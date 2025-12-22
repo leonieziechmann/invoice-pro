@@ -311,6 +311,8 @@
     name_ = state-autor-name.get()
   }
 
+  let iban_ = iban.replace(" ", "")
+
   let payment-amount_ = payment-amount
   if payment-amount == auto {
     payment-amount_ = state-total-invoice-amount.final()
@@ -338,7 +340,7 @@
       + "\n"
       + name_
       + "\n"
-      + iban
+      + iban_
       + "\n"
       + "EUR"
       + format-currency(payment-amount_, locale: "en")
@@ -362,7 +364,7 @@
     #set text(number-type: "lining")
     #account-holder-text: #name_ \
     Kreditinstitut: #bank \
-    IBAN: *#ibanator.iban(iban)* \
+    IBAN: *#ibanator.iban(iban_)* \
     BIC: #bic \
     #h(6.5cm)
   ][#block(width: qr-code_.size, qr-image)])
