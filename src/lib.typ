@@ -8,7 +8,7 @@
 
 #let state-autor-name = state("autor", none)
 #let state-tax-nr = state("tax-nr", none)
-#let state-invoice-nr = state("tax-nr", none)
+#let state-invoice-nr = state("invoice-nr", none)
 #let state-total-invoice-amount = state("total-invoice-amount", 0)
 #let state-vat = state("vat", 0)
 #let state-vat-exemption = state("vat-exemption", false)
