@@ -1,9 +1,10 @@
 #import "@preview/invoice-pro:0.1.0": *
 
-// Set language to German for correct date/number formatting
-#set text(lang: "de")
+// Language can be set to "de" (German) or "en" (English)
+// You can also pass a custom translation dictionary or override specific translations
 
 #show: invoice.with(
+  language: "de", // Change to "en" for English
   format: "DIN-5008-A", // or "DIN-5008-B"
 
   sender: (

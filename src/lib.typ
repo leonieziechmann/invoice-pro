@@ -5,6 +5,7 @@
 #import "@preview/ibanator:0.1.0"
 
 #import "helper.typ": *
+#import "translations.typ": get-translations, merge-translations, translations
 
 #let state-autor-name = state("autor", none)
 #let state-tax-nr = state("tax-nr", none)
@@ -12,6 +13,7 @@
 #let state-total-invoice-amount = state("total-invoice-amount", 0)
 #let state-vat = state("vat", 0)
 #let state-vat-exemption = state("vat-exemption", false)
+#let state-translations = state("translations", translations.de)
 
 /// Initializes the invoice document wrapper.
 ///
@@ -23,6 +25,13 @@
 ///
 /// -> content
 #let invoice(
+  /// The language for the invoice. Can be a language code ("de", "en")
+  /// or a custom translation dictionary.
+  /// -> str | dictionary
+  language: "de",
+  /// Custom translations to override the default ones for the selected language.
+  /// -> none | dictionary
+  override-translations: none,
   /// The letter format standard to use.
   /// -> "DIN-5008-A" | "DIN-5008-B"
   format: "DIN-5008-B",
@@ -76,9 +85,9 @@
   /// The unique invoice number.
   /// -> none | str | content
   invoice-nr: none,
-  /// The subject line of the letter.
-  /// -> str | content
-  subject: "Rechnung",
+  /// The subject line of the letter. If `auto`, uses the translated "Invoice" text.
+  /// -> auto | str | content
+  subject: auto,
   /// The tax number of the sender (displayed in the info box).
   /// -> none | str | content
   tax-nr: none,
@@ -106,6 +115,13 @@
   /// -> content
   body,
 ) = {
+  // Initialize translations
+  let t = if override-translations != none {
+    merge-translations(language, override-translations)
+  } else {
+    get-translations(language)
+  }
+
   margin = (
     left: margin.at("left", default: 25mm),
     right: margin.at("right", default: 20mm),
@@ -126,15 +142,18 @@
   state-tax-nr.update(tax-nr)
   state-vat-exemption.update(vat-exempt-small-biz)
   state-vat.update(vat)
+  state-translations.update(t)
 
-  subject = [#subject #invoice-nr]
+  // Set subject with translation fallback
+  let subject_ = if subject == auto { t.invoice } else { subject }
+  let full-subject = [#subject_ #invoice-nr]
 
   set document(
-    title: subject,
+    title: full-subject,
     author: sender.at("name", default: ""),
   )
 
-  set text(font: font, hyphenate: false)
+  set text(font: font, lang: t.id, hyphenate: false)
 
   if (header == auto) {
     header = pad(
@@ -147,7 +166,7 @@
 
         grid(
           columns: (1fr, 1fr),
-          subject,
+          full-subject,
           {
             set align(right)
             if sender.name != none {
@@ -201,7 +220,7 @@
         [#recipient.name]
         linebreak()
       } else {
-        box(fill: red)[Name Missing!]
+        box(fill: red)[#t.name-missing]
         linebreak()
       }
 
@@ -209,14 +228,14 @@
         [#recipient.address]
         linebreak()
       } else {
-        box(fill: red)[Address Missing!]
+        box(fill: red)[#t.address-missing]
         linebreak()
       }
 
       if recipient.at("city", default: none) != none {
         [#recipient.city]
       } else {
-        box(fill: red)[City Missing!]
+        box(fill: red)[#t.city-missing]
       }
     }
   }
@@ -234,7 +253,7 @@
     reference-signs = ()
   }
   if tax-nr != none {
-    reference-signs.insert(0, ("Steuernummer", tax-nr))
+    reference-signs.insert(0, (t.tax-number, tax-nr))
   }
 
   letter-generic(
@@ -254,7 +273,7 @@
   )[
     #grid(
       columns: (1fr, auto),
-      heading(subject),
+      heading(full-subject),
       {
         let cityname = extract-city-name(sender.at("city", default: none))
         if cityname != none {
@@ -300,9 +319,9 @@
   /// The amount to transfer. If `none`, the calculated total is used.
   /// -> float | int | none
   payment-amount: auto,
-  /// The label text for the account holder line.
-  /// -> str | content
-  account-holder-text: "Kontoinhaber:in",
+  /// The label text for the account holder line. If `auto`, uses the translated text.
+  /// -> auto | str | content
+  account-holder-text: auto,
   /// Configuration for the QR code.
   /// Structure: `(display: bool, size: length)`
   /// -> dictionary
@@ -311,6 +330,14 @@
     size: 4em,
   ),
 ) = context {
+  let t = state-translations.get()
+
+  let account-holder-text_ = if account-holder-text == auto {
+    t.account-holder
+  } else {
+    account-holder-text
+  }
+
   let name_ = name
   if name == auto {
     name_ = state-autor-name.get()
@@ -367,10 +394,10 @@
   )[
     #set par(leading: 0.40em)
     #set text(number-type: "lining")
-    #account-holder-text: #name_ \
-    Kreditinstitut: #bank \
-    IBAN: *#ibanator.iban(iban_)* \
-    BIC: #bic \
+    #account-holder-text_: #name_ \
+    #t.bank: #bank \
+    #t.iban-label: *#ibanator.iban(iban_)* \
+    #t.bic-label: #bic \
     #h(6.5cm)
   ][#block(width: qr-code_.size, qr-image)])
 }
@@ -456,6 +483,7 @@
   /// -> arguments
   ..items,
 ) = context {
+  let t = state-translations.get()
   let default-vat = state-vat.final()
 
   let vat-exemption_ = if vat-exemption == auto {
@@ -522,26 +550,26 @@
     ..(if show-vat-per-item_ { (right,) }),
   )
 
-  let tax-substring = if show-gross-prices [(brutto)] else [(netto)]
+  let tax-substring = if show-gross-prices [(#t.gross)] else [(#t.net)]
   if vat-exemption_ { tax-substring = none }
 
   let table-header = (
-    [*Pos*],
-    [*Beschreibung*],
+    [*#t.position*],
+    [*#t.description*],
     ..(
       if show-quantity_ {
         (
-          [*Menge*],
-          [*Einzelpreis #tax-substring*],
-          [*Gesamt #tax-substring*],
+          [*#t.quantity*],
+          [*#t.unit-price #tax-substring*],
+          [*#t.total-price #tax-substring*],
         )
       } else {
         (
-          [*Preis #tax-substring*],
+          [*#t.price #tax-substring*],
         )
       }
     ),
-    ..(if show-vat-per-item_ { ([*MwSt.*],) }),
+    ..(if show-vat-per-item_ { ([*#t.vat-label*],) }),
   )
 
   let table-body = items_
@@ -579,7 +607,7 @@
 
   let netto-table-footer = (
     ..left-spacer,
-    align(right)[Summe:],
+    align(right)[#t.sum:],
     [#format-currency(netto-price-sum) #currency],
     ..mwst-spacer,
     amount-line(),
@@ -589,7 +617,7 @@
           .sorted(key: it => it.vat)
           .map(vs => (
             ..left-spacer,
-            align(right, [#calc.round(vs.vat * 100, digits: 1)% Mehrwertsteuer:]),
+            align(right, [#calc.round(vs.vat * 100, digits: 1)% #t.vat-tax:]),
             [#format-currency(vs.total) #currency],
             ..mwst-spacer,
           ))
@@ -599,7 +627,7 @@
     amount-line(),
     ..(table-header.len() * ([],)),
     ..left-spacer,
-    align(right)[*Gesamt:*],
+    align(right)[*#t.total:*],
     [*#format-currency(total-price) #currency*],
     amount-line(stroke: 2pt + black),
   )
@@ -607,7 +635,7 @@
   let gross-table-footer = (
     ..(table-header.len() * ([],)),
     ..left-spacer,
-    align(right)[*Gesamt:*],
+    align(right)[*#t.total:*],
     [*#format-currency(total-price) #currency*],
     ..mwst-spacer,
     amount-line(stroke: 2pt + black),
@@ -617,7 +645,7 @@
           .sorted(key: it => it.vat)
           .map(vs => (
             ..left-spacer,
-            align(right, [inkl. #calc.round(vs.vat * 100, digits: 1)% Mehrwertsteuer:]),
+            align(right, [#t.including #calc.round(vs.vat * 100, digits: 1)% #t.vat-tax:]),
             [#format-currency(vs.total) #currency],
             ..mwst-spacer,
           ))
@@ -647,7 +675,7 @@
     ),
   )
 
-  if vat-exemption_ { block[Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.] }
+  if vat-exemption_ { block[#t.vat-exemption-notice] }
 }
 
 /// Generates a sentence stating the payment deadline.
@@ -665,23 +693,24 @@
   /// The currency symbol to use in the text.
   /// -> content
   currency: [€],
-) = {
-  let sum-str = context format-currency(state-total-invoice-amount.final())
+) = context {
+  let t = state-translations.get()
+  let sum-str = format-currency(state-total-invoice-amount.final())
 
   let deadline = if date != none {
     let date-str = if type(date) == datetime {
       date.display("[day].[month].[year]")
     } else {
-      date
+      str(date)
     }
-    "bis spätestens " + date-str
+    (t.deadline-by-date)(date-str)
   } else if days != none {
-    "innerhalb von " + days + " Tagen"
+    (t.deadline-within-days)(days)
   } else {
-    "zeitnah"
+    t.deadline-soon
   }
 
-  [Bitte überweisen Sie den Gesamtbetrag von *#sum-str #currency* #deadline ohne Abzug auf das unten genannte Konto.]
+  (t.payment-text)(sum-str, currency, deadline)
 }
 
 /// Appends a closing greeting and a signature.
@@ -695,6 +724,7 @@
   /// -> content | str | none
   signature: none,
 ) = context {
+  let t = state-translations.get()
   let name_ = name
   if name == auto {
     name_ = state-autor-name.final()
@@ -702,7 +732,7 @@
 
   block(breakable: false, {
     v(1em)
-    [Mit freundlichen Grüßen]
+    [#t.closing]
     v(1em)
 
     if type(signature) == str {
