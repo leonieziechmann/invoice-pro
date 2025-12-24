@@ -1,9 +1,10 @@
 #import "@preview/invoice-pro:0.1.0": *
 
-// Set language to German for correct date/number formatting
-#set text(lang: "de") 
+// Language can be set to "de" (German) or "en" (English)
+// You can also pass a custom translation dictionary or override specific translations
 
 #show: invoice.with(
+  language: "de", // Change to "en" for English
   format: "DIN-5008-A", // or "DIN-5008-B"
 
   sender: (
@@ -12,14 +13,14 @@
     city: "12345 Musterstadt",
     extra: (
       "Tel": [+49 123 4567890],
-      "Web": [#link("https://www.example.com")[www.example.com]]
-    )
+      "Web": [#link("https://www.example.com")[www.example.com]],
+    ),
   ),
 
   recipient: (
     name: "Kunden Name",
     address: "Kundenstraße 5",
-    city: "98765 Kundenstadt"
+    city: "98765 Kundenstadt",
   ),
 
   invoice-nr: "2024-001",
