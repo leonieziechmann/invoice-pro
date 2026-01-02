@@ -1,8 +1,8 @@
 #let to-string(it) = {
-  if it == none { return ""; }
-  if type(it) == str { return it; }
-  if type(it) != content { return str(it); } 
-  if it.has("text") { return it.text; }
+  if it == none { return "" }
+  if type(it) == str { return it }
+  if type(it) != content { return str(it) }
+  if it.has("text") { return it.text }
   if it.has("children") {
     return it.children.map(to-string).join()
   }
@@ -20,7 +20,7 @@
     s = s + "."
     after_dot = "."
   }
-  for i in range(precision - after_dot.len() + 1){
+  for i in range(precision - after_dot.len() + 1) {
     s = s + "0"
   }
   // fake de locale

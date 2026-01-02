@@ -1,4 +1,6 @@
-#import "@preview/letter-pro:3.0.0": letter-generic, address-duobox, address-tribox, sender-box, recipient-box, annotations-box, header-simple
+#import "@preview/letter-pro:3.0.0": (
+  address-duobox, address-tribox, annotations-box, header-simple, letter-generic, recipient-box, sender-box,
+)
 #import "@preview/rustycure:0.2.0"
 #import "@preview/ibanator:0.1.0"
 
@@ -24,23 +26,20 @@
   /// The letter format standard to use.
   /// -> "DIN-5008-A" | "DIN-5008-B"
   format: "DIN-5008-B",
-
   /// Custom content for the header. If `auto`, the subject is used.
   /// -> auto | content
   header: auto,
   /// Custom content for the footer.
   /// -> none | content
   footer: none,
-
   /// Whether to display folding marks on the left margin.
   /// -> bool
   folding-marks: true,
   /// Whether to display the hole punch mark.
   /// -> bool
   hole-mark: true,
-
-  /// Dictionary containing sender details. 
-  /// 
+  /// Dictionary containing sender details.
+  ///
   /// Structure: `(name: str, title: str | content, address: str | content, city: str | content, extra: (:))`
   ///
   /// -> dictionary
@@ -51,21 +50,19 @@
     city: none,
     extra: (:),
   ),
-
   /// Dictionary containing recipient details.
-  /// 
+  ///
   /// Structure: `(name: str | content, address: str | content, city: str | content)`
   ///
   /// -> dictionary | content
   recipient: (
     name: none,
     address: none,
-    city: none
+    city: none,
   ),
   /// Additional annotations above the address field (e.g., "Registered Mail").
   /// -> none | content
   annotations: none,
-
   /// Content for the information box on the right.
   /// If `auto`, it is generated from sender and metadata.
   /// -> auto | content
@@ -73,7 +70,6 @@
   /// Additional custom fields for the information box.
   /// -> none | array
   reference-signs: none,
-
   /// The date of the invoice.
   /// -> none | datetime | content
   date: none,
@@ -83,7 +79,6 @@
   /// The subject line of the letter.
   /// -> str | content
   subject: "Rechnung",
-
   /// The tax number of the sender (displayed in the info box).
   /// -> none | str | content
   tax-nr: none,
@@ -94,48 +89,44 @@
   /// No VAT will be calculated, and a legal notice will be added.
   /// -> bool
   vat-exempt-small-biz: false,
-
   /// The page numbering format.
   /// -> auto | str
   page-numbering: auto,
-
   /// Custom page margins.
   /// -> dictionary
   margin: (
-    left:   25mm,
-    right:  20mm,
-    top:    20mm,
+    left: 25mm,
+    right: 20mm,
+    top: 20mm,
     bottom: 20mm,
   ),
-
   /// The font family used for the document.
   /// -> str
   font: "Source Sans Pro",
-  
   /// -> content
-  body
+  body,
 ) = {
   margin = (
-    left:   margin.at("left",   default: 25mm),
-    right:  margin.at("right",  default: 20mm),
-    top:    margin.at("top",    default: 20mm),
+    left: margin.at("left", default: 25mm),
+    right: margin.at("right", default: 20mm),
+    top: margin.at("top", default: 20mm),
     bottom: margin.at("bottom", default: 20mm),
   )
 
   sender = (
-    name:    sender.at("name", default: none),
-    title:   sender.at("title", default: none),
+    name: sender.at("name", default: none),
+    title: sender.at("title", default: none),
     address: sender.at("address", default: none),
-    city:    sender.at("city", default: none),
-    extra:   sender.at("extra", default: none),
+    city: sender.at("city", default: none),
+    extra: sender.at("extra", default: none),
   )
-  
+
   state-autor-name.update(sender.name)
   state-invoice-nr.update(invoice-nr)
   state-tax-nr.update(tax-nr)
   state-vat-exemption.update(vat-exempt-small-biz)
   state-vat.update(vat)
-  
+
   subject = [#subject #invoice-nr]
 
   set document(
@@ -155,12 +146,12 @@
         set text(10pt)
         subject
         linebreak()
-      }
+      },
     )
   }
-  
+
   if type(recipient) == dictionary {
-    recipient = {  
+    recipient = {
       if recipient.at("name", default: none) != none {
         [#recipient.name]
         linebreak()
@@ -168,15 +159,15 @@
         box(fill: red)[Name Missing!]
         linebreak()
       }
-  
-      if recipient.at("address", default: none)!= none {
+
+      if recipient.at("address", default: none) != none {
         [#recipient.address]
         linebreak()
       } else {
         box(fill: red)[Address Missing!]
         linebreak()
       }
-  
+
       if recipient.at("city", default: none) != none {
         [#recipient.city]
       } else {
@@ -200,12 +191,12 @@
         strong(sender.name)
         linebreak()
       }
-      
+
       if sender.title != none {
         [#sender.title]
         linebreak()
       }
-      
+
       if sender.address != none {
         [#sender.address]
         linebreak()
@@ -221,12 +212,10 @@
       }
       if type(sender.extra) == dictionary {
         grid(
-          columns: 2, 
-          align: right, 
+          columns: 2,
+          align: right,
           gutter: .8em,
-          ..sender.extra.pairs()
-            .map(e => ([#e.at(0):], [#e.at(1)]))
-            .flatten()
+          ..sender.extra.pairs().map(e => ([#e.at(0):], [#e.at(1)])).flatten()
         )
       }
       if type(sender.extra) == array {
@@ -235,22 +224,22 @@
     }))
   }
 
- if type(reference-signs) != array {
-   reference-signs = ()
- }
- if tax-nr != none {
-   reference-signs.insert(0, ("Steuernummer", tax-nr))
- }
-  
+  if type(reference-signs) != array {
+    reference-signs = ()
+  }
+  if tax-nr != none {
+    reference-signs.insert(0, ("Steuernummer", tax-nr))
+  }
+
   letter-generic(
     format: format,
-  
+
     header: header,
     footer: footer,
-  
+
     folding-marks: folding-marks,
     hole-mark: hole-mark,
-  
+
     address-box: address-box,
     information-box: information-box,
 
@@ -266,15 +255,15 @@
         if cityname != none {
           [#cityname, ]
         }
-        
+
         if type(date) == datetime {
           strong(date.display("[day].[month].[year]"))
         } else {
           strong[#date]
         }
-      }
+      },
     )
-    
+
     #set text(hyphenate: true)
     #set par(justify: true)
     #body
@@ -322,6 +311,8 @@
     name_ = state-autor-name.get()
   }
 
+  let iban_ = iban.replace(" ", "")
+
   let payment-amount_ = payment-amount
   if payment-amount == auto {
     payment-amount_ = state-total-invoice-amount.final()
@@ -341,22 +332,39 @@
   }
 
   let epc-qr-content = (
-    "BCD\n" + "002\n" + "1\n" + "SCT\n" + bic + "\n" + name_ + "\n" + iban + "\n" + "EUR" + format-currency(payment-amount_, locale: "en") + "\n" + "\n" + reference_ + "\n" + "\n" + "\n"
+    "BCD\n"
+      + "002\n"
+      + "1\n"
+      + "SCT\n"
+      + bic
+      + "\n"
+      + name_
+      + "\n"
+      + iban_
+      + "\n"
+      + "EUR"
+      + format-currency(payment-amount_, locale: "en")
+      + "\n"
+      + "\n"
+      + reference_
+      + "\n"
+      + "\n"
+      + "\n"
   )
 
   let qr-image = rustycure.qr-code(epc-qr-content, width: qr-code_.size, quiet-zone: false)
-  
+
   block(width: 100% - qr-code_.size, grid(
     columns: (auto, 1fr),
     align: top,
     gutter: 1em,
     stroke: none,
-  )[ 
+  )[
     #set par(leading: 0.40em)
     #set text(number-type: "lining")
     #account-holder-text: #name_ \
     Kreditinstitut: #bank \
-    IBAN: *#ibanator.iban(iban)* \
+    IBAN: *#ibanator.iban(iban_)* \
     BIC: #bic \
     #h(6.5cm)
   ][#block(width: qr-code_.size, qr-image)])
@@ -391,23 +399,26 @@
   /// -> float
   vat: 0.19,
 ) = {
-  assert((price == none) or (price-total == none), message: "You can't specify the single item price and total item price at once.")
-  
+  assert(
+    (price == none) or (price-total == none),
+    message: "You can't specify the single item price and total item price at once.",
+  )
+
   if price-total != none {
     price = price-total / quantity
   }
 
   if price == none { price = 0 }
-  
+
   let base-price = if gross-price { price / (1 + vat) } else { price }
   let final-price = base-price * (1 + vat)
 
   (
-    description: description, 
+    description: description,
     base-price: base-price,
-    price: final-price, 
+    price: final-price,
     unit: unit,
-    quantity: quantity, 
+    quantity: quantity,
     vat: vat,
   )
 }
@@ -438,34 +449,36 @@
   show-gross-prices: false,
   /// The list of items created via the `item()` function.
   /// -> arguments
-  ..items
+  ..items,
 ) = context {
   let default-vat = state-vat.final()
-  
+
   let vat-exemption_ = if vat-exemption == auto {
     state-vat-exemption.final()
   } else {
     vat-exemption
   }
-  
-  let use-exact-calculation = show-gross-prices
-  
-  let items_ = items.pos().map(item => {
-    if vat-exemption_ {
-      item.vat = 0
-      item.base-price = item.price
-    }
-    
-    item.base-price-exact = item.base-price
-    item.base-price-display = calc.round(item.base-price, digits: 2)
 
-    if not(use-exact-calculation) {
-      item.base-price = item.base-price-display
-    }
-    
-    item.price = calc.round(item.base-price * (1 + item.vat), digits: 2)
-    return item
-  })
+  let use-exact-calculation = show-gross-prices
+
+  let items_ = items
+    .pos()
+    .map(item => {
+      if vat-exemption_ {
+        item.vat = 0
+        item.base-price = item.price
+      }
+
+      item.base-price-exact = item.base-price
+      item.base-price-display = calc.round(item.base-price, digits: 2)
+
+      if not (use-exact-calculation) {
+        item.base-price = item.base-price-display
+      }
+
+      item.price = calc.round(item.base-price * (1 + item.vat), digits: 2)
+      return item
+    })
 
   // Automatic Column Detection
   let show-quantity_ = show-quantity
@@ -475,24 +488,27 @@
 
   let show-vat-per-item_ = show-vat-per-item
   if show-vat-per-item == auto {
-    show-vat-per-item_ = not(vat-exemption_) and (items_.find(item => item.vat != default-vat) != none)
+    show-vat-per-item_ = not (vat-exemption_) and (items_.find(item => item.vat != default-vat) != none)
   }
 
   // --- Calculations ---
 
   let netto-price-sum = items_.map(item => item.base-price * item.quantity).sum()
 
-  let vat-stages = items_.map(item => item.vat).dedup().map(vat-val => (
-    vat: vat-val,
-    total: items_.filter(item => item.vat == vat-val).map(item => item.base-price * item.quantity).sum() * vat-val
-  ))
-  
+  let vat-stages = items_
+    .map(item => item.vat)
+    .dedup()
+    .map(vat-val => (
+      vat: vat-val,
+      total: items_.filter(item => item.vat == vat-val).map(item => item.base-price * item.quantity).sum() * vat-val,
+    ))
+
   let total-price = netto-price-sum + vat-stages.map(vat => vat.total).sum()
-  
+
   state-total-invoice-amount.update(total-price)
 
   // --- Table Layout ---
-  
+
   let table-align = (
     right,
     left,
@@ -507,75 +523,106 @@
   let table-header = (
     [*Pos*],
     [*Beschreibung*],
-    ..(if show-quantity_ {(
-      [*Menge*],
-      [*Einzelpreis #tax-substring*],
-      [*Gesamt #tax-substring*],
-    )} else {(
-      [*Preis #tax-substring*],
-    )}),
-    ..(if show-vat-per-item_ { ([*MwSt.*],) })
+    ..(
+      if show-quantity_ {
+        (
+          [*Menge*],
+          [*Einzelpreis #tax-substring*],
+          [*Gesamt #tax-substring*],
+        )
+      } else {
+        (
+          [*Preis #tax-substring*],
+        )
+      }
+    ),
+    ..(if show-vat-per-item_ { ([*MwSt.*],) }),
   )
 
-  let table-body = items_.enumerate().map(((pos, item)) => {
-    let unit-price-display = if show-gross-prices { item.price } else { item.base-price-display }
-    let total-row-price = unit-price-display * item.quantity
-    
-    (
-      [#(pos + 1)],
-      item.description,
-      ..(if show-quantity_ {(
-        [#item.quantity #item.unit],      
-        [#format-currency(unit-price-display) #currency],
-        [#format-currency(total-row-price) #currency],
-      )} else {(
-        [#format-currency(total-row-price) #currency],
-      )}),
-      ..(if show-vat-per-item_ { ([#calc.round(item.vat * 100, digits: 1)%],) }),
-   )
-  })
+  let table-body = items_
+    .enumerate()
+    .map(((pos, item)) => {
+      let unit-price-display = if show-gross-prices { item.price } else { item.base-price-display }
+      let total-row-price = unit-price-display * item.quantity
+
+      (
+        [#(pos + 1)],
+        item.description,
+        ..(
+          if show-quantity_ {
+            (
+              [#item.quantity #item.unit],
+              [#format-currency(unit-price-display) #currency],
+              [#format-currency(total-row-price) #currency],
+            )
+          } else {
+            (
+              [#format-currency(total-row-price) #currency],
+            )
+          }
+        ),
+        ..(if show-vat-per-item_ { ([#calc.round(item.vat * 100, digits: 1)%],) }),
+      )
+    })
 
   // Footer Logic
   let total-col-idx = table-header.len() - if show-vat-per-item_ { 1 } else { 0 }
   let amount-line = table.hline.with(start: total-col-idx - 1, end: total-col-idx, stroke: .5pt + black)
-  
+
   let left-spacer = (total-col-idx - 2) * ([],)
   let mwst-spacer = if show-vat-per-item_ { ([],) } else { () }
-   
+
   let netto-table-footer = (
-    ..left-spacer, align(right)[Summe:], [#format-currency(netto-price-sum) #currency], ..mwst-spacer,
+    ..left-spacer,
+    align(right)[Summe:],
+    [#format-currency(netto-price-sum) #currency],
+    ..mwst-spacer,
     amount-line(),
-    ..(if not(vat-exemption_) {
-      vat-stages.sorted(key: it => it.vat).map(vs => (
-        ..left-spacer,
-        align(right, [#calc.round(vs.vat * 100, digits: 1)% Mehrwertsteuer:]),
-        [#format-currency(vs.total) #currency],
-        ..mwst-spacer,
-      )).flatten()
-    }),
+    ..(
+      if not (vat-exemption_) {
+        vat-stages
+          .sorted(key: it => it.vat)
+          .map(vs => (
+            ..left-spacer,
+            align(right, [#calc.round(vs.vat * 100, digits: 1)% Mehrwertsteuer:]),
+            [#format-currency(vs.total) #currency],
+            ..mwst-spacer,
+          ))
+          .flatten()
+      }
+    ),
     amount-line(),
     ..(table-header.len() * ([],)),
-    ..left-spacer, align(right)[*Gesamt:*], [*#format-currency(total-price) #currency*],
+    ..left-spacer,
+    align(right)[*Gesamt:*],
+    [*#format-currency(total-price) #currency*],
     amount-line(stroke: 2pt + black),
   )
-  
+
   let gross-table-footer = (
     ..(table-header.len() * ([],)),
-    ..left-spacer, align(right)[*Gesamt:*], [*#format-currency(total-price) #currency*],
+    ..left-spacer,
+    align(right)[*Gesamt:*],
+    [*#format-currency(total-price) #currency*],
     ..mwst-spacer,
     amount-line(stroke: 2pt + black),
-    ..(if not(vat-exemption_) {
-      vat-stages.sorted(key: it => it.vat).map(vs => (
-        ..left-spacer,
-        align(right, [inkl. #calc.round(vs.vat * 100, digits: 1)% Mehrwertsteuer:]),
-        [#format-currency(vs.total) #currency],
-        ..mwst-spacer,
-      )).flatten()
-    }),
+    ..(
+      if not (vat-exemption_) {
+        vat-stages
+          .sorted(key: it => it.vat)
+          .map(vs => (
+            ..left-spacer,
+            align(right, [inkl. #calc.round(vs.vat * 100, digits: 1)% Mehrwertsteuer:]),
+            [#format-currency(vs.total) #currency],
+            ..mwst-spacer,
+          ))
+          .flatten()
+      }
+    ),
   )
 
   let table-footer = if show-gross-prices { gross-table-footer } else { netto-table-footer }
-  
+
 
   table(
     stroke: none,
@@ -591,8 +638,8 @@
     table.footer(
       table.hline(),
       repeat: false,
-      ..table-footer
-    )
+      ..table-footer,
+    ),
   )
 
   if vat-exemption_ { block[Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.] }
@@ -606,10 +653,10 @@
 #let payment-goal(
   /// The number of days until payment is due.
   /// -> int
-  days: 14, 
+  days: 14,
   /// The currency symbol to use in the text.
   /// -> content
-  currency: [€]
+  currency: [€],
 ) = {
   let sum-str = context format-currency(state-total-invoice-amount.final())
 
@@ -639,7 +686,7 @@
 
     if type(signature) == str {
       image("example_signature.png", height: 3em)
-    } 
+    }
     if type(signature) == content {
       signature
     }
