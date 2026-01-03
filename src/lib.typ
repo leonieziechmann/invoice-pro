@@ -144,8 +144,53 @@
       bottom: 5mm,
       {
         set text(10pt)
-        subject
-        linebreak()
+
+        grid(
+          columns: (1fr, 1fr),
+          subject,
+          {
+            set align(right)
+            if sender.name != none {
+              strong(sender.name)
+              linebreak()
+            }
+
+            if sender.title != none {
+              [#sender.title]
+              linebreak()
+            }
+
+            if sender.address != none {
+              [#sender.address]
+              linebreak()
+            }
+
+            if sender.city != none {
+              [#sender.city]
+              linebreak()
+            }
+
+            if type(sender.extra) == content {
+              sender.extra
+            }
+            if type(sender.extra) == dictionary {
+              block(
+                // If the block is allowed to break, the grid layout shifts into
+                // the rest of the header content
+                breakable: false,
+                grid(
+                  columns: 2,
+                  column-gutter: .4em,
+                  row-gutter: .8em,
+                  ..sender.extra.pairs().map(e => ([#e.at(0):], [#e.at(1)])).flatten()
+                ),
+              )
+            }
+            if type(sender.extra) == array {
+              sender.extra.map(e => [#e]).join(linebreak())
+            }
+          },
+        )
       },
     )
   }
@@ -185,45 +230,6 @@
     address-box = address-duobox(align(bottom, pad(bottom: .65em, sender-box)), recipient-box)
   }
 
-  if information-box == auto {
-    information-box = align(right, text(.9em, {
-      if sender.name != none {
-        strong(sender.name)
-        linebreak()
-      }
-
-      if sender.title != none {
-        [#sender.title]
-        linebreak()
-      }
-
-      if sender.address != none {
-        [#sender.address]
-        linebreak()
-      }
-
-      if sender.city != none {
-        [#sender.city]
-        linebreak()
-      }
-
-      if type(sender.extra) == content {
-        sender.extra
-      }
-      if type(sender.extra) == dictionary {
-        grid(
-          columns: 2,
-          align: right,
-          gutter: .8em,
-          ..sender.extra.pairs().map(e => ([#e.at(0):], [#e.at(1)])).flatten()
-        )
-      }
-      if type(sender.extra) == array {
-        sender.extra.map(e => [#e]).join(linebreak())
-      }
-    }))
-  }
-
   if type(reference-signs) != array {
     reference-signs = ()
   }
@@ -241,7 +247,6 @@
     hole-mark: hole-mark,
 
     address-box: address-box,
-    information-box: information-box,
 
     reference-signs: reference-signs,
 
