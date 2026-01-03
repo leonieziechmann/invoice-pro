@@ -22,7 +22,7 @@ A professional, compliant, and automated invoice template for [Typst](https://ty
 Import the package at the top of your Typst file:
 
 ```typst
-#import "@preview/invoice-pro:0.1.0": *
+#import "@preview/invoice-pro:0.1.1": *
 ```
 
 ### Basic Usage
@@ -30,7 +30,7 @@ Import the package at the top of your Typst file:
 Here is a minimal example of how to create an invoice:
 
 ```typst
-#import "@preview/invoice-pro:0.1.0": *
+#import "@preview/invoice-pro:0.1.1": *
 
 // Set language to German for correct date/number formatting
 #set text(lang: "de")
@@ -71,7 +71,7 @@ Here is a minimal example of how to create an invoice:
 // Bank Details with QR Code
 #bank-details(
   bank: "Musterbank",
-  iban: "DE07100202005821158846",
+  iban: "DE07100202005821158847",
   bic: "MUSTERBIC",
 )
 
@@ -194,7 +194,7 @@ This activates a shell containing `typst`, `typstyle`, `markdownlint`, and `pret
 
 ```typst
 // Use the @local namespace for development
-#import "@preview/invoice-pro:0.1.0": *
+#import "@preview/invoice-pro:0.1.1": *
 ```
 
 3. **Quality Control (Pre-commit):**

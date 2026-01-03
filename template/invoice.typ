@@ -1,4 +1,4 @@
-#import "@preview/invoice-pro:0.1.0": *
+#import "@preview/invoice-pro:0.1.1": *
 
 // Set language to German for correct date/number formatting
 #set text(lang: "de")
