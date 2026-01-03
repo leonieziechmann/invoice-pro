@@ -657,15 +657,31 @@
 /// -> content
 #let payment-goal(
   /// The number of days until payment is due.
-  /// -> int
-  days: 14,
+  /// -> int | none
+  days: none,
+  /// The date by which payment is due.
+  /// -> datetime | content | none
+  date: none,
   /// The currency symbol to use in the text.
   /// -> content
   currency: [€],
 ) = {
   let sum-str = context format-currency(state-total-invoice-amount.final())
 
-  [Bitte überweisen Sie den Gesamtbetrag von *#sum-str #currency* innerhalb von #days Tagen ohne Abzug auf das unten genannte Konto.]
+  let deadline = if date != none {
+    let date-str = if type(date) == datetime {
+      date.display("[day].[month].[year]")
+    } else {
+      date
+    }
+    "bis spätestens " + date-str
+  } else if days != none {
+    "innerhalb von " + days + " Tagen"
+  } else {
+    "zeitnah"
+  }
+
+  [Bitte überweisen Sie den Gesamtbetrag von *#sum-str #currency* #deadline ohne Abzug auf das unten genannte Konto.]
 }
 
 /// Appends a closing greeting and a signature.
