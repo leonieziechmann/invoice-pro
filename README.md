@@ -21,7 +21,7 @@ A professional, compliant, and automated invoice template for [Typst](https://ty
 
 Import the package at the top of your Typst file:
 
-```typ
+```typst
 #import "@preview/invoice-pro:0.1.0": *
 ```
 
@@ -29,7 +29,7 @@ Import the package at the top of your Typst file:
 
 Here is a minimal example of how to create an invoice:
 
-```typ
+```typst
 #import "@preview/invoice-pro:0.1.0": *
 
 // Set language to German for correct date/number formatting
@@ -82,35 +82,34 @@ Here is a minimal example of how to create an invoice:
 
 ### `invoice` arguments
 
-| Argument | Type | Description |
-| :--- | :--- | :--- |
-| `format` | string | "DIN-5008-A" or "DIN-5008-B" (Default: B). |
-| `sender` | dict | Sender details (`name`, `address`, `city`, `extra`). |
-| `recipient` | dict | Recipient details. |
-| `vat` | float | Default VAT rate (e.g., `0.19` for 19%). |
-| `vat-exempt-small-biz` | bool | If `true`, enables "Kleinunternehmer" mode (no VAT). |
-| `show-gross-prices` | bool | If `true`, calculates B2C gross prices. Default is `false` (B2B/Net). |
+| Argument               | Type   | Description                                                           |
+| :--------------------- | :----- | :-------------------------------------------------------------------- |
+| `format`               | string | "DIN-5008-A" or "DIN-5008-B" (Default: B).                            |
+| `sender`               | dict   | Sender details (`name`, `address`, `city`, `extra`).                  |
+| `recipient`            | dict   | Recipient details.                                                    |
+| `vat`                  | float  | Default VAT rate (e.g., `0.19` for 19%).                              |
+| `vat-exempt-small-biz` | bool   | If `true`, enables "Kleinunternehmer" mode (no VAT).                  |
+| `show-gross-prices`    | bool   | If `true`, calculates B2C gross prices. Default is `false` (B2B/Net). |
 
 ### `invoice-line-items` function
 
-| Argument | Type | Description |
-| :--- | :--- | :--- |
-| `vat-exemption` | `bool` \| `auto` | Overrides the global setting. `auto` inherits from `invoice`. |
-| `show-quantity` | `bool` \| `auto` | Controls the quantity column. `auto` hides it if all quantities are 1. |
-| `show-vat-per-item` | `bool` \| `auto` | Controls the VAT column. `auto` shows it only if VAT rates differ between items. |
-| `currency` | `content` | The currency symbol to display (Default: `[€]`). |
-| `show-gross-prices` | `bool` | Calculation mode: `false` (Default/B2B) for net prices, `true` (B2C) for gross prices (prevents rounding errors). |
-| `..items` | `arguments` | A list of `item()` calls. |
-
+| Argument            | Type             | Description                                                                                                       |
+| :------------------ | :--------------- | :---------------------------------------------------------------------------------------------------------------- |
+| `vat-exemption`     | `bool` \| `auto` | Overrides the global setting. `auto` inherits from `invoice`.                                                     |
+| `show-quantity`     | `bool` \| `auto` | Controls the quantity column. `auto` hides it if all quantities are 1.                                            |
+| `show-vat-per-item` | `bool` \| `auto` | Controls the VAT column. `auto` shows it only if VAT rates differ between items.                                  |
+| `currency`          | `content`        | The currency symbol to display (Default: `[€]`).                                                                  |
+| `show-gross-prices` | `bool`           | Calculation mode: `false` (Default/B2B) for net prices, `true` (B2C) for gross prices (prevents rounding errors). |
+| `..items`           | `arguments`      | A list of `item()` calls.                                                                                         |
 
 ### `item` function
 
-| Argument | Type | Description |
-| :--- | :--- | :--- |
-| `description` | content | Description of the service/product. |
-| `price` | float | Price per unit. |
-| `quantity` | float | Amount (Default: 1). |
-| `vat` | float | Specific VAT rate for this item (overrides default). |
+| Argument      | Type    | Description                                          |
+| :------------ | :------ | :--------------------------------------------------- |
+| `description` | content | Description of the service/product.                  |
+| `price`       | float   | Price per unit.                                      |
+| `quantity`    | float   | Amount (Default: 1).                                 |
+| `vat`         | float   | Specific VAT rate for this item (overrides default). |
 
 #### Line items with VAT exemption
 
@@ -173,6 +172,42 @@ Here is a minimal example of how to create an invoice:
 ```
 
 > Bitte überweisen Sie den Gesamtbetrag von **123,45€** bis spätestens 01.01.2026 ohne Abzug auf das unten genannte Konto.
+
+## 🛠️ Development
+
+This project uses **Nix** to provide a reproducible, sandboxed development environment. You do not need to install Typst, linters, or formatters globally—the flake provides everything.
+
+### Quick Start
+
+1. **Enter the environment:**
+
+```bash
+nix develop
+# or if you use direnv:
+direnv allow
+```
+
+This activates a shell containing `typst`, `typstyle`, `markdownlint`, and `prettier`.
+
+2. **Automatic Package Linking:**
+   The environment automatically links the current directory to a sandboxed local package registry (inside `.typst-data`). You can import the package in your test files immediately without manual installation:
+
+```typst
+// Use the @local namespace for development
+#import "@preview/invoice-pro:0.1.0": *
+```
+
+3. **Quality Control (Pre-commit):**
+   Git hooks are automatically configured to run before every commit. They ensure:
+
+- **Formatting:** `.typ` files are formatted with `typstyle`, and `.md` files with `prettier`.
+- **Linting:** Structure is checked with `markdownlint`.
+- **Hygiene:** Trailing whitespace and Nix formatting are enforced.
+  To run these checks manually:
+
+```bash
+pre-commit run --all-files
+```
 
 ## 🗺️ Roadmap
 

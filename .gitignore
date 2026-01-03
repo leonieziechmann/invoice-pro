@@ -1,1 +1,8 @@
+# Typst
 *.pdf
+
+# Nix
+.direnv/
+.typst-data/
+.typst-cache/
+result
