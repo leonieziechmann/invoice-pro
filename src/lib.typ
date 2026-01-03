@@ -1,5 +1,6 @@
 #import "@preview/letter-pro:3.0.0": (
-  address-duobox, address-tribox, annotations-box, header-simple, letter-generic, recipient-box, sender-box,
+  address-duobox, address-tribox, annotations-box, header-simple,
+  letter-generic, recipient-box, sender-box,
 )
 #import "@preview/rustycure:0.2.0"
 #import "@preview/ibanator:0.1.0"
@@ -182,7 +183,11 @@
                   columns: 2,
                   column-gutter: .4em,
                   row-gutter: .8em,
-                  ..sender.extra.pairs().map(e => ([#e.at(0):], [#e.at(1)])).flatten()
+                  ..sender
+                    .extra
+                    .pairs()
+                    .map(e => ([#e.at(0):], [#e.at(1)]))
+                    .flatten()
                 ),
               )
             }
@@ -221,13 +226,19 @@
     }
   }
 
-  let sender-box = sender-box(name: sender.name, [#sender.address, #sender.city])
+  let sender-box = sender-box(
+    name: sender.name,
+    [#sender.address, #sender.city],
+  )
   let annotations-box = annotations-box(annotations)
   let recipient-box = recipient-box([#recipient])
 
   let address-box = address-tribox(sender-box, annotations-box, recipient-box)
   if annotations == none {
-    address-box = address-duobox(align(bottom, pad(bottom: .65em, sender-box)), recipient-box)
+    address-box = address-duobox(
+      align(bottom, pad(bottom: .65em, sender-box)),
+      recipient-box,
+    )
   }
 
   if type(reference-signs) != array {
@@ -357,7 +368,11 @@
       + "\n"
   )
 
-  let qr-image = rustycure.qr-code(epc-qr-content, width: qr-code_.size, quiet-zone: false)
+  let qr-image = rustycure.qr-code(
+    epc-qr-content,
+    width: qr-code_.size,
+    quiet-zone: false,
+  )
 
   block(width: 100% - qr-code_.size, grid(
     columns: (auto, 1fr),
@@ -493,19 +508,28 @@
 
   let show-vat-per-item_ = show-vat-per-item
   if show-vat-per-item == auto {
-    show-vat-per-item_ = not (vat-exemption_) and (items_.find(item => item.vat != default-vat) != none)
+    show-vat-per-item_ = (
+      not (vat-exemption_)
+        and (items_.find(item => item.vat != default-vat) != none)
+    )
   }
 
   // --- Calculations ---
 
-  let netto-price-sum = items_.map(item => item.base-price * item.quantity).sum()
+  let netto-price-sum = items_
+    .map(item => item.base-price * item.quantity)
+    .sum()
 
   let vat-stages = items_
     .map(item => item.vat)
     .dedup()
     .map(vat-val => (
       vat: vat-val,
-      total: items_.filter(item => item.vat == vat-val).map(item => item.base-price * item.quantity).sum() * vat-val,
+      total: items_
+        .filter(item => item.vat == vat-val)
+        .map(item => item.base-price * item.quantity)
+        .sum()
+        * vat-val,
     ))
 
   let total-price = netto-price-sum + vat-stages.map(vat => vat.total).sum()
@@ -547,7 +571,9 @@
   let table-body = items_
     .enumerate()
     .map(((pos, item)) => {
-      let unit-price-display = if show-gross-prices { item.price } else { item.base-price-display }
+      let unit-price-display = if show-gross-prices { item.price } else {
+        item.base-price-display
+      }
       let total-row-price = unit-price-display * item.quantity
 
       (
@@ -566,13 +592,21 @@
             )
           }
         ),
-        ..(if show-vat-per-item_ { ([#calc.round(item.vat * 100, digits: 1)%],) }),
+        ..(
+          if show-vat-per-item_ { ([#calc.round(item.vat * 100, digits: 1)%],) }
+        ),
       )
     })
 
   // Footer Logic
-  let total-col-idx = table-header.len() - if show-vat-per-item_ { 1 } else { 0 }
-  let amount-line = table.hline.with(start: total-col-idx - 1, end: total-col-idx, stroke: .5pt + black)
+  let total-col-idx = (
+    table-header.len() - if show-vat-per-item_ { 1 } else { 0 }
+  )
+  let amount-line = table.hline.with(
+    start: total-col-idx - 1,
+    end: total-col-idx,
+    stroke: .5pt + black,
+  )
 
   let left-spacer = (total-col-idx - 2) * ([],)
   let mwst-spacer = if show-vat-per-item_ { ([],) } else { () }
@@ -589,7 +623,10 @@
           .sorted(key: it => it.vat)
           .map(vs => (
             ..left-spacer,
-            align(right, [#calc.round(vs.vat * 100, digits: 1)% Mehrwertsteuer:]),
+            align(
+              right,
+              [#calc.round(vs.vat * 100, digits: 1)% Mehrwertsteuer:],
+            ),
             [#format-currency(vs.total) #currency],
             ..mwst-spacer,
           ))
@@ -617,7 +654,10 @@
           .sorted(key: it => it.vat)
           .map(vs => (
             ..left-spacer,
-            align(right, [inkl. #calc.round(vs.vat * 100, digits: 1)% Mehrwertsteuer:]),
+            align(
+              right,
+              [inkl. #calc.round(vs.vat * 100, digits: 1)% Mehrwertsteuer:],
+            ),
             [#format-currency(vs.total) #currency],
             ..mwst-spacer,
           ))
@@ -626,7 +666,9 @@
     ),
   )
 
-  let table-footer = if show-gross-prices { gross-table-footer } else { netto-table-footer }
+  let table-footer = if show-gross-prices { gross-table-footer } else {
+    netto-table-footer
+  }
 
 
   table(
@@ -647,7 +689,9 @@
     ),
   )
 
-  if vat-exemption_ { block[Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.] }
+  if vat-exemption_ {
+    block[Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.]
+  }
 }
 
 /// Generates a sentence stating the payment deadline.
@@ -676,7 +720,7 @@
     }
     "bis spätestens " + date-str
   } else if days != none {
-    "innerhalb von " + days + " Tagen"
+    "innerhalb von " + str(days) + " Tagen"
   } else {
     "zeitnah"
   }
