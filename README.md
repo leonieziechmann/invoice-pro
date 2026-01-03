@@ -13,6 +13,7 @@ A professional, compliant, and automated invoice template for [Typst](https://ty
 - **EPC QR-Code (GiroCode):** Generates a scannable banking QR code for easy payment apps using `rustycure`.
 - **Flexible Tax Settings:** Supports standard VAT (Brutto/Netto modes).
   - **Kleinunternehmerregelung:** Built-in support for small business exemption (§ 19 UStG).
+- **Internationalization:** Built-in support for German and English with customizable translations.
 - **Customizable:** Easy configuration of sender, recipient, payment goals, and bank details.
 
 ## Getting Started
@@ -32,10 +33,9 @@ Here is a minimal example of how to create an invoice:
 ```typ
 #import "@preview/invoice-pro:0.1.0": *
 
-// Set language to German for correct date/number formatting
-#set text(lang: "de")
-
+// Set language to German for correct date/number formatting and translations
 #show: invoice.with(
+  language: "de", // or "en" for English
   format: "DIN-5008-A", // or "DIN-5008-B"
 
   sender: (
@@ -84,6 +84,8 @@ Here is a minimal example of how to create an invoice:
 
 | Argument | Type | Description |
 | :--- | :--- | :--- |
+| `language` | string \| dict | Language for translations: `"de"` (German, default) or `"en"` (English). Can also pass a custom translation dictionary. |
+| `override-translations` | dict \| none | Custom translations to override specific strings in the selected language. |
 | `format` | string | "DIN-5008-A" or "DIN-5008-B" (Default: B). |
 | `sender` | dict | Sender details (`name`, `address`, `city`, `extra`). |
 | `recipient` | dict | Recipient details. |
@@ -111,6 +113,59 @@ Here is a minimal example of how to create an invoice:
 | `price` | float | Price per unit. |
 | `quantity` | float | Amount (Default: 1). |
 | `vat` | float | Specific VAT rate for this item (overrides default). |
+
+## Localization
+
+The invoice-pro template supports multiple languages with built-in translations for German and English.
+
+### Supported Languages
+
+- `"de"` - German (Deutsch) - Default
+- `"en"` - English - United Kingdom
+
+### Changing Language
+
+```typ
+// English invoice
+#show: invoice.with(
+  language: "en",
+  // ... other parameters
+)
+```
+
+### Custom Translations
+
+You can override specific translations for a language:
+
+```typ
+#show: invoice.with(
+  language: "en",
+  override-translations: (
+    invoice: "Quote", // Change "Invoice" to "Quote"
+    closing: "Best regards",
+  ),
+  // ... other parameters
+)
+```
+
+### Custom Language Dictionary
+
+For complete control, you can pass a custom translation dictionary:
+
+```typ
+#let my-translations = (
+  id: "en",
+  country: "GB",
+  invoice: "Quote",
+  recipient: "Recipient",
+  // ... include all necessary keys
+)
+
+#show: invoice.with(
+  language: my-translations,
+  // ... other parameters
+)
+```
 
 #### Line items with VAT exemption
 
@@ -179,10 +234,11 @@ Here is a minimal example of how to create an invoice:
 I am actively working on improving this template. Here is what's planned for future releases:
 
 - [ ] **Refactored API:** Moving away from global states to a more robust, scoped API (inspired by CeTZ) for better stability and flexibility.
-- [ ] **Internationalization (i18n):** Built-in support for English and other languages (currently creates German invoices by default).
+- [x] **Internationalization (i18n):** Built-in support for English and German with customizable translations.
 - [ ] **Theming Engine:** Allow easy customization of accent colors and fonts to match corporate identities.
 - [ ] **Data Loading:** Helper functions to load invoice items directly from JSON, CSV, or YAML files.
 - [ ] **ZUGFeRD Support:** (Long-term goal) Embedding XML data for fully compliant e-invoicing.
+- [ ] **Additional Languages:** Support for French, Spanish, and other languages (contributions welcome!).
 
 Have an idea? Feel free to open an issue or pull request!
 

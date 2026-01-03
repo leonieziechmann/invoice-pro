@@ -11,7 +11,17 @@
   return ""
 }
 
-#let format-currency(number, locale: "de") = {
+/// Formats a number as currency with proper decimal places and locale-specific separators.
+///
+/// -> str
+#let format-currency(
+  /// The number to format.
+  /// -> float | int
+  number,
+  /// The locale for formatting ("de" uses comma as decimal separator, "en" uses period).
+  /// -> str
+  locale: "de",
+) = {
   let precision = 2
   assert(precision > 0)
   let s = str(calc.round(number, digits: precision))
@@ -23,7 +33,7 @@
   for i in range(precision - after_dot.len() + 1) {
     s = s + "0"
   }
-  // fake de locale
+  // Apply locale-specific decimal separator
   if locale == "de" {
     s.replace(".", ",")
   } else {
