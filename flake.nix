@@ -10,11 +10,12 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
     flake-utils.url = "github:numtide/flake-utils";
+    tytanic.url = "github:typst-community/tytanic/v0.3.3";
     typst-utils.url = "github:leonieziechmann/typst-nix-utils";
     loom.url = "github:leonieziechmann/loom";
   };
 
-  outputs = { self, nixpkgs, pre-commit-hooks, flake-utils, typst-utils, loom, }:
+  outputs = { self, nixpkgs, pre-commit-hooks, flake-utils, typst-utils, tytanic, loom, }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -65,6 +66,7 @@
             typstEnv
             typstyle
             nodePackages.prettier
+            tytanic.packages.${system}.default
           ] ++ self.checks.${system}.pre-commit-check.enabledPackages;
 
           shellHook = ''
