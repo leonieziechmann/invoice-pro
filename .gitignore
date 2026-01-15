@@ -6,3 +6,6 @@
 .typst-data/
 .typst-cache/
 result
+
+# Pre Commit Hook
+.pre-commit-config.yaml
