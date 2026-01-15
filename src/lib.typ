@@ -670,7 +670,6 @@
     netto-table-footer
   }
 
-
   table(
     stroke: none,
     columns: (auto, 1fr, ..((table-header.len() - 2) * (auto,))),
