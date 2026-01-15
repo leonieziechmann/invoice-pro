@@ -173,6 +173,48 @@ Here is a minimal example of how to create an invoice:
 
 > Bitte überweisen Sie den Gesamtbetrag von **123,45€** bis spätestens 01.01.2026 ohne Abzug auf das unten genannte Konto.
 
+### `bank-details` function
+
+Renders a block containing the bank details and an optional EPC-QR-Code (GiroCode) for easy mobile payment.
+
+| Argument              | Type         | Description                                                                                        |
+| --------------------- | ------------ | -------------------------------------------------------------------------------------------------- |
+| `bank`                | `str`        | `content`                                                                                          |
+| `iban`                | `str`        | **Required.** The IBAN (formatting is handled automatically).                                      |
+| `bic`                 | `str`        | **Required.** The BIC (Bank Identifier Code).                                                      |
+| `name`                | `auto`       | `str`                                                                                              |
+| `reference`           | `str`        | `none`                                                                                             |
+| `show-refernce`       | `bool`       | Toggles visibility of the reference line. (Note: Parameter is currently spelled `show-refernce`) . |
+| `payment-amount`      | `float`      | `auto`                                                                                             |
+| `account-holder-text` | `str`        | `content`                                                                                          |
+| `qr-code`             | `dictionary` | Configuration for the QR code `(display: bool, size: length)`. Default size is `4em`.              |
+
+```typst
+// Standard usage with automatic total and reference
+#bank-details(
+  bank: "Sparkasse Musterstadt",
+  iban: "DE00 1234 5678 9012 3456 78",
+  bic: "SPKDE...",
+)
+
+// Customizing the QR code size and reference text
+#bank-details(
+  bank: "Neo Bank",
+  iban: "DE99...",
+  bic: "NEO...",
+  reference: "Rechnungs-Nr. 2024-001 / Kundennummer 55",
+  qr-code: (size: 3cm)
+)
+
+// Hiding the QR Code
+#bank-details(
+  bank: "Oldschool Bank",
+  iban: "DE11...",
+  bic: "OLD...",
+  qr-code: (display: false)
+)
+```
+
 ## 🛠️ Development
 
 This project uses **Nix** to provide a reproducible, sandboxed development environment. You do not need to install Typst, linters, or formatters globally—the flake provides everything.

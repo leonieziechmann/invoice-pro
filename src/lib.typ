@@ -308,6 +308,9 @@
   /// The payment reference. If `none`, the invoice number is used.
   /// -> str | none
   reference: auto,
+  /// Toggls the visabilitity of the reference
+  /// -> bool
+  show-refernce: true,
   /// The amount to transfer. If `none`, the calculated total is used.
   /// -> float | int | none
   payment-amount: auto,
@@ -386,9 +389,11 @@
     Kreditinstitut: #bank \
     IBAN: *#ibanator.iban(iban_)* \
     BIC: #bic \
+    #if show-refernce [Referenz: *#reference_* ] \
     #h(6.5cm)
   ][#block(width: qr-code_.size, qr-image)])
 }
+
 
 /// Helper function to define a single line item.
 ///
