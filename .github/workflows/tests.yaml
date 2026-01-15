@@ -1,0 +1,52 @@
+name: Testing
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'lib.typ'
+      - 'src/**'
+      - 'tests/**'
+      - 'template/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'lib.typ'
+      - 'src/**'
+      - 'tests/**'
+      - 'template/**'
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v14
+        with:
+          name: typ-flow
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Run test suite
+        run: nix develop --accept-flake-config --command tt run
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: artifacts
+          path: |
+            tests/**/diff/*.png
+            tests/**/out/*.png
+            tests/**/ref/*.png
+          retention-days: 5

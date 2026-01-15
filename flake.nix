@@ -1,64 +1,81 @@
 {
   description = "invoice-pro dev environment";
 
+  nixConfig = {
+    extra-substituters = [ "https://typ-flow.cachix.org" ];
+    extra-trusted-public-keys = [ "typ-flow.cachix.org-1:WEY45Irm+quH9n4ENB5rOxkdxfgkTcB3iMtdaADjf9s=" ];
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
+    flake-utils.url = "github:numtide/flake-utils";
+    tytanic.url = "github:typst-community/tytanic/v0.3.3";
+    typst-utils.url = "github:leonieziechmann/typst-nix-utils";
+    loom.url = "github:leonieziechmann/loom";
   };
 
-  outputs = { self, nixpkgs, pre-commit-hooks }:
-    let
-      system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
+  outputs = { self, nixpkgs, pre-commit-hooks, flake-utils, typst-utils, tytanic, loom, }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
 
-      toml = builtins.fromTOML (builtins.readFile ./typst.toml);
-      name = toml.package.name;
-      version = toml.package.version;
+        toml = builtins.fromTOML (builtins.readFile ./typst.toml);
+        name = toml.package.name;
+        version = toml.package.version;
 
-    in
-    {
-      checks.${system}.pre-commit-check = pre-commit-hooks.lib.${system}.run {
-        src = ./.;
-        hooks = {
-          typstyle = {
-            enable = true;
-            name = "typstyle";
-            entry = "${pkgs.typstyle}/bin/typstyle -i";
-            files = "\\.typ$";
-          };
-          markdownlint.enable = true;
-          prettier = {
-            enable = true;
-            types_or = [ "markdown" ];
-          };
-          nixpkgs-fmt.enable = true;
+        invoice-proPackage = typst-utils.lib.buildTypstPackage {
+          inherit pkgs;
+          pname = toml.package.name;
+          version = toml.package.version;
+          src = ./.;
+          files = [
+            "typst.toml"
+            "LICENSE"
+            "src"
+            "template"
+          ];
         };
-      };
 
-      devShells.${system}.default = pkgs.mkShell {
-        buildInputs = with pkgs; [
-          typst
-          typstyle
-          markdownlint-cli
-          nodePackages.prettier
-        ] ++ self.checks.${system}.pre-commit-check.enabledPackages;
+        loomPackage = loom.packages.${system}.default;
 
-        shellHook = ''
-          ${self.checks.${system}.pre-commit-check.shellHook}
+        typstEnv = typst-utils.lib.mkTypstEnv {
+          inherit pkgs;
+          typst = pkgs.typst;
+          packages = [
+            invoice-proPackage
+            loomPackage
+          ];
+        };
 
-          export XDG_DATA_HOME="$PWD/.typst-data"
-          export XDG_CACHE_HOME="$PWD/.typst-cache"
+      in
+      {
+        packages.default = invoice-proPackage;
 
-          PKG_DIR="$XDG_DATA_HOME/typst/packages/preview/${name}/${version}"
+        checks.pre-commit-check = pre-commit-hooks.lib.${system}.run {
+          src = ./.;
+          hooks = {
+            typstyle = { enable = true; name = "typstyle"; entry = "${pkgs.typstyle}/bin/typstyle -i"; files = "\\.typ$"; };
+            prettier = { enable = true; types_or = [ "markdown" ]; };
+            nixpkgs-fmt.enable = true;
+          };
+        };
 
-          echo "✨ Environment isolated. Data & Cache are local."
+        devShells.default = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            typstEnv
+            typstyle
+            nodePackages.prettier
+            tytanic.packages.${system}.default
+          ] ++ self.checks.${system}.pre-commit-check.enabledPackages;
 
-          mkdir -p "$(dirname "$PKG_DIR")"
-          rm -rf "$PKG_DIR"
-          ln -s "$PWD" "$PKG_DIR"
-
-          echo "✔  Package linked! You can now use: #import \"@preview/${name}:${version}\": *"
-        '';
-      };
-    };
+          shellHook = ''
+            ${self.checks.${system}.pre-commit-check.shellHook}
+            echo "✔  Packages linked! You can now use:"
+            echo "    @preview/${name}:${version}"
+            echo "    @preview/loom:${loomPackage.version}"
+          '';
+        };
+      }
+    );
 }
