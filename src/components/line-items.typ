@@ -4,7 +4,6 @@
 #import "../utils/coercion.typ"
 #import "../utils/types.typ"
 #import "../data/tax.typ" as m-tax
-#import "../layout/line-item-layout.typ": render-invoice
 
 /// The root container for all invoice items, bundles, and modifiers.
 /// It establishes overarching tax settings, manages the global application of modifiers,
@@ -68,6 +67,10 @@
           }
         })
       })
+
+      nest("theme", {
+        ensure("line-items", (..) => [Line Items])
+      })
     }),
     measure: (ctx, children) => {
       let modifier-applicator = loom.query.find-signal(
@@ -94,6 +97,7 @@
 
         update("price", ctx.format.currency-fine)
         update("total", ctx.format.currency)
+        update("unmodified-total", ctx.format.currency)
 
         update("tax", x => (
           rate: (ctx.format.percent)(x.rate),
@@ -108,7 +112,9 @@
           (
             name: [#d.name],
             description: [#d.description],
-            display: display-format(d.display),
+            display: display-format(calc.abs(d.display)),
+            absolute: (ctx.format.currency)(calc.abs(d.absolute)),
+            is-percent: d.type == "relative",
             has-description: d.description != none,
           )
         }))
@@ -121,7 +127,9 @@
           (
             name: [#s.name],
             description: [#s.description],
-            display: display-format(s.display),
+            display: display-format(calc.abs(s.display)),
+            absolute: (ctx.format.currency)(calc.abs(s.absolute)),
+            is-percent: s.type == "relative",
             has-description: s.description != none,
           )
         }))
@@ -148,6 +156,11 @@
         gross: (ctx.format.currency)(tax-applicator.gross-total),
       )
 
+      let unmodified-formated-total = (
+        net: (ctx.format.currency)(tax-applicator.unmodified-net-total),
+        gross: (ctx.format.currency)(tax-applicator.unmodified-gross-total),
+      )
+
       let formated-discounts = modifier-applicator.modifier.discounts.map(
         discount => loom.mutator.batch(discount, {
           import loom.mutator: *
@@ -156,12 +169,13 @@
           update("description", x => [#x])
 
           remove("type")
+          put("is-percent", discount.type == "relative")
           update("display", d => {
             if discount.type == "absolute" [#(ctx.format.currency)(
               calc.abs(d),
-            )] else [#(ctx.format.percent)(calc.abs(d)) (#(ctx.format.currency)(discount.absolute))]
+            )] else [#(ctx.format.percent)(calc.abs(d))]
           })
-          remove("absolute")
+          update("absolute", x => (ctx.format.currency)(calc.abs(x)))
 
           if discount.type == "relative" { put("split", (:)) }
           update("split", split => split
@@ -186,12 +200,13 @@
           update("description", x => [#x])
 
           remove("type")
+          put("is-percent", surcharge.type == "relative")
           update("display", d => {
             if surcharge.type == "absolute" [#(ctx.format.currency)(
               calc.abs(d),
             )] else [#(ctx.format.percent)(calc.abs(d))]
           })
-          remove("absolute")
+          update("absolute", x => (ctx.format.currency)(calc.abs(x)))
 
           if surcharge.type == "relative" { put("split", (:)) }
           update("split", split => split
@@ -216,6 +231,9 @@
         multiple-quantities: items.map(i => i.quantity).dedup().len() > 1,
         multiple-units: items.map(i => i.unit).dedup().len() > 1,
         multiple-tax-rates: items.map(i => i.tax).dedup().len() > 1,
+        has-global-modifier: formated-discounts.len()
+          + formated-surcharges.len()
+          > 0,
       )
 
       let view = (
@@ -224,16 +242,22 @@
         surcharges: formated-surcharges,
         taxes: formated-taxes,
         total: formated-total,
+        unmodified-total: unmodified-formated-total,
         layout-information: item-information,
+        tax-mode: ctx.tax-mode,
       )
 
-      return (1, view)
+      let public = (
+        total: (
+          net: tax-applicator.net-total,
+          gross: tax-applicator.gross-total,
+        ),
+        formated-total: formated-total,
+      )
+
+      return (public, view)
     },
-    draw: (ctx, _, view, body) => {
-      [= Line Items]
-      render-invoice(view)
-      body
-    },
+    draw: (ctx, _, view, body) => (ctx.theme.line-items)(ctx, view, body),
     (
       modifier-applicator,
       tax-applicator,

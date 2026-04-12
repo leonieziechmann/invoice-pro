@@ -1,8 +1,49 @@
-#import "../loom-wrapper.typ": data-motif, loom, weave
+#import "../loom-wrapper.typ": data-motif, loom, loom-key
 #import "../logic/calc-item.typ": calculate-item-data
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
 #import "../data/tax.typ" as m-tax
+
+#let normalize-modifier(ctx, modifier) = {
+  let modifier-type = type(modifier)
+  if modifier-type == content {
+    let (_, frames) = loom.core.intertwine(
+      key: loom-key,
+      loom.path.append((:), "line-items"),
+      modifier,
+    )
+
+    let signals = loom.query.collect-signals(frames, kind: "modifier")
+
+    signals.map(s => (
+      name: s.name,
+      amount: if s.type == "relative" { float(s.amount) * 100% } else {
+        s.amount
+      },
+      description: s.description,
+    ))
+  } else if modifier-type == dictionary {
+    modifier
+  } else {
+    none
+  }
+}
+
+#let evaluate-modifier(ctx, modifier) = {
+  let modifier-type = type(modifier)
+
+  if modifier == auto { return auto }
+
+  if modifier-type == array {
+    modifier.map(normalize-modifier.with(ctx)).flatten()
+  } else if modifier-type == content {
+    (normalize-modifier(ctx, modifier),).flatten()
+  } else if modifier-type == dictionary {
+    (modifier,)
+  } else {
+    ()
+  }.filter(m => m != none)
+}
 
 /// Represents a single line item, product, or service on the invoice.
 /// It integrates with the loom data model to automatically calculate base prices,
@@ -74,14 +115,22 @@
   )
 
   types.require(input-gross, "item::input-gross", auto, bool)
-  types.require(tax, "item::tax", auto, types.tax-like)
+  types.require(tax, "item::tax", auto, ratio, types.tax-like)
 
   types.require(item-id, "item::item-id", none, auto, str, dictionary)
   types.require(reference, "item::reference", none, auto, str)
 
-  types.require(modifier, "item::modifier", none, auto, loom.matcher.many(
-    types.modifier-type,
-  ))
+  types.require(
+    modifier,
+    "item::modifier",
+    none,
+    auto,
+    content,
+    loom.matcher.many(loom.matcher.choice(
+      types.modifier-type,
+      content,
+    )),
+  )
 
   data-motif(
     "item",
@@ -96,21 +145,47 @@
         coercion.to-decimal(base-quantity),
         default: decimal("1"),
       )
-      derive("unit", unit, default: [pc.])
+      derive("unit", unit, default: [Stk.])
 
       derive("date", coercion.to-date(date))
 
-      derive("price", coercion.to-decimal(price), default: auto)
-      derive("total", coercion.to-decimal(total), default: auto)
+      derive("item-price", coercion.to-decimal(price), default: auto)
+      derive("item-total", coercion.to-decimal(total), default: auto)
 
       ensure("tax-mode", "exclusive")
       derive("input-gross", input-gross)
-      derive("tax", m-tax.to-tax(tax), default: m-tax.zero())
+      update("tax", t => if type(t) != ratio { t } else {
+        let infer-tax = ctx
+          .at("locale", default: (:))
+          .at("normalize", default: (:))
+          .at("infer-tax", default: (..) => panic(
+            "item::tax can not be of type `ratio`.",
+          ))
+        infer-tax(t)
+      })
+      derive(
+        "tax",
+        {
+          if type(tax) == ratio {
+            let infer-tax = ctx
+              .at("locale", default: (:))
+              .at("normalize", default: (:))
+              .at("infer-tax", default: (..) => panic(
+                "item::tax can not be of type `ratio`.",
+              ))
+            infer-tax(tax)
+          } else {
+            m-tax.to-tax(tax)
+          }
+        },
+        default: m-tax.zero(),
+      )
 
       derive("item-id", item-id)
       derive("reference", reference)
 
       derive("modifier", modifier, default: ())
+      update("modifier", evaluate-modifier.with(ctx))
 
       nest("normalize", {
         ensure("money", v => calc.round(coercion.to-decimal(v), digits: 2))

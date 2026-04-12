@@ -101,7 +101,32 @@
 
       derive("input-gross", input-gross, default: false)
       ensure("tax-mode", "exclusive")
-      derive("tax", m-tax.to-tax(tax), default: m-tax.zero())
+      update("tax", t => if type(t) != ratio { t } else {
+        let infer-tax = ctx
+          .at("locale", default: (:))
+          .at("normalize", default: (:))
+          .at("infer-tax", default: (..) => panic(
+            "item::tax can not be of type `ratio`.",
+          ))
+        infer-tax(t)
+      })
+      derive(
+        "tax",
+        {
+          if type(tax) == ratio {
+            let infer-tax = ctx
+              .at("locale", default: (:))
+              .at("normalize", default: (:))
+              .at("infer-tax", default: (..) => panic(
+                "item::tax can not be of type `ratio`.",
+              ))
+            infer-tax(tax)
+          } else {
+            m-tax.to-tax(tax)
+          }
+        },
+        default: m-tax.zero(),
+      )
 
       derive("item-id", item-id)
       derive("reference", reference)

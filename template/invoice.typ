@@ -1,131 +1,108 @@
 #import "@preview/invoice-pro:0.2.0": *
 
-#let item-discount(name, amount: 0%, description: none) = (
-  (name: name, amount: -amount, description: description),
+#show: invoice.with(
+  theme: themes.DIN-5008(form: "A"),
+  sender: (
+    name: "Deine Firma / Name",
+    address: "Musterstraße 1",
+    city: "12345 Musterstadt",
+  ),
+  recipient: (
+    name: "Kunden Name",
+    address: "Kundenstraße 5",
+    city: "98765 Kundenstadt",
+  ),
+  invoice-nr: "2026-01",
+  references: (
+    "Steuernummer": "123/456/789",
+  ),
 )
 
-#show: invoice()
+#set text(10pt)
 
 #line-items[
   #bundle(
+    [Webseiten Relaunch 2026],
     date: (date(10, 2, 2026), date(5, 3, 2026)),
-  )[Webseiten Relaunch 2026][
+    unit: "Pausch.",
+  )[
     #item(
+      [Konzeption & Wireframing],
       price: 1200.00,
       quantity: 1,
       unit: "Pauschale",
-    )[Konzeption & Wireframing]
-    #item(price: 85.00, quantity: 15, unit: "Std.")[UI/UX Design]
+    )
+    #item([UI/UX Design], price: 85.00, quantity: 15, unit: "Std.")
     #item(
+      [Frontend & Backend Entwicklung],
       price: 95.00,
       quantity: 40,
       unit: "Std.",
-    )[Frontend & Backend Entwicklung]
+    )
 
-    #modifier(amount: -10%)[Paketrabatt (10% auf Entwicklungsleistungen)]
+    #discount([Paketrabatt (10% auf Entwicklungsleistungen)], amount: 10%)
 
-    #bundle[SEO & Tracking Setup][
+    #bundle([SEO & Tracking Setup])[
       #item(
+        [Keyword-Recherche & Strategie],
         price: 90.00,
         quantity: 5,
         unit: "Std.",
-      )[Keyword-Recherche & Strategie]
-      #item(price: 150.00, quantity: 1)[Setup Google Analytics & Tag Manager]
+      )
+      #item([Setup Google Analytics & Tag Manager], price: 150.00, quantity: 1)
     ]
   ]
 
-  #apply(tax: tax.vat(7%), modifier: item-discount(
-    amount: 15%,
-  )[Frühbucherrabatt])[
+  #apply(tax: 7%)[
     #item(
+      [Fachbuch: "Modernes Webdesign"],
       price: 49.90,
       quantity: 2,
       unit: "Stk.",
-    )[Fachbuch: "Modernes Webdesign"]
-    #item(price: 29.90, quantity: 1, unit: "Stk.")[Fachbuch: "SEO für Anfänger"]
+    )
+    #item(
+      [Fachbuch: "SEO für Anfänger"],
+      price: 29.90,
+      quantity: 1,
+      unit: "Stk.",
+    )
   ]
 
   #item(
+    [Premium Hosting],
     price: 15.00,
     quantity: 12,
     unit: "Monate",
     date: datetime.today(),
-  )[Premium Hosting]
-
-  #item(total: 11.90, input-gross: true)[Domainregistrierung (.de)]
+  )
 
   #item(
+    [Domainregistrierung (.de)],
+    total: 11.90,
+    input-gross: true,
+    unit: "Pausch.",
+  )
+
+  #item(
+    [Einrichtung der E-Mail-Postfächer],
     price: 0,
     tax: tax.zero(),
     description: "Inklusivleistung gemäß Rahmenvertrag",
-  )[Einrichtung der E-Mail-Postfächer]
+    unit: "Pausch.",
+  )
 
-  #modifier(amount: -50)[Aktionsgutschein "NEUKUNDE50"]
-  #modifier(amount: 15.00)[Bearbeitungs- und Servicegebühr]
-  #modifier(amount: -3%)[Skonto (bei Zahlung innerhalb von 7 Tagen)]
+  #discount([Aktionsgutschein "NEUKUNDE50"], amount: 50)
+  #surcharge([Bearbeitungs- und Servicegebühr], amount: 15.00)
 ]
 
-#pagebreak()
+#payment-goal(days: 14)
 
+#bank-details(
+  bank: "Musterbank",
+  iban: "DE07100202005821158846",
+  bic: "MUSTERBICXX",
+)
 
+#v(-.5em)
 
-
-
-
-
-#line-items(tax-mode: "exclusive", tax: tax.vat(19%))[
-  #bundle[Dienstreise Berlin][
-    #item(price: 120.00, quantity: 2, tax: tax.vat(7%), date: date(
-      12,
-      5,
-      2026,
-    ))[Hotelübernachtung]
-    #item(price: 85.50, quantity: 1, tax: tax.vat(19%), date: date(
-      14,
-      5,
-      2026,
-    ))[Bahnticket]
-  ]
-
-  #bundle(
-    description: "Individuell vereinbartes Catering-Paket laut Angebot",
-    date: date(20, 5, 2026),
-  )[Messecatering][
-    #item(price: 25.00, quantity: 50, tax: tax.vat(19%), date: date(
-      20,
-      5,
-      2026,
-    ))[Buffet Standard]
-    #item(price: 4.50, quantity: 50, tax: tax.vat(19%), date: date(
-      20,
-      5,
-      2026,
-    ))[Getränkepauschale]
-  ]
-
-  #for i in range(1, 4) {
-    item(
-      price: 15.00,
-      description: [Lizenzschlüssel für Arbeitsplatz #i],
-    )[Software-Abonnement (Monat)]
-  }
-
-  #item(
-    price: 12.00,
-    quantity: 250,
-    base-quantity: 100,
-    unit: "Stk.",
-  )[Flyer Druck (Preis pro 100 Stk.)]
-
-  #bundle(quantity: 3, base-quantity: 1, unit: "Paket")[Social Media Kampagne][
-    #item(price: 150.00)[Kampagnen-Setup]
-    #item(price: 50.00)[Grafik-Erstellung]
-  ]
-
-  #item(
-    total: 450.00,
-    quantity: 6,
-    unit: "Std.",
-    description: "Einzelpreis wurde automatisch via Total errechnet",
-  )[Notdienst-Pauschale]
-]
+#signature()

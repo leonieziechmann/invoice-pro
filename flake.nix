@@ -20,7 +20,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        toml = builtins.fromTOML (builtins.readFile ./typst.toml);
+        toml = fromTOML (builtins.readFile ./typst.toml);
         name = toml.package.name;
         version = toml.package.version;
 

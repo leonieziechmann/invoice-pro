@@ -28,8 +28,12 @@
   }
 
   // 3. Base Price Calculation (B2C = gross, B2B = net)
-  let price = if ctx.price != auto { ctx.price * tax-modifier } else { auto }
-  let total = if ctx.total != auto { ctx.total * tax-modifier } else { auto }
+  let price = if ctx.item-price != auto { ctx.item-price * tax-modifier } else {
+    auto
+  }
+  let total = if ctx.item-total != auto { ctx.item-total * tax-modifier } else {
+    auto
+  }
 
   if price == auto and total == auto {
     price = decimal("0")

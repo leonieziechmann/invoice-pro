@@ -81,3 +81,87 @@
     },
   )
 }
+
+#let discount(
+  /// The name or label of the modifier (e.g., "Summer Sale Discount", "Shipping Fee").
+  /// -> str | content
+  name,
+  /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
+  // -> bool | auto
+  description: auto,
+  /// The value of the modifier.
+  /// -> ratio | int | float | decimal | str
+  amount: 0,
+  /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
+  /// -> bool | auto
+  input-gross: auto,
+) = {
+  types.require(
+    amount,
+    "discount::amount",
+    types.decimal-like,
+    types.ratio-like,
+  )
+
+  let final-amount = 0
+  if type(amount) == ratio {
+    assert(amount >= 0%, message: "discount::amount must be positive!")
+    final-amount = -amount
+  } else {
+    let normalized-amount = coercion.to-decimal(amount)
+    assert(
+      normalized-amount >= 0,
+      message: "discount::amount must be positive!",
+    )
+    final-amount = -normalized-amount
+  }
+
+  modifier(
+    name,
+    description: description,
+    amount: final-amount,
+    input-gross: input-gross,
+  )
+}
+
+#let surcharge(
+  /// The name or label of the modifier (e.g., "Summer Sale Discount", "Shipping Fee").
+  /// -> str | content
+  name,
+  /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
+  // -> bool | auto
+  description: auto,
+  /// The value of the modifier.
+  /// -> ratio | int | float | decimal | str
+  amount: 0,
+  /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
+  /// -> bool | auto
+  input-gross: auto,
+) = {
+  types.require(
+    amount,
+    "surcharge::amount",
+    types.decimal-like,
+    types.ratio-like,
+  )
+
+  let final-amount = 0
+  if type(amount) == ratio {
+    assert(amount >= 0%, message: "surcharge::amount must be positive!")
+    final-amount = amount
+  } else {
+    let normalized-amount = coercion.to-decimal(amount)
+    assert(
+      normalized-amount >= 0,
+      message: "discount::amount must be positive!",
+    )
+    final-amount = normalized-amount
+  }
+
+  modifier(
+    name,
+    description: description,
+    amount: final-amount,
+    input-gross: input-gross,
+  )
+}

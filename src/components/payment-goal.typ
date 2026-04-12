@@ -1,0 +1,43 @@
+#import "../loom-wrapper.typ": loom, managed-motif
+#import "../utils/types.typ"
+#import "../utils/coercion.typ"
+
+#let payment-goal(
+  days: none,
+  date: none,
+) = {
+  types.require(days, "payment-goal::days", none, int)
+  types.require(date, "payment-goal::date", none, datetime, str, content)
+
+  managed-motif(
+    "payment-goal",
+    scope: ctx => loom.mutator.batch(ctx, {
+      import loom.mutator: *
+
+      nest("format", {
+        ensure("currency", v => [#v])
+      })
+
+      nest("theme", {
+        ensure("payment-goal", (..) => [Payment Goal])
+      })
+
+      nest("global", {
+        nest("total", {
+          ensure("gross", 0)
+        })
+      })
+    }),
+    measure: (ctx, _) => {
+      let data = (
+        days: days,
+        date: date,
+        total: ctx.global.total.gross,
+      )
+
+      (none, data)
+    },
+    draw: (ctx, _, view, ..) => (ctx.theme.payment-goal)(ctx, view),
+    none,
+  )
+}

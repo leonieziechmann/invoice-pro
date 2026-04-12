@@ -47,6 +47,9 @@
   let net-total = decimal("0")
   let gross-total = decimal("0")
 
+  let unmodified-net-total = decimal("0")
+  let unmodified-gross-total = decimal("0")
+
   let taxes = (:)
 
   for (key, group) in tax-groups.groups.pairs() {
@@ -65,6 +68,8 @@
       .sum(default: decimal("0"))
 
     let scope-modifier-totals = modifier-groups.at(key)
+
+    let unmodified-group-total = group.total
     let group-total = group.total + scope-modifier-totals
 
     let tax = (
@@ -78,17 +83,27 @@
       tax.absolute = tax-amount
       net-total += group-total
       gross-total += group-total + tax-amount
+
+      let unmodified-tax-amount = norm-money(unmodified-group-total * tax.rate)
+      unmodified-net-total += unmodified-group-total
+      unmodified-gross-total += unmodified-group-total + unmodified-tax-amount
     } else {
       let net = norm-money(group-total / (1 + tax.rate))
       tax.absolute = group-total - net
       net-total += net
       gross-total += group-total
+
+      let unmodified-net = norm-money(unmodified-group-total / (1 + tax.rate))
+      unmodified-net-total += unmodified-net
+      unmodified-gross-total += unmodified-group-total
     }
 
     taxes.insert(key, tax)
   }
 
   (
+    unmodified-net-total: unmodified-net-total,
+    unmodified-gross-total: unmodified-gross-total,
     net-total: net-total,
     gross-total: gross-total,
     taxes: taxes,

@@ -1,6 +1,7 @@
 #import "@preview/loom:0.1.0" as loom
 
-#let (weave, motif, prebuild-motif) = loom.construct-loom(<invoice-pro:0.2.0>)
+#let loom-key = <invoice-pro:0.2.0>
+#let (weave, motif, prebuild-motif) = loom.construct-loom(loom-key)
 
 // The Engine
 #let weave = weave
@@ -16,8 +17,6 @@
 #let debug = prebuild-motif.debug
 #let apply(..args, body) = compute-motif(
   scope: ctx => ctx + args.named(),
-  measure: (_, children) => {
-    children
-  },
+  measure: (_, children) => children,
   body,
 )
