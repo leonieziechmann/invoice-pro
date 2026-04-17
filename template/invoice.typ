@@ -13,9 +13,7 @@
     city: "98765 Kundenstadt",
   ),
   invoice-nr: "2026-01",
-  references: (
-    "Steuernummer": "123/456/789",
-  ),
+  tax-nr: "123/456/789",
 )
 
 #set text(10pt)

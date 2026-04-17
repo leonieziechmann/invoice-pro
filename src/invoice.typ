@@ -36,6 +36,9 @@
   /// The unique identifier or number of the invoice.
   /// -> none | string | content
   invoice-nr: none,
+  /// Your unique tax identifier
+  /// -> none | string | content
+  tax-nr: none,
 
   /// The default tax rate to apply if not specified elsewhere.
   /// If `auto`, it is inferred from the locale.
@@ -71,6 +74,7 @@
     )),
   )
   types.require(invoice-nr, "invoice::invoice-nr", none, str, content)
+  types.require(tax-nr, "invoice::tax-nr", none, str, content)
 
   types.require(tax, "invoice::tax", none, auto, types.tax-like)
   types.require(tax-mode, "invoice::tax-mode", "inclusive", "exclusive")
@@ -93,6 +97,10 @@
   }
 
   let document-references = ()
+  if tax-nr != none {
+    document-references.push(("Steuernummer", tax-nr))
+  }
+
   if type(references) == array { document-references = references } else if (
     type(references) == dictionary
   ) {
@@ -111,6 +119,7 @@
     subject: document-subject,
     references: document-references,
     invoice-nr: invoice-nr,
+    tax-nr: tax-nr,
 
     tax: document-tax,
     tax-mode: tax-mode,
