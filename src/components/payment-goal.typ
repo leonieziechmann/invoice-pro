@@ -2,8 +2,16 @@
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
 
+/// Displays the payment deadline and terms for the invoice.
+///
+/// -> content
 #let payment-goal(
+  /// The number of days allowed for payment from the invoice date.
+  /// -> none | int
   days: none,
+
+  /// A specific fixed date for the payment deadline.
+  /// -> none | datetime | string | content
   date: none,
 ) = {
   types.require(days, "payment-goal::days", none, int)

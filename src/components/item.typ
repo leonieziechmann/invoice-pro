@@ -4,7 +4,17 @@
 #import "../utils/coercion.typ"
 #import "../data/tax.typ" as m-tax
 
-#let normalize-modifier(ctx, modifier) = {
+/// Normalizes a modifier input (content, dictionary, or signal) into a structured modifier object.
+///
+/// -> dictionary | none
+#let normalize-modifier(
+  /// The loom context.
+  /// -> dictionary
+  ctx,
+  /// The modifier to normalize.
+  /// -> content | dictionary
+  modifier,
+) = {
   let modifier-type = type(modifier)
   if modifier-type == content {
     let (_, frames) = loom.core.intertwine(
@@ -29,7 +39,17 @@
   }
 }
 
-#let evaluate-modifier(ctx, modifier) = {
+/// Evaluates a collection of modifiers, flattening arrays and resolving content signals.
+///
+/// -> array
+#let evaluate-modifier(
+  /// The loom context.
+  /// -> dictionary
+  ctx,
+  /// The modifier(s) to evaluate.
+  /// -> auto | array | content | dictionary
+  modifier,
+) = {
   let modifier-type = type(modifier)
 
   if modifier == auto { return auto }

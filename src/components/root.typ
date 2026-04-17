@@ -1,6 +1,14 @@
 #import "../loom-wrapper.typ": loom, managed-motif
 
-#let root(body) = {
+/// The internal root container that wraps the invoice body.
+/// It initializes the global context and provides the base document structure to the theme.
+///
+/// -> content
+#let root(
+  /// The content to be rendered within the document structure.
+  /// -> content
+  body,
+) = {
   managed-motif(
     "root",
     scope: ctx => loom.mutator.batch(ctx, {

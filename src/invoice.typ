@@ -5,22 +5,51 @@
 #import "themes/themes.typ"
 #import "locale/locale.typ"
 
+/// The main entry point for creating an invoice document.
+/// It orchestrates the theme, localization, and data calculation passes.
+///
+/// -> content
 #let invoice(
+  /// The visual theme to apply to the invoice.
+  /// -> function
   theme: themes.DIN-5008(),
+  /// The locale settings for language and number formatting.
+  /// -> function
   locale: locale.de,
 
+  /// A dictionary containing sender details (e.g., name, address).
+  /// -> dictionary
   sender: (:),
+  /// A dictionary containing recipient details (e.g., name, address).
+  /// -> dictionary
   recipient: (:),
 
+  /// The date of the invoice. Defaults to today.
+  /// -> datetime
   date: datetime.today(),
+  /// The subject line of the invoice.
+  /// -> string | content
   subject: "Rechnung",
+  /// Reference information for the document header (e.g., customer number).
+  /// -> none | dictionary | array
   references: none,
+  /// The unique identifier or number of the invoice.
+  /// -> none | string | content
   invoice-nr: none,
 
+  /// The default tax rate to apply if not specified elsewhere.
+  /// If `auto`, it is inferred from the locale.
+  /// -> auto | ratio | dictionary | none
   tax: auto,
+  /// Determines if prices are handled as inclusive or exclusive of tax.
+  /// -> "inclusive" | "exclusive"
   tax-mode: "exclusive",
+  /// If true, applies small business tax exemption logic according to the locale.
+  /// -> bool
   tax-exempt-small-biz: false,
 
+  /// The content of the invoice, typically containing line-items and other components.
+  /// -> content
   body,
 ) = {
   types.require(theme, "invoice::theme", function)

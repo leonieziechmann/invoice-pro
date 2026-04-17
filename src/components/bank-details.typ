@@ -2,17 +2,44 @@
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
 
+/// Defines and renders the bank account information for payments.
+///
+/// -> content
 #let bank-details(
+  /// The name of the account holder. Defaults to the sender's name.
+  /// -> auto | none | string
   name: auto,
+
+  /// The name of the banking institution.
+  /// -> none | string
   bank: none,
+
+  /// The International Bank Account Number (IBAN).
+  /// -> none | string
   iban: none,
+
+  /// The Bank Identifier Code (BIC/SWIFT).
+  /// -> none | string
   bic: none,
 
+  /// The payment reference to be used by the customer.
+  /// -> auto | none | string
   reference: auto,
+
+  /// The specific amount to be paid. If `auto`, it uses the document total.
+  /// -> auto | none | decimal | float | int
   payment-amount: auto,
 
+  /// Whether to display the reference field in the output.
+  /// -> bool
   show-reference: true,
+
+  /// Optional custom text to label the account holder field.
+  /// -> auto
   account-holder-text: auto,
+
+  /// Configuration for a payment QR code (e.g., EPC-QR).
+  /// -> dictionary
   qr-code: (:),
 ) = {
   types.require(name, "bank-details::name", none, auto, str)
