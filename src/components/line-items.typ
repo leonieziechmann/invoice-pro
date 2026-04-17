@@ -81,6 +81,7 @@
 
       derive("tax", tax, default: m-tax.zero())
       derive("tax-mode", tax-mode, default: "exclusive")
+      ensure("tax-exempt-small-biz", false)
 
       put("show-column", {
         let base-col = ctx.at("show-column", default: (:))
@@ -323,6 +324,7 @@
         unmodified-total: unmodified-formated-total,
         layout-information: layout-information,
         tax-mode: ctx.tax-mode,
+        tax-exempt-small-biz: ctx.tax-exempt-small-biz,
       )
 
       let public = (

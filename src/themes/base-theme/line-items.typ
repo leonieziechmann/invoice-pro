@@ -373,6 +373,7 @@
     not layout.show-tax-rates
       and not layout.multiple-tax-rates
       and data.items.len() > 0
+      and not data.tax-exempt-small-biz
   ) {
     let tax-rate = data.items.first(default: (tax: (rate: [0%]))).tax.rate
     let tax-text = if is-net { "zzgl." } else { "inkl." }
@@ -401,6 +402,10 @@
   ) {
     let date = data.items.first(default: (date: none)).date
     global-infos.push([Leistungsdatum aller Positionen: #date])
+  }
+
+  if data.tax-exempt-small-biz {
+    global-infos.push([Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.])
   }
 
   if layout.show-global-information and global-infos.len() > 0 {

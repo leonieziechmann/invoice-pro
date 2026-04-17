@@ -123,6 +123,7 @@
 
     tax: document-tax,
     tax-mode: tax-mode,
+    tax-exempt-small-biz: tax-exempt-small-biz,
   )
 
   /** Data Calculations **/
