@@ -19,15 +19,18 @@
   /// -> ratio | dictionary | auto
   tax: auto,
   /// Determines how taxes are calculated globally. Defaults to `"exclusive"`.
-  /// "exclusive" | "inclusive" | auto
+  /// -> "exclusive" | "inclusive" | auto
   tax-mode: auto,
 
-  /// Whether to show the quantity column. `auto` hides it if all quantities are 1.
-  /// -> bool | auto
-  show-quantity: auto,
-  /// Whether to show the VAT column per item. `auto` shows it if VAT rates differ.
-  /// -> bool | auto
-  show-vat-per-item: auto,
+  /// Override the automatic calculations if columns should be shown
+  /// ->  auto | dictionary
+  show-column: auto,
+  /// Wether to show the total block below the line items.
+  /// -> auto | bool
+  show-total: auto,
+  /// Whether to show the information notices about information that all items have.
+  /// -> auto | bool
+  show-information: auto,
 
   /// The content block containing the `item`s, `bundle`s, and `modifier`s.
   /// -> content
@@ -43,6 +46,31 @@
     "exclusive",
     "inclusive",
   )
+  types.require(
+    show-column,
+    "line-items::show-column",
+    auto,
+    (),
+    loom.matcher.dict(loom.matcher.choice(auto, bool)),
+  )
+  types.require(show-total, "line-items::show-total", auto, bool)
+
+  let show-column-default = (
+    pos: auto,
+    description: auto,
+    modifier: auto,
+    date: auto,
+    quantity: auto,
+    unit: auto,
+    unit-price: auto,
+    total-price: auto,
+    tax-rate: auto,
+  )
+  let show-column = if type(show-column) == dictionary {
+    show-column-default + show-column
+  } else {
+    show-column-default
+  }
 
   managed-motif(
     "line-items",
@@ -53,6 +81,18 @@
 
       derive("tax", tax, default: m-tax.zero())
       derive("tax-mode", tax-mode, default: "exclusive")
+
+      put("show-column", {
+        let base-col = ctx.at("show-column", default: (:))
+        if type(base-col) == dictionary {
+          base-col + show-column
+        } else {
+          show-column
+        }
+      })
+
+      derive("show-total", show-total, default: true)
+      derive("show-information", show-information, default: true)
 
       nest("format", {
         ensure("percent", x => str(calc.round(x * 100)) + "%")
@@ -236,6 +276,44 @@
           > 0,
       )
 
+      let layout-information = (
+        show-pos: if ctx.show-column.pos == auto { true } else {
+          ctx.show-column.pos
+        },
+        show-descriptions: if ctx.show-column.description == auto {
+          true
+        } else { ctx.show-column.description },
+        show-modifier: if ctx.show-column.modifier == auto { true } else {
+          ctx.show-column.modifier
+        },
+        show-dates: if ctx.show-column.date == auto {
+          item-information.has-dates
+        } else { ctx.show-column.date },
+        show-quantity: if ctx.show-column.quantity == auto {
+          (
+            item-information.multiple-quantities
+              or item-information.multiple-units
+          )
+        } else { ctx.show-column.quantity },
+        show-units: if ctx.show-column.unit == auto {
+          item-information.multiple-units
+        } else { ctx.show-column.unit },
+        show-unit-price: if ctx.show-column.unit-price == auto {
+          item-information.multiple-quantities
+        } else { ctx.show-column.unit-price },
+        show-total-price: if ctx.show-column.total-price == auto { true } else {
+          ctx.show-column.total-price
+        },
+        show-tax-rates: if ctx.show-column.tax-rate == auto {
+          item-information.multiple-tax-rates
+        } else { ctx.show-column.tax-rate },
+
+        show-total: ctx.show-total,
+        show-global-information: ctx.show-information,
+
+        ..item-information,
+      )
+
       let view = (
         items: formated-items,
         discounts: formated-discounts,
@@ -243,7 +321,7 @@
         taxes: formated-taxes,
         total: formated-total,
         unmodified-total: unmodified-formated-total,
-        layout-information: item-information,
+        layout-information: layout-information,
         tax-mode: ctx.tax-mode,
       )
 

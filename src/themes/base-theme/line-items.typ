@@ -23,17 +23,12 @@
   let totals-row-gutter = 0.6em
 
   // --- Table Configuration & Flags ---
-  let all-qty-one = data.items.all(item => str(item.quantity) == "1")
-  let show-qty-price = not all-qty-one
-
-  let unique-tax-rates = data.items.map(item => item.tax.rate).dedup()
-  let show-tax = unique-tax-rates.len() > 1
-
+  let layout = data.layout-information
   let is-net = data.tax-mode == "exclusive"
 
-  let cols = (auto, 1fr)
-  let headers = ([*Pos*], [*Beschreibung*])
-  let aligns = (center, left)
+  let cols = ()
+  let headers = ()
+  let aligns = ()
 
   let subtitle = text.with(
     size: size-subtitle,
@@ -44,11 +39,23 @@
   // --- Column & Header Setup ---
   set par(justify: false)
 
-  if show-qty-price {
+  if layout.show-pos {
+    cols.push(auto)
+    headers.push([*Pos*])
+    aligns.push(center)
+  }
+
+  cols.push(1fr)
+  headers.push([*Beschreibung*])
+  aligns.push(left)
+
+  if layout.show-quantity {
     cols.push(auto)
     headers.push([*Menge*])
     aligns.push(right)
+  }
 
+  if layout.show-unit-price {
     cols.push(auto)
     headers.push(align(
       center,
@@ -57,25 +64,36 @@
     aligns.push(right)
   }
 
-  if show-tax {
+  if layout.show-tax-rates {
     cols.push(auto)
     headers.push([*MwSt.*])
     aligns.push(right)
   }
 
-  cols.push(auto)
-  headers.push(align(
-    center,
-    if is-net [*Gesamt* \ #subtitle[(Netto)]] else [*Gesamt* \ #subtitle[(Brutto)]],
-  ))
-  aligns.push(right)
+  if layout.show-total-price {
+    cols.push(auto)
+    headers.push(align(
+      center,
+      if is-net [*Gesamt* \ #subtitle[(Netto)]] else [*Gesamt* \ #subtitle[(Brutto)]],
+    ))
+    aligns.push(right)
+  }
 
-  let colspan-desc = if show-tax { cols.len() - 3 } else { cols.len() - 2 }
+  let colspan-left = if layout.show-pos { 1 } else { 0 }
+  let colspan-right = (
+    (if layout.show-tax-rates { 1 } else { 0 })
+      + (if layout.show-total-price { 1 } else { 0 })
+  )
+  if colspan-right == 0 { colspan-right = 1 } // Fallback to prevent invalid span if both tax and total are hidden
+  let colspan-mid = calc.max(1, cols.len() - colspan-left - colspan-right)
+
   let item-rows = ()
 
   // --- Item Rows Generation ---
   for (i, item) in data.items.enumerate() {
-    let has-modifications = item.has-discounts or item.has-surcharge
+    let has-modifications = (
+      (item.has-discounts or item.has-surcharge) and layout.show-modifier
+    )
 
     let bg = if calc.odd(i) { color-row-odd } else { none }
 
@@ -85,49 +103,62 @@
       dir: ttb,
       spacing: 0.4em,
       text(weight: weight-bold, item.name),
-      ..if item.has-description {
+      ..if item.has-description and layout.show-descriptions {
         (text(size: size-small, fill: color-desc, item.description),)
       } else { () },
-      ..if item.has-date {
+      ..if item.has-date and layout.show-dates {
         (text(size: size-small, style: "italic", item.date),)
       } else { () },
     )
 
-    item-rows.push(cell(str(i + 1)))
+    if layout.show-pos {
+      item-rows.push(cell(str(i + 1)))
+    }
+
     item-rows.push(cell(description-stack))
 
-    if show-qty-price {
-      item-rows.push(cell([#item.quantity #item.unit]))
+    if layout.show-quantity {
+      if layout.show-units {
+        item-rows.push(cell([#item.quantity #item.unit]))
+      } else {
+        item-rows.push(cell([#item.quantity]))
+      }
+    }
+
+    if layout.show-unit-price {
       item-rows.push(cell(item.price))
     }
-    if show-tax {
+
+    if layout.show-tax-rates {
       item-rows.push(cell([#item.tax.rate #item.tax.category]))
     }
 
-    if has-modifications and item.keys().contains("unmodified-total") {
-      item-rows.push(cell(str(item.unmodified-total)))
-    } else {
-      item-rows.push(cell(item.total))
+    if layout.show-total-price {
+      if has-modifications and item.keys().contains("unmodified-total") {
+        item-rows.push(cell(str(item.unmodified-total)))
+      } else {
+        item-rows.push(cell(item.total))
+      }
     }
 
     let cell-spacing = (inset: cell-inset, fill: bg)
 
     // --- Discount Handling ---
-    if item.has-discounts {
+    if item.has-discounts and layout.show-modifier {
       for d in item.discounts {
-        item-rows.push(cell(..cell-spacing)[])
+        if layout.show-pos {
+          item-rows.push(cell(..cell-spacing)[])
+        }
 
         item-rows.push(cell(
-          colspan: colspan-desc,
+          colspan: colspan-mid,
           align: left,
           ..cell-spacing,
         )[
           #text(size: size-small, fill: color-discount)[↳ Rabatt: #d.name]
         ])
 
-        item-rows.push(cell(..cell-spacing, colspan: if show-tax {
-          2
-        } else { 1 })[
+        item-rows.push(cell(..cell-spacing, colspan: colspan-right)[
           #text(
             fill: color-discount,
           )[#if d.is-percent [(− #d.display) #h(.5em)]]
@@ -137,21 +168,21 @@
     }
 
     // --- Surcharge Handling ---
-    if item.has-surcharge {
+    if item.has-surcharge and layout.show-modifier {
       for s in item.surcharge {
-        item-rows.push(cell(..cell-spacing)[])
+        if layout.show-pos {
+          item-rows.push(cell(..cell-spacing)[])
+        }
 
         item-rows.push(cell(
-          colspan: colspan-desc,
+          colspan: colspan-mid,
           align: left,
           ..cell-spacing,
         )[
           #text(size: size-small, fill: color-surcharge)[↳ Zuschlag: #s.name]
         ])
 
-        item-rows.push(cell(..cell-spacing, colspan: if show-tax {
-          2
-        } else { 1 })[
+        item-rows.push(cell(..cell-spacing, colspan: colspan-right)[
           #text(
             fill: color-surcharge,
           )[#if s.is-percent [(\+ #s.display) #h(.5em)]]
@@ -162,9 +193,11 @@
 
     // --- Subtotal per Item ---
     if has-modifications {
-      item-rows.push(cell[])
+      if layout.show-pos {
+        item-rows.push(cell[])
+      }
       item-rows.push(cell(
-        colspan: if show-tax { colspan-desc + 1 } else { colspan-desc },
+        colspan: colspan-mid + (if layout.show-tax-rates { 1 } else { 0 }),
         align: left,
         fill: bg,
       )[
@@ -175,9 +208,13 @@
         )[Zwischensumme Pos. #str(i + 1):]
       ])
 
-      item-rows.push(cell[#text(
-        weight: weight-bold,
-      )[#item.total]])
+      if layout.show-total-price {
+        item-rows.push(cell[#text(
+          weight: weight-bold,
+        )[#item.total]])
+      } else if colspan-right == 1 and not layout.show-tax-rates {
+        item-rows.push(cell[]) // Spacer if total price is hidden and forced fallback triggered
+      }
     }
   }
 
@@ -198,146 +235,183 @@
   )
 
   // --- Summary & Totals Box ---
-  align(right)[
-    #box(width: totals-width, {
-      if data.tax-mode == "inclusive" {
-        grid(
-          columns: (1fr, auto),
-          row-gutter: totals-row-gutter,
-          column-gutter: 1em,
-          align: (left, right),
+  if layout.show-total {
+    align(right)[
+      #box(width: totals-width, {
+        if data.tax-mode == "inclusive" {
+          grid(
+            columns: (1fr, auto),
+            row-gutter: totals-row-gutter,
+            column-gutter: 1em,
+            align: (left, right),
 
-          // Only show Brutto subtotal if there are actually modifiers
-          ..if data.discounts.len() > 0 or data.surcharges.len() > 0 {
-            (
-              [Zwischensumme (Brutto):],
-              data.unmodified-total.gross,
-            )
-          } else { () },
+            // Only show Brutto subtotal if there are actually modifiers
+            ..if data.discounts.len() > 0 or data.surcharges.len() > 0 {
+              (
+                [Zwischensumme (Brutto):],
+                data.unmodified-total.gross,
+              )
+            } else { () },
 
-          ..data
-            .discounts
-            .map(d => (
-              text(fill: color-discount, size-small)[Rabatt: #d.name],
-              text(
-                fill: color-discount,
-              )[#if d.is-percent [(− #d.display) #h(.5em)] − #d.absolute],
-            ))
-            .flatten(),
+            ..data
+              .discounts
+              .map(d => (
+                text(fill: color-discount, size-small)[Rabatt: #d.name],
+                text(
+                  fill: color-discount,
+                )[#if d.is-percent [(− #d.display) #h(.5em)] − #d.absolute],
+              ))
+              .flatten(),
 
-          ..data
-            .surcharges
-            .map(s => (
-              text(fill: color-surcharge, size-small)[Zuschlag: #s.name],
-              text(
-                fill: color-surcharge,
-              )[#if s.is-percent [(\+ #s.display) #h(.5em)] \+ #s.absolute],
-            ))
-            .flatten(),
+            ..data
+              .surcharges
+              .map(s => (
+                text(fill: color-surcharge, size-small)[Zuschlag: #s.name],
+                text(
+                  fill: color-surcharge,
+                )[#if s.is-percent [(\+ #s.display) #h(.5em)] \+ #s.absolute],
+              ))
+              .flatten(),
 
-          grid.hline(stroke: stroke-thick),
+            grid.hline(stroke: stroke-thick),
 
-          pad(top: 0.5em, text(
-            weight: weight-bold,
-            size: size-total,
-          )[Bruttobetrag:]),
-          pad(top: 0.5em, text(
-            weight: weight-bold,
-            size: size-total,
-          )[#data.total.gross]),
+            pad(top: 0.5em, text(
+              weight: weight-bold,
+              size: size-total,
+            )[Bruttobetrag:]),
+            pad(top: 0.5em, text(
+              weight: weight-bold,
+              size: size-total,
+            )[#data.total.gross]),
 
-          grid.hline(stroke: stroke-thick), [], [],
+            grid.hline(stroke: stroke-thick), [], [],
 
-          ..data
-            .taxes
-            .map(t => (
-              text(fill: color-vat-label)[inkl. MwSt. #t.rate (#t.category):],
-              text(fill: black)[#t.amount],
-            ))
-            .flatten(),
+            ..data
+              .taxes
+              .map(t => (
+                text(fill: color-vat-label)[inkl. MwSt. #t.rate (#t.category):],
+                text(fill: black)[#t.amount],
+              ))
+              .flatten(),
 
-          pad(y: -.5em)[], pad(y: -.5em)[],
-          pad(bottom: 0.3em)[], pad(bottom: 0.3em)[],
-        )
-      } else {
-        grid(
-          columns: (1fr, auto),
-          row-gutter: totals-row-gutter,
-          column-gutter: 1em,
-          align: (left, right),
+            pad(y: -.5em)[], pad(y: -.5em)[],
+            pad(bottom: 0.3em)[], pad(bottom: 0.3em)[],
+          )
+        } else {
+          grid(
+            columns: (1fr, auto),
+            row-gutter: totals-row-gutter,
+            column-gutter: 1em,
+            align: (left, right),
 
-          [Zwischensumme (Netto):], data.unmodified-total.net,
+            [Zwischensumme (Netto):], data.unmodified-total.net,
 
-          ..data
-            .discounts
-            .map(d => (
-              text(fill: color-discount, size-small)[Rabatt: #d.name],
-              text(
-                fill: color-discount,
-              )[#if d.is-percent [(− #d.display) #h(.5em)] − #d.absolute],
-            ))
-            .flatten(),
+            ..data
+              .discounts
+              .map(d => (
+                text(fill: color-discount, size-small)[Rabatt: #d.name],
+                text(
+                  fill: color-discount,
+                )[#if d.is-percent [(− #d.display) #h(.5em)] − #d.absolute],
+              ))
+              .flatten(),
 
-          ..data
-            .surcharges
-            .map(s => (
-              text(fill: color-surcharge, size-small)[Zuschlag: #s.name],
-              text(
-                fill: color-surcharge,
-              )[#if s.is-percent [(+ #s.display) #h(.5em)] \+ #s.absolute],
-            ))
-            .flatten(),
+            ..data
+              .surcharges
+              .map(s => (
+                text(fill: color-surcharge, size-small)[Zuschlag: #s.name],
+                text(
+                  fill: color-surcharge,
+                )[#if s.is-percent [(+ #s.display) #h(.5em)] \+ #s.absolute],
+              ))
+              .flatten(),
 
-          ..if data.discounts.len() > 0 or data.surcharges.len() > 0 {
-            (
-              text(weight: weight-bold)[Gesamt Netto:],
-              text(weight: weight-bold)[#data.total.net],
-            )
-          } else { () },
+            ..if data.discounts.len() > 0 or data.surcharges.len() > 0 {
+              (
+                text(weight: weight-bold)[Gesamt Netto:],
+                text(weight: weight-bold)[#data.total.net],
+              )
+            } else { () },
 
-          grid.hline(stroke: stroke-thin),
+            grid.hline(stroke: stroke-thin),
 
-          pad(top: 0.3em)[], pad(top: 0.3em)[],
+            pad(top: 0.3em)[], pad(top: 0.3em)[],
 
-          ..data
-            .taxes
-            .map(t => (
-              text(fill: color-vat-label)[zzgl. MwSt. #t.rate (#t.category):],
-              text(fill: black)[#t.amount],
-            ))
-            .flatten(),
+            ..data
+              .taxes
+              .map(t => (
+                text(fill: color-vat-label)[zzgl. MwSt. #t.rate (#t.category):],
+                text(fill: black)[#t.amount],
+              ))
+              .flatten(),
 
-          pad(y: -.5em)[], pad(y: -.5em)[],
-          pad(bottom: 0.3em)[], pad(bottom: 0.3em)[],
+            pad(y: -.5em)[], pad(y: -.5em)[],
+            pad(bottom: 0.3em)[], pad(bottom: 0.3em)[],
 
-          grid.hline(stroke: stroke-thick),
+            grid.hline(stroke: stroke-thick),
 
-          pad(y: 0.5em, text(
-            weight: weight-bold,
-            size: size-total,
-          )[Bruttobetrag:]),
-          pad(y: 0.5em, text(
-            weight: weight-bold,
-            size: size-total,
-          )[#data.total.gross]),
+            pad(y: 0.5em, text(
+              weight: weight-bold,
+              size: size-total,
+            )[Bruttobetrag:]),
+            pad(y: 0.5em, text(
+              weight: weight-bold,
+              size: size-total,
+            )[#data.total.gross]),
 
-          grid.hline(stroke: stroke-thick),
-        )
-      }
-    })
-  ]
+            grid.hline(stroke: stroke-thick),
+          )
+        }
+      })
+    ]
+  }
 
-  // --- Global Tax Information ---
-  if not show-tax and unique-tax-rates.len() == 1 {
-    let tax-rate = unique-tax-rates.first()
+  // --- Global Information ---
+  let global-infos = ()
+
+  if (
+    not layout.show-tax-rates
+      and not layout.multiple-tax-rates
+      and data.items.len() > 0
+  ) {
+    let tax-rate = data.items.first(default: (tax: (rate: [0%]))).tax.rate
     let tax-text = if is-net { "zzgl." } else { "inkl." }
-    pad(top: 0.5em, bottom: 1em, align(right)[
-      #text(
+    global-infos.push(
+      [Alle Positionen verstehen sich #tax-text #tax-rate MwSt.],
+    )
+  }
+
+  if (
+    not layout.show-units and not layout.multiple-units and data.items.len() > 0
+  ) {
+    let unit = data.items.first(default: (unit: none)).unit
+    global-infos.push([Einheit aller Positionen: #unit])
+  }
+
+  if not layout.show-quantity and not layout.multiple-quantities {
+    let quantity = data.items.first(default: (quantity: 0)).quantity
+    global-infos.push([Menge aller Positionen: #quantity])
+  }
+
+  if (
+    not layout.show-dates
+      and layout.has-dates
+      and not layout.multiple-dates
+      and data.items.len() > 0
+  ) {
+    let date = data.items.first(default: (date: none)).date
+    global-infos.push([Leistungsdatum aller Positionen: #date])
+  }
+
+  if layout.show-global-information and global-infos.len() > 0 {
+    pad(
+      top: 1em,
+      text(
         size: size-small,
-        style: "italic",
         fill: color-desc,
-      )[Alle Positionen verstehen sich #tax-text #tax-rate MwSt.]
-    ])
+        global-infos.join([\ ]),
+      ),
+    )
   }
 
   body
