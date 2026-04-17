@@ -1,5 +1,13 @@
 #import "@preview/invoice-pro:0.2.0": *
 
+/*
+ * Invoice Pro by Leonie Ziechmann
+ *
+ * GitHub: https://github.com/leonieziechmann/invoice-pro
+ * If you have feature requests or find outdated information,
+ * please create an Issue or Pull Request on GitHub.
+ */
+
 #show: invoice.with(
   theme: themes.DIN-5008(form: "A"),
   sender: (
