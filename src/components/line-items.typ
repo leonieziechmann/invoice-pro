@@ -297,7 +297,10 @@
           )
         } else { ctx.show-column.quantity },
         show-units: if ctx.show-column.unit == auto {
-          item-information.multiple-units
+          (
+            item-information.multiple-units
+              or item-information.multiple-quantities
+          )
         } else { ctx.show-column.unit },
         show-unit-price: if ctx.show-column.unit-price == auto {
           item-information.multiple-quantities
