@@ -21,6 +21,7 @@ jobs:
           mkdir -p "$PACKAGE_DIR"
 
           cp -r typst.toml "$PACKAGE_DIR/"
+          cp -r thumbnail.png "$PACKAGE_DIR/"
           cp -r LICENSE "$PACKAGE_DIR/"
           cp -r src "$PACKAGE_DIR/"
           cp -r template "$PACKAGE_DIR/"

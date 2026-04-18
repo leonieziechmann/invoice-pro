@@ -11,7 +11,7 @@ jobs:
     with:
       # Target fork where the PR branch will be pushed
       fork_repo: leonieziechmann/packages
-      files: "typst.toml README.md LICENSE src template images"
+      files: "typst.toml README.md LICENSE thumbnail.png src template images"
     secrets:
       # A PAT with permission to push to your fork
       packages_pat: ${{ secrets.PACKAGES_PAT }}

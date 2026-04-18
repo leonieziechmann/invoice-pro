@@ -4,7 +4,7 @@ Modern Invoice Template for Typst
 
 A professional, compliant, and automated invoice template for [Typst](https://typst.app). This package follows the German **DIN 5008** standard (Form A & B) and automates calculations, VAT handling, and payment details.
 
-![Example Invoice](images/thumbnail.png)
+![Example Invoice](thumbnail.png)
 
 ## Features
 
@@ -116,7 +116,7 @@ You can customize the underlying layout using the new theming engine:
     hole-mark: true,
     folding-marks: true
   ),
-  ...
+  // ...
 )
 ```
 
