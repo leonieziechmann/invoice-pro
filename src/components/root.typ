@@ -32,6 +32,7 @@
       ensure("invoice-nr", "#invoice-nr")
 
       nest("locale", {
+        ensure("lang", "de")
         nest("format", {
           ensure("date", x => [#x])
         })
@@ -70,7 +71,10 @@
 
       return (public, none)
     },
-    draw: (ctx, _, _, body) => (ctx.theme.document)(ctx, body),
+    draw: (ctx, _, _, body) => {
+      set text(lang: ctx.locale.lang)
+      (ctx.theme.document)(ctx, body)
+    },
     body,
   )
 }
