@@ -15,7 +15,7 @@
   theme: themes.DIN-5008(),
   /// The locale settings for language and number formatting.
   /// -> function
-  locale: locale.de,
+  locale: locale.de-de,
 
   /// A dictionary containing sender details (e.g., name, address).
   /// -> dictionary
