@@ -17,31 +17,37 @@
 /// Customizes the document type designations.
 /// - invoice (auto, str): e.g., "Invoice", "Rechnung", "Proforma"
 /// -> dictionary
-#let document(invoice: auto) = {
-  let payload = _clean-auto((invoice: invoice))
-  return (strings: (document: payload))
-}
+#let document(invoice: auto) = (
+  {
+    let payload = _clean-auto((invoice: invoice))
+    return (strings: (document: payload))
+  },
+)
 
 /// Customizes the address-related labels.
 /// - recipient (auto, str): e.g., "Bill To", "Empfänger"
 /// - sender (auto, str): e.g., "From", "Absender"
 /// -> dictionary
-#let address(recipient: auto, sender: auto) = {
-  let payload = _clean-auto((recipient: recipient, sender: sender))
-  return (strings: (address: payload))
-}
+#let address(recipient: auto, sender: auto) = (
+  {
+    let payload = _clean-auto((recipient: recipient, sender: sender))
+    return (strings: (address: payload))
+  },
+)
 
 /// Customizes the metadata and reference numbers labels.
 /// - tax-number (auto, str): e.g., "Tax ID", "Steuernummer"
 /// - invoice-number (auto, str): e.g., "Invoice Number", "Rechnungsnummer"
 /// -> dictionary
-#let reference(tax-number: auto, invoice-number: auto) = {
-  let payload = _clean-auto((
-    tax-number: tax-number,
-    invoice-number: invoice-number,
-  ))
-  return (strings: (reference: payload))
-}
+#let reference(tax-number: auto, invoice-number: auto) = (
+  {
+    let payload = _clean-auto((
+      tax-number: tax-number,
+      invoice-number: invoice-number,
+    ))
+    return (strings: (reference: payload))
+  },
+)
 
 /// Customizes the headers and labels used in the invoice line-items table.
 ///
@@ -71,24 +77,26 @@
   discount: auto,
   surcharge: auto,
   subtotal: auto,
-) = {
-  let payload = _clean-auto((
-    position: position,
-    description: description,
-    quantity: quantity,
-    unit-price: unit-price,
-    price: price,
-    total: total,
-    vat: vat,
-    net: net,
-    gross: gross,
-    discount: discount,
-    surcharge: surcharge,
-    subtotal: subtotal,
-  ))
+) = (
+  {
+    let payload = _clean-auto((
+      position: position,
+      description: description,
+      quantity: quantity,
+      unit-price: unit-price,
+      price: price,
+      total: total,
+      vat: vat,
+      net: net,
+      gross: gross,
+      discount: discount,
+      surcharge: surcharge,
+      subtotal: subtotal,
+    ))
 
-  return (strings: (line-items: payload))
-}
+    return (strings: (line-items: payload))
+  },
+)
 
 /// Customizes the summary and total labels at the bottom of the table.
 /// - sum (auto, str): e.g., "Subtotal", "Summe"
@@ -103,16 +111,18 @@
   total: auto,
   including: auto,
   excluding: auto,
-) = {
-  let payload = _clean-auto((
-    sum: sum,
-    vat-tax: vat-tax,
-    total: total,
-    including: including,
-    excluding: excluding,
-  ))
-  return (strings: (summary: payload))
-}
+) = (
+  {
+    let payload = _clean-auto((
+      sum: sum,
+      vat-tax: vat-tax,
+      total: total,
+      including: including,
+      excluding: excluding,
+    ))
+    return (strings: (summary: payload))
+  },
+)
 
 /// Customizes the bank detail labels.
 /// - account-holder (auto, str): e.g., "Account Holder", "Kontoinhaber"
@@ -125,15 +135,17 @@
   bank: auto,
   iban: auto,
   bic: auto,
-) = {
-  let payload = _clean-auto((
-    account-holder: account-holder,
-    bank: bank,
-    iban: iban,
-    bic: bic,
-  ))
-  return (strings: (bank-details: payload))
-}
+) = (
+  {
+    let payload = _clean-auto((
+      account-holder: account-holder,
+      bank: bank,
+      iban: iban,
+      bic: bic,
+    ))
+    return (strings: (bank-details: payload))
+  },
+)
 
 /// Customizes the payment instructions and deadline texts.
 /// - text (auto, fn): Function generating the main sentence: (sum, currency, deadline) => content
@@ -146,31 +158,37 @@
   deadline-date: auto,
   deadline-days: auto,
   deadline-soon: auto,
-) = {
-  let payload = _clean-auto((
-    text: text,
-    deadline-date: deadline-date,
-    deadline-days: deadline-days,
-    deadline-soon: deadline-soon,
-  ))
-  return (strings: (payment: payload))
-}
+) = (
+  {
+    let payload = _clean-auto((
+      text: text,
+      deadline-date: deadline-date,
+      deadline-days: deadline-days,
+      deadline-soon: deadline-soon,
+    ))
+    return (strings: (payment: payload))
+  },
+)
 
 /// Customizes the signature and closing area.
 /// - closing (auto, str): e.g., "Sincerely,", "Mit freundlichen Grüßen"
 /// -> dictionary
-#let signature(closing: auto) = {
-  let payload = _clean-auto((closing: closing))
-  return (strings: (signature: payload))
-}
+#let signature(closing: auto) = (
+  {
+    let payload = _clean-auto((closing: closing))
+    return (strings: (signature: payload))
+  },
+)
 
 /// Customizes standard legal texts.
 /// - vat-exemption (auto, str): Legal text for small business tax exemptions.
 /// -> dictionary
-#let legal(vat-exemption: auto) = {
-  let payload = _clean-auto((vat-exemption: vat-exemption))
-  return (strings: (legal: payload))
-}
+#let legal(vat-exemption: auto) = (
+  {
+    let payload = _clean-auto((vat-exemption: vat-exemption))
+    return (strings: (legal: payload))
+  },
+)
 
 // -----------------------------------------------------------------------------
 // REGION OVERRIDES (region.format.*)
@@ -185,14 +203,16 @@
   money: auto,
   money-fine: auto,
   infer-tax: auto,
-) = {
-  let payload = _clean-auto((
-    money: money,
-    money-fine: money-fine,
-    infer-tax: infer-tax,
-  ))
-  return (region: (normalize: payload))
-}
+) = (
+  {
+    let payload = _clean-auto((
+      money: money,
+      money-fine: money-fine,
+      infer-tax: infer-tax,
+    ))
+    return (region: (normalize: payload))
+  },
+)
 
 /// Customizes regional formatting behaviors without creating a new region file.
 /// Highly useful for tweaking date patterns or currency symbols on the fly.
@@ -210,17 +230,19 @@
   currency-fine: auto,
   date: auto,
   time: auto,
-) = {
-  let payload = _clean-auto((
-    percent: percent,
-    number: number,
-    currency: currency,
-    currency-fine: currency-fine,
-    date: date,
-    time: time,
-  ))
-  return (region: (format: payload))
-}
+) = (
+  {
+    let payload = _clean-auto((
+      percent: percent,
+      number: number,
+      currency: currency,
+      currency-fine: currency-fine,
+      date: date,
+      time: time,
+    ))
+    return (region: (format: payload))
+  },
+)
 
 /// Customizes the legal tax objects applied within the region.
 /// Useful for overriding default rates or providing custom exemption grounds.
@@ -230,10 +252,12 @@
 #let tax(
   default-vat: auto,
   small-enterprise-special-scheme: auto,
-) = {
-  let payload = _clean-auto((
-    default-vat: default-vat,
-    small-enterprise-special-scheme: small-enterprise-special-scheme,
-  ))
-  return (region: (tax: payload))
-}
+) = (
+  {
+    let payload = _clean-auto((
+      default-vat: default-vat,
+      small-enterprise-special-scheme: small-enterprise-special-scheme,
+    ))
+    return (region: (tax: payload))
+  },
+)

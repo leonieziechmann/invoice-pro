@@ -85,7 +85,7 @@
   let eval-locale = locale()
 
   let document-subject = (subject, invoice-nr).join(" ")
-  let document-tax = if tax != auto { tax } else { eval-locale.variables.vat }
+  let document-tax = if tax != auto { tax } else { eval-locale.tax.default-vat }
 
   if tax-exempt-small-biz {
     if tax != auto {
@@ -93,7 +93,7 @@
         "If using invoice::tax-exempt-small-biz then the tax must be set to `auto`",
       )
     }
-    document-tax = eval-locale.variables.small-biz-tax-exemption-code
+    document-tax = eval-locale.tax.small-enterprise-special-scheme
   }
 
   let document-references = ()
