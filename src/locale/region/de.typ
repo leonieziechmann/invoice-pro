@@ -48,7 +48,6 @@
     ),
 
     format: (
-      percent: x => str(calc.round(x * 100)) + "%",
       number: m-format.number.with(..numeric-format),
       currency: m-format.currency.with(
         ..currency-format,
@@ -64,27 +63,12 @@
           number-format: numeric-format + (accuracy: accuracy, padding: true),
         )
       },
-      date: date => {
-        let format-datetime(d) = d.display("[day].[month].[year]")
-        if type(date) == datetime { format-datetime(date) } else if (
-          type(date) == array
-        ) {
-          (
-            format-datetime(date.first())
-              + " "
-              + sym.dash.em
-              + " "
-              + format-datetime(date.last())
-          )
-        } else { none }
-      },
-      time: x => x.display("[hour repr:24]:[minute padding:zero]"),
     ),
 
     tax: (
       default-vat: tax.vat(19%),
       small-enterprise-special-scheme: tax.outside-scope(
-        grounds: lang.legal.vat-exemption,
+        grounds: "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.",
       ),
     ),
   )

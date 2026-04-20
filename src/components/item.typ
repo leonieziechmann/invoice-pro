@@ -201,6 +201,10 @@
         default: m-tax.zero(),
       )
 
+      if ctx.at("tax-exempt-small-biz", default: false) {
+        put("tax", ctx.locale.tax.small-enterprise-special-scheme)
+      }
+
       derive("item-id", item-id)
       derive("reference", reference)
 

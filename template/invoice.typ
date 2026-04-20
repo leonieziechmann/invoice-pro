@@ -8,13 +8,9 @@
  * please create an Issue or Pull Request on GitHub.
  */
 
-
 #show: invoice.with(
   theme: themes.DIN-5008(form: "A"),
-  locale: locale.de-de.with(
-    lc.format(currency: x => str(x) + "EUR"),
-    lc.tax(default-vat: tax.vat(10%)),
-  ),
+  locale: locale.de-de,
   sender: (
     name: "Deine Firma / Name",
     address: "Musterstraße 1",
@@ -30,6 +26,7 @@
 )
 
 #set text(10pt)
+
 
 #line-items[
   #bundle(
@@ -64,7 +61,7 @@
     ]
   ]
 
-  #apply(tax: 7%)[
+  #apply(tax: tax.lower-rate(7%))[
     #item(
       [Fachbuch: "Modernes Webdesign"],
       price: 49.90,

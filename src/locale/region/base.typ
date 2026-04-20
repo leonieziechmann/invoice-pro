@@ -29,7 +29,10 @@
   format: (
     /// Converts a ratio (0.19) or number into a localized percentage string ("19%").
     /// -> (ratio | float | decimal | int) => str
-    percent: x => str(calc.round(float(x) * 100)) + "%",
+    percent: x => {
+      let p = float(x) * 100
+      str(calc.round(p, digits: 1)).replace(".", ",") + "%"
+    },
 
     /// Formats a number with regional separators (thousands, decimals).
     /// -> (int | float | decimal) => str
@@ -53,7 +56,7 @@
       sym.dash.em
       " "
       x.last().display("[day].[month].[year]")
-    } else {
+    } else if type(x) == datetime {
       x.display("[day].[month].[year]")
     },
 

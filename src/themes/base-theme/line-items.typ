@@ -23,6 +23,10 @@
   let totals-row-gutter = 0.6em
 
   // --- Localization ---
+  let region = ctx.locale.meta.region
+  let lang = ctx.locale.strings.meta.lang
+  let lang-eq-region = region == lang
+
   let strings = ctx.locale.strings
   let li-str = strings.line-items
   let sum-str = strings.summary
@@ -94,6 +98,12 @@
   if colspan-right == 0 { colspan-right = 1 }
   let colspan-mid = calc.max(1, cols.len() - colspan-left - colspan-right)
 
+  let mod-colspan-mid = 1
+  let mod-colspan-right = calc.max(
+    1,
+    cols.len() - colspan-left - mod-colspan-mid,
+  )
+
   let item-rows = ()
 
   // --- Item Rows Generation ---
@@ -158,7 +168,7 @@
         }
 
         item-rows.push(cell(
-          colspan: colspan-mid,
+          colspan: mod-colspan-mid,
           align: left,
           ..cell-spacing,
         )[
@@ -168,7 +178,7 @@
           )[↳ #li-str.discount: #d.name]
         ])
 
-        item-rows.push(cell(..cell-spacing, colspan: colspan-right)[
+        item-rows.push(cell(..cell-spacing, colspan: mod-colspan-right)[
           #text(
             fill: color-discount,
           )[#if d.is-percent [(− #d.display) #h(.5em)]]
@@ -185,7 +195,7 @@
         }
 
         item-rows.push(cell(
-          colspan: colspan-mid,
+          colspan: mod-colspan-mid,
           align: left,
           ..cell-spacing,
         )[
@@ -195,7 +205,7 @@
           )[↳ #li-str.surcharge: #s.name]
         ])
 
-        item-rows.push(cell(..cell-spacing, colspan: colspan-right)[
+        item-rows.push(cell(..cell-spacing, colspan: mod-colspan-right)[
           #text(
             fill: color-surcharge,
           )[#if s.is-percent [(\+ #s.display) #h(.5em)]]
@@ -398,6 +408,7 @@
   // --- Global Information ---
   let global-infos = ()
 
+  // Standard Tax Statement (Suppressed for small businesses)
   if (
     not layout.show-tax-rates
       and not layout.multiple-tax-rates
@@ -413,6 +424,7 @@
     ))
   }
 
+  // Unit, Quantity, and Date info (Simplified display)
   if (
     not layout.show-units and not layout.multiple-units and data.items.len() > 0
   ) {
@@ -433,6 +445,22 @@
   ) {
     let date = data.items.first(default: (date: none)).date
     global-infos.push([#info-str.date #date])
+  }
+
+  // Small Business Legal Clause
+  if data.tax-exempt-small-biz {
+    let grounds = leg-str.vat-exemption
+    let legal-grounds = ctx
+      .locale
+      .tax
+      .small-enterprise-special-scheme
+      .at("grounds", default: none)
+
+    if lang-eq-region {
+      global-infos.push(legal-grounds)
+    } else {
+      global-infos.push[#grounds (#legal-grounds)]
+    }
   }
 
   if layout.show-global-information and global-infos.len() > 0 {
