@@ -3,6 +3,7 @@
 #import "group-by-tax.typ": group-by-tax
 
 #let apply-mod(ctx, tax-groups, modifier) = {
+  let normalize = ctx.locale.normalize
   let modifier-total = decimal("0")
   let tax-split = (:)
 
@@ -33,7 +34,7 @@
     if is-net-based and mod-is-gross {
       if scope-gross-total > decimal("0") {
         let conversion-ratio = scope-net-total / scope-gross-total
-        effective-amount = (ctx.normalize.money)(
+        effective-amount = (normalize.money)(
           modifier.amount * conversion-ratio,
         )
       } else {
@@ -42,7 +43,7 @@
     } else if not is-net-based and not mod-is-gross {
       if scope-net-total > decimal("0") {
         let conversion-ratio = scope-gross-total / scope-net-total
-        effective-amount = (ctx.normalize.money)(
+        effective-amount = (normalize.money)(
           modifier.amount * conversion-ratio,
         )
       } else {
@@ -53,7 +54,7 @@
 
   if modifier.type == "relative" {
     for (key, group) in tax-groups.groups {
-      let group-modifier = (ctx.normalize.money)(group.total * effective-amount)
+      let group-modifier = (normalize.money)(group.total * effective-amount)
       modifier-total += group-modifier
       tax-split.insert(key, (
         tax: (
@@ -75,7 +76,7 @@
     for (key, group) in tax-groups.groups {
       let group-total = group.total
       let group-proporiton = group-total / base-total
-      let group-modifier = (ctx.normalize.money)(
+      let group-modifier = (normalize.money)(
         effective-amount * group-proporiton,
       )
 
@@ -141,8 +142,9 @@
 #let calculate-modifier(ctx, children) = {
   let to-dec = coercion.to-decimal
   let to-ratio = coercion.to-ratio
-  let norm-money = ctx.normalize.money
-  let norm-money-fine = ctx.normalize.money-fine
+  let normalize = ctx.locale.normalize
+  let norm-money = normalize.money
+  let norm-money-fine = normalize.money-fine
 
   let items = loom.query.collect-signals(children, kind: "item", depth: 2)
   let modifiers = loom.query.collect-signals(children, kind: "modifier")
@@ -190,9 +192,15 @@
     scope: ctx => loom.mutator.batch(ctx, {
       import loom.mutator: *
 
-      nest("normalize", {
-        ensure("money", v => calc.round(coercion.to-decimal(v), digits: 2))
-        ensure("money-fine", v => calc.round(coercion.to-decimal(v), digits: 4))
+      nest("locale", {
+        nest("normalize", {
+          ensure("money", (..) => panic(
+            "locale::normalize::money is not provided",
+          ))
+          ensure("money-fine", (..) => panic(
+            "locale::normalize::money-fine is not provided",
+          ))
+        })
       })
     }),
     measure: (ctx, children) => {

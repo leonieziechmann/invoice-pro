@@ -1,5 +1,4 @@
 /// German language overrides.
-/// This dictionary is merged over `lang/base.typ` by the locale factory.
 #let de = (
   meta: (
     lang: "de",
@@ -42,21 +41,43 @@
     excluding: "zzgl.",
   ),
 
+  /// Global informational sentences (usually displayed below the line items)
+  global-info: (
+    /// Sentence specifying the universal tax rate applied
+    /// -> (content|str, content|str, content|str) => content
+    tax-statement: (
+      tax-text,
+      rate,
+      vat-tax,
+    ) => [Alle Artikel sind #tax-text #rate #vat-tax],
+    unit: "Einheit für alle Artikel:",
+    quantity: "Menge für alle Artikel:",
+    date: "Leistungsdatum für alle Artikel:",
+  ),
+
   bank-details: (
     account-holder: "Kontoinhaber:in",
     bank: "Kreditinstitut",
     iban: "IBAN",
     bic: "BIC",
+    reference: "Verwendungszweck",
   ),
 
   payment: (
+    /// Generates the final payment instruction sentence.
+    /// -> (content|str, content|str) => content
     text: (
       sum,
-      currency,
       deadline,
-    ) => [Bitte überweisen Sie den Gesamtbetrag von *#sum #currency* #deadline ohne Abzug auf das unten genannte Konto.],
+    ) => [Bitte überweisen Sie den Gesamtbetrag von *#sum* #deadline ohne Abzug auf das unten genannte Konto.],
+
+    /// Text for a fixed target date.
     deadline-date: date => "bis spätestens " + str(date),
+
+    /// Text for a relative target date (in X days).
     deadline-days: days => "innerhalb von " + str(days) + " Tagen",
+
+    /// Text for immediate/prompt payment.
     deadline-soon: "zeitnah",
   ),
 

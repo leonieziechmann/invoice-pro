@@ -22,12 +22,19 @@
     scope: ctx => loom.mutator.batch(ctx, {
       import loom.mutator: *
 
-      nest("format", {
-        ensure("currency", v => [#v])
+      nest("locale", {
+        nest("format", {
+          ensure("currency", (..) => panic(
+            "locale::format::currency is not provided",
+          ))
+          ensure("date", (..) => panic("locale::date is not provided"))
+        })
       })
 
       nest("theme", {
-        ensure("payment-goal", (..) => [Payment Goal])
+        ensure("payment-goal", (..) => panic(
+          "theme::payment-goal is not provided",
+        ))
       })
 
       nest("global", {

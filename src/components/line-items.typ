@@ -95,17 +95,24 @@
       derive("show-total", show-total, default: true)
       derive("show-information", show-information, default: true)
 
-      nest("format", {
-        ensure("percent", x => str(calc.round(x * 100)) + "%")
-        ensure("number", x => str(x))
-        ensure("currency", x => str(calc.round(x, digits: 2)) + "€")
-        ensure("currency-fine", x => str(calc.round(x, digits: 4)) + "€")
-        ensure("date", date => {
-          if type(date) == datetime { date.display() } else if (
-            type(date) == array
-          ) { date.first().display() + " - " + date.last().display() } else {
-            none
-          }
+      nest("locale", {
+        ensure("strings", (:))
+
+        nest("format", {
+          ensure("percent", (..) => panic(
+            "locale::format::percent is not provided",
+          ))
+          ensure("number", (..) => panic(
+            "locale::format::number is not provided",
+          ))
+          ensure("currency", (..) => panic(
+            "locale::format::currency is not provided",
+          ))
+          ensure("currency-fine", (..) => panic(
+            "locale::format::currency-fine is not provided",
+          ))
+          ensure("date", (..) => panic("locale::format::date is not provided"))
+          ensure("time", (..) => panic("locale::format::time is not provided"))
         })
       })
 
@@ -121,6 +128,8 @@
       let tax-applicator = loom.query.find-signal(children, "tax-applicator")
       let items = modifier-applicator.items
 
+      let format = ctx.locale.format
+
       let formated-items = items.map(item => loom.mutator.batch(item, {
         import loom.mutator: *
 
@@ -129,32 +138,32 @@
         update("description", x => [#x])
 
         put("has-date", item.date != none)
-        update("date", ctx.format.date)
+        update("date", format.date)
 
-        update("quantity", ctx.format.number)
-        update("base-quantity", ctx.format.number)
+        update("quantity", format.number)
+        update("base-quantity", format.number)
 
         update("unit", x => [#x])
 
-        update("price", ctx.format.currency-fine)
-        update("total", ctx.format.currency)
-        update("unmodified-total", ctx.format.currency)
+        update("price", format.currency-fine)
+        update("total", format.currency)
+        update("unmodified-total", format.currency)
 
         update("tax", x => (
-          rate: (ctx.format.percent)(x.rate),
+          rate: (format.percent)(x.rate),
           category: x.category,
         ))
 
         put("has-discounts", item.discounts.len() >= 1)
         update("discounts", discounts => discounts.map(d => {
           let display-format = if d.type == "relative" {
-            ctx.format.percent
-          } else { ctx.format.currency }
+            format.percent
+          } else { format.currency }
           (
             name: [#d.name],
             description: [#d.description],
             display: display-format(calc.abs(d.display)),
-            absolute: (ctx.format.currency)(calc.abs(d.absolute)),
+            absolute: (format.currency)(calc.abs(d.absolute)),
             is-percent: d.type == "relative",
             has-description: d.description != none,
           )
@@ -163,13 +172,13 @@
         put("has-surcharge", item.surcharge.len() >= 1)
         update("surcharge", discounts => discounts.map(s => {
           let display-format = if s.type == "relative" {
-            ctx.format.percent
-          } else { ctx.format.currency }
+            format.percent
+          } else { format.currency }
           (
             name: [#s.name],
             description: [#s.description],
             display: display-format(calc.abs(s.display)),
-            absolute: (ctx.format.currency)(calc.abs(s.absolute)),
+            absolute: (format.currency)(calc.abs(s.absolute)),
             is-percent: s.type == "relative",
             has-description: s.description != none,
           )
@@ -183,8 +192,8 @@
         .taxes
         .pairs()
         .map(((key, tax)) => {
-          let formated-rate = (ctx.format.percent)(tax.rate)
-          let formated-value = (ctx.format.currency)(tax.absolute)
+          let formated-rate = (format.percent)(tax.rate)
+          let formated-value = (format.currency)(tax.absolute)
           (
             rate: [#formated-rate],
             category: [#tax.category],
@@ -193,13 +202,13 @@
         })
 
       let formated-total = (
-        net: (ctx.format.currency)(tax-applicator.net-total),
-        gross: (ctx.format.currency)(tax-applicator.gross-total),
+        net: (format.currency)(tax-applicator.net-total),
+        gross: (format.currency)(tax-applicator.gross-total),
       )
 
       let unmodified-formated-total = (
-        net: (ctx.format.currency)(tax-applicator.unmodified-net-total),
-        gross: (ctx.format.currency)(tax-applicator.unmodified-gross-total),
+        net: (format.currency)(tax-applicator.unmodified-net-total),
+        gross: (format.currency)(tax-applicator.unmodified-gross-total),
       )
 
       let formated-discounts = modifier-applicator.modifier.discounts.map(
@@ -212,11 +221,11 @@
           remove("type")
           put("is-percent", discount.type == "relative")
           update("display", d => {
-            if discount.type == "absolute" [#(ctx.format.currency)(
+            if discount.type == "absolute" [#(format.currency)(
               calc.abs(d),
-            )] else [#(ctx.format.percent)(calc.abs(d))]
+            )] else [#(format.percent)(calc.abs(d))]
           })
-          update("absolute", x => (ctx.format.currency)(calc.abs(x)))
+          update("absolute", x => (format.currency)(calc.abs(x)))
 
           if discount.type == "relative" { put("split", (:)) }
           update("split", split => split
@@ -224,10 +233,10 @@
             .map(((_, group)) => {
               (
                 tax: (
-                  rate: [#(ctx.format.percent)(group.tax.rate)],
+                  rate: [#(format.percent)(group.tax.rate)],
                   category: [#group.tax.category],
                 ),
-                amount: [#(ctx.format.currency)(calc.abs(group.absolute))],
+                amount: [#(format.currency)(calc.abs(group.absolute))],
               )
             }))
         }),
@@ -243,11 +252,11 @@
           remove("type")
           put("is-percent", surcharge.type == "relative")
           update("display", d => {
-            if surcharge.type == "absolute" [#(ctx.format.currency)(
+            if surcharge.type == "absolute" [#(format.currency)(
               calc.abs(d),
-            )] else [#(ctx.format.percent)(calc.abs(d))]
+            )] else [#(format.percent)(calc.abs(d))]
           })
-          update("absolute", x => (ctx.format.currency)(calc.abs(x)))
+          update("absolute", x => (format.currency)(calc.abs(x)))
 
           if surcharge.type == "relative" { put("split", (:)) }
           update("split", split => split
@@ -255,10 +264,10 @@
             .map(((_, group)) => {
               (
                 tax: (
-                  rate: [#(ctx.format.percent)(group.tax.rate)],
+                  rate: [#(format.percent)(group.tax.rate)],
                   category: [#group.tax.category],
                 ),
-                amount: [#(ctx.format.currency)(calc.abs(group.absolute))],
+                amount: [#(format.currency)(calc.abs(group.absolute))],
               )
             }))
         }),

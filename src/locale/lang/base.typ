@@ -49,12 +49,27 @@
     excluding: "excl.",
   ),
 
+  /// Global informational sentences (usually displayed below the line items)
+  global-info: (
+    /// Sentence specifying the universal tax rate applied
+    /// -> (content|str, content|str, content|str) => content
+    tax-statement: (
+      tax-text,
+      rate,
+      vat-tax,
+    ) => [All items are #tax-text #rate #vat-tax],
+    unit: "Unit for all items:",
+    quantity: "Quantity for all items:",
+    date: "Service date for all items:",
+  ),
+
   /// Designations for bank and payment details
   bank-details: (
     account-holder: "Account Holder",
     bank: "Bank",
     iban: "IBAN",
     bic: "BIC",
+    reference: "Reference",
   ),
 
   /// Text blocks for payment terms
@@ -63,9 +78,8 @@
     /// -> (content|str, content|str, content|str) => content
     text: (
       sum,
-      currency,
       deadline,
-    ) => [Please transfer the total amount of *#sum #currency* #deadline to the account listed below.],
+    ) => [Please transfer the total amount of *#sum* #deadline to the account listed below.],
 
     /// Text for a fixed target date.
     /// -> (content|str) => str

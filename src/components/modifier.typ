@@ -50,31 +50,37 @@
       derive("description", description)
       derive("input-gross", input-gross, default: false)
 
-      nest("normalize", {
-        ensure("money", x => calc.round(x, digits: 2))
-        ensure("money-fine", x => calc.round(x, digits: 2))
+      nest("locale", {
+        nest("normalize", {
+          ensure("money", (..) => panic(
+            "locale::normalize::money is not provided",
+          ))
+        })
       })
     }),
     measure: ctx => {
       loom.guards.assert-direct-parent(ctx, "line-items", "bundle")
-      let _raw-amount = ctx.modifier-amount
-      let _amount = 0
-      let _amount-type = none
+      let normalize = ctx.locale.normalize
 
-      if type(_raw-amount) == ratio {
-        _amount = coercion.to-ratio(_raw-amount)
-        _amount-type = "relative"
+      let raw-amount = ctx.modifier-amount
+
+      let amount = 0
+      let amount-type = none
+
+      if type(raw-amount) == ratio {
+        amount = coercion.to-ratio(raw-amount)
+        amount-type = "relative"
       } else {
-        _amount = (ctx.normalize.money)(_raw-amount)
-        _amount-type = "absolute"
+        amount = (normalize.money)(raw-amount)
+        amount-type = "absolute"
       }
 
       return (
         name: name,
         description: ctx.description,
 
-        type: _amount-type,
-        amount: _amount,
+        type: amount-type,
+        amount: amount,
 
         is-gross: ctx.input-gross,
       )

@@ -207,9 +207,15 @@
       derive("modifier", modifier, default: ())
       update("modifier", evaluate-modifier.with(ctx))
 
-      nest("normalize", {
-        ensure("money", v => calc.round(coercion.to-decimal(v), digits: 2))
-        ensure("money-fine", v => calc.round(coercion.to-decimal(v), digits: 4))
+      nest("locale", {
+        nest("normalize", {
+          ensure("money", (..) => panic(
+            "locale::normalize::money is not provided",
+          ))
+          ensure("money-fine", (..) => panic(
+            "locale::normalize::money-fine is not provided",
+          ))
+        })
       })
     }),
     measure: ctx => {

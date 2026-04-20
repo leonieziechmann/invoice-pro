@@ -34,7 +34,7 @@
       nest("locale", {
         ensure("lang", "de")
         nest("format", {
-          ensure("date", x => [#x])
+          ensure("date", (..) => panic("locale::format::date is not provided"))
         })
       })
 

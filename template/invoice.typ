@@ -8,8 +8,13 @@
  * please create an Issue or Pull Request on GitHub.
  */
 
+
 #show: invoice.with(
   theme: themes.DIN-5008(form: "A"),
+  locale: locale.de-de.with(
+    lc.format(currency: x => str(x) + "EUR"),
+    lc.tax(default-vat: tax.vat(10%)),
+  ),
   sender: (
     name: "Deine Firma / Name",
     address: "Musterstraße 1",

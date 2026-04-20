@@ -1,7 +1,10 @@
 #let render-signature(ctx, view) = {
+  let strings = ctx.locale.strings
+  let sig-str = strings.signature
+
   block(breakable: false, {
     v(1em)
-    [Mit freundlichen Grüßen]
+    sig-str.closing
     v(1em)
 
     view.signature

@@ -3,8 +3,8 @@
 #import "group-by-tax.typ": group-by-tax
 
 #let calculate-taxes(ctx, children) = {
-  let norm-money = ctx.normalize.money
-  let norm-money-fine = ctx.normalize.money-fine
+  let norm-money = ctx.locale.normalize.money
+  let norm-money-fine = ctx.locale.normalize.money-fine
 
   let modifier-applicator = loom.query.find-signal(
     children,
@@ -117,9 +117,15 @@
     scope: ctx => loom.mutator.batch(ctx, {
       import loom.mutator: *
 
-      nest("normalize", {
-        ensure("money", v => calc.round(coercion.to-decimal(v), digits: 2))
-        ensure("money-fine", v => calc.round(coercion.to-decimal(v), digits: 4))
+      nest("locale", {
+        nest("normalize", {
+          ensure("money", (..) => panic(
+            "locale::normalize::money is not provided",
+          ))
+          ensure("money-fine", (..) => panic(
+            "locale::normalize::money-fine is not provided",
+          ))
+        })
       })
     }),
     measure: (ctx, children) => {

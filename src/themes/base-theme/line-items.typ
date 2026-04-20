@@ -22,6 +22,13 @@
   let totals-width = 66%
   let totals-row-gutter = 0.6em
 
+  // --- Localization ---
+  let strings = ctx.locale.strings
+  let li-str = strings.line-items
+  let sum-str = strings.summary
+  let leg-str = strings.legal
+  let info-str = strings.global-info
+
   // --- Table Configuration & Flags ---
   let layout = data.layout-information
   let is-net = data.tax-mode == "exclusive"
@@ -41,17 +48,17 @@
 
   if layout.show-pos {
     cols.push(auto)
-    headers.push([*Pos*])
+    headers.push([*#li-str.position*])
     aligns.push(center)
   }
 
   cols.push(1fr)
-  headers.push([*Beschreibung*])
+  headers.push([*#li-str.description*])
   aligns.push(left)
 
   if layout.show-quantity {
     cols.push(auto)
-    headers.push([*Menge*])
+    headers.push([*#li-str.quantity*])
     aligns.push(right)
   }
 
@@ -59,14 +66,14 @@
     cols.push(auto)
     headers.push(align(
       center,
-      if is-net [*Einzelpreis* \ #subtitle[(Netto)]] else [*Einzelpreis* \ #subtitle[(Brutto)]],
+      if is-net [*#li-str.unit-price* \ #subtitle[(#li-str.net)]] else [*#li-str.unit-price* \ #subtitle[(#li-str.gross)]],
     ))
     aligns.push(right)
   }
 
   if layout.show-tax-rates {
     cols.push(auto)
-    headers.push([*MwSt.*])
+    headers.push([*#li-str.vat*])
     aligns.push(right)
   }
 
@@ -74,7 +81,7 @@
     cols.push(auto)
     headers.push(align(
       center,
-      if is-net [*Gesamt* \ #subtitle[(Netto)]] else [*Gesamt* \ #subtitle[(Brutto)]],
+      if is-net [*#li-str.total* \ #subtitle[(#li-str.net)]] else [*#li-str.total* \ #subtitle[(#li-str.gross)]],
     ))
     aligns.push(right)
   }
@@ -84,7 +91,7 @@
     (if layout.show-tax-rates { 1 } else { 0 })
       + (if layout.show-total-price { 1 } else { 0 })
   )
-  if colspan-right == 0 { colspan-right = 1 } // Fallback to prevent invalid span if both tax and total are hidden
+  if colspan-right == 0 { colspan-right = 1 }
   let colspan-mid = calc.max(1, cols.len() - colspan-left - colspan-right)
 
   let item-rows = ()
@@ -155,7 +162,10 @@
           align: left,
           ..cell-spacing,
         )[
-          #text(size: size-small, fill: color-discount)[↳ Rabatt: #d.name]
+          #text(
+            size: size-small,
+            fill: color-discount,
+          )[↳ #li-str.discount: #d.name]
         ])
 
         item-rows.push(cell(..cell-spacing, colspan: colspan-right)[
@@ -179,7 +189,10 @@
           align: left,
           ..cell-spacing,
         )[
-          #text(size: size-small, fill: color-surcharge)[↳ Zuschlag: #s.name]
+          #text(
+            size: size-small,
+            fill: color-surcharge,
+          )[↳ #li-str.surcharge: #s.name]
         ])
 
         item-rows.push(cell(..cell-spacing, colspan: colspan-right)[
@@ -205,7 +218,7 @@
           size: size-small,
           weight: weight-bold,
           fill: color-subtitle,
-        )[Zwischensumme Pos. #str(i + 1):]
+        )[#li-str.subtotal #li-str.position #str(i + 1):]
       ])
 
       if layout.show-total-price {
@@ -213,7 +226,7 @@
           weight: weight-bold,
         )[#item.total]])
       } else if colspan-right == 1 and not layout.show-tax-rates {
-        item-rows.push(cell[]) // Spacer if total price is hidden and forced fallback triggered
+        item-rows.push(cell[])
       }
     }
   }
@@ -248,7 +261,7 @@
             // Only show Brutto subtotal if there are actually modifiers
             ..if data.discounts.len() > 0 or data.surcharges.len() > 0 {
               (
-                [Zwischensumme (Brutto):],
+                [#sum-str.sum (#li-str.gross):],
                 data.unmodified-total.gross,
               )
             } else { () },
@@ -256,7 +269,10 @@
             ..data
               .discounts
               .map(d => (
-                text(fill: color-discount, size-small)[Rabatt: #d.name],
+                text(
+                  fill: color-discount,
+                  size-small,
+                )[#li-str.discount: #d.name],
                 text(
                   fill: color-discount,
                 )[#if d.is-percent [(− #d.display) #h(.5em)] − #d.absolute],
@@ -266,7 +282,10 @@
             ..data
               .surcharges
               .map(s => (
-                text(fill: color-surcharge, size-small)[Zuschlag: #s.name],
+                text(
+                  fill: color-surcharge,
+                  size-small,
+                )[#li-str.surcharge: #s.name],
                 text(
                   fill: color-surcharge,
                 )[#if s.is-percent [(\+ #s.display) #h(.5em)] \+ #s.absolute],
@@ -278,7 +297,7 @@
             pad(top: 0.5em, text(
               weight: weight-bold,
               size: size-total,
-            )[Bruttobetrag:]),
+            )[#sum-str.total:]),
             pad(top: 0.5em, text(
               weight: weight-bold,
               size: size-total,
@@ -289,7 +308,9 @@
             ..data
               .taxes
               .map(t => (
-                text(fill: color-vat-label)[inkl. MwSt. #t.rate (#t.category):],
+                text(
+                  fill: color-vat-label,
+                )[#sum-str.including #sum-str.vat-tax #t.rate (#t.category):],
                 text(fill: black)[#t.amount],
               ))
               .flatten(),
@@ -304,12 +325,15 @@
             column-gutter: 1em,
             align: (left, right),
 
-            [Zwischensumme (Netto):], data.unmodified-total.net,
+            [#sum-str.sum (#li-str.net):], data.unmodified-total.net,
 
             ..data
               .discounts
               .map(d => (
-                text(fill: color-discount, size-small)[Rabatt: #d.name],
+                text(
+                  fill: color-discount,
+                  size-small,
+                )[#li-str.discount: #d.name],
                 text(
                   fill: color-discount,
                 )[#if d.is-percent [(− #d.display) #h(.5em)] − #d.absolute],
@@ -319,7 +343,10 @@
             ..data
               .surcharges
               .map(s => (
-                text(fill: color-surcharge, size-small)[Zuschlag: #s.name],
+                text(
+                  fill: color-surcharge,
+                  size-small,
+                )[#li-str.surcharge: #s.name],
                 text(
                   fill: color-surcharge,
                 )[#if s.is-percent [(+ #s.display) #h(.5em)] \+ #s.absolute],
@@ -328,7 +355,7 @@
 
             ..if data.discounts.len() > 0 or data.surcharges.len() > 0 {
               (
-                text(weight: weight-bold)[Gesamt Netto:],
+                text(weight: weight-bold)[#li-str.total #li-str.net:],
                 text(weight: weight-bold)[#data.total.net],
               )
             } else { () },
@@ -340,7 +367,9 @@
             ..data
               .taxes
               .map(t => (
-                text(fill: color-vat-label)[zzgl. MwSt. #t.rate (#t.category):],
+                text(
+                  fill: color-vat-label,
+                )[#sum-str.excluding #sum-str.vat-tax #t.rate (#t.category):],
                 text(fill: black)[#t.amount],
               ))
               .flatten(),
@@ -353,7 +382,7 @@
             pad(y: 0.5em, text(
               weight: weight-bold,
               size: size-total,
-            )[Bruttobetrag:]),
+            )[#sum-str.total:]),
             pad(y: 0.5em, text(
               weight: weight-bold,
               size: size-total,
@@ -376,22 +405,24 @@
       and not data.tax-exempt-small-biz
   ) {
     let tax-rate = data.items.first(default: (tax: (rate: [0%]))).tax.rate
-    let tax-text = if is-net { "zzgl." } else { "inkl." }
-    global-infos.push(
-      [Alle Positionen verstehen sich #tax-text #tax-rate MwSt.],
-    )
+    let tax-text = if is-net { sum-str.excluding } else { sum-str.including }
+    global-infos.push(info-str.tax-statement(
+      tax-text,
+      tax-rate,
+      sum-str.vat-tax,
+    ))
   }
 
   if (
     not layout.show-units and not layout.multiple-units and data.items.len() > 0
   ) {
     let unit = data.items.first(default: (unit: none)).unit
-    global-infos.push([Einheit aller Positionen: #unit])
+    global-infos.push([#info-str.unit #unit])
   }
 
   if not layout.show-quantity and not layout.multiple-quantities {
     let quantity = data.items.first(default: (quantity: 0)).quantity
-    global-infos.push([Menge aller Positionen: #quantity])
+    global-infos.push([#info-str.quantity #quantity])
   }
 
   if (
@@ -401,11 +432,7 @@
       and data.items.len() > 0
   ) {
     let date = data.items.first(default: (date: none)).date
-    global-infos.push([Leistungsdatum aller Positionen: #date])
-  }
-
-  if data.tax-exempt-small-biz {
-    global-infos.push([Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.])
+    global-infos.push([#info-str.date #date])
   }
 
   if layout.show-global-information and global-infos.len() > 0 {

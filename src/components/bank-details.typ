@@ -76,7 +76,9 @@
       derive("reference", reference)
 
       nest("theme", {
-        ensure("bank-details", (..) => [Bank Details])
+        ensure("bank-details", (..) => panic(
+          "theme::bank-details is not provided",
+        ))
       })
 
       nest("global", {
