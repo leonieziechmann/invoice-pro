@@ -66,6 +66,8 @@
             typstEnv
             typstyle
             nodePackages.prettier
+            nodejs
+            yarn
             tytanic.packages.${system}.default
           ] ++ self.checks.${system}.pre-commit-check.enabledPackages;
 
@@ -75,6 +77,10 @@
             echo "    @preview/${name}:${version}"
             echo "    @preview/loom:${loomPackage.version}"
           '';
+        };
+
+        docs = pkgs.mkShell {
+          builtins = with pkgs; [ nodejs typst ];
         };
       }
     );
