@@ -124,17 +124,41 @@
   },
 )
 
+/// Customizes global informational sentences.
+/// - tax-statement (auto, fn): Function for tax rate sentence
+/// - unit (auto, str): Unit label
+/// - quantity (auto, str): Quantity label
+/// - date (auto, str): Service date label
+#let global-info(
+  tax-statement: auto,
+  unit: auto,
+  quantity: auto,
+  date: auto,
+) = (
+  {
+    let payload = _clean-auto((
+      tax-statement: tax-statement,
+      unit: unit,
+      quantity: quantity,
+      date: date,
+    ))
+    return (strings: (global-info: payload))
+  },
+)
+
 /// Customizes the bank detail labels.
 /// - account-holder (auto, str): e.g., "Account Holder", "Kontoinhaber"
 /// - bank (auto, str): e.g., "Bank", "Kreditinstitut"
 /// - iban (auto, str): e.g., "IBAN"
 /// - bic (auto, str): e.g., "BIC"
+/// - reference (auto, str): e.g., "Reference", "Verwendungszweck"
 /// -> dictionary
 #let bank-details(
   account-holder: auto,
   bank: auto,
   iban: auto,
   bic: auto,
+  reference: auto,
 ) = (
   {
     let payload = _clean-auto((
@@ -142,6 +166,7 @@
       bank: bank,
       iban: iban,
       bic: bic,
+      reference: reference,
     ))
     return (strings: (bank-details: payload))
   },
@@ -190,14 +215,42 @@
   },
 )
 
+/// Customizes error and warning messages.
+/// - name-missing (auto, str)
+/// - address-missing (auto, str)
+/// - city-missing (auto, str)
+/// - ambiguous-tax (auto, str)
+/// - invalid-tax (auto, str)
+#let errors(
+  name-missing: auto,
+  address-missing: auto,
+  city-missing: auto,
+  ambiguous-tax: auto,
+  invalid-tax: auto,
+) = (
+  {
+    let payload = _clean-auto((
+      name-missing: name-missing,
+      address-missing: address-missing,
+      city-missing: city-missing,
+      ambiguous-tax: ambiguous-tax,
+      invalid-tax: invalid-tax,
+    ))
+    return (strings: (errors: payload))
+  },
+)
+
 // -----------------------------------------------------------------------------
-// REGION OVERRIDES (region.format.*)
+// REGION OVERRIDES (region.*)
 // -----------------------------------------------------------------------------
 
 /// Customizes regional normalization and calculation logic.
-/// - money (auto, fn): Function to round standard currency totals. -> (number) => number
-/// - money-fine (auto, fn): Function to round high-precision items. -> (number) => number
-/// - infer-tax (auto, fn): Function that maps a raw rate to a tax object. -> (number) => tax
+/// - money (auto, fn): Function to round standard currency totals.
+/// -> (number) => number
+/// - money-fine (auto, fn): Function to round high-precision items.
+/// -> (number) => number
+/// - infer-tax (auto, fn): Function that maps a raw rate to a tax object.
+/// -> (number) => tax
 /// -> dictionary
 #let normalize(
   money: auto,
