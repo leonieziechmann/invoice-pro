@@ -4,27 +4,29 @@
  * work well for content-centric websites.
  */
 
-/* You can override the default Infima variables here. */
+/* LIGHT MODE: A crisp, professional blue that signifies trust and finance. */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
+  --ifm-color-primary: #2563eb;
+  --ifm-color-primary-dark: #2159d3;
+  --ifm-color-primary-darker: #1f54c8;
+  --ifm-color-primary-darkest: #1a45a5;
+  --ifm-color-primary-light: #3b72ed;
+  --ifm-color-primary-lighter: #467aef;
+  --ifm-color-primary-lightest: #6692f2;
+  
   --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.05);
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
+/* DARK MODE: A softer, luminous blue to reduce eye strain while maintaining the brand identity. */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-color-primary: #60a5fa;
+  --ifm-color-primary-dark: #5695e1;
+  --ifm-color-primary-darker: #518dd5;
+  --ifm-color-primary-darkest: #4374aa;
+  --ifm-color-primary-light: #70aefb;
+  --ifm-color-primary-lighter: #78b3fb;
+  --ifm-color-primary-lightest: #90c2fc;
+  
+  --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.1);
 }
