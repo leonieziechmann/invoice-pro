@@ -4,3 +4,71 @@ sidebar_position: 1
 ---
 
 # Introduction
+
+Welcome to the official documentation for `invoice-pro`, an open-source, automated invoicing template designed for Typst. Our goal is to provide a DRY (Don't Repeat Yourself) and declarative API that makes generating compliant invoices straightforward and reliable.
+
+## The Engine and Paradigm
+
+At its core, `invoice-pro` relies on a highly optimized, block-based API. This architecture completely decouples your data model from the visual representation. You define *what* you are billing for, and the template calculates *how* it should be displayed.
+
+The underlying system utilizes a robust pipeline packed with quality-of-life features, such as **Forward/Backward Calculation**. Whether you input gross totals or net unit prices, all mathematical dependencies are resolved automatically, ensuring a mathematically sound document. 
+
+Additionally, the engine handles different `tax-mode` configurations natively. By easily switching between net and gross calculations, `invoice-pro` effortlessly supports both B2B and B2C invoice workflows.
+
+## Quick Glance
+
+The power of `invoice-pro` lies in its conciseness. Below is a minimal example of a consulting invoice to demonstrate the declarative nature of the API:
+
+```typst
+#import "@preview/invoice-pro:0.3.0": *
+
+#show: invoice.with(
+  // Set the locale for language, formatting, and legal behaviors
+  locale: locale.en-de,
+  sender: (name: "Consulting Group LLC", street: "Consulting Street 1", city: "Berlin"),
+  recipient: (name: "Acme Corp", street: "Acme Street 1", city: "Munich"),
+  invoice-nr: "INV-2026-001",
+)
+
+// A strictly scoped block where children inherit parameters automatically
+#line-items[
+  #item([Strategic IT Consulting], quantity: 10, unit: "h", price: 150.00)
+  #item([Server Infrastructure Audit], price: 1200.00)
+  #item([Cloud Migration Support], quantity: 5, unit: "h", price: 120.00)
+
+  // Modifiers automatically apply to the context they are placed in
+  #discount([Long-term Client Discount], amount: 10%)
+]
+
+// Automated bank details with QoL payment features
+#bank-details(
+  bank: "My Bank",
+  iban: "DE00000000000000000000",
+  bic: "123456789XX",
+)
+```
+
+## Key Capabilities
+
+- **Locale System:** An advanced and extensible locale system that contains not just language translations, but also regional formatting and legal information/behavior.
+- **Cascading Information:** Children naturally inherit parameters from their parent blocks. This **Cascading** behavior means significantly less typing for you and no need for complex overriding logic.
+- **Payment Automation:** Quality-of-life features like automatic EPC-QR-Code (GiroCode) generation make it easier for clients to pay instantly via mobile banking applications.
+- **Theming API:** In the next major release, the theming engine will be reworked to include support for multiple distinct visual themes out of the box.
+
+## Compliance and Ecosystem
+
+Generating compliant invoices requires handling specific tax logic and regional rules. `invoice-pro` natively supports the EU VAT system and works seamlessly for countries utilizing similar tax models, such as Switzerland and Norway.
+
+The template helps you establish the correct **Grounds** for tax justifications easily. Because our data logic is decoupled from the layout layer, the visual layout can be entirely swapped out without altering your business data. This separation of concerns paves the way for our planned future support of **EN 16931** compliant e-invoicing standards (such as ZUGFeRD).
+
+:::info
+The visual layout (such as the German **DIN 5008** standard) is merely a presentation layer. You can swap themes at any time, and your underlying data structure remains perfectly intact.
+:::
+
+## Path Forward
+
+:::tip
+To ensure your Typst environment is properly configured for automated rendering and PDF generation, we highly recommend starting with the [Getting Started](./getting-started.md) guide.
+:::
+
+Once your environment is set up and you understand the basic workflow, you can dive into the specific modules and functions in our detailed [API Reference](./api-reference/index.md).

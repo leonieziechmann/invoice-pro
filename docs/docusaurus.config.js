@@ -141,7 +141,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} Invoice Pro, Leonie Ziechmann`,
+        copyright: `Copyright © ${new Date().getFullYear()}, Invoice Pro, Leonie Ziechmann.<br/><span style="opacity: 0.8; font-size: 0.9em;">Built with 🩵 🩷 🤍 🩷 🩵 and zero tolerance for hate.</span>`,
       },
       prism: {
         theme: prismThemes.github,
