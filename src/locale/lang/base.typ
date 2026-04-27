@@ -83,11 +83,15 @@
 
     /// Text for a fixed target date.
     /// -> (content|str) => str
-    deadline-date: date => "no later than " + str(date),
+    deadline-date: date => ("no later than", date).join(" "),
 
     /// Text for a relative target date (in X days).
     /// -> (int) => str
-    deadline-days: days => "within " + str(days) + " days",
+    deadline-days: days => (
+      "within",
+      str(days),
+      "days",
+    ).join(" "),
 
     /// Text for immediate/prompt payment.
     /// -> str

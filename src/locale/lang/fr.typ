@@ -75,8 +75,12 @@
       deadline,
     ) => [Veuillez transférer le montant total de *#sum* #deadline sur le compte indiqué ci-dessous.],
 
-    deadline-date: date => "au plus tard le " + str(date),
-    deadline-days: days => "sous " + str(days) + " jours",
+    deadline-date: date => ("au plus tard le", date).join(" "),
+    deadline-days: days => (
+      "sous",
+      str(days),
+      "jours",
+    ).join(" "),
     deadline-soon: "dès réception",
   ),
 

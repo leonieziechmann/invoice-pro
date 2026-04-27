@@ -72,10 +72,14 @@
     ) => [Bitte überweisen Sie den Gesamtbetrag von *#sum* #deadline ohne Abzug auf das unten genannte Konto.],
 
     /// Text for a fixed target date.
-    deadline-date: date => "bis spätestens " + str(date),
+    deadline-date: date => ("bis spätestens ", date).join(" "),
 
     /// Text for a relative target date (in X days).
-    deadline-days: days => "innerhalb von " + str(days) + " Tagen",
+    deadline-days: days => (
+      "innerhalb von",
+      str(days),
+      "Tagen",
+    ).join(" "),
 
     /// Text for immediate/prompt payment.
     deadline-soon: "zeitnah",

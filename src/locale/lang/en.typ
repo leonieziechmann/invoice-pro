@@ -78,10 +78,14 @@
     ) => [Please transfer the total amount of *#sum* #deadline to the account listed below.],
 
     /// Text for a fixed target date.
-    deadline-date: date => "no later than " + str(date),
+    deadline-date: date => ("no later than", date).join(" "),
 
     /// Text for a relative target date (in X days).
-    deadline-days: days => "within " + str(days) + " days",
+    deadline-days: days => (
+      "within",
+      str(days),
+      "days",
+    ).join(" "),
 
     /// Text for immediate/prompt payment.
     deadline-soon: "upon receipt",

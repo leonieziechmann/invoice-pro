@@ -78,10 +78,14 @@
     ) => [Por favor, transfiera el importe total de *#sum* #deadline a la cuenta indicada a continuación.],
 
     /// Texto para una fecha de vencimiento fija.
-    deadline-date: date => "antes del " + str(date),
+    deadline-date: date => ("antes del", date).join(" "),
 
     /// Texto para un plazo relativo (en X días).
-    deadline-days: days => "en un plazo de " + str(days) + " días",
+    deadline-days: days => (
+      "en un plazo de",
+      str(days),
+      "días",
+    ).join(" "),
 
     /// Texto para pago inmediato.
     deadline-soon: "al recibir la factura",
