@@ -30,13 +30,22 @@
 
   margin: (:),
 ) = (ctx, body) => {
-  // NYI
-  let annotations = none
-  // END NYI
-
   let format = "DIN-5008-" + form
   let subject = ctx.subject
   let reference-signs = ctx.references
+
+  let extras = ctx.sender.extra
+
+  let recipient-extras = ctx.recipient.extra
+  let annotations = if recipient-extras == () { none } else {
+    if type(recipient-extras) == array {
+      recipient-extras
+        .map(r => [#r.at(0, default: none): #r.at(1, default: none)])
+        .join(", ")
+    } else {
+      recipient-extras
+    }
+  }
 
   let margin = (
     left: margin.at("left", default: 25mm),
@@ -75,6 +84,31 @@
           if sender.name != none [#strong(sender.name) \ ]
           if sender.address != none [#sender.address \ ]
           if sender.city != none [#sender.city \ ]
+
+          parbreak()
+
+          if type(extras) == array {
+            block(
+              breakable: false,
+              grid(
+                columns: (auto, 1em, auto),
+                align: (left + horizon, left, right + horizon),
+                stroke: none,
+                row-gutter: 1.75em,
+                ..extras
+                  .map(a => {
+                    (
+                      [#a.at(0, default: none):],
+                      none,
+                      a.at(1, default: none),
+                    )
+                  })
+                  .flatten()
+              ),
+            )
+          } else {
+            extras
+          }
         },
       )
     },

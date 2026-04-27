@@ -1,4 +1,4 @@
-#import "@preview/invoice-pro:0.2.0": *
+#import "@preview/invoice-pro:0.3.0": *
 
 /*
  * Invoice Pro by Leonie Ziechmann
@@ -15,6 +15,10 @@
     name: "Deine Firma / Name",
     address: "Musterstraße 1",
     city: "12345 Musterstadt",
+    extra: (
+      "Tel": "+49 123 4567890",
+      "E-Mail": "my-mail@domain.de",
+    ),
   ),
   recipient: (
     name: "Kunden Name",
@@ -24,7 +28,6 @@
   invoice-nr: "2026-01",
   tax-nr: "123/456/789",
 )
-
 #set text(10pt)
 
 
