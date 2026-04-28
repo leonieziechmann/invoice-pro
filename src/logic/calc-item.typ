@@ -4,8 +4,8 @@
 #let calculate-item-data(ctx, name) = {
   let to-dec = coercion.to-decimal
   let to-ratio = coercion.to-ratio
-  let norm-money = ctx.normalize.money
-  let norm-money-fine = ctx.normalize.money-fine
+  let norm-money = ctx.locale.normalize.money
+  let norm-money-fine = ctx.locale.normalize.money-fine
 
   // 1. Quantity & Uni Normalization
   let quantity = to-dec(ctx.quantity)

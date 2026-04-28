@@ -18,12 +18,18 @@
         ensure("name", "#sender.name")
         ensure("address", "#sender.address")
         ensure("city", "#sender.city")
+
+        ensure("extra", ())
+        update("extra", x => if type(x) == dictionary { x.pairs() } else { x })
       })
 
       nest("recipient", {
         ensure("name", "#recipient.name")
         ensure("address", "#recipient.address")
         ensure("city", "#recipient.city")
+
+        ensure("extra", ())
+        update("extra", x => if type(x) == dictionary { x.pairs() } else { x })
       })
 
       ensure("invoice-date", datetime.today())
@@ -34,7 +40,7 @@
       nest("locale", {
         ensure("lang", "de")
         nest("format", {
-          ensure("date", x => [#x])
+          ensure("date", (..) => panic("locale::format::date is not provided"))
         })
       })
 

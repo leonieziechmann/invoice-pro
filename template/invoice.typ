@@ -1,4 +1,4 @@
-#import "@preview/invoice-pro:0.2.0": *
+#import "@preview/invoice-pro:0.3.0": *
 
 /*
  * Invoice Pro by Leonie Ziechmann
@@ -10,10 +10,15 @@
 
 #show: invoice.with(
   theme: themes.DIN-5008(form: "A"),
+  locale: locale.de-de,
   sender: (
     name: "Deine Firma / Name",
     address: "Musterstraße 1",
     city: "12345 Musterstadt",
+    extra: (
+      "Tel": "+49 123 4567890",
+      "E-Mail": "my-mail@domain.de",
+    ),
   ),
   recipient: (
     name: "Kunden Name",
@@ -23,8 +28,8 @@
   invoice-nr: "2026-01",
   tax-nr: "123/456/789",
 )
-
 #set text(10pt)
+
 
 #line-items[
   #bundle(
@@ -59,7 +64,7 @@
     ]
   ]
 
-  #apply(tax: 7%)[
+  #apply(tax: tax.lower-rate(7%))[
     #item(
       [Fachbuch: "Modernes Webdesign"],
       price: 49.90,

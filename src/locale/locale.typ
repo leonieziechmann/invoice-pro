@@ -1,97 +1,47 @@
-#import "../loom-wrapper.typ": loom
-#import "../data/tax.typ"
-#import "../utils/format.typ" as m-format
-#import "../utils/coercion.typ"
+#import "lang/lang.typ"
+#import "region/region.typ"
 
-#let format-datetime(date) = date.display("[day].[month].[year]")
-#let numeric-format = (
-  decimal-sign: ",",
-  thousand-separators: ".",
-  padding: false,
-  accuracy: 4,
-)
-#let currency-format = (currency: "€", location: end)
+#import "factory.typ": build-locale
+#import "custom.typ"
 
-#let infer-tax-de(rate) = {
-  if rate == 19% { return tax.vat(19%) } else if rate == 7% {
-    return tax.lower-rate(7%)
-  } else if rate == 0% {
-    panic(
-      "Ambiguous 0% tax rate detected! You must explicitly define the 0% category for legal compliance. "
-        + "Please use one of the explicit constructors instead of a raw 0%:"
-        + "`tax.reverse-charge()` -> B2B Reverse Charge (§13b UStG)"
-        + "`tax.intra-community()` -> EU B2B Delivery (§4 Nr. 1b UStG)"
-        + "`tax.export()` -> Non-EU Export (§4 Nr. 1a UStG)"
-        + "`tax.exempt()` -> VAT Exemptions (§4 UStG)"
-        + "`tax.outside-scope()` -> Small Business/Kleinunternehmer (§19 UStG) or out of scope.",
-    )
-  } else {
-    panic(
-      "Invalid German VAT rate detected: "
-        + repr(rate)
-        + ". Expected 19%, 7%, or a specific tax constructor.",
-    )
-  }
-}
+// Region AT locale
+#let de-at = build-locale(lang.de, region.at)
+#let en-at = build-locale(lang.en, region.at)
+#let fr-at = build-locale(lang.fr, region.at)
+#let it-at = build-locale(lang.it, region.at)
+#let es-at = build-locale(lang.es, region.at)
 
-#let de(
-  normalize: (:),
-  format: (:),
-  variables: (:),
-) = {
-  loom.collection.merge-deep(
-    (
-      lang: "de",
+// Region CH Locale
+#let de-ch = build-locale(lang.de, region.ch)
+#let en-ch = build-locale(lang.en, region.ch)
+#let fr-ch = build-locale(lang.fr, region.ch)
+#let it-ch = build-locale(lang.it, region.ch)
+#let es-ch = build-locale(lang.es, region.ch)
 
-      normalize: (
-        money: x => calc.round(coercion.to-decimal(x), digits: 2),
-        money-fine: x => calc.round(coercion.to-decimal(x), digits: 4),
-        infer-tax: infer-tax-de,
-      ),
+// Region DE Locale
+#let de-de = build-locale(lang.de, region.de)
+#let en-de = build-locale(lang.en, region.de)
+#let es-de = build-locale(lang.es, region.de)
+#let fr-de = build-locale(lang.fr, region.de)
+#let it-de = build-locale(lang.it, region.de)
 
-      variables: (
-        small-biz-tax-exemption-code: tax.outside-scope(
-          grounds: "Kleinunternehmen nach §19 UStG",
-        ),
-        vat: tax.vat(19%),
-      ),
+// Region ES Locale
+#let de-es = build-locale(lang.de, region.es)
+#let en-es = build-locale(lang.en, region.es)
+#let fr-es = build-locale(lang.fr, region.es)
+#let it-es = build-locale(lang.it, region.es)
+#let es-es = build-locale(lang.es, region.es)
 
-      format: (
-        percent: x => str(calc.round(x * 100)) + "%",
-        number: m-format.number.with(..numeric-format),
-        currency: m-format.currency.with(
-          ..currency-format,
-          number-format: numeric-format + (accuracy: 2, padding: true),
-        ),
-        currency-fine: x => {
-          let accuracy = if (
-            calc.round(x, digits: 2) == calc.round(x, digits: 4)
-          ) { 2 } else { 4 }
-          m-format.currency(
-            x,
-            ..currency-format,
-            number-format: numeric-format + (accuracy: accuracy, padding: true),
-          )
-        },
-        date: date => {
-          if type(date) == datetime { format-datetime(date) } else if (
-            type(date) == array
-          ) {
-            (
-              format-datetime(date.first())
-                + " "
-                + sym.dash.em
-                + " "
-                + format-datetime(date.last())
-            )
-          } else { none }
-        },
-      ),
-    ),
-    (
-      normalize: normalize,
-      format: format,
-      variables: variables,
-    ),
-  )
-}
+// Region FR Locale
+#let de-fr = build-locale(lang.de, region.fr)
+#let en-fr = build-locale(lang.en, region.fr)
+#let fr-fr = build-locale(lang.fr, region.fr)
+#let it-fr = build-locale(lang.it, region.fr)
+#let es-fr = build-locale(lang.es, region.fr)
+
+// Region IT Locale
+#let de-it = build-locale(lang.de, region.it)
+#let en-it = build-locale(lang.en, region.it)
+#let fr-it = build-locale(lang.fr, region.it)
+#let it-it = build-locale(lang.it, region.it)
+#let es-it = build-locale(lang.es, region.it)

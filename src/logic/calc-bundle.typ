@@ -15,8 +15,8 @@
 ) = {
   let to-dec = coercion.to-decimal
   let to-ratio = coercion.to-ratio
-  let norm-money = ctx.normalize.money
-  let norm-money-fine = ctx.normalize.money-fine
+  let norm-money = ctx.locale.normalize.money
+  let norm-money-fine = ctx.locale.normalize.money-fine
 
   let is-net-based = ctx.tax-mode == "exclusive"
 

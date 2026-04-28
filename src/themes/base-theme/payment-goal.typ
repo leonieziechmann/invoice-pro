@@ -1,20 +1,24 @@
 #import "../../utils/format.typ"
 
 #let render-payment-goal(ctx, view) = {
-  let sum-str = (ctx.format.currency)(view.total)
+  let pay-str = ctx.locale.strings.payment
+  let format = ctx.locale.format
 
   let deadline = if view.date != none {
     let date-str = if type(view.date) == datetime {
-      view.date.display("[day].[month].[year]")
+      (format.date)(view.date)
     } else {
       view.date
     }
-    [bis spätestens #date-str]
+    (pay-str.deadline-date)(date-str)
   } else if view.days != none {
-    [innerhalb von #view.days Tagen]
+    (pay-str.deadline-days)(view.days)
   } else {
-    [zeitnah]
+    pay-str.deadline-soon
   }
 
-  [Bitte überweisen Sie den Gesamtbetrag von *#sum-str* #deadline ohne Abzug auf das unten genannte Konto.]
+  (pay-str.text)(
+    (format.currency)(view.total),
+    deadline,
+  )
 }

@@ -23,8 +23,12 @@
 
       derive("sender", "name", name, default: "")
 
+      nest("locale", {
+        ensure("strings", (:))
+      })
+
       nest("theme", {
-        ensure("signature", (..) => [Signature])
+        ensure("signature", (..) => panic("theme::signature is not provided"))
       })
     }),
     measure: (ctx, _) => {

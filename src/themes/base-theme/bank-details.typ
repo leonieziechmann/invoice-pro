@@ -2,6 +2,9 @@
 #import "@preview/sepay:0.1.1": epc-qr-code
 
 #let render-bank-details(ctx, view) = {
+  let strings = ctx.locale.strings
+  let bd-str = strings.bank-details
+
   let qr-image = block(
     width: view.qr-code.size,
     height: view.qr-code.size,
@@ -36,13 +39,13 @@
     )[
       #set par(leading: 0.4em)
       #set text(number-type: "lining")
-      Kontoinhaber:in: #view.sender.name \
-      Kreditinstitut: #view.sender.bank \
-      IBAN: *#ibanator.iban(view.sender.iban)* \
-      BIC: #view.sender.bic \
+      #bd-str.account-holder: #view.sender.name \
+      #bd-str.bank: #view.sender.bank \
+      #bd-str.iban: *#ibanator.iban(view.sender.iban)* \
+      #bd-str.bic: #view.sender.bic \
       #if (
         view.show-reference and view.reference != none
-      ) [Referenz: *#view.reference*] \
+      ) [#bd-str.reference: *#view.reference*] \
       #h(6.5cm)
     ][
       #if view.qr-code.display {

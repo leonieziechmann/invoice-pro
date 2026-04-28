@@ -15,7 +15,7 @@
   theme: themes.DIN-5008(),
   /// The locale settings for language and number formatting.
   /// -> function
-  locale: locale.de,
+  locale: locale.de-de,
 
   /// A dictionary containing sender details (e.g., name, address).
   /// -> dictionary
@@ -29,7 +29,7 @@
   date: datetime.today(),
   /// The subject line of the invoice.
   /// -> string | content
-  subject: "Rechnung",
+  subject: auto,
   /// Reference information for the document header (e.g., customer number).
   /// -> none | dictionary | array
   references: none,
@@ -62,7 +62,7 @@
   types.require(recipient, "invoice::recipient", dictionary)
 
   types.require(date, "invoice::date", datetime)
-  types.require(subject, "invoice::subject", str, content)
+  types.require(subject, "invoice::subject", auto, str, content)
   types.require(
     references,
     "invoice::references",
@@ -84,8 +84,10 @@
   let eval-theme = theme()
   let eval-locale = locale()
 
+  if subject == auto { subject = eval-locale.strings.document.invoice }
+
   let document-subject = (subject, invoice-nr).join(" ")
-  let document-tax = if tax != auto { tax } else { eval-locale.variables.vat }
+  let document-tax = if tax != auto { tax } else { eval-locale.tax.default-vat }
 
   if tax-exempt-small-biz {
     if tax != auto {
@@ -93,12 +95,12 @@
         "If using invoice::tax-exempt-small-biz then the tax must be set to `auto`",
       )
     }
-    document-tax = eval-locale.variables.small-biz-tax-exemption-code
+    document-tax = eval-locale.tax.small-enterprise-special-scheme
   }
 
   let document-references = ()
   if tax-nr != none {
-    document-references.push(("Steuernummer", tax-nr))
+    document-references.push((eval-locale.strings.reference.tax-number, tax-nr))
   }
 
   if type(references) == array { document-references = references } else if (
