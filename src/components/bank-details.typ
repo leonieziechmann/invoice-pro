@@ -73,6 +73,8 @@
       import loom.mutator: *
 
       derive("sender", "name", name, default: "")
+
+      put("reference", ctx.invoice-nr)
       derive("reference", reference)
 
       nest("theme", {
