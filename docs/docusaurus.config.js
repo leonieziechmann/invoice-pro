@@ -53,12 +53,12 @@ const config = {
           sidebarPath: './sidebars.js',
           editUrl: 'https://github.com/leonieziechmann/invoice-pro/tree/main/docs',
 
-          // versions: {
-          //   current: {
-          //     label: 'Canary 🚧',
-          //     path: 'canary',
-          //   },
-          // },
+          versions: {
+            current: {
+              label: 'Canary 🚧',
+              path: 'canary',
+            },
+          },
         },
 
         blog: false,
