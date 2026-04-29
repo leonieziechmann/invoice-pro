@@ -3,7 +3,10 @@
 #import "data/tax.typ"
 #import "utils/types.typ"
 #import "themes/themes.typ"
+
 #import "locale/locale.typ"
+#import "locale/lang/base.typ": base-language
+#import "locale/region/base.typ": base-region
 
 /// The main entry point for creating an invoice document.
 /// It orchestrates the theme, localization, and data calculation passes.
@@ -82,7 +85,7 @@
 
   /** Input Calculations **/
   let eval-theme = theme()
-  let eval-locale = locale()
+  let eval-locale = locale(base-language, base-region)
 
   if subject == auto { subject = eval-locale.strings.document.invoice }
 

@@ -1,6 +1,3 @@
-#import "lang/base.typ": base-language
-#import "region/base.typ": base-region
-
 /// Merges a depth-2 patch dictionary onto a base dictionary.
 /// Panics if the patch contains keys not present in the base schema.
 #let base-pull-deep-merge(base, patch) = {
@@ -38,7 +35,7 @@
 }
 
 #let build-locale(lang, region) = {
-  (..overrides) => {
+  (..overrides, base-lang, base-region) => {
     // 1. Extract the user DSL arrays safely
     let user-lang-patches = overrides
       .pos()
@@ -56,7 +53,7 @@
     let final-lang = (
       lang,
       ..user-lang-patches,
-    ).fold(base-language, base-pull-deep-merge)
+    ).fold(base-lang, base-pull-deep-merge)
 
     // 3. Region Pipeline
     let specific-region = region(final-lang)
