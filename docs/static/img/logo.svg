@@ -1,37 +1,70 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <defs>
-    <linearGradient id="docGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3b72ed" />
-      <stop offset="100%" stop-color="#1a45a5" />
-    </linearGradient>
-    
-    <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#60a5fa" />
-      <stop offset="100%" stop-color="#2563eb" />
-    </linearGradient>
-
-    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.15"/>
-    </filter>
-  </defs>
-
-  <rect x="110" y="80" width="280" height="360" rx="24" fill="#e2e8f0" opacity="0.8" />
-
-  <rect x="80" y="50" width="280" height="360" rx="24" fill="url(#docGrad)" filter="url(#shadow)" />
-
-  <path d="M80 140 L360 140" stroke="#ffffff" stroke-width="2" stroke-opacity="0.2" />
-
-  <rect x="120" y="180" width="200" height="16" rx="8" fill="#ffffff" opacity="0.9" />
-  <rect x="120" y="220" width="140" height="16" rx="8" fill="#ffffff" opacity="0.7" />
-  <rect x="120" y="260" width="170" height="16" rx="8" fill="#ffffff" opacity="0.7" />
-
-  <rect x="120" y="310" width="200" height="2" fill="#ffffff" opacity="0.3" />
-
-  <rect x="230" y="330" width="90" height="24" rx="8" fill="#ffffff" />
-  
-  <circle cx="380" cy="360" r="60" fill="#ffffff" filter="url(#shadow)" />
-  
-  <circle cx="380" cy="360" r="50" fill="url(#badgeGrad)" />
-  
-  <text x="380" y="362" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="900" font-size="30" fill="#ffffff" text-anchor="middle" dominant-baseline="middle" letter-spacing="1">PRO</text>
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 25.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 1024 1024" style="enable-background:new 0 0 1024 1024;" xml:space="preserve">
+<style type="text/css">
+	.st0{opacity:0.8;fill:#E2E8F0;enable-background:new    ;}
+	.st1{filter:url(#shadow);}
+	.st2{fill:url(#SVGID_1_);}
+	.st3{stroke:#FFFFFF;stroke-width:4;stroke-miterlimit:8;stroke-opacity:0.2;}
+	.st4{opacity:0.9;fill:#FFFFFF;enable-background:new    ;}
+	.st5{opacity:0.7;fill:#FFFFFF;enable-background:new    ;}
+	.st6{opacity:0.3;fill:#FFFFFF;enable-background:new    ;}
+	.st7{fill:#FFFFFF;}
+	.st8{fill:url(#SVGID_2_);}
+	.st9{enable-background:new    ;}
+</style>
+<filter  height="140%" id="shadow" width="140%" x="-20%" y="-20%">
+	<feGaussianBlur  in="SourceAlpha" result="blur" stdDeviation="12"></feGaussianBlur>
+	<feOffset  dx="0" dy="8" in="blur" result="offsetBlur"></feOffset>
+	
+		<feColorMatrix  in="offsetBlur" result="shadow" type="matrix" values="         0 0 0 0 0           0 0 0 0 0           0 0 0 0 0           0 0 0 0.15 0">
+		</feColorMatrix>
+	<feMerge>
+		<feMergeNode  in="shadow"></feMergeNode>
+		<feMergeNode  in="SourceGraphic"></feMergeNode>
+	</feMerge>
+</filter>
+<path class="st0" d="M257.4,128.6h546.1c31.2,0,56.5,25.3,56.5,56.5v734.4c0,31.2-25.3,56.5-56.5,56.5H257.4
+	c-31.2,0-56.5-25.3-56.5-56.5V185.1C200.9,153.9,226.2,128.6,257.4,128.6z"/>
+<g class="st1">
+	
+		<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="-5.303248e-02" y1="1024.0583" x2="1.1239" y2="1022.8814" gradientTransform="matrix(560 0 0 -720 160 737380)">
+		<stop  offset="0" style="stop-color:#3B72ED"/>
+		<stop  offset="1" style="stop-color:#1A45A5"/>
+	</linearGradient>
+	<path class="st2" d="M186.8,58h546.1c31.2,0,56.5,25.3,56.5,56.5v734.4c0,31.2-25.3,56.5-56.5,56.5H186.8
+		c-31.2,0-56.5-25.3-56.5-56.5V114.5C130.3,83.3,155.6,58,186.8,58z"/>
+</g>
+<path class="st3" d="M130.3,269.8h659.1"/>
+<path class="st4" d="M243.3,364h433.1c10.4,0,18.8,8.4,18.8,18.8l0,0c0,10.4-8.4,18.8-18.8,18.8H243.3c-10.4,0-18.8-8.4-18.8-18.8
+	l0,0C224.5,372.4,232.9,364,243.3,364z"/>
+<path class="st5" d="M243.3,458.2h291.9c10.4,0,18.8,8.4,18.8,18.8l0,0c0,10.4-8.4,18.8-18.8,18.8H243.3c-10.4,0-18.8-8.4-18.8-18.8
+	l0,0C224.5,466.6,232.9,458.2,243.3,458.2z"/>
+<path class="st5" d="M243.3,552.3h362.5c10.4,0,18.8,8.4,18.8,18.8l0,0c0,10.4-8.4,18.8-18.8,18.8H243.3c-10.4,0-18.8-8.4-18.8-18.8
+	l0,0C224.5,560.7,232.9,552.3,243.3,552.3z"/>
+<rect x="224.5" y="670" class="st6" width="470.8" height="4.7"/>
+<path class="st7" d="M502.2,717.1h174.2c10.4,0,18.8,8.4,18.8,18.8v18.8c0,10.4-8.4,18.8-18.8,18.8H502.2
+	c-10.4,0-18.8-8.4-18.8-18.8v-18.8C483.4,725.5,491.8,717.1,502.2,717.1z"/>
+<g class="st1">
+	<circle class="st7" cx="836.5" cy="787.7" r="141.2"/>
+</g>
+<linearGradient id="SVGID_2_" gradientUnits="userSpaceOnUse" x1="0.2939" y1="1023.75" x2="1.4708" y2="1022.5731" gradientTransform="matrix(200 0 0 -200 660 205420)">
+	<stop  offset="0" style="stop-color:#60A5FA"/>
+	<stop  offset="1" style="stop-color:#2563EB"/>
+</linearGradient>
+<circle class="st8" cx="836.5" cy="787.7" r="117.7"/>
+<g class="st9">
+	<path class="st7" d="M761.7,762.4h26c5.7,0,9.9,1.3,12.7,4c2.8,2.7,4.2,6.5,4.2,11.5c0,5.1-1.5,9.1-4.6,12
+		c-3.1,2.9-7.8,4.3-14.1,4.3h-8.6V813h-15.7V762.4z M777.4,784h3.8c3,0,5.1-0.5,6.3-1.6c1.2-1,1.8-2.4,1.8-4c0-1.6-0.5-2.9-1.6-4
+		c-1.1-1.1-3-1.7-6-1.7h-4.4V784z"/>
+	<path class="st7" d="M815.3,813v-50.5h26c4.8,0,8.5,0.4,11.1,1.2c2.6,0.8,4.6,2.4,6.2,4.6c1.6,2.2,2.3,5,2.3,8.2
+		c0,2.8-0.6,5.2-1.8,7.3c-1.2,2-2.8,3.7-4.9,4.9c-1.3,0.8-3.2,1.5-5.5,2c1.9,0.6,3.2,1.2,4.1,1.9c0.6,0.4,1.4,1.3,2.5,2.7
+		c1.1,1.4,1.8,2.4,2.2,3.1L865,813h-17.6l-8.3-15.4c-1.1-2-2-3.3-2.8-3.9c-1.1-0.8-2.4-1.2-3.8-1.2H831V813H815.3z M831,782.9h6.6
+		c0.7,0,2.1-0.2,4.1-0.7c1-0.2,1.9-0.7,2.5-1.6c0.7-0.9,1-1.8,1-2.9c0-1.6-0.5-2.9-1.6-3.8c-1-0.9-3-1.3-5.8-1.3H831V782.9z"/>
+	<path class="st7" d="M869.2,787.7c0-8.3,2.3-14.7,6.9-19.3c4.6-4.6,11-6.9,19.2-6.9c8.4,0,14.9,2.3,19.4,6.8s6.8,10.8,6.8,19
+		c0,5.9-1,10.8-3,14.5c-2,3.8-4.9,6.7-8.6,8.8c-3.8,2.1-8.4,3.2-14.1,3.2c-5.7,0-10.4-0.9-14.2-2.7c-3.7-1.8-6.8-4.7-9.1-8.6
+		C870.3,798.6,869.2,793.6,869.2,787.7z M884.8,787.8c0,5.1,0.9,8.8,2.8,11s4.5,3.3,7.7,3.3c3.4,0,6-1.1,7.8-3.3s2.8-6.1,2.8-11.8
+		c0-4.8-1-8.2-2.9-10.4s-4.5-3.3-7.8-3.3c-3.1,0-5.7,1.1-7.6,3.3C885.8,779,884.8,782.7,884.8,787.8z"/>
+</g>
 </svg>
