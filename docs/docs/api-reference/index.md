@@ -80,5 +80,5 @@ Below is a foundational structural blueprint illustrating how the modules intera
 ```
 
 :::tip
-For a structured learning path, we recommend verifying your understanding of the [Invoice API](./invoice) first, followed by the deep dive into the [Line Items API](./line-items). These two modules cover 90% of standard implementation workflows.
+For a structured learning path, we recommend verifying your understanding of the [Invoice API](api-reference/invoice) first, followed by the deep dive into the [Line Items API](api-reference/line-items). These two modules cover 90% of standard implementation workflows.
 :::
