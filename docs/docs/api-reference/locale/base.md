@@ -159,9 +159,21 @@ Exercise extreme caution when overriding functions in the `normalize` block. Ret
 
 Contains core metadata about the region configuration.
 
-| Key      | Type  | Description                                                               |
-| :------- | :---- | :------------------------------------------------------------------------ |
-| `region` | `str` | The official identifier or ISO code of the region (e.g., `"DE"`, `"US"`). |
+| Key            | Type  | Description                                                                  |
+| :------------- | :---- | :--------------------------------------------------------------------------- |
+| `region`       | `str` | The internal, lower-case identifier of the region (e.g., `"de"`, `"us"`).    |
+| `country-code` | `str` | The 2-letter ISO 3166-1 alpha-2 country code (e.g., `"DE"`, `"CH"`, `"US"`). |
+
+### `currency`
+
+Metadata for the primary currency used in the region. This is essential for structured data payloads like ZUGFeRD or EPC-QR codes.
+
+| Key             | Type  | Description                                                                      |
+| :-------------- | :---- | :------------------------------------------------------------------------------- |
+| `code`          | `str` | The 3-letter ISO 4217 currency code (e.g., `"EUR"`, `"CHF"`).                    |
+| `symbol`        | `str` | The visual symbol of the currency (e.g., `"€"`, `"CHF "`).                       |
+| `decimals`      | `int` | The standard number of subunits/decimal places for financial totals (e.g., `2`). |
+| `decimals-fine` | `int` | The allowed number of decimal places for singular unit prices (usually `4`).     |
 
 ### `normalize`
 
