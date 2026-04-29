@@ -67,6 +67,7 @@
       strings: final-lang,
       format: final-region.format,
       normalize: final-region.normalize,
+      currency: final-region.currency,
       tax: final-region.tax,
       meta: final-region.meta,
     )

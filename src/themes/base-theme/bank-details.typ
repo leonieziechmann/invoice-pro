@@ -4,24 +4,19 @@
 #let render-bank-details(ctx, view) = {
   let strings = ctx.locale.strings
   let bd-str = strings.bank-details
+  let currency-code = ctx.locale.currency.code
 
-  let qr-image = block(
-    width: view.qr-code.size,
-    height: view.qr-code.size,
-    fill: black,
-    align(
-      center + horizon,
-      text(fill: white, .8em, style: "italic")[EPC \ QR-CODE \ \<HERE\>],
-    ),
-  )
+  let qr-image = none
 
-  if float(view.payment-amount) >= 0.1 {
+  if currency-code == "EUR" {
     qr-image = epc-qr-code(
       view.sender.name,
       view.sender.iban,
       ..(
         bic: view.sender.bic,
-        amount: float(view.payment-amount),
+        amount: if float(view.payment-amount) >= 0.1 {
+          float(view.payment-amount)
+        },
         width: view.qr-code.size,
         height: view.qr-code.size,
       )
