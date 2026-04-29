@@ -8,22 +8,23 @@
  * please create an Issue or Pull Request on GitHub.
  */
 
+
 #show: invoice.with(
   theme: themes.DIN-5008(form: "A"),
-  locale: locale.de-de,
+  locale: locale.en-de,
   sender: (
-    name: "Deine Firma / Name",
-    address: "Musterstraße 1",
-    city: "12345 Musterstadt",
+    name: "Your Company / Name",
+    address: "123 Example Street",
+    city: "12345 Example City",
     extra: (
       "Tel": "+49 123 4567890",
-      "E-Mail": "my-mail@domain.de",
+      "E-Mail": "my-mail@domain.com",
     ),
   ),
   recipient: (
-    name: "Kunden Name",
-    address: "Kundenstraße 5",
-    city: "98765 Kundenstadt",
+    name: "Customer Name",
+    address: "5 Customer Street",
+    city: "98765 Customer City",
   ),
   invoice-nr: "2026-01",
   tax-nr: "123/456/789",
@@ -33,32 +34,32 @@
 
 #line-items[
   #bundle(
-    [Webseiten Relaunch 2026],
+    [Website Relaunch 2026],
     date: (date(10, 2, 2026), date(5, 3, 2026)),
-    unit: "Pausch.",
+    unit: "flat",
   )[
     #item(
-      [Konzeption & Wireframing],
+      [Concept & Wireframing],
       price: 1200.00,
       quantity: 1,
-      unit: "Pauschale",
+      unit: "flat",
     )
-    #item([UI/UX Design], price: 85.00, quantity: 15, unit: "Std.")
+    #item([UI/UX Design], price: 85.00, quantity: 15, unit: "hrs")
     #item(
-      [Frontend & Backend Entwicklung],
+      [Frontend & Backend Development],
       price: 95.00,
       quantity: 40,
-      unit: "Std.",
+      unit: "hrs",
     )
 
-    #discount([Paketrabatt (10% auf Entwicklungsleistungen)], amount: 10%)
+    #discount([Package Discount (10% on development services)], amount: 10%)
 
     #bundle([SEO & Tracking Setup])[
       #item(
-        [Keyword-Recherche & Strategie],
+        [Keyword Research & Strategy],
         price: 90.00,
         quantity: 5,
-        unit: "Std.",
+        unit: "hrs",
       )
       #item([Setup Google Analytics & Tag Manager], price: 150.00, quantity: 1)
     ]
@@ -66,16 +67,16 @@
 
   #apply(tax: tax.lower-rate(7%))[
     #item(
-      [Fachbuch: "Modernes Webdesign"],
+      [Textbook: "Modern Web Design"],
       price: 49.90,
       quantity: 2,
-      unit: "Stk.",
+      unit: "pcs",
     )
     #item(
-      [Fachbuch: "SEO für Anfänger"],
+      [Textbook: "SEO for Beginners"],
       price: 29.90,
       quantity: 1,
-      unit: "Stk.",
+      unit: "pcs",
     )
   ]
 
@@ -83,35 +84,35 @@
     [Premium Hosting],
     price: 15.00,
     quantity: 12,
-    unit: "Monate",
+    unit: "months",
     date: datetime.today(),
   )
 
   #item(
-    [Domainregistrierung (.de)],
+    [Domain Registration (.com)],
     total: 11.90,
     input-gross: true,
-    unit: "Pausch.",
+    unit: "flat",
   )
 
   #item(
-    [Einrichtung der E-Mail-Postfächer],
+    [Email Inbox Setup],
     price: 0,
     tax: tax.zero(),
-    description: "Inklusivleistung gemäß Rahmenvertrag",
-    unit: "Pausch.",
+    description: "Included service as per framework agreement",
+    unit: "flat",
   )
 
-  #discount([Aktionsgutschein "NEUKUNDE50"], amount: 50)
-  #surcharge([Bearbeitungs- und Servicegebühr], amount: 15.00)
+  #discount([Promo Voucher "NEWCUSTOMER50"], amount: 50)
+  #surcharge([Processing and Service Fee], amount: 15.00)
 ]
 
 #payment-goal(days: 14)
 
 #bank-details(
-  bank: "Musterbank",
+  bank: "Example Bank",
   iban: "DE07100202005821158846",
-  bic: "MUSTERBICXX",
+  bic: "EXAMPLEBICX",
 )
 
 #v(-.5em)
