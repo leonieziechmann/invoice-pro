@@ -9,9 +9,9 @@ Welcome to the official documentation for `invoice-pro`, an open-source, automat
 
 ## The Engine and Paradigm
 
-At its core, `invoice-pro` relies on a highly optimized, block-based API. This architecture completely decouples your data model from the visual representation. You define *what* you are billing for, and the template calculates *how* it should be displayed.
+At its core, `invoice-pro` relies on a highly optimized, block-based API. This architecture completely decouples your data model from the visual representation. You define _what_ you are billing for, and the template calculates _how_ it should be displayed.
 
-The underlying system utilizes a robust pipeline packed with quality-of-life features, such as **Forward/Backward Calculation**. Whether you input gross totals or net unit prices, all mathematical dependencies are resolved automatically, ensuring a mathematically sound document. 
+The underlying system utilizes a robust pipeline packed with quality-of-life features, such as **Forward/Backward Calculation**. Whether you input gross totals or net unit prices, all mathematical dependencies are resolved automatically, ensuring a mathematically sound document.
 
 Additionally, the engine handles different `tax-mode` configurations natively. By easily switching between net and gross calculations, `invoice-pro` effortlessly supports both B2B and B2C invoice workflows.
 

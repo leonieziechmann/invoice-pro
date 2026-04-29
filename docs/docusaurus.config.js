@@ -116,7 +116,16 @@ const config = {
         links: [
           {
             title: 'Docs',
-            items: [],
+            items: [
+              {
+                label: 'Getting Started',
+                to: '/getting-started',
+              },
+              {
+                label: 'API Reference',
+                to: '/api-reference',
+              },
+            ],
           },
           {
             title: 'Community',
