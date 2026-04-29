@@ -52,3 +52,37 @@
     formated-string + currency
   } else { panic("Inavalid Location!") }
 }
+
+/// Helper function to reduce formatting boilerplate in concrete regions.
+/// Generates the standard number and currency formatters based on the provided metadata.
+#let make-formatters(numeric-format, currency-meta, currency-location: end) = {
+  let currency-format = (
+    currency: currency-meta.symbol,
+    location: currency-location,
+  )
+
+  return (
+    number: number.with(..numeric-format),
+
+    currency: currency.with(
+      ..currency-format,
+      number-format: numeric-format
+        + (accuracy: currency-meta.decimals, padding: true),
+    ),
+
+    currency-fine: x => {
+      // Determines whether the fine value has actual decimals beyond standard precision
+      let standard-rounded = calc.round(x, digits: currency-meta.decimals)
+      let fine-rounded = calc.round(x, digits: currency-meta.decimals-fine)
+      let accuracy = if (standard-rounded == fine-rounded) {
+        currency-meta.decimals
+      } else { 4 }
+
+      currency(
+        x,
+        ..currency-format,
+        number-format: numeric-format + (accuracy: accuracy, padding: true),
+      )
+    },
+  )
+}

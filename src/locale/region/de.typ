@@ -1,17 +1,7 @@
 #import "../../data/tax.typ"
-#import "../../utils/format.typ" as m-format
-#import "../../utils/coercion.typ"
 
 #let de(lang) = {
   // --- Helper Functions ---
-  let numeric-format = (
-    decimal-sign: ",",
-    thousand-separators: ".",
-    padding: false,
-    accuracy: 4,
-  )
-  let currency-format = (currency: "€", location: end)
-
   let infer-tax-de(rate) = {
     if rate == 19% { return tax.vat(19%) } else if rate == 7% {
       return tax.lower-rate(7%)
@@ -42,27 +32,7 @@
     ),
 
     normalize: (
-      money: x => calc.round(coercion.to-decimal(x), digits: 2),
-      money-fine: x => calc.round(coercion.to-decimal(x), digits: 4),
       infer-tax: infer-tax-de,
-    ),
-
-    format: (
-      number: m-format.number.with(..numeric-format),
-      currency: m-format.currency.with(
-        ..currency-format,
-        number-format: numeric-format + (accuracy: 2, padding: true),
-      ),
-      currency-fine: x => {
-        let accuracy = if (
-          calc.round(x, digits: 2) == calc.round(x, digits: 4)
-        ) { 2 } else { 4 }
-        m-format.currency(
-          x,
-          ..currency-format,
-          number-format: numeric-format + (accuracy: accuracy, padding: true),
-        )
-      },
     ),
 
     tax: (
@@ -73,4 +43,3 @@
     ),
   )
 }
-
