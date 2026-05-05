@@ -138,7 +138,7 @@ I am actively working on improving this template. Here is what's planned for fut
 
 - [x] (v0.2.0) **Refactored API:** Moving away from global states to a more robust, scoped API (inspired by CeTZ) for better stability and flexibility.
 - [x] (v0.3.0) **Internationalization (i18n):** Built-in support for English and other languages (currently creates German invoices by default).
-- [ ] **Theming Engine:** Allow easy customization of accent colors and fonts to match corporate identities.
+- [ ] (WIP) **Theming Engine:** Allow easy customization of accent colors and fonts to match corporate identities.
 - [ ] **Data Loading:** Helper functions to load invoice items directly from JSON, CSV, or YAML files.
 - [ ] **ZUGFeRD Support:** (Long-term goal) Embedding XML data for fully compliant e-invoicing.
 

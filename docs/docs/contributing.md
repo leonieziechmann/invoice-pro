@@ -80,8 +80,8 @@ Use as few external packages as possible. While delegating complex generation ta
 The following milestones are planned for future releases of the core engine:
 
 - [x] (v0.2.0) **Refactored API:** Moving away from global states to a more robust, scoped API for better stability and flexibility.
-- [x] (WIP) **Internationalization (i18n):** Built-in support for English and other locales (currently generates German invoices by default).
-- [ ] **Theming Engine:** Allow easy customization of accent colors and fonts to match corporate identities.
+- [x] (v0.3.0) **Internationalization (i18n):** Built-in support for English and other locales (currently generates German invoices by default).
+- [ ] (WIP) **Theming Engine:** Allow easy customization of accent colors and fonts to match corporate identities.
 - [ ] **Data Loading:** Helper functions to load invoice items directly from JSON, CSV, or YAML data sources.
 - [ ] **ZUGFeRD Support:** (Long-term goal) Embedding XML data for fully compliant, **Normalized** e-invoicing based on standards like **UNTDID 5305**.
 
