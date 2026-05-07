@@ -31,7 +31,7 @@ The power of `invoice-pro` lies in its conciseness. Below is a minimal example o
 )
 
 // A strictly scoped block where children inherit parameters automatically
-#line-items[
+#line-items(show-column: (tax-rate: true))[
   #item([Strategic IT Consulting], quantity: 10, unit: "h", price: 150.00)
   #item([Server Infrastructure Audit], price: 1200.00)
   #item([Cloud Migration Support], quantity: 5, unit: "h", price: 120.00)
@@ -42,9 +42,9 @@ The power of `invoice-pro` lies in its conciseness. Below is a minimal example o
 
 // Automated bank details with QoL payment features
 #bank-details(
-  bank: "My Bank",
-  iban: "DE00000000000000000000",
-  bic: "123456789XX",
+  bank: "Example Bank",
+  iban: "DE07100202005821158846",
+  bic: "EXAMPLEBICX",
 )
 ```
 

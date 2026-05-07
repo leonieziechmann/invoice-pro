@@ -417,7 +417,7 @@
   ) {
     let tax-rate = data.items.first(default: (tax: (rate: [0%]))).tax.rate
     let tax-text = if is-net { sum-str.excluding } else { sum-str.including }
-    global-infos.push(info-str.tax-statement(
+    global-infos.push((info-str.tax-statement)(
       tax-text,
       tax-rate,
       sum-str.vat-tax,

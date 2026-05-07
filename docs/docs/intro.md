@@ -42,9 +42,9 @@ The power of `invoice-pro` lies in its conciseness. Below is a minimal example o
 
 // Automated bank details with QoL payment features
 #bank-details(
-  bank: "My Bank",
-  iban: "DE00000000000000000000",
-  bic: "123456789XX",
+  bank: "Example Bank",
+  iban: "DE07100202005821158846",
+  bic: "EXAMPLEBICX",
 )
 ```
 
