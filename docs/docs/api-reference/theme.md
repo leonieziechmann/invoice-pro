@@ -35,7 +35,7 @@ By default, the theme is configured for Form A, but Form B can easily be selecte
 ### Example Usage
 
 ```typst
-#import "@preview/invoice-pro:0.3.0": invoice, themes
+#import "@preview/invoice-pro:0.3.1": invoice, themes
 
 // Initialize the invoice with a customized DIN-5008 theme
 #show: invoice.with(
@@ -67,7 +67,7 @@ Because the `blank` theme applies strictly no document-level theming, the output
 ### Example Usage
 
 ```typst
-#import "@preview/invoice-pro:0.3.0": invoice, themes
+#import "@preview/invoice-pro:0.3.1": invoice, themes
 
 // 1. Apply native Typst document-level formatting
 #set page("a5", margin: (left: 0.5cm, right: 4cm))

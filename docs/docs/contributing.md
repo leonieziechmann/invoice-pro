@@ -39,7 +39,7 @@ This activates a shell containing a custom-wrapped `typst` binary, `typstyle`, `
 
 ```typst
 // Import the dynamically linked development version directly
-#import "@preview/invoice-pro:0.3.0": *
+#import "@preview/invoice-pro:0.3.1": *
 
 // Initialize the root environment for testing
 #show: invoice.with(..)
