@@ -1,6 +1,6 @@
-#import "@preview/loom:0.1.0" as loom
+#import "@preview/loom:0.1.1" as loom
 
-#let loom-key = <invoice-pro:0.2.0>
+#let loom-key = <invoice-pro:0.3.0>
 #let (weave, motif, prebuild-motif) = loom.construct-loom(loom-key)
 
 // The Engine
