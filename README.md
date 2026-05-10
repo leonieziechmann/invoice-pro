@@ -86,7 +86,7 @@ Here is an example of how to create an invoice using the new v0.3.0 API:
 #bank-details(
   bank: "Example Bank",
   iban: "DE07100202005821158846",
-  bic: "EXAMPLEBIC",
+  bic: "EXAMPLEBICX",
 )
 
 #signature()
