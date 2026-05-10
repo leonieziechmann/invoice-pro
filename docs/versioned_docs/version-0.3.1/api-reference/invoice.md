@@ -42,9 +42,9 @@ While the table above lists all available options, a few parameters dictate the 
 
 These parameters define the contact details for the invoicing party (sender) and the customer (recipient). Both parameters accept a standard dictionary.
 
-Standard keys generally include `name`, `street`, and `city`. Additionally, you can use the `extras` key to provide arbitrary supplementary information (like phone numbers, email addresses, or commercial register numbers) styled according to your theme.
+Standard keys generally include `name`, `street`, and `city`. Additionally, you can use the `extra` key to provide arbitrary supplementary information (like phone numbers, email addresses, or commercial register numbers) styled according to your theme.
 
-Just like the header `references`, the `extras` field accepts either a dictionary of key-value pairs or an array of `(label, value)` tuples.
+Just like the header `references`, the `extra` field accepts either a dictionary of key-value pairs or an array of `(label, value)` tuples.
 
 **Example:**
 
@@ -53,7 +53,7 @@ sender: (
   name: "Max Mustermann",
   street: "Musterstraße 1",
   city: "12345 Musterstadt",
-  extras: (
+  extra: (
     "Phone": "+49 123 456789",
     "Email": "max@mustermann.de",
     "Web": "www.mustermann.de"
@@ -63,7 +63,7 @@ recipient: (
   name: "Acme Corporation",
   street: "Business Blvd 42",
   city: "54321 Metropolis",
-  extras: (
+  extra: (
     ("Contact Person", "Jane Doe"),
     ("Department", "Accounting")
   )
