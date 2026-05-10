@@ -2,6 +2,7 @@
 
 // Sparse setup: Omitting optional fields to test defaults
 #show: invoice.with(
+  theme: themes.DIN-5008(font: "libertinus serif"),
   sender: (
     name: "Sparse Setup Corp",
     address: "1 Sparse Ln",

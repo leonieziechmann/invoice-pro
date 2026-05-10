@@ -2,6 +2,7 @@
 
 // 1. Initialize the document using a show rule
 #show: invoice.with(
+  theme: themes.DIN-5008(font: "libertinus serif"),
   // Sender and recipient configurations
   sender: (
     name: "Acme Corporation",

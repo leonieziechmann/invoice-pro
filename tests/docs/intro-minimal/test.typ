@@ -1,6 +1,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
+  theme: themes.DIN-5008(font: "libertinus serif"),
   // Set the locale for language, formatting, and legal behaviors
   locale: locale.en-de,
   sender: (

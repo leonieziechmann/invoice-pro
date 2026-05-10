@@ -1,7 +1,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(form: "A"), // or form: "B"
+  theme: themes.DIN-5008(form: "A", font: "libertinus serif"),
   locale: locale.en-de,
   sender: (
     name: "Your Company / Name",

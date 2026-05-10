@@ -1,7 +1,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(form: "A"),
+  theme: themes.DIN-5008(form: "B", font: "libertinus serif"),
   locale: locale.en-de,
   sender: (
     name: "Complex Setup Corp",
