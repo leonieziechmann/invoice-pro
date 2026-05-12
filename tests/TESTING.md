@@ -26,6 +26,11 @@ tests/
 │   └── features-sparse/
 │       └── …
 │
+├── issues/                # Regression tests for reported bugs
+│   └── issue-42/
+│       ├── .gitignore
+│       └── test.typ
+│
 └── line-items/            # Focused unit-style tests for calculations
     └── totals/
         ├── .gitignore
@@ -258,6 +263,53 @@ When the documentation code and the test code diverge, use the following rule of
 
 ---
 
+### 4. Issue Regression Tests (`issues/`)
+
+Every bug reported as a GitHub issue that can be reproduced must have a regression test. These tests ensure that once a bug is fixed, it never resurfaces.
+
+```
+tests/issues/issue-<number>/
+├── .gitignore
+└── test.typ
+```
+
+**Steps:**
+
+1. Create a directory named `issue-<number>` under `tests/issues/` (using the GitHub issue number).
+2. Write `test.typ` that reproduces the bug scenario described in the issue.
+3. Add the `.gitignore`.
+4. Use `data-test` with `test-locale` and `themes.blank` if the bug involves calculations. Use a visual regression test (with `ref/1.png`) if the bug is visual.
+5. Add a comment at the top of `test.typ` linking to the issue and briefly describing the bug.
+6. Register the test in the Issue Test Registry below.
+
+**Template:**
+
+```typ
+// Regression test for GitHub issue #<number>
+// https://github.com/leonieziechmann/invoice-pro/issues/<number>
+//
+// Bug: <brief description of the reported bug>
+
+#import "/src/lib.typ": *
+#import "/tests/data-test.typ": data-test, loom
+#import "/tests/test-locale.typ": test-locale
+
+#show: invoice.with(
+  theme: themes.blank,
+  locale: test-locale,
+  sender: (name: "Test Sender"),
+  recipient: (name: "Test Recipient"),
+)
+
+#data-test(test: (ctx, data) => {
+  // assertions that verify the bug is fixed
+})[
+  // scenario that triggered the bug
+]
+```
+
+---
+
 ## Running Tests
 
 ```bash
@@ -266,6 +318,9 @@ tt run
 
 # Run a specific test
 tt run "line-items/totals"
+
+# Run all issue regression tests
+tt run "issues/"
 
 # Update reference snapshots after intentional visual changes
 tt update
@@ -299,6 +354,18 @@ Every non-trivial code block in `docs/docs/` must be registered here. When addin
 
 ---
 
+## Issue Test Registry
+
+Every bug reported as a GitHub issue must be registered here. When a bug is fixed, add a regression test and update the status. If the test is not yet created, mark the entry as **⚠️ not implemented**.
+
+| Issue                                                           | Description                                                                           | Test directory     | Status |
+| :-------------------------------------------------------------- | :------------------------------------------------------------------------------------ | :----------------- | :----- |
+| [#19](https://github.com/leonieziechmann/invoice-pro/issues/19) | Item-level modifier not applied; `extra` dict >2 items; decimal discount context loss | `issues/issue-19/` | ✅     |
+
+> _Add entries as bugs are reported._
+
+---
+
 ## Quick Checklist for New Tests
 
 - [ ] Created a new directory under the appropriate category
@@ -309,3 +376,4 @@ Every non-trivial code block in `docs/docs/` must be registered here. When addin
 - [ ] Generated reference snapshots with `tt update` (for visual tests)
 - [ ] Committed `test.typ`, `.gitignore`, and `ref/` (if applicable)
 - [ ] Registered the test in the Documentation Test Registry (if it covers a doc code block)
+- [ ] Registered the test in the Issue Test Registry (if it reproduces a bug from an issue)
