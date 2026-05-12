@@ -11,33 +11,33 @@
 // Scenario (all prices are net / tax-exclusive):
 //
 //   ┌─────────────────────────────────────────────────────────┐
-//   │ Standalone Items                                       │
+//   │ Standalone Items                                        │
 //   ├─────────────────────────────────────────────────────────┤
-//   │ Item A: 100.00 × 2 = 200.00 @ 19% VAT                │
-//   │   └─ item discount: -10% → -20.00                     │
-//   │   └─ modified total: 180.00                           │
+//   │ Item A: 100.00 × 2 = 200.00 @ 19% VAT                   │
+//   │   └─ item discount: -10% → -20.00                       │
+//   │   └─ modified total: 180.00                             │
 //   │                                                         │
-//   │ Item B: total = 500.00 @ 7% lower-rate                │
-//   │   └─ item surcharge: +25.00                           │
-//   │   └─ modified total: 525.00                           │
+//   │ Item B: total = 500.00 @ 7% lower-rate                  │
+//   │   └─ item surcharge: +25.00                             │
+//   │   └─ modified total: 525.00                             │
 //   ├─────────────────────────────────────────────────────────┤
-//   │ Bundle "Development" (quantity: 1)                     │
-//   │   Item C: 300.00 × 1 = 300.00 @ 19% VAT              │
-//   │   Item D: 150.00 × 1 = 150.00 @ 7% lower-rate        │
-//   │   Bundle discount: -50.00 absolute                    │
+//   │ Bundle "Development" (quantity: 1)                      │
+//   │   Item C: 300.00 × 1 = 300.00 @ 19% VAT                 │
+//   │   Item D: 150.00 × 1 = 150.00 @ 7% lower-rate           │
+//   │   Bundle discount: -50.00 absolute                      │
 //   │                                                         │
-//   │   Bundle produces virtual items per tax bracket:       │
-//   │     19% bracket base: 300.00                          │
-//   │       discount split: -50 × (300/450) = -33.33        │
-//   │       virtual total: 300.00 - 33.33 = 266.67          │
-//   │     7% bracket base: 150.00                           │
-//   │       discount split: -50 × (150/450) = -16.67        │
-//   │       virtual total: 150.00 - 16.67 = 133.33          │
+//   │   Bundle produces virtual items per tax bracket:        │
+//   │     19% bracket base: 300.00                            │
+//   │       discount split: -50 × (300/450) = -33.33          │
+//   │       virtual total: 300.00 - 33.33 = 266.67            │
+//   │     7% bracket base: 150.00                             │
+//   │       discount split: -50 × (150/450) = -16.67          │
+//   │       virtual total: 150.00 - 16.67 = 133.33            │
 //   ├─────────────────────────────────────────────────────────┤
-//   │ Item E (zero-rated): total = 100.00 @ 0%              │
+//   │ Item E (zero-rated): total = 100.00 @ 0%                │
 //   ├─────────────────────────────────────────────────────────┤
-//   │ Global discount: -5%                                   │
-//   │ Global surcharge: +30.00 absolute                     │
+//   │ Global discount: -5%                                    │
+//   │ Global surcharge: +30.00 absolute                       │
 //   └─────────────────────────────────────────────────────────┘
 //
 // Step 1: Items entering modifier-applicator (after item-level mods,
@@ -52,7 +52,7 @@
 //   19% discount: 446.67 × 5%  = -22.33
 //    7% discount: 658.33 × 5%  = -32.92
 //    0% discount: 100.00 × 5%  = -5.00
-//   Total discount:             = -60.25
+//   Total discount:            = -60.25
 //
 // Step 3: Global 30.00 absolute surcharge split proportionally:
 //   Base total = 1205.00
@@ -60,22 +60,22 @@
 //    7% share: 30 × (658.33 / 1205) ≈ 16.39
 //    0% share: 30 × (100.00 / 1205) ≈  2.49
 //   (Rounding remainder goes to largest group, 7%)
-//   Total surcharge:                   = 30.00
+//   Total surcharge:                = 30.00
 //
 // Step 4: Net totals after global modifiers:
 //   19% net: 446.67 - 22.33 + 11.12   = 435.46
 //    7% net: 658.33 - 32.92 + 16.39   = 641.80
 //    0% net: 100.00 -  5.00 +  2.49   =  97.49
-//   Net total:                         = 1174.75
+//   Net total:                        = 1174.75
 //
 // Step 5: Tax:
 //   19% tax: 435.46 × 0.19            = 82.74
 //    7% tax: 641.80 × 0.07            = 44.93
-//    0% tax:                           =  0.00
-//   Total tax:                         = 127.67
+//    0% tax:                          =  0.00
+//   Total tax:                        = 127.67
 //
 // Step 6: Gross total:
-//   1174.75 + 127.67                   = 1302.42
+//   1174.75 + 127.67                  = 1302.42
 
 #import "/src/lib.typ": *
 #import "/tests/data-test.typ": data-test, loom

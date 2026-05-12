@@ -1,10 +1,12 @@
 #import "../loom-wrapper.typ": loom
 #import loom.matcher as _matcher
+#import "display-matcher.typ"
 
 #let require(value, value-name, ..types) = {
   import loom.matcher: *
-  let allowed-types = types.pos().filter(t => type(t) == type)
-  let allowed-values = types.pos().filter(t => type(t) != type)
+
+  let pattern = choice(..types)
+  let pattern-str = display-matcher.display(pattern)
 
   let message = (
     "variable `"
@@ -12,27 +14,11 @@
       + "`("
       + repr(value)
       + ") must be of "
-      + if allowed-types.len() > 0 {
-        (
-          "type: ("
-            + allowed-types.map(t => "`" + str(t) + "`").join(", ")
-            + ") "
-            + if allowed-values.len() > 0 { " or " } else { "" }
-        )
-      } else {
-        ""
-      }
-      + if allowed-values.len() > 0 {
-        (
-          "value: ("
-            + allowed-values.map(v => "`" + repr(v) + "`").join(", ")
-            + ")"
-        )
-      }
+      + pattern-str
   )
 
   assert(
-    match(value, choice(..types)),
+    match(value, pattern),
     message: message,
   )
 }
