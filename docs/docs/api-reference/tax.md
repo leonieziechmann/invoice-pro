@@ -33,7 +33,7 @@ All tax functions accept an optional `grounds` parameter (a string). This is use
 **Example Usage:**
 
 ```typst
-#import "@preview/invoice-pro:0.1.0": item, tax
+#import "@preview/invoice-pro:0.3.1": item, tax
 
 item(
   name: "Consulting (B2B EU)",
@@ -98,7 +98,7 @@ Only use this if you know exactly which UNTDID 5305 tax category code your accou
 **Example:**
 
 ```typst
-#import "@preview/invoice-pro:0.1.0": tax
+#import "@preview/invoice-pro:0.3.1": tax
 
 #let custom-tax = tax.new(
   rate: 0%,

@@ -158,10 +158,10 @@ Here is an example of the minimal boilerplate needed to get started:
 // The document body starts here
 #line-items[
   #item(
-    name: "Consulting Services",
+    [Consulting Services],
     quantity: 10,
     unit: "h",
-    price: 150.00
+    price: 150.00,
   )
 ]
 ```

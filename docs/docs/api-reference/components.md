@@ -113,17 +113,17 @@ While a `bundle` also passes parameters down to its children, it functionally ag
 If you have multiple items that share a specific tax rate (e.g., books with a reduced 7% tax rate), you can wrap them in an `apply` block instead of setting the `tax` parameter on every single item.
 
 ```typst
-#import "@preview/invoice-pro:0.1.0": item, apply, tax
+#import "@preview/invoice-pro:0.3.1": item, apply, tax
 
 // ...
 #apply(tax: tax.lower-rate(7%))[
   #item(
-    name: [Textbook: "Modern Web Design"],
+    [Textbook: "Modern Web Design"],
     price: 49.90,
     quantity: 2,
   )
   #item(
-    name: [Textbook: "SEO for Beginners"],
+    [Textbook: "SEO for Beginners"],
     price: 29.90,
   )
 ]

@@ -158,6 +158,7 @@ Key details:
 - **`themes.blank`** — use the blank theme when you only care about data, not visual output.
 - **Tax constructors** — use `tax.vat(rate)` for the standard rate, `tax.lower-rate(rate)` for reduced rates, and `tax.zero()` for zero-rated items. Each produces a different tax category.
 - **Assertion messages** — always include both the expected and actual value in the message for fast debugging. Use the pattern: `"Field: expected <value>, got " + repr(actual)`. The `repr()` function ensures the actual value is displayed in a readable format.
+- **Valid IBAN/BIC** — when using `bank-details` in tests or docs, always use values that pass validation checks. Use IBAN `DE75512108001245126199` and a valid 9 or 11 character BIC (e.g., `SOLADEST600`). Fake values like `DE12 3456 7890...` or `EXAMPLEBICX` will fail IBAN/BIC validation.
 - Always combine `data-test` with `test-locale` for deterministic results.
 
 ---
@@ -223,6 +224,37 @@ tests/line-items/<test-name>/
 4. Run `tt run` — the test passes if all `assert.eq()` calls succeed.
 
 > **Note:** Data tests may still produce visual output (and thus `out/`), but the assertions are what determine pass/fail.
+
+---
+
+### 3. Documentation Example Tests (`docs/`)
+
+Every non-trivial code block in the documentation (`docs/docs/**/*.md`) must have a corresponding test under `tests/docs/`. These tests ensure that published examples remain compilable and visually correct as the codebase evolves.
+
+```
+tests/docs/<doc-page>-<example-name>/
+├── .gitignore
+├── test.typ
+└── ref/
+    └── 1.png
+```
+
+**Steps:**
+
+1. Identify each non-trivial code block in the documentation page.
+2. Create a test directory under `tests/docs/` with a descriptive kebab-case name derived from the doc page and example (e.g., `getting-started-minimal`).
+3. Copy the code block into `test.typ`, adjusting imports to use `/src/lib.typ` instead of the package import `@preview/invoice-pro:...`.
+4. Add the `.gitignore`, create `ref/1.png`, run `tt update`, and commit.
+
+**Resolving discrepancies between docs and tests:**
+
+When the documentation code and the test code diverge, use the following rule of thumb:
+
+> **Take syntax from the test, take structure from the docs.**
+
+- **The docs are the target** — if the docs show a different scenario, feature usage, or overall structure, update the test to match the docs.
+- **The tests are likely correct for syntax** — if the difference is small (renamed parameters, updated function signatures, changed API surface), the test has probably been updated to match a code change that the docs haven't caught up with yet. In this case, update the docs.
+- **Use context to decide** — if a parameter was renamed in the source but the docs still use the old name, the test is correct. If the docs intentionally demonstrate a new pattern, the docs are correct. Infer intent from the surrounding changes.
 
 ---
 

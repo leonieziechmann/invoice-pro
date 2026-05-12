@@ -68,8 +68,8 @@
 
 #bank-details(
   bank: "Test Bank",
-  iban: "DE07100202005821158846",
-  bic: "EXAMPLEBICX",
+  iban: "DE75512108001245126199",
+  bic: "SOLADEST600",
 )
 
 #signature()
