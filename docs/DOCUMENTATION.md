@@ -5,7 +5,7 @@ This document tracks all code sections in the documentation and their maintenanc
 ## Key Rules
 
 1. **Every non-trivial code block** must be listed in the registry below.
-2. **Code blocks with version numbers** (e.g., `@preview/invoice-pro:0.3.1`) must be flagged with the version so they can be updated during releases.
+2. **Code blocks with version numbers** (e.g., `@preview/invoice-pro:0.3.2`) must be flagged with the version so they can be updated during releases.
 3. **When adding a new code section**, register it here and — if possible — create a corresponding test under `tests/docs/`. See [TESTING.md](/tests/TESTING.md) for test setup instructions.
 4. **Discrepancy resolution:** When docs and tests diverge, take syntax from the test and structure from the docs. See [TESTING.md](/tests/TESTING.md) for the full rule.
 
@@ -24,28 +24,28 @@ All code sections in `docs/docs/`, listed by file. Each entry includes:
 
 | Code ID        | Description                                         | Version | Test                  | Notes |
 | :------------- | :-------------------------------------------------- | :------ | :-------------------- | :---- |
-| `quick-glance` | Full invoice with items, discount, and bank details | `0.3.1` | `docs/intro-minimal/` |       |
+| `quick-glance` | Full invoice with items, discount, and bank details | `0.3.2` | `docs/intro-minimal/` |       |
 
 ### `getting-started.md`
 
 | Code ID         | Description                                      | Version | Test                            | Notes                             |
 | :-------------- | :----------------------------------------------- | :------ | :------------------------------ | :-------------------------------- |
-| `import`        | Package import statement                         | `0.3.1` | —                               | Trivial one-liner, no test needed |
-| `first-invoice` | Minimal invoice with items and tax configuration | `0.3.1` | `docs/getting-started-minimal/` |                                   |
+| `import`        | Package import statement                         | `0.3.2` | —                               | Trivial one-liner, no test needed |
+| `first-invoice` | Minimal invoice with items and tax configuration | `0.3.2` | `docs/getting-started-minimal/` |                                   |
 
 ### `contributing.md`
 
 | Code ID      | Description                              | Version | Test | Notes                    |
 | :----------- | :--------------------------------------- | :------ | :--- | :----------------------- |
 | `dev-shell`  | Nix development shell commands           | —       | —    | Bash commands, not Typst |
-| `dev-import` | Import snippet showing package injection | `0.3.1` | —    | Trivial snippet          |
+| `dev-import` | Import snippet showing package injection | `0.3.2` | —    | Trivial snippet          |
 | `pre-commit` | Pre-commit run command                   | —       | —    | Bash command, not Typst  |
 
 ### `api-reference/index.md`
 
 | Code ID     | Description                                                       | Version | Test                        | Notes |
 | :---------- | :---------------------------------------------------------------- | :------ | :-------------------------- | :---- |
-| `blueprint` | Full architectural blueprint with items, payment, bank, signature | `0.3.1` | `docs/api-index-blueprint/` |       |
+| `blueprint` | Full architectural blueprint with items, payment, bank, signature | `0.3.2` | `docs/api-index-blueprint/` |       |
 
 ### `api-reference/invoice.md`
 
@@ -54,7 +54,7 @@ All code sections in `docs/docs/`, listed by file. Each entry includes:
 | `sender-recipient` | Sender/recipient dictionary structure          | —       | —                           | Snippet (partial), no test needed |
 | `references-dict`  | References as dictionary                       | —       | —                           | Snippet (partial), no test needed |
 | `references-array` | References as array of tuples                  | —       | —                           | Snippet (partial), no test needed |
-| `minimal-config`   | Minimal valid configuration with a single item | `0.3.1` | `docs/api-invoice-minimal/` |                                   |
+| `minimal-config`   | Minimal valid configuration with a single item | `0.3.2` | `docs/api-invoice-minimal/` |                                   |
 
 ### `api-reference/line-items.md`
 
@@ -67,21 +67,21 @@ No code blocks.
 | `payment-goal-default` | Default prompt payment                                | —       | —                            | Trivial one-liner |
 | `payment-goal-days`    | Relative deadline (14 days)                           | —       | —                            | Trivial one-liner |
 | `payment-goal-date`    | Fixed deadline date                                   | —       | —                            | Trivial one-liner |
-| `apply-bulk-tax`       | Apply block wrapping items with shared lower tax rate | `0.3.1` | `docs/api-components-apply/` |                   |
+| `apply-bulk-tax`       | Apply block wrapping items with shared lower tax rate | `0.3.2` | `docs/api-components-apply/` |                   |
 
 ### `api-reference/tax.md`
 
 | Code ID          | Description                         | Version | Test | Notes                                   |
 | :--------------- | :---------------------------------- | :------ | :--- | :-------------------------------------- |
-| `reverse-charge` | Reverse-charge tax usage on an item | `0.3.1` | —    | Snippet only (no full document context) |
-| `custom-tax`     | Custom tax category with `tax.new`  | `0.3.1` | —    | Snippet only (let binding)              |
+| `reverse-charge` | Reverse-charge tax usage on an item | `0.3.2` | —    | Snippet only (no full document context) |
+| `custom-tax`     | Custom tax category with `tax.new`  | `0.3.2` | —    | Snippet only (let binding)              |
 
 ### `api-reference/theme.md`
 
 | Code ID           | Description                                          | Version | Test                      | Notes |
 | :---------------- | :--------------------------------------------------- | :------ | :------------------------ | :---- |
-| `din5008-example` | DIN-5008 theme with custom form, font, and hole-mark | `0.3.1` | `docs/api-theme-din5008/` |       |
-| `blank-example`   | Blank theme with native Typst page setup             | `0.3.1` | `docs/api-theme-blank/`   |       |
+| `din5008-example` | DIN-5008 theme with custom form, font, and hole-mark | `0.3.2` | `docs/api-theme-din5008/` |       |
+| `blank-example`   | Blank theme with native Typst page setup             | `0.3.2` | `docs/api-theme-blank/`   |       |
 
 ### `api-reference/locale/index.md`
 
@@ -95,16 +95,16 @@ No code blocks.
 
 | Code ID       | Description                                 | Version | Test | Notes                             |
 | :------------ | :------------------------------------------ | :------ | :--- | :-------------------------------- |
-| `pl-language` | Polish language dictionary definition       | `0.3.1` | —    | Part of multi-file locale example |
-| `pl-region`   | Polish region builder function              | `0.3.1` | —    | Part of multi-file locale example |
-| `pl-factory`  | Building locale with `build-locale` factory | `0.3.1` | —    | Part of multi-file locale example |
-| `pl-usage`    | Using the custom locale in a document       | `0.3.1` | —    | Part of multi-file locale example |
+| `pl-language` | Polish language dictionary definition       | `0.3.2` | —    | Part of multi-file locale example |
+| `pl-region`   | Polish region builder function              | `0.3.2` | —    | Part of multi-file locale example |
+| `pl-factory`  | Building locale with `build-locale` factory | `0.3.2` | —    | Part of multi-file locale example |
+| `pl-usage`    | Using the custom locale in a document       | `0.3.2` | —    | Part of multi-file locale example |
 
 ### `api-reference/locale/base.md`
 
 | Code ID           | Description                                     | Version | Test | Notes      |
 | :---------------- | :---------------------------------------------- | :------ | :--- | :--------- |
-| `schema-override` | Schema inspection and partial language override | `0.3.1` | —    | Needs test |
+| `schema-override` | Schema inspection and partial language override | `0.3.2` | —    | Needs test |
 
 ---
 

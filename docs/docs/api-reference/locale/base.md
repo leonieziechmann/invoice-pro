@@ -214,7 +214,7 @@ Contains default standard tax objects utilized by the region.
 When building your own tools or customizing a layout, you can leverage the cascading merge by specifying only the nested keys you wish to alter.
 
 ```typst
-#import "@preview/invoice-pro:0.3.1": invoice, locale
+#import "@preview/invoice-pro:0.3.2": invoice, locale
 
 #let custom-lang = (
   payment: (
