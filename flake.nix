@@ -52,6 +52,31 @@
       {
         packages.default = invoice-proPackage;
 
+        packages.check-version = pkgs.writeScriptBin "check-version" ''
+          #!/usr/bin/env bash
+          EXCLUDE="-g '!docs/versioned_docs/' -g '!docs/versioned_sidebars/' -g '!docs/build/' -g '!docs/node_modules/' -g '!docs/.docusaurus/'"
+          GLOBS="-g '*.typ' -g '*.md' -g '*.toml'"
+
+          echo "Current version: ${version}"
+          echo ""
+          echo "Searching for stale version references..."
+          echo "==========================================="
+
+          if [ -z "$1" ]; then
+            echo "Usage: check-version <old-version>"
+            echo "  e.g. check-version 0.3.0"
+            exit 1
+          fi
+
+          OLD="$1"
+          echo ""
+          echo "--- Stale references to $OLD (should be empty) ---"
+          eval "${pkgs.ripgrep}/bin/rg \"$OLD\" $GLOBS $EXCLUDE" || echo "  ✔ No stale references found."
+          echo ""
+          echo "--- Current references to ${version} ---"
+          eval "${pkgs.ripgrep}/bin/rg \"${version}\" $GLOBS $EXCLUDE"
+        '';
+
         checks.pre-commit-check = pre-commit-hooks.lib.${system}.run {
           src = ./.;
           hooks = {
@@ -68,7 +93,9 @@
             nodePackages.prettier
             nodejs
             yarn
+            ripgrep
             tytanic.packages.${system}.default
+            self.packages.${system}.check-version
           ] ++ self.checks.${system}.pre-commit-check.enabledPackages;
 
           shellHook = ''
