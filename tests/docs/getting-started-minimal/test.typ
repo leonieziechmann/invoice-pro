@@ -6,11 +6,13 @@
   // Sender and recipient configurations
   sender: (
     name: "Acme Corporation",
-    address: "123 Business Rd, Metropolis, NY 10001",
+    address: "123 Business Rd",
+    city: "Metropolis, NY 10001",
   ),
   recipient: (
     name: "John Doe",
-    address: "456 Consumer Way, Gotham, NJ 07001",
+    address: "456 Consumer Way",
+    city: "Gotham, NJ 07001",
   ),
 
   // Document metadata
@@ -28,14 +30,14 @@
 // Add individual line items; these automatically inherit root settings
 #line-items[
   #item(
-    ["Consultation Fee"],
+    [Consultation Fee],
     description: "Initial system architecture review.",
     quantity: 10,
     price: 150.00,
   )
 
   #item(
-    ["Server Migration"],
+    [Server Migration],
     quantity: 1,
     price: 500.00,
   )
