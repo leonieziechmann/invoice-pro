@@ -19,6 +19,14 @@ To include `@preview/invoice-pro` in your Typst project, simply import it from t
 Always check for the latest package version in the Typst Universe to ensure you have the most recent **Normalized** tax templates and locale dictionaries.
 :::
 
+### Try it out via Nix
+
+If you use [Nix](https://nixos.org/), you can instantly compile a `.typ` file using the latest version of this template directly from GitHub, without any local installation:
+
+```bash
+nix run github:leonieziechmann/invoice-pro -- my-invoice.typ
+```
+
 ## Your First Invoice
 
 The most efficient workflow for initializing a document is to use a `#show` rule with the `invoice.with(..)` function at the root of your Typst file. This establishes the document layout and allows global configuration to automatically propagate to all underlying elements.

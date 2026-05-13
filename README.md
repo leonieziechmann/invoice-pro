@@ -106,6 +106,16 @@ With the major refactoring introduced in version 0.2.0, the package structure is
 
 This project uses **Nix** to provide a reproducible, sandboxed development environment. You do not need to install Typst, linters, or formatters globally—the flake provides everything.
 
+### Try it out (No Install)
+
+You can instantly compile a `.typ` file using the latest unreleased version of this template directly from GitHub, without entering a development shell:
+
+```bash
+nix run github:leonieziechmann/invoice-pro -- my-invoice.typ
+# Or locally from the repository root:
+nix run .#default -- my-invoice.typ
+```
+
 ### Quick Start
 
 1. **Enter the environment:**
@@ -125,11 +135,11 @@ This activates a shell containing `typst`, `typstyle`, `markdownlint`, and `pret
 #import "@preview/invoice-pro:0.3.2": *
 ```
 
-3. **Quality Control (Pre-commit):**
-   Git hooks are automatically configured to run before every commit.
+3. **Quality Control:**
+   To run the full suite of Pull Request checks (linter, tests, and documentation build) locally before submitting a PR, you can use the built-in test runner:
 
 ```bash
-pre-commit run --all-files
+check-pr
 ```
 
 ## 🗺️ Roadmap

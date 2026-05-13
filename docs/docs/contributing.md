@@ -27,7 +27,7 @@ Nix is the **only** supported environment for development. All formatting, linti
 1. **Enter the environment:**
 
 ```bash
-nix develo
+nix develop
 # or if you use direnv:
 direnv allow
 ```
@@ -48,9 +48,13 @@ This activates a shell containing a custom-wrapped `typst` binary, `typstyle`, `
 3. **Quality Control (Pre-commit):**
    Git hooks are automatically configured to run before every commit. Formatting (`typstyle`, `prettier`, `nixpkgs-fmt`) and linting rules defined in the flake must be followed.
 
+   Before submitting a Pull Request, please ensure all CI checks pass by running the built-in test runner:
+
 ```bash
-pre-commit run --all-files
+check-pr
 ```
+
+This script will sequentially run the linter, compile the tests, and build the documentation locally, providing immediate feedback on whether your PR will pass the automated checks.
 
 ## Contribution Guidelines
 
