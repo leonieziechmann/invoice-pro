@@ -20,7 +20,7 @@ Additionally, the engine handles different `tax-mode` configurations natively. B
 The power of `invoice-pro` lies in its conciseness. Below is a minimal example of a consulting invoice to demonstrate the declarative nature of the API:
 
 ```typst
-#import "@preview/invoice-pro:0.3.1": *
+#import "@preview/invoice-pro:0.3.2": *
 
 #show: invoice.with(
   // Set the locale for language, formatting, and legal behaviors
@@ -43,8 +43,8 @@ The power of `invoice-pro` lies in its conciseness. Below is a minimal example o
 // Automated bank details with QoL payment features
 #bank-details(
   bank: "Example Bank",
-  iban: "DE07100202005821158846",
-  bic: "EXAMPLEBICX",
+  iban: "DE75512108001245126199",
+  bic: "SOLADEST600",
 )
 ```
 

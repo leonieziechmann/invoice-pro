@@ -19,7 +19,7 @@
   if modifier-type == content {
     let (_, frames) = loom.core.intertwine(
       key: loom-key,
-      loom.path.append((:), "line-items"),
+      loom.path.append(ctx, "line-items"),
       modifier,
     )
 
@@ -208,7 +208,7 @@
       derive("item-id", item-id)
       derive("reference", reference)
 
-      derive("modifier", modifier, default: ())
+      derive("modifier", evaluate-modifier(ctx, modifier), default: ())
       update("modifier", evaluate-modifier.with(ctx))
 
       nest("locale", {

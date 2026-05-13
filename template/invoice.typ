@@ -1,4 +1,4 @@
-#import "@preview/invoice-pro:0.3.1": *
+#import "@preview/invoice-pro:0.3.2": *
 
 /*
  * Invoice Pro by Leonie Ziechmann

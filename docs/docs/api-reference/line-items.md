@@ -19,7 +19,7 @@ Many parameters (like `input-gross` and `tax`) are **cascading**. This means if 
 The root container that manages the context, column visibility, and overall calculations for all items, bundles, and modifiers inside it.
 
 :::tip
-By default, the `show-columns` parameter works automatically and tries to minimize the number of shown columns (e.g., hiding the tax column if all items share the exact same tax rate). You only need to provide a dictionary if you want to strictly override this behavior.
+By default, the `show-column` parameter works automatically and tries to minimize the number of shown columns (e.g., hiding the tax column if all items share the exact same tax rate). You only need to provide a dictionary if you want to strictly override this behavior.
 :::
 
 | Key                | Type                                     | Description                                                                                                                                                                                                      |
@@ -27,14 +27,14 @@ By default, the `show-columns` parameter works automatically and tries to minimi
 | `input-gross`      | `bool` \| `auto`                         | If `auto`, it matches the document's `tax-mode`. If manually set, it specifies if prices of items are entered as net or gross, triggering forward or backward tax calculations.                                  |
 | `tax`              | `ratio` \| `dictionary` \| `auto`        | If `auto`, inherited from the locale default. If a `ratio` (e.g., `19%`), the tax-bracket/code is inferred by the locale system. If a `dictionary`, it should be set by the `tax` module (e.g., `tax.vat(19%)`). |
 | `tax-mode`         | `"exclusive"` \| `"inclusive"` \| `auto` | Sets the tax mode. If `auto`, it matches the [document root's `tax-mode`](./invoice). _It is highly recommended not to change this value here unless absolutely necessary._                                      |
-| `show-columns`     | `dictionary` \| `auto`                   | Overrides the default automatic column visibility. Used to manually toggle columns like `pos`, `quantity`, `unit-price`, etc.                                                                                    |
+| `show-column`      | `dictionary` \| `auto`                   | Overrides the default automatic column visibility. Used to manually toggle columns like `pos`, `quantity`, `unit-price`, etc.                                                                                    |
 | `show-total`       | `bool` \| `auto`                         | Shows the total summary block of the line items. Defaults to `true`.                                                                                                                                             |
 | `show-information` | `bool` \| `auto`                         | Shows annotations after the total about the content of the line-items (e.g., tax exemptions). Defaults to `true`.                                                                                                |
 | `body`             | `content`                                | The main content block containing your `item`, `bundle`, or `modifier` calls.                                                                                                                                    |
 
-### `show-columns` Dictionary
+### `show-column` Dictionary
 
-When overriding the automatic column visibility in `line-items`, you can pass a dictionary to the `show-columns` parameter. Each key toggles a specific column in the invoice table.
+When overriding the automatic column visibility in `line-items`, you can pass a dictionary to the `show-column` parameter. Each key toggles a specific column in the invoice table.
 
 | Key           | Type             | Description                                                                 |
 | ------------- | ---------------- | --------------------------------------------------------------------------- |

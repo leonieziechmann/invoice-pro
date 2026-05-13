@@ -79,7 +79,7 @@
       grid(
         columns: (1fr, 1fr),
         subject,
-        {
+        block(width: 100%, height: 5.5cm, {
           set align(right)
           if sender.name != none [#strong(sender.name) \ ]
           if sender.address != none [#sender.address \ ]
@@ -91,15 +91,14 @@
             block(
               breakable: false,
               grid(
-                columns: (auto, 1em, auto),
-                align: (left + horizon, left, right + horizon),
-                stroke: none,
-                row-gutter: 1.75em,
+                columns: 2,
+                align: (left + horizon, right + horizon),
+                column-gutter: .4em,
+                row-gutter: .75em,
                 ..extras
                   .map(a => {
                     (
                       [#a.at(0, default: none):],
-                      none,
                       a.at(1, default: none),
                     )
                   })
@@ -109,7 +108,7 @@
           } else {
             extras
           }
-        },
+        }),
       )
     },
   )

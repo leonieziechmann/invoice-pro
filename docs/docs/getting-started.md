@@ -12,7 +12,7 @@ To include `@preview/invoice-pro` in your Typst project, simply import it from t
 
 ```typst
 // Import the core invoice environment and necessary components
-#import "@preview/invoice-pro:0.3.1": *
+#import "@preview/invoice-pro:0.3.2": *
 ```
 
 :::info
@@ -26,18 +26,20 @@ The most efficient workflow for initializing a document is to use a `#show` rule
 Here is a minimal, copy-paste example to get you started:
 
 ```typst
-#import "@preview/invoice-pro:0.3.1": *
+#import "@preview/invoice-pro:0.3.2": *
 
 // 1. Initialize the document using a show rule
 #show: invoice.with(
   // Sender and recipient configurations
   sender: (
     name: "Acme Corporation",
-    address: "123 Business Rd, Metropolis, NY 10001",
+    address: "123 Business Rd",
+    city: "Metropolis, NY 10001",
   ),
   recipient: (
     name: "John Doe",
-    address: "456 Consumer Way, Gotham, NJ 07001",
+    address: "456 Consumer Way",
+    city: "Gotham, NJ 07001",
   ),
 
   // Document metadata
@@ -46,7 +48,7 @@ Here is a minimal, copy-paste example to get you started:
 
   // Financial configuration
   tax-mode: "exclusive",      // Base prices do not include tax
-  tax: 0.19                   // Applies a 19% default tax rate
+  tax: tax.vat(19%),          // Applies a 19% default tax rate
 )
 
 // 2. Define the invoice body
@@ -55,16 +57,16 @@ Here is a minimal, copy-paste example to get you started:
 // Add individual line items; these automatically inherit root settings
 #line-items[
   #item(
-    title: "Consultation Fee",
+    [Consultation Fee],
     description: "Initial system architecture review.",
     quantity: 10,
-    price: 150.00
+    price: 150.00,
   )
 
   #item(
-    title: "Server Migration",
+    [Server Migration],
     quantity: 1,
-    price: 500.00
+    price: 500.00,
   )
 ]
 ```

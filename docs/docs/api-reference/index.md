@@ -53,29 +53,29 @@ Below is a foundational structural blueprint illustrating how the modules intera
 
 ```typst
 // Always import the required functions and modules
-#import "@preview/invoice-pro:0.3.1": *
+#import "@preview/invoice-pro:0.3.2": *
 
 // 1. Invoice Module: Establish the document root and global context
 #show: invoice.with(
   sender: (name: "Acme Corp"),
   recipient: (name: "Jane Doe"),
   tax-nr: "DE123456789", // Legally required identifier
-  invoice-nr: "INV-2026-001"
+  invoice-nr: "INV-2026-001",
 )
 
 // 2. Line Items Module: Define the billable content
 #line-items[
   #item(
-    name: "System Architecture Consulting",
+    [System Architecture Consulting],
     quantity: 10,
     unit: "h",
-    price: 150.00 // Unit price subject to Forward/Backward Calculation
+    price: 150.00, // Unit price subject to Forward/Backward Calculation
   )
 ]
 
 // 3. Components Module: Append standalone visual metadata
 #payment-goal(days: 14)
-#bank-details(iban: "DE12 3456 7890 1234 5678 90")
+#bank-details(iban: "DE75512108001245126199")
 #signature()
 ```
 

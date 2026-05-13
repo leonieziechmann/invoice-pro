@@ -29,7 +29,7 @@ For comprehensive guides, API references, theming instructions, and advanced exa
 Import the package at the top of your Typst file:
 
 ```typst
-#import "@preview/invoice-pro:0.3.1": *
+#import "@preview/invoice-pro:0.3.2": *
 ```
 
 ### Basic Usage
@@ -37,7 +37,7 @@ Import the package at the top of your Typst file:
 Here is an example of how to create an invoice using the new v0.3.0 API:
 
 ```typst
-#import "@preview/invoice-pro:0.3.1": *
+#import "@preview/invoice-pro:0.3.2": *
 
 #show: invoice.with(
   theme: themes.DIN-5008(form: "A"), // or form: "B"
@@ -86,7 +86,7 @@ Here is an example of how to create an invoice using the new v0.3.0 API:
 #bank-details(
   bank: "Example Bank",
   iban: "DE07100202005821158846",
-  bic: "EXAMPLEBIC",
+  bic: "EXAMPLEBICX",
 )
 
 #signature()
@@ -122,7 +122,7 @@ This activates a shell containing `typst`, `typstyle`, `markdownlint`, and `pret
    The environment automatically links the current directory to a sandboxed local package registry (inside `.typst-data`). You can import the package in your test files immediately without manual installation:
 
 ```typst
-#import "@preview/invoice-pro:0.3.1": *
+#import "@preview/invoice-pro:0.3.2": *
 ```
 
 3. **Quality Control (Pre-commit):**
