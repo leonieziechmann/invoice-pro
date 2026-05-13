@@ -14,22 +14,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v14
+        with:
+          name: typ-flow
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
       - name: Create Package Archive
-        run: |
-          PACKAGE_DIR="invoice-pro-${{ github.ref_name }}"
-
-          mkdir -p "$PACKAGE_DIR"
-
-          cp -r typst.toml "$PACKAGE_DIR/"
-          cp -r thumbnail.png "$PACKAGE_DIR/"
-          cp -r LICENSE "$PACKAGE_DIR/"
-          cp -r src "$PACKAGE_DIR/"
-          cp -r template "$PACKAGE_DIR/"
-
-          # Create the tarball
-          tar -czvf "$PACKAGE_DIR.tar.gz" "$PACKAGE_DIR"
+        run: nix build --accept-flake-config .#release
 
       - name: Upload Asset to Release
         uses: softprops/action-gh-release@v1
         with:
-          files: invoice-pro-${{ github.ref_name }}.tar.gz
+          files: result/*.tar.gz

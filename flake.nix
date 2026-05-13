@@ -50,7 +50,43 @@
 
       in
       {
+        apps.default = {
+          type = "app";
+          program = "${pkgs.writeScriptBin "typst-wrapper" ''
+            #!/usr/bin/env bash
+            if [ $# -eq 0 ] || [[ "$1" == *.typ ]]; then
+              exec ${typstEnv}/bin/typst compile "$@"
+            else
+              exec ${typstEnv}/bin/typst "$@"
+            fi
+          ''}/bin/typst-wrapper";
+        };
+
         packages.default = invoice-proPackage;
+
+        packages.documentation = pkgs.buildNpmPackage {
+          pname = "invoice-pro-documentation";
+          inherit version;
+          src = ./docs;
+          npmDepsHash = "sha256-XjBCbNybXdX87+3uYERtGPFjj+zrsop5DYRVgIgvIfI=";
+          installPhase = ''
+            mkdir -p $out
+            cp -r build/* $out/
+          '';
+        };
+
+        packages.release = pkgs.runCommand "invoice-pro-release" { } ''
+          PACKAGE_DIR="invoice-pro-v${version}"
+          mkdir -p $PACKAGE_DIR
+          cp -r ${./typst.toml} $PACKAGE_DIR/typst.toml
+          cp -r ${./thumbnail.png} $PACKAGE_DIR/thumbnail.png || true
+          cp -r ${./LICENSE} $PACKAGE_DIR/LICENSE
+          cp -r ${./src} $PACKAGE_DIR/src
+          cp -r ${./template} $PACKAGE_DIR/template
+
+          mkdir -p $out
+          tar -czvf $out/invoice-pro-v${version}.tar.gz $PACKAGE_DIR
+        '';
 
         packages.check-version = pkgs.writeScriptBin "check-version" ''
           #!/usr/bin/env bash
@@ -77,6 +113,32 @@
           eval "${pkgs.ripgrep}/bin/rg \"${version}\" $GLOBS $EXCLUDE"
         '';
 
+        packages.check-pr = pkgs.writeScriptBin "check-pr" ''
+          #!/usr/bin/env bash
+          set -e
+
+          echo "========================"
+          echo " Running PR checks... "
+          echo "========================"
+
+          echo ""
+          echo "[1/3] Running linter..."
+          nix build .#checks.''${system}.lint --print-build-logs
+
+          echo ""
+          echo "[2/3] Running tests..."
+          nix develop .#test --accept-flake-config --command tt run
+
+          echo ""
+          echo "[3/3] Building documentation..."
+          nix build .#documentation --print-build-logs
+
+          echo ""
+          echo "✔ All checks passed successfully!"
+        '';
+
+        checks.lint = self.checks.${system}.pre-commit-check;
+
         checks.pre-commit-check = pre-commit-hooks.lib.${system}.run {
           src = ./.;
           hooks = {
@@ -96,6 +158,7 @@
             ripgrep
             tytanic.packages.${system}.default
             self.packages.${system}.check-version
+            self.packages.${system}.check-pr
           ] ++ self.checks.${system}.pre-commit-check.enabledPackages;
 
           shellHook = ''
@@ -106,8 +169,11 @@
           '';
         };
 
-        docs = pkgs.mkShell {
-          builtins = with pkgs; [ nodejs typst ];
+        devShells.test = pkgs.mkShell {
+          buildInputs = [
+            typstEnv
+            tytanic.packages.${system}.default
+          ];
         };
       }
     );

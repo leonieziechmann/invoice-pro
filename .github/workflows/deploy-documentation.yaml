@@ -39,22 +39,13 @@ jobs:
           name: typ-flow
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
-      - name: Cache npm dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('docs/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
       - name: Build website using Nix environment
-        run: |
-          nix develop --accept-flake-config .\#docs.x86_64-linux --command bash -c "cd docs && npm ci && npm run build"
+        run: nix build --accept-flake-config .#documentation
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './docs/build'
+          path: './result'
 
       - name: Deploy to GitHub Pages
         id: deployment
