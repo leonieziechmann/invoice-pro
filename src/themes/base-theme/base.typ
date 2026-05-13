@@ -1,4 +1,4 @@
-#import "line-items.typ": render-line-items
+#import "line-items.typ": *
 #import "bank-details.typ": render-bank-details
 #import "payment-goal.typ": render-payment-goal
 #import "signature.typ": render-signature
@@ -7,7 +7,6 @@
   /// Document Root Styling.
   /// -> (ctx, content) => content
   document: (ctx, body) => body,
-
   /// Header that will be evaluted by the weave loop and then by appled to the
   /// document. Can include motifs/active items.
   /// -> content
@@ -16,10 +15,9 @@
   /// document. Can include motifs/active items.
   /// -> content
   footer: [],
-
   /// Layout of the aggregated line item data.
   /// -> (ctx, dictionary, content) => content
-  line-items: render-line-items,
+  line-items: render-line-items-reordered,
   /// Layout of the bank-details the customer should send the payment to.
   /// -> (ctx, dictionary) => content
   bank-details: render-bank-details,
