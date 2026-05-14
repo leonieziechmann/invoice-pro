@@ -91,7 +91,7 @@
   let is-net = data.tax-mode == "exclusive"
   let has-modifiers = data.discounts.len() > 0 or data.surcharges.len() > 0
 
-  let null-cell = grid.cell(colspan: 2, inset: 0pt, none)
+  let null-row = grid.cell(colspan: 2, inset: 0pt, none)
   let grid-spacer(height) = grid.cell(colspan: 2, inset: 0pt, v(height))
 
   let rows = ()
@@ -99,13 +99,13 @@
   rows += if not is-net {
     (
       // --- Inclusive Mode ---
-      if has-modifiers { elements.subtotal },
+      ..if has-modifiers { elements.subtotal },
       elements.modifiers,
       grid.hline(stroke: styles.stroke-thick),
-      null-cell,
+      null-row,
       elements.grand-total,
       grid.hline(stroke: styles.stroke-thick),
-      null-cell,
+      null-row,
       elements.taxes,
     )
   } else {
@@ -113,15 +113,15 @@
       // --- Exclusive Mode ---
       elements.subtotal,
       elements.modifiers,
-      if has-modifiers { elements.net-total },
+      ..if has-modifiers { elements.net-total },
       grid.hline(stroke: styles.stroke-thin),
-      null-cell,
+      null-row,
       elements.taxes,
       grid.hline(stroke: styles.stroke-thick),
-      null-cell,
+      null-row,
       elements.grand-total,
       grid.hline(stroke: styles.stroke-thick),
-      null-cell,
+      null-row,
     )
   }
 
