@@ -106,6 +106,8 @@
     render-tax-suffix: render-tax-suffix,
   )
 
+  v(-1em)
+
   if data.layout-information.show-total {
     generic-render-totals(
       ctx,

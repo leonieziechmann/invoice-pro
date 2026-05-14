@@ -2,46 +2,78 @@
 
 // --- Styling Callbacks (Return (content, content)) ---
 
-#let render-subtotal(ctx, value, styles) = {
-  // Should return a tuple (label, value) for the subtotal row.
-  // The values should use the provided styles and ctx for localization.
-  panic(
-    "render-subtotal: Implement a function that returns a (label, value) content tuple for the subtotal.",
+#let default-render-subtotal(ctx, value, styles) = {
+  let strings = ctx.locale.strings
+  let label = if ctx.tax-mode == "exclusive" {
+    [#strings.summary.sum (#strings.line-items.net):]
+  } else {
+    [#strings.summary.sum (#strings.line-items.gross):]
+  }
+  (label, value)
+}
+
+#let default-render-total-net(ctx, value, styles) = {
+  let strings = ctx.locale.strings
+  (
+    text(
+      weight: styles.weight-bold,
+    )[#strings.line-items.total #strings.line-items.net:],
+    text(weight: styles.weight-bold)[#value],
   )
 }
 
-#let render-total-net(ctx, value, styles) = {
-  // Should return a tuple (label, value) for the intermediate net total.
-  panic(
-    "render-total-net: Implement a function that returns a (label, value) content tuple for the intermediate net total.",
+#let default-render-total-gross(ctx, value, styles) = {
+  let strings = ctx.locale.strings
+  (
+    text(
+      weight: styles.weight-bold,
+      size: styles.size-total,
+    )[#strings.summary.total:],
+    text(
+      weight: styles.weight-bold,
+      size: styles.size-total,
+    )[#value],
   )
 }
 
-#let render-total-gross(ctx, value, styles) = {
-  // Should return a tuple (label, value) for the grand gross total.
-  panic(
-    "render-total-gross: Implement a function that returns a (label, value) content tuple for the grand total.",
+#let default-render-discount(ctx, discount, styles) = {
+  let strings = ctx.locale.strings
+  (
+    text(
+      fill: styles.color-discount,
+      size: styles.size-small,
+    )[#strings.line-items.discount: #discount.name],
+    text(
+      fill: styles.color-discount,
+    )[#if discount.is-percent [(− #discount.display) #h(0.5em)] − #discount.absolute],
   )
 }
 
-#let render-discount(ctx, discount, styles) = {
-  // Should return a tuple (label, value) for a single discount entry.
-  panic(
-    "render-discount: Implement a function that returns a (label, value) content tuple for a discount.",
+#let default-render-surcharge(ctx, surcharge, styles) = {
+  let strings = ctx.locale.strings
+  (
+    text(
+      fill: styles.color-surcharge,
+      size: styles.size-small,
+    )[#strings.line-items.surcharge: #surcharge.name],
+    text(
+      fill: styles.color-surcharge,
+    )[#if surcharge.is-percent [(\+ #surcharge.display) #h(0.5em)] \+ #surcharge.absolute],
   )
 }
 
-#let render-surcharge(ctx, surcharge, styles) = {
-  // Should return a tuple (label, value) for a single surcharge entry.
-  panic(
-    "render-surcharge: Implement a function that returns a (label, value) content tuple for a surcharge.",
-  )
-}
-
-#let render-tax(ctx, tax, styles) = {
-  // Should return a tuple (label, value) for a single tax entry.
-  panic(
-    "render-tax: Implement a function that returns a (label, value) content tuple for a tax line.",
+#let default-render-tax(ctx, tax, styles) = {
+  let strings = ctx.locale.strings
+  let prefix = if ctx.tax-mode == "exclusive" {
+    strings.summary.excluding
+  } else {
+    strings.summary.including
+  }
+  (
+    text(
+      fill: styles.color-vat-label,
+    )[#prefix #strings.summary.vat-tax #tax.rate (#tax.category):],
+    text(fill: black)[#tax.amount],
   )
 }
 
@@ -51,18 +83,66 @@
 #let totals-cell-wrapper(ctx, content, styles) = {
   // Should wrap the raw content (label or value) in a container like table.cell.
   // This is the point where theme-specific cell styling (inset, fill, etc.) is applied.
-  table.cell(content)
+  grid.cell(content)
 }
 
 /// Assembles the wrapped elements into the final content
-#let render-totals-body(ctx, data, styles, elements) = {
-  // This function is the architect of the totals block.
-  // It receives a dictionary 'elements' containing the already-wrapped cells:
-  // elements: (subtotal: (c1, c2), modifiers: ((c1, c2), ...), taxes: (...), grand-total: (...))
-  // It should arrange these cells into a grid, table, or custom layout.
-  panic(
-    "render-totals-body: Implement the assembly logic that arranges the wrapped elements into the final visual block.",
-  )
+#let default-render-totals-body(ctx, data, styles, elements) = {
+  let is-net = data.tax-mode == "exclusive"
+  let has-modifiers = data.discounts.len() > 0 or data.surcharges.len() > 0
+
+  let null-cell = grid.cell(colspan: 2, inset: 0pt, none)
+  let grid-spacer(height) = grid.cell(colspan: 2, inset: 0pt, v(height))
+
+  let rows = ()
+
+  rows += if not is-net {
+    (
+      // --- Inclusive Mode ---
+      if has-modifiers { elements.subtotal },
+
+      elements.modifiers,
+
+      grid.hline(stroke: styles.stroke-thick),
+      null-cell,
+      elements.grand-total,
+      grid.hline(stroke: styles.stroke-thick),
+      null-cell,
+
+      elements.taxes,
+    )
+  } else {
+    (
+      // --- Exclusive Mode ---
+      elements.subtotal,
+      elements.modifiers,
+
+      if has-modifiers { elements.net-total },
+
+      grid.hline(stroke: styles.stroke-thin),
+      null-cell,
+
+      elements.taxes,
+
+      grid.hline(stroke: styles.stroke-thick),
+      null-cell,
+      elements.grand-total,
+      grid.hline(stroke: styles.stroke-thick),
+      null-cell,
+    )
+  }
+
+  align(styles.totals-align)[
+    #box(width: styles.totals-width)[
+      #grid(
+        columns: (1fr, auto),
+        row-gutter: styles.totals-row-gutter,
+        column-gutter: styles.totals-col-gutter,
+        align: (left, right),
+        ..rows.flatten(),
+      )
+    ]
+  ]
 }
 
 // --- Main Component ---
@@ -71,15 +151,15 @@
   ctx,
   data,
   // Stylers
-  render-subtotal: render-subtotal,
-  render-total-net: render-total-net,
-  render-total-gross: render-total-gross,
-  render-discount: render-discount,
-  render-surcharge: render-surcharge,
-  render-tax: render-tax,
+  render-subtotal: auto,
+  render-total-net: auto,
+  render-total-gross: auto,
+  render-discount: auto,
+  render-surcharge: auto,
+  render-tax: auto,
   // Wrapper & Builder
-  totals-cell-wrapper: totals-cell-wrapper,
-  render-totals-body: render-totals-body,
+  totals-cell-wrapper: auto,
+  render-totals-body: auto,
   // Standard styling parameters
   color-discount: rgb("b22222"),
   color-surcharge: rgb("333333"),
@@ -109,9 +189,85 @@
     totals-align: totals-align,
   )
 
-  // Implementation logic for gathering and wrapping elements goes here.
-  // The results should then be passed to render-totals-body.
-  panic(
-    "render-totals: Implement the collection and wrapping logic that prepares the elements for the builder.",
-  )
+  // Resolve Callbacks
+  let r-subtotal = if render-subtotal == auto or render-subtotal == none {
+    default-render-subtotal
+  } else {
+    render-subtotal
+  }
+  let r-total-net = if render-total-net == auto or render-total-net == none {
+    default-render-total-net
+  } else {
+    render-total-net
+  }
+  let r-total-gross = if (
+    render-total-gross == auto or render-total-gross == none
+  ) {
+    default-render-total-gross
+  } else {
+    render-total-gross
+  }
+  let r-discount = if render-discount == auto or render-discount == none {
+    default-render-discount
+  } else {
+    render-discount
+  }
+  let r-surcharge = if render-surcharge == auto or render-surcharge == none {
+    default-render-surcharge
+  } else {
+    render-surcharge
+  }
+  let r-tax = if render-tax == auto or render-tax == none {
+    default-render-tax
+  } else {
+    render-tax
+  }
+  let w-cell = if totals-cell-wrapper == auto or totals-cell-wrapper == none {
+    content => grid.cell(content)
+  } else {
+    content => totals-cell-wrapper(ctx, content, styles)
+  }
+  let b-render = if render-totals-body == auto or render-totals-body == none {
+    default-render-totals-body
+  } else {
+    render-totals-body
+  }
+
+  let wrap-pair(pair) = pair.map(w-cell)
+
+  // Gather Elements
+  let elements = (:)
+
+  // Subtotal
+  let sub-val = if data.tax-mode == "exclusive" {
+    data.unmodified-total.net
+  } else {
+    data.unmodified-total.gross
+  }
+  elements.subtotal = wrap-pair(r-subtotal(ctx, sub-val, styles))
+
+  // Modifiers
+  elements.modifiers = ()
+  for d in data.discounts {
+    elements.modifiers.push(wrap-pair(r-discount(ctx, d, styles)))
+  }
+  for s in data.surcharges {
+    elements.modifiers.push(wrap-pair(r-surcharge(ctx, s, styles)))
+  }
+
+  // Net Total (for exclusive)
+  if data.tax-mode == "exclusive" {
+    elements.net-total = wrap-pair(r-total-net(ctx, data.total.net, styles))
+  }
+
+  // Taxes
+  elements.taxes = ()
+  for t in data.taxes {
+    elements.taxes.push(wrap-pair(r-tax(ctx, t, styles)))
+  }
+
+  // Grand Total
+  elements.grand-total = wrap-pair(r-total-gross(ctx, data.total.gross, styles))
+
+  b-render(ctx, data, styles, elements)
 }

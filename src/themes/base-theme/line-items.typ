@@ -1,4 +1,5 @@
 #import "../components/line-items/line-items.typ" as generic-line-items
+#import "../components/line-items/totals.typ"
 
 /// Default base theme line items
 #let render-line-items(ctx, data, body) = {
@@ -28,32 +29,151 @@
 
 /// An elegant theme with a minimalist header
 #let render-line-items-elegant(ctx, data, body) = {
+  let elegant-label(content) = {
+    set text(size: 0.75em, tracking: 0.2em, weight: "bold")
+    upper(content)
+  }
+
   generic-line-items.render-line-items(
     ctx,
     data,
     body,
     color-row-odd: none,
     stroke-header-top: 2pt + black,
-    stroke-header-bottom: none,
-    stroke-table-bottom: 2pt + black,
-    tax-suffix-style: "inline",
-    show-redundant-taxes: false,
+    stroke-header-bottom: 0.5pt + black,
+    stroke-table-bottom: 0.5pt + black,
+    stroke-thin: 0.5pt + black,
+    totals-width: 50%,
+    tax-suffix-style: (unit-price: none, total: "inline"),
     // Header Customization
     render-header-cell: (ctx, content, styles) => {
       table.cell(inset: (y: 0.8em))[
-        #set text(size: 0.75em, tracking: 0.2em, weight: "bold")
-        #upper(content)
+        #elegant-label(content)
       ]
     },
     render-table-header: (ctx, header-cells, styles) => {
       table.header(
         repeat: true,
-        table.hline(stroke: 2pt + black),
+        table.hline(stroke: styles.stroke-header-top),
         ..header-cells,
-        table.hline(stroke: 0.5pt + black),
+        table.hline(stroke: styles.stroke-header-bottom),
         table.cell(colspan: header-cells.len(), inset: 0pt, v(2pt)),
-        table.hline(stroke: 0.5pt + black),
+        table.hline(stroke: styles.stroke-header-bottom),
       )
+    },
+    // Totals Customization
+    render-subtotal: (ctx, value, styles) => {
+      let (label, val) = totals.default-render-subtotal(ctx, value, styles)
+      (elegant-label(label), val)
+    },
+    render-total-net: (ctx, value, styles) => {
+      let (label, val) = totals.default-render-total-net(ctx, value, styles)
+      (elegant-label(label), val)
+    },
+    render-total-gross: (ctx, value, styles) => {
+      let (label, val) = totals.default-render-total-gross(ctx, value, styles)
+      (elegant-label(label), val)
+    },
+    render-discount: (ctx, discount, styles) => {
+      (
+        text(weight: "bold")[#discount.name],
+        [#if discount.is-percent [(− #discount.display) #h(0.5em)] − #discount.absolute],
+      )
+    },
+    render-surcharge: (ctx, surcharge, styles) => {
+      (
+        text(weight: "bold")[#surcharge.name],
+        [#if surcharge.is-percent [(\+ #surcharge.display) #h(0.5em)] \+ #surcharge.absolute],
+      )
+    },
+    totals-cell-wrapper: (_, content, _) => table.cell(content),
+    render-totals-body: (ctx, data, styles, elements) => {
+      let is-net = data.tax-mode == "exclusive"
+      let has-modifiers = data.discounts.len() > 0 or data.surcharges.len() > 0
+
+      // --- Section 1: Modifiers Table (Aligned with main table) ---
+      if is-net or has-modifiers {
+        let modifier-rows = ()
+
+        // Transparent spacer to help align the first column with "Position"
+        modifier-rows.push(table.cell(inset: (y: 0pt), block(
+          height: 0pt,
+          elegant-label(text(
+            fill: black.transparentize(100%),
+            ctx.locale.strings.line-items.position,
+          )),
+        )))
+        modifier-rows.push(table.cell(inset: 0pt, []))
+        modifier-rows.push(table.cell(inset: 0pt, []))
+
+        // Start with Subtotal if modifiers exist (or always for exclusive)
+        //modifier-rows += (none, ..elements.subtotal)
+
+        // Add all modifiers
+        for m in elements.modifiers {
+          modifier-rows += (none, ..m)
+        }
+
+        table(
+          columns: (auto, 1fr, auto),
+          align: (center, left, right),
+          stroke: none,
+          ..modifier-rows,
+          table.hline(stroke: styles.stroke-thick),
+          table.cell(colspan: 3, inset: 0pt, []),
+          // null row
+        )
+      }
+
+      // --- Section 2: Summary Box (Right aligned, narrower) ---
+      let summary-rows = ()
+      let null-row = table.cell(colspan: 2, inset: 0pt, [])
+      let spacer(height) = table.cell(colspan: 2, inset: 0pt, v(height))
+
+      if is-net {
+        if has-modifiers {
+          summary-rows += elements.net-total
+        }
+        summary-rows += (
+          spacer(0.1em),
+          table.hline(stroke: styles.stroke-thin),
+          null-row,
+          ..elements.taxes.flatten(),
+        )
+      }
+
+      summary-rows += (
+        table.hline(stroke: styles.stroke-thick),
+        null-row,
+        spacer(0.2em),
+        ..elements.grand-total,
+        spacer(0.2em),
+        table.hline(stroke: styles.stroke-thin),
+        null-row,
+        spacer(2pt),
+        table.hline(stroke: styles.stroke-thin),
+        null-row,
+      )
+
+      if not is-net {
+        summary-rows += (
+          spacer(0.5em),
+          ..elements.taxes.flatten(),
+        )
+      }
+
+      v(-1em)
+      align(right)[
+        #box(width: styles.totals-width)[
+          #table(
+            columns: (1fr, auto),
+            column-gutter: styles.totals-col-gutter,
+            stroke: none,
+            align: (left + horizon, right + horizon),
+            ..summary-rows,
+          )
+        ]
+      ]
     },
   )
 }
