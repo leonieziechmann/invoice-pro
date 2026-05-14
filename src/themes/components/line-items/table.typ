@@ -36,6 +36,42 @@
   )
 }
 
+#let default-render-tax-suffix(ctx, is-net, styles, style-type) = {
+  let strings = ctx.locale.strings.line-items
+  let label = if is-net { strings.net } else { strings.gross }
+
+  if style-type == "newline" {
+    (
+      [\ ]
+        + text(
+          size: 0.8em,
+          weight: "regular",
+          fill: styles.color-subtitle,
+        )[(#label)]
+    )
+  } else if style-type == "inline" {
+    (
+      [ ]
+        + text(
+          size: 0.8em,
+          weight: "regular",
+          fill: styles.color-subtitle,
+        )[(#label)]
+    )
+  } else if style-type == "accent" {
+    (
+      [ ]
+        + text(
+          size: 0.7em,
+          weight: "bold",
+          fill: styles.color-subtitle.lighten(20%),
+        )[#upper(label)]
+    )
+  } else {
+    []
+  }
+}
+
 #let render-table(
   ctx,
   data,
@@ -57,7 +93,6 @@
   render-discount-row: auto,
   render-surcharge-row: auto,
   render-subtotal-row: auto,
-
   // Header/Footer parameters
   header-bg: none,
   header-color: black,
@@ -68,6 +103,9 @@
   render-header-cell: auto,
   render-table-header: auto,
   render-table-footer: auto,
+  // Tax suffix parameters
+  tax-suffix-style: "newline",
+  render-tax-suffix: auto,
 ) = {
   types.require(color-subtitle, "render-table::color-subtitle", color, none)
   types.require(color-desc, "render-table::color-desc", color, none)
@@ -120,13 +158,27 @@
     cell-inset: cell-inset,
   )
 
-  let subtitle = text.with(
-    size: size-subtitle,
-    weight: weight-bold,
-    fill: color-subtitle,
-  )
-
   set par(justify: false)
+
+  // Resolve suffix styles
+  let resolve-suffix-style(key) = {
+    if type(tax-suffix-style) == str {
+      tax-suffix-style
+    } else if type(tax-suffix-style) == dictionary {
+      tax-suffix-style.at(key, default: "newline")
+    } else {
+      "newline"
+    }
+  }
+
+  let get-suffix(key) = {
+    if render-tax-suffix == auto {
+      let s-type = resolve-suffix-style(key)
+      default-render-tax-suffix(ctx, is-net, styles, s-type)
+    } else {
+      render-tax-suffix(ctx, is-net, styles, key)
+    }
+  }
 
   // --- Dynamic Column Setup ---
   let cols = ()
@@ -153,10 +205,7 @@
     ),
     "unit-price": (
       enabled: layout.show-unit-price,
-      header: align(
-        center,
-        if is-net [*#li-str.unit-price* \ #subtitle[(#li-str.net)]] else [*#li-str.unit-price* \ #subtitle[(#li-str.gross)]],
-      ),
+      header: [*#li-str.unit-price*#get-suffix("unit-price")],
       align: right,
     ),
     "tax-rate": (
@@ -166,10 +215,7 @@
     ),
     "total-price": (
       enabled: layout.show-total-price,
-      header: align(
-        center,
-        if is-net [*#li-str.total* \ #subtitle[(#li-str.net)]] else [*#li-str.total* \ #subtitle[(#li-str.gross)]],
-      ),
+      header: [*#li-str.total*#get-suffix("total")],
       align: right,
     ),
   )
@@ -223,7 +269,7 @@
   let table-footer = if render-table-footer == auto {
     ()
   } else {
-    render-table-footer(ctx, styles)
+    render-table-footer(ctx, total-cols, styles)
   }
 
   let item-rows = ()
@@ -316,9 +362,9 @@
             )[#label])
             row.push(cell(align: right, ..cell-spacing)[#percent #total-val])
           }
-          item-rows.push(..row)
+          item-rows += row
         } else {
-          item-rows.push(..render-discount-row(
+          item-rows += render-discount-row(
             ctx,
             d,
             layout,
@@ -331,7 +377,7 @@
             ),
             styles,
             cell-spacing,
-          ))
+          )
         }
       }
     }
@@ -381,9 +427,9 @@
             )[#label])
             row.push(cell(align: right, ..cell-spacing)[#percent #total-val])
           }
-          item-rows.push(..row)
+          item-rows += row
         } else {
-          item-rows.push(..render-surcharge-row(
+          item-rows += render-surcharge-row(
             ctx,
             s,
             layout,
@@ -396,7 +442,7 @@
             ),
             styles,
             cell-spacing,
-          ))
+          )
         }
       }
     }
@@ -431,7 +477,7 @@
           )[#label])
           row.push(cell(align: right, fill: bg)[#total-val])
         }
-        item-rows.push(..row)
+        item-rows += row
       } else {
         item-rows += render-subtotal-row(
           ctx,
@@ -457,8 +503,8 @@
     stroke: none,
     align: (x, y) => aligns.at(x, default: right),
     table-header,
-    ..table-footer,
     ..item-rows,
+    ..table-footer,
     table.hline(stroke: s-table-bottom)
   )
 }

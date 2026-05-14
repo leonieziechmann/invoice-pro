@@ -49,6 +49,10 @@
   render-header-cell: auto,
   render-table-header: auto,
   render-table-footer: auto,
+
+  // Tax suffix parameters
+  tax-suffix-style: "newline",
+  render-tax-suffix: auto,
 ) = {
   render-table(
     ctx,
@@ -81,6 +85,9 @@
     render-header-cell: render-header-cell,
     render-table-header: render-table-header,
     render-table-footer: render-table-footer,
+
+    tax-suffix-style: tax-suffix-style,
+    render-tax-suffix: render-tax-suffix,
   )
 
   if data.layout-information.show-total {
