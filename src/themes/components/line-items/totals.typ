@@ -1,184 +1,117 @@
 #import "../../../utils/types.typ"
 
+// --- Styling Callbacks (Return (content, content)) ---
+
+#let render-subtotal(ctx, value, styles) = {
+  // Should return a tuple (label, value) for the subtotal row.
+  // The values should use the provided styles and ctx for localization.
+  panic(
+    "render-subtotal: Implement a function that returns a (label, value) content tuple for the subtotal.",
+  )
+}
+
+#let render-total-net(ctx, value, styles) = {
+  // Should return a tuple (label, value) for the intermediate net total.
+  panic(
+    "render-total-net: Implement a function that returns a (label, value) content tuple for the intermediate net total.",
+  )
+}
+
+#let render-total-gross(ctx, value, styles) = {
+  // Should return a tuple (label, value) for the grand gross total.
+  panic(
+    "render-total-gross: Implement a function that returns a (label, value) content tuple for the grand total.",
+  )
+}
+
+#let render-discount(ctx, discount, styles) = {
+  // Should return a tuple (label, value) for a single discount entry.
+  panic(
+    "render-discount: Implement a function that returns a (label, value) content tuple for a discount.",
+  )
+}
+
+#let render-surcharge(ctx, surcharge, styles) = {
+  // Should return a tuple (label, value) for a single surcharge entry.
+  panic(
+    "render-surcharge: Implement a function that returns a (label, value) content tuple for a surcharge.",
+  )
+}
+
+#let render-tax(ctx, tax, styles) = {
+  // Should return a tuple (label, value) for a single tax entry.
+  panic(
+    "render-tax: Implement a function that returns a (label, value) content tuple for a tax line.",
+  )
+}
+
+// --- Structural Callbacks ---
+
+/// Wrapper applied to every output of the styling functions
+#let totals-cell-wrapper(ctx, content, styles) = {
+  // Should wrap the raw content (label or value) in a container like table.cell.
+  // This is the point where theme-specific cell styling (inset, fill, etc.) is applied.
+  table.cell(content)
+}
+
+/// Assembles the wrapped elements into the final content
+#let render-totals-body(ctx, data, styles, elements) = {
+  // This function is the architect of the totals block.
+  // It receives a dictionary 'elements' containing the already-wrapped cells:
+  // elements: (subtotal: (c1, c2), modifiers: ((c1, c2), ...), taxes: (...), grand-total: (...))
+  // It should arrange these cells into a grid, table, or custom layout.
+  panic(
+    "render-totals-body: Implement the assembly logic that arranges the wrapped elements into the final visual block.",
+  )
+}
+
+// --- Main Component ---
+
 #let render-totals(
   ctx,
   data,
-
+  // Stylers
+  render-subtotal: render-subtotal,
+  render-total-net: render-total-net,
+  render-total-gross: render-total-gross,
+  render-discount: render-discount,
+  render-surcharge: render-surcharge,
+  render-tax: render-tax,
+  // Wrapper & Builder
+  totals-cell-wrapper: totals-cell-wrapper,
+  render-totals-body: render-totals-body,
+  // Standard styling parameters
   color-discount: rgb("b22222"),
   color-surcharge: rgb("333333"),
   color-vat-label: rgb("475569"),
-
   size-small: 0.85em,
   size-total: 1.2em,
-
   weight-bold: "bold",
-
   stroke-thin: 0.5pt,
   stroke-thick: 2pt,
-
   totals-width: 66%,
   totals-row-gutter: 0.6em,
+  totals-col-gutter: 1em,
+  totals-align: right,
 ) = {
-  types.require(color-discount, "render-totals::color-discount", color, none)
-  types.require(color-surcharge, "render-totals::color-surcharge", color, none)
-  types.require(color-vat-label, "render-totals::color-vat-label", color, none)
-
-  types.require(weight-bold, "render-totals::weight-bold", str, int)
-
-  types.require(stroke-thin, "render-totals::stroke-thin", stroke, length, none)
-  types.require(
-    stroke-thick,
-    "render-totals::stroke-thick",
-    stroke,
-    length,
-    none,
+  let styles = (
+    color-discount: color-discount,
+    color-surcharge: color-surcharge,
+    color-vat-label: color-vat-label,
+    size-small: size-small,
+    size-total: size-total,
+    weight-bold: weight-bold,
+    stroke-thin: stroke-thin,
+    stroke-thick: stroke-thick,
+    totals-width: totals-width,
+    totals-row-gutter: totals-row-gutter,
+    totals-col-gutter: totals-col-gutter,
+    totals-align: totals-align,
   )
 
-  let sum-str = ctx.locale.strings.summary
-  let li-str = ctx.locale.strings.line-items
-
-  align(right)[
-    #box(width: totals-width, {
-      if data.tax-mode == "inclusive" {
-        grid(
-          columns: (1fr, auto),
-          row-gutter: totals-row-gutter,
-          column-gutter: 1em,
-          align: (left, right),
-
-          // Only show Brutto subtotal if there are actually modifiers
-          ..if data.discounts.len() > 0 or data.surcharges.len() > 0 {
-            (
-              [#sum-str.sum (#li-str.gross):],
-              data.unmodified-total.gross,
-            )
-          } else { () },
-
-          ..data
-            .discounts
-            .map(d => (
-              text(
-                fill: color-discount,
-                size-small,
-              )[#li-str.discount: #d.name],
-              text(
-                fill: color-discount,
-              )[#if d.is-percent [(− #d.display) #h(.5em)] − #d.absolute],
-            ))
-            .flatten(),
-
-          ..data
-            .surcharges
-            .map(s => (
-              text(
-                fill: color-surcharge,
-                size-small,
-              )[#li-str.surcharge: #s.name],
-              text(
-                fill: color-surcharge,
-              )[#if s.is-percent [(\+ #s.display) #h(.5em)] \+ #s.absolute],
-            ))
-            .flatten(),
-
-          grid.hline(stroke: stroke-thick),
-
-          pad(top: 0.5em, text(
-            weight: weight-bold,
-            size: size-total,
-          )[#sum-str.total:]),
-          pad(top: 0.5em, text(
-            weight: weight-bold,
-            size: size-total,
-          )[#data.total.gross]),
-
-          grid.hline(stroke: stroke-thick), [], [],
-
-          ..data
-            .taxes
-            .map(t => (
-              text(
-                fill: color-vat-label,
-              )[#sum-str.including #sum-str.vat-tax #t.rate (#t.category):],
-              text(fill: black)[#t.amount],
-            ))
-            .flatten(),
-
-          pad(y: -.5em)[], pad(y: -.5em)[],
-          pad(bottom: 0.3em)[], pad(bottom: 0.3em)[],
-        )
-      } else {
-        grid(
-          columns: (1fr, auto),
-          row-gutter: totals-row-gutter,
-          column-gutter: 1em,
-          align: (left, right),
-
-          [#sum-str.sum (#li-str.net):], data.unmodified-total.net,
-
-          ..data
-            .discounts
-            .map(d => (
-              text(
-                fill: color-discount,
-                size-small,
-              )[#li-str.discount: #d.name],
-              text(
-                fill: color-discount,
-              )[#if d.is-percent [(− #d.display) #h(.5em)] − #d.absolute],
-            ))
-            .flatten(),
-
-          ..data
-            .surcharges
-            .map(s => (
-              text(
-                fill: color-surcharge,
-                size-small,
-              )[#li-str.surcharge: #s.name],
-              text(
-                fill: color-surcharge,
-              )[#if s.is-percent [(+ #s.display) #h(.5em)] \+ #s.absolute],
-            ))
-            .flatten(),
-
-          ..if data.discounts.len() > 0 or data.surcharges.len() > 0 {
-            (
-              text(weight: weight-bold)[#li-str.total #li-str.net:],
-              text(weight: weight-bold)[#data.total.net],
-            )
-          } else { () },
-
-          grid.hline(stroke: stroke-thin),
-
-          pad(top: 0.3em)[], pad(top: 0.3em)[],
-
-          ..data
-            .taxes
-            .map(t => (
-              text(
-                fill: color-vat-label,
-              )[#sum-str.excluding #sum-str.vat-tax #t.rate (#t.category):],
-              text(fill: black)[#t.amount],
-            ))
-            .flatten(),
-
-          pad(y: -.5em)[], pad(y: -.5em)[],
-          pad(bottom: 0.3em)[], pad(bottom: 0.3em)[],
-
-          grid.hline(stroke: stroke-thick),
-
-          pad(y: 0.5em, text(
-            weight: weight-bold,
-            size: size-total,
-          )[#sum-str.total:]),
-          pad(y: 0.5em, text(
-            weight: weight-bold,
-            size: size-total,
-          )[#data.total.gross]),
-
-          grid.hline(stroke: stroke-thick),
-        )
-      }
-    })
-  ]
+  // Implementation logic for gathering and wrapping elements goes here.
+  // The results should then be passed to render-totals-body.
+  panic(
+    "render-totals: Implement the collection and wrapping logic that prepares the elements for the builder.",
+  )
 }

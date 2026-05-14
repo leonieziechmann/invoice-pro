@@ -1,4 +1,5 @@
 #import "../../../utils/types.typ"
+#import "columns.typ": get-column-metadata
 
 #let default-render-description-cell(ctx, item, layout, styles) = {
   stack(
@@ -107,24 +108,6 @@
   tax-suffix-style: "newline",
   render-tax-suffix: auto,
 ) = {
-  types.require(color-subtitle, "render-table::color-subtitle", color, none)
-  types.require(color-desc, "render-table::color-desc", color, none)
-  types.require(color-row-odd, "render-table::color-row-odd", color, none)
-  types.require(color-row-even, "render-table::color-row-even", color, none)
-  types.require(color-discount, "render-table::color-discount", color, none)
-  types.require(color-surcharge, "render-table::color-surcharge", color, none)
-
-  types.require(weight-bold, "render-table::weight-bold", str, int)
-
-  types.require(stroke-thin, "render-table::stroke-thin", stroke, length, none)
-  types.require(
-    stroke-regular,
-    "render-table::stroke-regular",
-    stroke,
-    length,
-    none,
-  )
-
   let strings = ctx.locale.strings
   let li-str = strings.line-items
 
@@ -181,75 +164,30 @@
   }
 
   // --- Dynamic Column Setup ---
-  let cols = ()
+  let meta = get-column-metadata(data, column-order)
+  let cols = meta.cols
+  let active-cols-keys = meta.active-keys
+
   let raw-headers = ()
-  let aligns = ()
-
-  // Left columns are fixed: Position (if enabled) and Description
-  if layout.show-pos {
-    cols.push(auto)
-    raw-headers.push([*#li-str.position*])
-    aligns.push(center)
-  }
-
-  cols.push(1fr)
+  if layout.show-pos { raw-headers.push([*#li-str.position*]) }
   raw-headers.push([*#li-str.description*])
-  aligns.push(left)
 
-  // Map requested column order to headers and styles
   let available-cols = (
-    "quantity": (
-      enabled: layout.show-quantity,
-      header: [*#li-str.quantity*],
-      align: right,
-    ),
-    "unit-price": (
-      enabled: layout.show-unit-price,
-      header: [*#li-str.unit-price*#get-suffix("unit-price")],
-      align: right,
-    ),
-    "tax-rate": (
-      enabled: layout.show-tax-rates,
-      header: [*#li-str.vat*],
-      align: right,
-    ),
-    "total-price": (
-      enabled: layout.show-total-price,
-      header: [*#li-str.total*#get-suffix("total")],
-      align: right,
-    ),
+    "quantity": [*#li-str.quantity*],
+    "unit-price": [*#li-str.unit-price*#get-suffix("unit-price")],
+    "tax-rate": [*#li-str.vat*],
+    "total-price": [*#li-str.total*#get-suffix("total")],
   )
 
-  let active-cols-keys = ()
-  for col-key in column-order {
-    if col-key in available-cols {
-      let col = available-cols.at(col-key)
-      if col.enabled {
-        cols.push(auto)
-        raw-headers.push(col.header)
-        aligns.push(col.align)
-        active-cols-keys.push(col-key)
-      }
-    }
+  for key in active-cols-keys {
+    raw-headers.push(available-cols.at(key))
   }
 
-  // Calculate absolute indices for alignment
-  let total-cols = cols.len()
-  let colspan-left = if layout.show-pos { 1 } else { 0 }
-  let desc-idx = colspan-left
-
-  let total-price-idx = active-cols-keys.position(k => k == "total-price")
-  let abs-total-idx = if total-price-idx != none {
-    desc-idx + 1 + total-price-idx
-  } else {
-    none
-  }
-
-  let abs-percent-idx = if total-price-idx != none and total-price-idx > 0 {
-    abs-total-idx - 1
-  } else {
-    none
-  }
+  let total-cols = meta.total-count
+  let colspan-left = meta.left-count
+  let desc-idx = meta.desc-idx
+  let abs-total-idx = meta.total-idx
+  let abs-percent-idx = meta.percent-idx
 
   // --- Header Construction ---
   let header-cells = raw-headers.map(h => {
@@ -501,7 +439,11 @@
   table(
     columns: cols,
     stroke: none,
-    align: (x, y) => aligns.at(x, default: right),
+    align: (x, y) => {
+      if x == 0 and layout.show-pos { return center }
+      if x == desc-idx { return left }
+      return right
+    },
     table-header,
     ..item-rows,
     ..table-footer,
