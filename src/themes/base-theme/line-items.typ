@@ -22,6 +22,7 @@
     stroke-regular: 1pt,
     stroke-thick: 2pt,
     cell-inset: (top: 0.125em, bottom: 0.125em),
+    header-cell-inset: (top: 0.5em, bottom: 0.5em),
     totals-width: 66%,
     totals-row-gutter: 0.6em,
   )
@@ -43,11 +44,12 @@
     stroke-header-bottom: 0.5pt + black,
     stroke-table-bottom: 0.5pt + black,
     stroke-thin: 0.5pt + black,
+    header-cell-inset: (y: 0.8em),
     totals-width: 50%,
     tax-suffix-style: (unit-price: none, total: "inline"),
     // Header Customization
     render-header-cell: (ctx, content, styles) => {
-      table.cell(inset: (y: 0.8em))[
+      table.cell(inset: styles.header-cell-inset)[
         #elegant-label(content)
       ]
     },

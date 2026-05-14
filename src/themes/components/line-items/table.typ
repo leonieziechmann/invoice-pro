@@ -22,7 +22,7 @@
 }
 
 #let default-render-header-cell(ctx, content, styles) = {
-  table.cell(fill: styles.header-bg, inset: styles.cell-inset)[
+  table.cell(fill: styles.header-bg, inset: styles.header-cell-inset)[
     #set text(fill: styles.header-color)
     #content
   ]
@@ -32,7 +32,9 @@
   table.header(
     repeat: styles.header-repeat,
     table.hline(stroke: styles.stroke-header-top),
+    table.cell(colspan: header-cells.len(), inset: 0pt, []),
     ..header-cells,
+    table.cell(colspan: header-cells.len(), inset: 0pt, []),
     table.hline(stroke: styles.stroke-header-bottom),
   )
 }
@@ -42,34 +44,29 @@
   let label = if is-net { strings.net } else { strings.gross }
 
   if style-type == "newline" {
-    (
-      [\ ]
-        + text(
-          size: 0.8em,
-          weight: "regular",
-          fill: styles.color-subtitle,
-        )[(#label)]
+    block(
+      spacing: .2em,
+      text(
+        size: 0.8em,
+        weight: "regular",
+        fill: styles.color-subtitle,
+        [(#label)],
+      ),
     )
   } else if style-type == "inline" {
-    (
-      [ ]
-        + text(
-          size: 0.8em,
-          weight: "regular",
-          fill: styles.color-subtitle,
-        )[(#label)]
-    )
+    text(
+      size: 0.8em,
+      weight: "regular",
+      fill: styles.color-subtitle,
+    )[(#label)]
   } else if style-type == "accent" {
-    (
-      [ ]
-        + text(
-          size: 0.7em,
-          weight: "bold",
-          fill: styles.color-subtitle.lighten(20%),
-        )[#upper(label)]
-    )
+    text(
+      size: 0.7em,
+      weight: "bold",
+      fill: styles.color-subtitle.lighten(20%),
+    )[#upper(label)]
   } else {
-    []
+    none
   }
 }
 
@@ -88,6 +85,7 @@
   stroke-thin: 0.5pt,
   stroke-regular: 1pt,
   cell-inset: (top: 0.125em, bottom: 0.125em),
+  header-cell-inset: (top: 0.5em, bottom: 0.5em),
   // Structural parameters
   column-order: ("quantity", "unit-price", "tax-rate", "total-price"),
   render-description-cell: auto,
@@ -139,6 +137,7 @@
     stroke-header-bottom: s-header-bottom,
     stroke-table-bottom: s-table-bottom,
     cell-inset: cell-inset,
+    header-cell-inset: header-cell-inset,
   )
 
   set par(justify: false)
@@ -149,6 +148,8 @@
       tax-suffix-style
     } else if type(tax-suffix-style) == dictionary {
       tax-suffix-style.at(key, default: "newline")
+    } else if tax-suffix-style == none {
+      "none"
     } else {
       "newline"
     }

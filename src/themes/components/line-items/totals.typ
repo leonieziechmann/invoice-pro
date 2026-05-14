@@ -100,15 +100,12 @@
     (
       // --- Inclusive Mode ---
       if has-modifiers { elements.subtotal },
-
       elements.modifiers,
-
       grid.hline(stroke: styles.stroke-thick),
       null-cell,
       elements.grand-total,
       grid.hline(stroke: styles.stroke-thick),
       null-cell,
-
       elements.taxes,
     )
   } else {
@@ -116,14 +113,10 @@
       // --- Exclusive Mode ---
       elements.subtotal,
       elements.modifiers,
-
       if has-modifiers { elements.net-total },
-
       grid.hline(stroke: styles.stroke-thin),
       null-cell,
-
       elements.taxes,
-
       grid.hline(stroke: styles.stroke-thick),
       null-cell,
       elements.grand-total,
@@ -131,6 +124,8 @@
       null-cell,
     )
   }
+
+  v(.5em)
 
   align(styles.totals-align)[
     #box(width: styles.totals-width)[
