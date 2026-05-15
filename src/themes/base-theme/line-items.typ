@@ -49,20 +49,8 @@
     totals-width: 50%,
     tax-suffix-style: (unit-price: none, total: "inline"),
     // Header Customization
-    render-header-cell: (ctx, content, styles) => {
-      table.cell(inset: styles.header-cell-inset)[
-        #elegant-label(content)
-      ]
-    },
-    render-table-header: (ctx, header-cells, styles) => {
-      table.header(
-        repeat: true,
-        table.hline(stroke: styles.stroke-header-top),
-        ..header-cells,
-        table.hline(stroke: styles.stroke-header-bottom),
-        table.cell(colspan: header-cells.len(), inset: 0pt, v(2pt)),
-        table.hline(stroke: styles.stroke-header-bottom),
-      )
+    render-header: (ctx, content, styles) => {
+      elegant-label(content)
     },
     // Totals Customization
     render-subtotal: (ctx, value, styles) => {
@@ -195,8 +183,8 @@
     stroke-table-bottom: 2pt + accent,
     tax-suffix-style: "none",
     // Header
-    render-header-cell: (ctx, content, styles) => {
-      table.cell(inset: 0.4em, align: center + horizon)[
+    render-header: (ctx, content, styles) => {
+      align(center + horizon)[
         #place(block(
           width: 100%,
           height: 100%,
@@ -206,9 +194,6 @@
         ))
         #pad(x: 0.4em, text(fill: white, weight: "bold", size: 0.8em, content))
       ]
-    },
-    render-table-header: (ctx, header-cells, styles) => {
-      table.header(repeat: true, ..header-cells)
     },
   )
 }
