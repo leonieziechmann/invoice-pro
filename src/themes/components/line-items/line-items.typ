@@ -32,7 +32,9 @@
   totals-align: right,
   // Structural parameters
   column-order: ("quantity", "unit-price", "tax-rate", "total-price"),
-  render-description-cell: auto,
+  render-title-cell: auto,
+  render-description-row: auto,
+  desc-colspan: ("quantity", "unit-price"),
   render-discount-row: auto,
   render-surcharge-row: auto,
   render-subtotal-row: auto,
@@ -80,7 +82,9 @@
     header-cell-inset: header-cell-inset,
 
     column-order: column-order,
-    render-description-cell: render-description-cell,
+    render-title-cell: render-title-cell,
+    render-description-row: render-description-row,
+    desc-colspan: desc-colspan,
     render-discount-row: render-discount-row,
     render-surcharge-row: render-surcharge-row,
     render-subtotal-row: render-subtotal-row,

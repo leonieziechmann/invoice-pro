@@ -1,23 +1,134 @@
 #import "../../../utils/types.typ"
 #import "columns.typ": get-column-metadata
 
-#let default-render-description-cell(ctx, item, layout, styles) = {
+// --- Default Renderers ---
+
+#let default-render-title-cell(
+  ctx,
+  item,
+  layout,
+  styles,
+  is-sub-item: false,
+) = {
+  let prefix = if is-sub-item { h(1em) + "↳ " } else { "" }
+
   stack(
     dir: ttb,
     spacing: 0.4em,
-    text(weight: styles.weight-bold, item.name),
-    ..if item.has-description and layout.show-descriptions {
+    text(
+      weight: if is-sub-item { "regular" } else { styles.weight-bold },
+      [#prefix #item.name],
+    ),
+    ..if item.has-date and layout.show-dates {
+      let date-indent = if is-sub-item { h(2.2em) } else { "" }
       (
         text(
           size: styles.size-small,
-          fill: styles.color-desc,
-          item.description,
+          style: "italic",
+          [#date-indent #item.date],
         ),
       )
     } else { () },
-    ..if item.has-date and layout.show-dates {
-      (text(size: styles.size-small, style: "italic", item.date),)
-    } else { () },
+  )
+}
+
+#let default-render-description-row(
+  ctx,
+  item,
+  layout,
+  styles,
+  colspan-info,
+  cell-spacing,
+) = {
+  let row = ()
+  if layout.show-pos { row.push(table.cell(..cell-spacing)[]) }
+
+  row.push(table.cell(
+    colspan: colspan-info.colspan,
+    ..cell-spacing,
+  )[
+    #set text(size: styles.size-small, fill: styles.color-desc)
+    #item.description
+  ])
+
+  if colspan-info.remaining > 0 {
+    row.push(table.cell(colspan: colspan-info.remaining, ..cell-spacing)[])
+  }
+  row
+}
+
+#let default-render-modifier-row(
+  ctx,
+  mod,
+  layout,
+  indices,
+  styles,
+  cell-spacing,
+  is-discount: true,
+) = {
+  let strings = ctx.locale.strings.line-items
+  let row = ()
+  if layout.show-pos { row.push(table.cell(..cell-spacing)[]) }
+
+  let color = if is-discount { styles.color-discount } else {
+    styles.color-surcharge
+  }
+  let label-str = if is-discount { strings.discount } else { strings.surcharge }
+  let sign = if is-discount { "−" } else { "+" }
+
+  let label = text(
+    size: styles.size-small,
+    fill: color,
+  )[↳ #label-str: #mod.name]
+  let percent = if mod.is-percent {
+    text(fill: color)[(#sign #mod.display)]
+  } else { [] }
+  let total-val = text(fill: color)[#sign #mod.absolute]
+
+  if indices.total != none {
+    if indices.percent != none {
+      row.push(table.cell(
+        colspan: indices.percent - indices.desc,
+        align: left,
+        ..cell-spacing,
+      )[#label])
+      row.push(table.cell(align: right, ..cell-spacing)[#percent])
+      row.push(table.cell(align: right, ..cell-spacing)[#total-val])
+    } else {
+      row.push(table.cell(
+        colspan: indices.total - indices.desc,
+        align: left,
+        ..cell-spacing,
+      )[#label])
+      row.push(table.cell(align: right, ..cell-spacing)[#percent #total-val])
+    }
+    let remaining = indices.total-count - (indices.total + 1)
+    if remaining > 0 {
+      row.push(table.cell(colspan: remaining, ..cell-spacing)[])
+    }
+  } else {
+    row.push(table.cell(
+      colspan: indices.total-count - indices.left - 1,
+      align: left,
+      ..cell-spacing,
+    )[#label])
+    row.push(table.cell(align: right, ..cell-spacing)[#percent #total-val])
+  }
+  row
+}
+
+#let default-render-group-row(ctx, item, total-cols, styles, cell-spacing) = {
+  (
+    table.cell(
+      colspan: total-cols,
+      fill: styles.color-row-odd.darken(5%),
+      align: left,
+      inset: (x: 0.5em, y: 0.6em),
+      ..cell-spacing,
+    )[
+      #set text(weight: styles.weight-bold, fill: styles.color-subtitle)
+      #upper(item.name)
+    ],
   )
 }
 
@@ -42,33 +153,46 @@
 #let default-render-tax-suffix(ctx, is-net, styles, style-type) = {
   let strings = ctx.locale.strings.line-items
   let label = if is-net { strings.net } else { strings.gross }
+  let fill-color = styles.color-subtitle
 
   if style-type == "newline" {
-    block(
-      spacing: .2em,
-      text(
-        size: 0.8em,
-        weight: "regular",
-        fill: styles.color-subtitle,
-        [(#label)],
-      ),
-    )
-  } else if style-type == "inline" {
-    text(
+    block(spacing: .2em, text(
       size: 0.8em,
       weight: "regular",
-      fill: styles.color-subtitle,
-    )[(#label)]
+      fill: fill-color,
+      [(#label)],
+    ))
+  } else if style-type == "inline" {
+    text(size: 0.8em, weight: "regular", fill: fill-color)[(#label)]
   } else if style-type == "accent" {
-    text(
-      size: 0.7em,
-      weight: "bold",
-      fill: styles.color-subtitle.lighten(20%),
-    )[#upper(label)]
-  } else {
-    none
-  }
+    text(size: 0.7em, weight: "bold", fill: fill-color.lighten(20%))[#upper(
+      label,
+    )]
+  } else { none }
 }
+
+// --- Logic Helpers ---
+
+#let compute-desc-colspan(
+  total-cols,
+  desc-idx,
+  active-cols-keys,
+  colspan-spec,
+) = {
+  if type(colspan-spec) == int {
+    if colspan-spec > 0 { return colspan-spec }
+    return calc.max(1, total-cols - desc-idx + colspan-spec)
+  } else if type(colspan-spec) == array {
+    let count = 1
+    for key in active-cols-keys {
+      if key in colspan-spec { count += 1 } else { break }
+    }
+    return count
+  }
+  return 1
+}
+
+// --- Main Function ---
 
 #let render-table(
   ctx,
@@ -86,13 +210,14 @@
   stroke-regular: 1pt,
   cell-inset: (top: 0.125em, bottom: 0.125em),
   header-cell-inset: (top: 0.5em, bottom: 0.5em),
-  // Structural parameters
   column-order: ("quantity", "unit-price", "tax-rate", "total-price"),
-  render-description-cell: auto,
+  render-title-cell: auto,
+  render-description-row: auto,
+  desc-colspan: auto,
   render-discount-row: auto,
   render-surcharge-row: auto,
   render-subtotal-row: auto,
-  // Header/Footer parameters
+  render-group-row: auto,
   header-bg: none,
   header-color: black,
   header-repeat: true,
@@ -102,25 +227,12 @@
   render-header-cell: auto,
   render-table-header: auto,
   render-table-footer: auto,
-  // Tax suffix parameters
   tax-suffix-style: "newline",
   render-tax-suffix: auto,
 ) = {
-  let strings = ctx.locale.strings
-  let li-str = strings.line-items
-
   let layout = data.layout-information
   let is-net = data.tax-mode == "exclusive"
-
-  let s-header-top = if stroke-header-top == auto { stroke-regular } else {
-    stroke-header-top
-  }
-  let s-header-bottom = if stroke-header-bottom == auto { stroke-thin } else {
-    stroke-header-bottom
-  }
-  let s-table-bottom = if stroke-table-bottom == auto { stroke-regular } else {
-    stroke-table-bottom
-  }
+  let li-str = ctx.locale.strings.line-items
 
   let styles = (
     color-subtitle: color-subtitle,
@@ -133,42 +245,84 @@
     header-bg: header-bg,
     header-color: header-color,
     header-repeat: header-repeat,
-    stroke-header-top: s-header-top,
-    stroke-header-bottom: s-header-bottom,
-    stroke-table-bottom: s-table-bottom,
+    stroke-header-top: if stroke-header-top == auto { stroke-regular } else {
+      stroke-header-top
+    },
+    stroke-header-bottom: if stroke-header-bottom == auto { stroke-thin } else {
+      stroke-header-bottom
+    },
+    stroke-table-bottom: if stroke-table-bottom == auto {
+      stroke-regular
+    } else { stroke-table-bottom },
     cell-inset: cell-inset,
     header-cell-inset: header-cell-inset,
+    color-row-odd: color-row-odd,
+    color-row-even: color-row-even,
   )
 
   set par(justify: false)
 
-  // Resolve suffix styles
-  let resolve-suffix-style(key) = {
-    if type(tax-suffix-style) == str {
-      tax-suffix-style
-    } else if type(tax-suffix-style) == dictionary {
-      tax-suffix-style.at(key, default: "newline")
-    } else if tax-suffix-style == none {
-      "none"
-    } else {
-      "newline"
-    }
+  // Pre-resolve callbacks
+  let do-render-title = if render-title-cell == auto {
+    default-render-title-cell
+  } else { render-title-cell }
+  let do-render-desc = if render-description-row == auto {
+    default-render-description-row
+  } else {
+    render-description-row
   }
+  let do-render-header-cell = if render-header-cell == auto {
+    default-render-header-cell
+  } else { render-header-cell }
+  let do-render-table-header = if render-table-header == auto {
+    default-render-table-header
+  } else {
+    render-table-header
+  }
+  let do-render-discount = if render-discount-row == auto {
+    default-render-modifier-row.with(is-discount: true)
+  } else {
+    render-discount-row
+  }
+  let do-render-surcharge = if render-surcharge-row == auto {
+    default-render-modifier-row.with(is-discount: false)
+  } else { render-surcharge-row }
+  let do-render-group = if render-group-row == auto {
+    default-render-group-row
+  } else { render-group-row }
 
   let get-suffix(key) = {
-    if render-tax-suffix == auto {
-      let s-type = resolve-suffix-style(key)
-      default-render-tax-suffix(ctx, is-net, styles, s-type)
-    } else {
-      render-tax-suffix(ctx, is-net, styles, key)
+    if render-tax-suffix != auto {
+      return render-tax-suffix(ctx, is-net, styles, key)
     }
+    let s-type = if type(tax-suffix-style) == str { tax-suffix-style } else if (
+      type(tax-suffix-style) == dictionary
+    ) {
+      tax-suffix-style.at(key, default: "newline")
+    } else { "newline" }
+    default-render-tax-suffix(ctx, is-net, styles, s-type)
   }
 
-  // --- Dynamic Column Setup ---
+  // Column Setup
   let meta = get-column-metadata(data, column-order)
-  let cols = meta.cols
-  let active-cols-keys = meta.active-keys
+  let (
+    cols,
+    active-keys: active-cols-keys,
+    total-count: total-cols,
+    left-count: colspan-left,
+    desc-idx,
+    total-idx: abs-total-idx,
+    percent-idx: abs-percent-idx,
+  ) = meta
+  let indices = (
+    left: colspan-left,
+    desc: desc-idx,
+    total: abs-total-idx,
+    percent: abs-percent-idx,
+    total-count: total-cols,
+  )
 
+  // Header Construction
   let raw-headers = ()
   if layout.show-pos { raw-headers.push([*#li-str.position*]) }
   raw-headers.push([*#li-str.description*])
@@ -179,206 +333,104 @@
     "tax-rate": [*#li-str.vat*],
     "total-price": [*#li-str.total*#get-suffix("total")],
   )
+  for key in active-cols-keys { raw-headers.push(available-cols.at(key)) }
 
-  for key in active-cols-keys {
-    raw-headers.push(available-cols.at(key))
-  }
-
-  let total-cols = meta.total-count
-  let colspan-left = meta.left-count
-  let desc-idx = meta.desc-idx
-  let abs-total-idx = meta.total-idx
-  let abs-percent-idx = meta.percent-idx
-
-  // --- Header Construction ---
-  let header-cells = raw-headers.map(h => {
-    if render-header-cell == auto {
-      default-render-header-cell(ctx, h, styles)
-    } else {
-      render-header-cell(ctx, h, styles)
-    }
-  })
-
-  let table-header = if render-table-header == auto {
-    default-render-table-header(ctx, header-cells, styles)
-  } else {
-    render-table-header(ctx, header-cells, styles)
-  }
-
-  let table-footer = if render-table-footer == auto {
-    ()
-  } else {
+  let table-header = do-render-table-header(
+    ctx,
+    raw-headers.map(h => do-render-header-cell(ctx, h, styles)),
+    styles,
+  )
+  let table-footer = if render-table-footer != auto {
     render-table-footer(ctx, total-cols, styles)
-  }
+  } else { () }
+  let abs-desc-colspan = compute-desc-colspan(
+    total-cols,
+    desc-idx,
+    active-cols-keys,
+    desc-colspan,
+  )
 
-  let item-rows = ()
-
-  // --- Item Row Rendering ---
-  for (i, item) in data.items.enumerate() {
-    let has-modifications = (
-      (item.has-discounts or item.has-surcharge) and layout.show-modifier
-    )
-
-    let bg = if calc.odd(i) { color-row-odd } else { color-row-even }
+  // Recursive Item Builder
+  let build-item-rows(item, index, is-sub-item: false) = {
+    let rows = ()
+    let bg = if calc.odd(index) { styles.color-row-odd } else {
+      styles.color-row-even
+    }
     let cell = table.cell.with(fill: bg, stroke: none)
     let cell-spacing = (inset: cell-inset, fill: bg)
 
-    // 1. Position
+    if item.at("is-group", default: false) {
+      return do-render-group(ctx, item, total-cols, styles, cell-spacing)
+    }
+
+    let has-mods = (
+      (
+        item.at("has-discounts", default: false)
+          or item.at("has-surcharge", default: false)
+      )
+        and layout.show-modifier
+    )
+
     if layout.show-pos {
-      item-rows.push(cell(str(i + 1)))
+      rows.push(cell(if is-sub-item { "" } else { str(index) }))
     }
+    rows.push(cell(do-render-title(
+      ctx,
+      item,
+      layout,
+      styles,
+      is-sub-item: is-sub-item,
+    )))
 
-    // 2. Description
-    let desc-content = if render-description-cell == auto {
-      default-render-description-cell(ctx, item, layout, styles)
-    } else {
-      render-description-cell(ctx, item, layout, styles)
-    }
-    item-rows.push(cell(desc-content))
-
-    // 3. Dynamic Columns
-    for col-key in active-cols-keys {
-      let content = if col-key == "quantity" {
+    for key in active-cols-keys {
+      let content = if key == "quantity" {
         if layout.show-units { [#item.quantity #item.unit] } else {
           [#item.quantity]
         }
-      } else if col-key == "unit-price" {
-        item.price
-      } else if col-key == "tax-rate" {
+      } else if key == "unit-price" { item.price } else if key == "tax-rate" {
         [#item.tax.rate #item.tax.category]
-      } else if col-key == "total-price" {
-        if has-modifications and item.keys().contains("unmodified-total") {
+      } else if key == "total-price" {
+        if has-mods and "unmodified-total" in item {
           item.unmodified-total
-        } else {
-          item.total
-        }
+        } else { item.total }
       }
-      item-rows.push(cell(content))
+      rows.push(cell(content))
     }
 
-    // --- Discounts ---
-    if item.has-discounts and layout.show-modifier {
-      for d in item.discounts {
-        if render-discount-row == auto {
-          let row = ()
-          if layout.show-pos { row.push(cell(..cell-spacing)[]) }
+    if item.at("has-description", default: false) and layout.show-descriptions {
+      rows += do-render-desc(
+        ctx,
+        item,
+        layout,
+        styles,
+        (
+          colspan: abs-desc-colspan,
+          remaining: total-cols - desc-idx - abs-desc-colspan,
+        ),
+        cell-spacing,
+      )
+    }
 
-          let label = text(
-            size: size-small,
-            fill: color-discount,
-          )[↳ #li-str.discount: #d.name]
-          let percent = if d.is-percent {
-            text(fill: color-discount)[(− #d.display)]
-          } else { [] }
-          let total-val = text(fill: color-discount)[− #d.absolute]
-
-          if abs-total-idx != none {
-            if abs-percent-idx != none {
-              row.push(cell(
-                colspan: abs-percent-idx - desc-idx,
-                align: left,
-                ..cell-spacing,
-              )[#label])
-              row.push(cell(align: right, ..cell-spacing)[#percent])
-              row.push(cell(align: right, ..cell-spacing)[#total-val])
-            } else {
-              row.push(cell(
-                colspan: abs-total-idx - desc-idx,
-                align: left,
-                ..cell-spacing,
-              )[#label])
-              row.push(cell(align: right, ..cell-spacing)[#percent #total-val])
-            }
-            let remaining = total-cols - (abs-total-idx + 1)
-            if remaining > 0 {
-              row.push(cell(colspan: remaining, ..cell-spacing)[])
-            }
-          } else {
-            row.push(cell(
-              colspan: total-cols - colspan-left - 1,
-              align: left,
-              ..cell-spacing,
-            )[#label])
-            row.push(cell(align: right, ..cell-spacing)[#percent #total-val])
-          }
-          item-rows += row
-        } else {
-          item-rows += render-discount-row(
+    if has-mods {
+      if item.at("has-discounts", default: false) {
+        for d in item.discounts {
+          rows += do-render-discount(
             ctx,
             d,
             layout,
-            (
-              left: colspan-left,
-              desc: desc-idx,
-              total: abs-total-idx,
-              percent: abs-percent-idx,
-              total-count: total-cols,
-            ),
+            indices,
             styles,
             cell-spacing,
           )
         }
       }
-    }
-
-    // --- Surcharges ---
-    if item.has-surcharge and layout.show-modifier {
-      for s in item.surcharge {
-        if render-surcharge-row == auto {
-          let row = ()
-          if layout.show-pos { row.push(cell(..cell-spacing)[]) }
-
-          let label = text(
-            size: size-small,
-            fill: color-surcharge,
-          )[↳ #li-str.surcharge: #s.name]
-          let percent = if s.is-percent {
-            text(fill: color-surcharge)[(\+ #s.display)]
-          } else { [] }
-          let total-val = text(fill: color-surcharge)[\+ #s.absolute]
-
-          if abs-total-idx != none {
-            if abs-percent-idx != none {
-              row.push(cell(
-                colspan: abs-percent-idx - desc-idx,
-                align: left,
-                ..cell-spacing,
-              )[#label])
-              row.push(cell(align: right, ..cell-spacing)[#percent])
-              row.push(cell(align: right, ..cell-spacing)[#total-val])
-            } else {
-              row.push(cell(
-                colspan: abs-total-idx - desc-idx,
-                align: left,
-                ..cell-spacing,
-              )[#label])
-              row.push(cell(align: right, ..cell-spacing)[#percent #total-val])
-            }
-            let remaining = total-cols - (abs-total-idx + 1)
-            if remaining > 0 {
-              row.push(cell(colspan: remaining, ..cell-spacing)[])
-            }
-          } else {
-            row.push(cell(
-              colspan: total-cols - colspan-left - 1,
-              align: left,
-              ..cell-spacing,
-            )[#label])
-            row.push(cell(align: right, ..cell-spacing)[#percent #total-val])
-          }
-          item-rows += row
-        } else {
-          item-rows += render-surcharge-row(
+      if item.at("has-surcharge", default: false) {
+        for s in item.surcharge {
+          rows += do-render-surcharge(
             ctx,
             s,
             layout,
-            (
-              left: colspan-left,
-              desc: desc-idx,
-              total: abs-total-idx,
-              percent: abs-percent-idx,
-              total-count: total-cols,
-            ),
+            indices,
             styles,
             cell-spacing,
           )
@@ -386,68 +438,29 @@
       }
     }
 
-    // --- Subtotal per Item ---
-    if has-modifications {
-      if render-subtotal-row == auto {
-        let row = ()
-        if layout.show-pos { row.push(cell(fill: bg)[]) }
-
-        let label = text(
-          size: size-small,
-          weight: weight-bold,
-          fill: color-subtitle,
-        )[#li-str.subtotal #li-str.position #str(i + 1):]
-        let total-val = text(weight: weight-bold)[#item.total]
-
-        if abs-total-idx != none {
-          row.push(cell(
-            colspan: abs-total-idx - desc-idx,
-            align: left,
-            fill: bg,
-          )[#label])
-          row.push(cell(align: right, fill: bg)[#total-val])
-          let remaining = total-cols - (abs-total-idx + 1)
-          if remaining > 0 { row.push(cell(colspan: remaining, fill: bg)[]) }
-        } else {
-          row.push(cell(
-            colspan: total-cols - colspan-left - 1,
-            align: left,
-            fill: bg,
-          )[#label])
-          row.push(cell(align: right, fill: bg)[#total-val])
-        }
-        item-rows += row
-      } else {
-        item-rows += render-subtotal-row(
-          ctx,
-          i + 1,
-          item.total,
-          layout,
-          (
-            left: colspan-left,
-            desc: desc-idx,
-            total: abs-total-idx,
-            percent: abs-percent-idx,
-            total-count: total-cols,
-          ),
-          styles,
-          bg,
-        )
+    if "sub-items" in item {
+      for sub in item.sub-items {
+        rows += build-item-rows(sub, index, is-sub-item: true)
       }
     }
+    rows
+  }
+
+  let item-rows = ()
+  let display-index = 1
+  for item in data.items {
+    item-rows += build-item-rows(item, display-index)
+    if not item.at("is-group", default: false) { display-index += 1 }
   }
 
   table(
-    columns: cols,
-    stroke: none,
+    columns: cols, stroke: none,
     align: (x, y) => {
-      if x == 0 and layout.show-pos { return center }
-      if x == desc-idx { return left }
-      return right
+      if x == 0 and layout.show-pos { center } else if x == desc-idx {
+        left
+      } else { right }
     },
-    table-header,
-    ..item-rows,
-    ..table-footer,
-    table.hline(stroke: s-table-bottom)
+    table-header, ..item-rows, ..table-footer,
+    table.hline(stroke: styles.stroke-table-bottom)
   )
 }

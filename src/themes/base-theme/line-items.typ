@@ -25,6 +25,7 @@
     header-cell-inset: (top: 0.5em, bottom: 0.5em),
     totals-width: 66%,
     totals-row-gutter: 0.6em,
+    tax-suffix-style: "inline",
   )
 }
 
