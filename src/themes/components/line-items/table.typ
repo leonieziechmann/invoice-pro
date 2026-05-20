@@ -64,11 +64,6 @@
   )
 }
 
-#let default-render-group(ctx, item, styles) = {
-  set text(weight: styles.weight-bold, fill: styles.color-subtitle)
-  upper(item.name)
-}
-
 #let default-render-header(ctx, content, styles) = {
   set text(fill: styles.header-color)
   content
@@ -80,12 +75,15 @@
   let fill-color = styles.color-subtitle
 
   if style-type == "newline" {
-    block(spacing: .2em, text(
-      size: 0.8em,
-      weight: "regular",
-      fill: fill-color,
-      [(#label)],
-    ))
+    align(
+      center,
+      block(spacing: 0.2em, text(
+        size: 0.8em,
+        weight: "regular",
+        fill: fill-color,
+        [(#label)],
+      )),
+    )
   } else if style-type == "inline" {
     text(size: 0.8em, weight: "regular", fill: fill-color)[(#label)]
   } else if style-type == "accent" {
@@ -132,16 +130,12 @@
   // Table styling
   color-row-odd: rgb("e2e8f0"),
   color-row-even: none,
-  color-group-bg: auto,
   stroke-thin: 0.5pt,
   stroke-regular: 1pt,
-  // New Spacing & Border System
+  // Spacing & Border
   item-inset: (y: 0.25em),
-  item-internal-inset: (y: 0.125em),
   item-stroke: none,
-  // Legacy/Other styling
   cell-inset: (x: 0.4em),
-  inset-group: (x: 0.5em, y: 0.6em),
   // Header styling
   header-bg: none,
   header-color: black,
@@ -158,7 +152,6 @@
   render-title: auto,
   render-description: auto,
   render-modifier: auto,
-  render-group: auto,
   render-header: auto,
   render-table-footer: auto,
   render-tax-suffix: auto,
@@ -166,58 +159,65 @@
   let layout = data.layout-information
   let is-net = data.tax-mode == "exclusive"
   let li-str = ctx.locale.strings.line-items
+  let null-dir = (left: 0pt, right: 0pt, top: 0pt, bottom: 0pt)
+
+  // Input Normalization
+  let normalize-directional(value) = if type(value) == dictionary {
+    (
+      left: value.at("left", default: value.at("x", default: 0pt)),
+      right: value.at("right", default: value.at("x", default: 0pt)),
+      top: value.at("top", default: value.at("y", default: 0pt)),
+      bottom: value.at("bottom", default: value.at("y", default: 0pt)),
+    )
+  } else { (left: value, right: value, top: value, bottom: value) }
+
+  let resolve-auto(value, fallback) = if value == auto { fallback } else {
+    auto
+  }
+
+  let normalized-cell-inset = normalize-directional(cell-inset)
+  let normalized-header-cell-inset = normalize-directional(header-cell-inset)
+  let normalized-item-inset = normalize-directional(item-inset)
+  let normalized-item-stroke = normalize-directional(item-stroke)
 
   let styles = (
     color-subtitle: color-subtitle,
     color-desc: color-desc,
     color-discount: color-discount,
     color-surcharge: color-surcharge,
+    color-row-odd: color-row-odd,
+    color-row-even: color-row-even,
+
     size-subtitle: size-subtitle,
     size-small: size-small,
     weight-bold: weight-bold,
+
     header-bg: header-bg,
     header-color: header-color,
     header-repeat: header-repeat,
-    stroke-header-top: if stroke-header-top == auto { stroke-regular } else {
-      stroke-header-top
-    },
-    stroke-header-bottom: if stroke-header-bottom == auto { stroke-thin } else {
-      stroke-header-bottom
-    },
-    stroke-table-bottom: if stroke-table-bottom == auto {
-      stroke-regular
-    } else { stroke-table-bottom },
-    item-inset: item-inset,
-    item-internal-inset: item-internal-inset,
-    item-stroke: item-stroke,
-    cell-inset: cell-inset,
-    inset-group: inset-group,
-    header-cell-inset: header-cell-inset,
-    color-row-odd: color-row-odd,
-    color-row-even: color-row-even,
-    color-group-bg: if color-group-bg == auto {
-      color-row-odd.darken(5%)
-    } else { color-group-bg },
+    stroke-header-top: resolve-auto(stroke-header-top, stroke-regular),
+    stroke-header-bottom: resolve-auto(stroke-header-bottom, stroke-thin),
+    stroke-table-bottom: resolve-auto(stroke-table-bottom, stroke-regular),
+
+    item-inset: normalized-item-inset,
+    item-stroke: normalized-item-stroke,
+    cell-inset: normalized-cell-inset,
+    header-cell-inset: normalized-header-cell-inset,
   )
 
   set par(justify: false)
 
   // Pre-resolve callbacks
-  let do-render-title = if render-title == auto { default-render-title } else {
-    render-title
-  }
-  let do-render-desc = if render-description == auto {
-    default-render-description
-  } else { render-description }
-  let do-render-header = if render-header == auto {
-    default-render-header
-  } else { render-header }
-  let do-render-modifier = if render-modifier == auto {
-    default-render-modifier
-  } else { render-modifier }
-  let do-render-group = if render-group == auto { default-render-group } else {
-    render-group
-  }
+  let do-render-title = resolve-auto(render-title, default-render-title)
+  let do-render-desc = resolve-auto(
+    render-description,
+    default-render-description,
+  )
+  let do-render-header = resolve-auto(render-header, default-render-header)
+  let do-render-modifier = resolve-auto(
+    render-modifier,
+    default-render-modifier,
+  )
 
   let get-suffix(key) = {
     if render-tax-suffix != auto {
@@ -227,7 +227,7 @@
       type(tax-suffix-style) == dictionary
     ) {
       tax-suffix-style.at(key, default: "newline")
-    } else { "newline" }
+    } else if tax-suffix-style == none { none } else { "newline" }
     default-render-tax-suffix(ctx, is-net, styles, s-type)
   }
 
@@ -257,25 +257,36 @@
   raw-headers.push([*#li-str.description*])
 
   let available-cols = (
-    "quantity": [*#li-str.quantity*],
-    "unit-price": [*#li-str.unit-price*#get-suffix("unit-price")],
-    "tax-rate": [*#li-str.vat*],
-    "total-price": [*#li-str.total*#get-suffix("total")],
+    "quantity": align(right, block[*#li-str.quantity*]),
+    "unit-price": align(
+      right,
+      block[*#li-str.unit-price*#get-suffix("unit-price")],
+    ),
+    "tax-rate": align(right, block[*#li-str.vat*]),
+    "total-price": align(right, block[*#li-str.total*#get-suffix("total")]),
   )
   for key in active-cols-keys { raw-headers.push(available-cols.at(key)) }
 
-  let table-header-cells = raw-headers.map(h => table.cell(
-    fill: styles.header-bg,
-    inset: styles.header-cell-inset,
-  )[#do-render-header(ctx, h, styles)])
+  let empty-cell = table.cell.with(inset: 0pt, none)
+
+  let table-header-cells = (
+    (empty-cell(),)
+      + raw-headers.map(h => table.cell(
+        fill: styles.header-bg,
+        inset: styles.header-cell-inset,
+      )[#do-render-header(ctx, h, styles)])
+      + (empty-cell(),)
+  )
 
   let table-header = table.header(
     repeat: styles.header-repeat,
+    table.cell(colspan: total-cols + 2, inset: 0pt, none),
     table.hline(stroke: styles.stroke-header-top),
-    table.cell(colspan: total-cols, inset: 0pt, []),
+    table.cell(colspan: total-cols + 2, inset: 0pt, none),
     ..table-header-cells,
-    table.cell(colspan: total-cols, inset: 0pt, []),
+    table.cell(colspan: total-cols + 2, inset: 0pt, none),
     table.hline(stroke: styles.stroke-header-bottom),
+    table.cell(colspan: total-cols + 2, inset: 0pt, none),
   )
 
   let table-footer = if render-table-footer != auto {
@@ -292,78 +303,57 @@
   // Recursive Item Builder
   let build-item-rows(item, index, is-sub-item: false) = {
     let rows = ()
-    let bg = if calc.odd(index) { styles.color-row-odd } else {
+    let bg = if calc.odd(index) {
+      styles.color-row-odd
+    } else {
       styles.color-row-even
     }
 
     // 1. Resolve Strokes (Top, Bottom, Left, Right)
-    let s = styles.item-stroke
-    let (s-top, s-bot, s-left, s-right) = (none, none, none, none)
-    if type(s) == dictionary {
-      s-top = s.at("top", default: s.at("y", default: none))
-      s-bot = s.at("bottom", default: s.at("y", default: none))
-      s-left = s.at("left", default: s.at("x", default: none))
-      s-right = s.at("right", default: s.at("x", default: none))
-    } else {
-      (s-top, s-bot, s-left, s-right) = (s, s, s, s)
-    }
+    let cell-inset = styles.cell-inset
+    let item-inset = styles.item-inset
+    let item-stroke = styles.item-stroke
 
-    // 2. Resolve Insets
-    let i-in = styles.item-internal-inset
-    let (in-top, in-bot) = (0pt, 0pt)
-    if type(i-in) == dictionary {
-      in-top = i-in.at("top", default: i-in.at("y", default: 0pt))
-      in-bot = i-in.at("bottom", default: i-in.at("y", default: 0pt))
-    } else {
-      (in-top, in-bot) = (i-in, i-in)
-    }
+    // [ Item ] [ Description ] [ Qty ] [ Unit Price ] [ Tax ] [ Total ]
+    // Item: cell-inset
+    // Qty: cell-inset
+    // Unit Price: cell-inset
+    // Tax: cell-inset
+    // Total: cell-inset
 
-    let i-out = styles.item-inset
-    let (out-top, out-bot) = (0pt, 0pt)
-    if type(i-out) == dictionary {
-      out-top = i-out.at("top", default: i-out.at("y", default: 0pt))
-      out-bot = i-out.at("bottom", default: i-out.at("y", default: 0pt))
-    } else {
-      (out-top, out-bot) = (i-out, i-out)
-    }
+    // Description:
+    // First Row Header + Date : (left, top, right) from cell-inset + (bottom: 0pt)
+    // Description Row: (left, right) from cell-inset + (bottom: 0pt, top: item-description-spacing)
+    // Add ghost row with height cell-inset.bottom
+    // If modifier add row ghost row with internal-row-spacing height
+    // Modifier rows; (left, right) from cell-inset + (top, bottom) from modifier-spacing
+    // If modifier add row ghost row with internal-row-spacing height
+    // If modifier subtotal with spacing
 
-    let c-in = styles.cell-inset
-    let (c-left, c-right) = (0pt, 0pt)
-    if type(c-in) == dictionary {
-      c-left = c-in.at("left", default: c-in.at("x", default: 0pt))
-      c-right = c-in.at("right", default: c-in.at("x", default: 0pt))
-    } else {
-      (c-left, c-right) = (c-in, c-in)
-    }
+    // Example Table structure
+    // [ Ghost Row item-inset.top ]
+    // [ Ghost Column item-inset.left ] [ Item `1` ] [ Description `Titel + Date` ] [ Qty `1 pc` ] [ Unit Price `100` ] [ Tax `19%` ] [ Total `100` ] [ Ghost Column item-inset.right ]
+    // [ none ] [ none ] [ item description ] ..
+    // [ Ghost Row cell-inset.bottom ]
+    // [ Ghost Row internal-row-spacing ]
+    // [ none ] [ none ] [ Modifer `Discount 1` ] [ (-10%) ] [ -10 ]
+    // [ none ] [ none ] [ Modifer `Discount 2` ] [ (-10%) ] [ -10 ]
+    // [ Ghost Row internal-row-spacing ]
+    // [ none ] [ none ] [ Subtoal ] [ `1000` ]
+    // [ Ghost Row item-inset.bottom ]
 
-    // Group Row Logic
-    if item.at("is-group", default: false) {
-      return (
-        table.cell(
-          colspan: total-cols,
-          fill: styles.color-group-bg,
-          align: left,
-          inset: styles.inset-group,
-          stroke: (top: s-top, bottom: s-bot, left: s-left, right: s-right),
-        )[#do-render-group(ctx, item, styles)],
-      )
-    }
+    // Idea is that we have multiple logical connected cells
+    // There are single cells like Item, Qty, Unit Price etc.
+    // And There are connected blocks like Item description (title-date + description) and (Modifier)
 
     // Centralized cell generator for internal row elements
-    let make-cell(content, col-idx, colspan: 1, align: auto) = {
-      table.cell(
-        colspan: colspan,
-        align: align,
-        fill: bg,
-        inset: (top: in-top, bottom: in-bot, left: c-left, right: c-right),
-        stroke: (
-          left: if col-idx == 0 { s-left } else { none },
-          right: if col-idx + colspan == total-cols { s-right } else { none },
-          top: none,
-          bottom: none,
-        ),
-      )[#content]
-    }
+    let line-cell = table.cell.with(
+      colspan: 1,
+      align: auto,
+      fill: bg,
+      inset: cell-inset,
+      stroke: none,
+    )
 
     let has-mods = (
       (
@@ -373,31 +363,45 @@
         and layout.show-modifier
     )
 
+    let has-description = (
+      item.at("has-description", default: false) and layout.show-descriptions
+    )
+
+    let left-spacer = line-cell(
+      inset: null-dir + (left: item-inset.left),
+      stroke: (left: item-stroke.left),
+      none,
+    )
+
+    let right-spacer = line-cell(
+      inset: null-dir + (right: item-inset.right),
+      stroke: (right: item-stroke.right),
+      none,
+    )
+
     // --- TOP CAP: Padding & Border ---
-    if out-top != 0pt or s-top != none {
-      rows.push(table.cell(
-        colspan: total-cols,
-        fill: bg,
-        inset: (top: out-top, bottom: 0pt, left: 0pt, right: 0pt),
-        stroke: (top: s-top, left: s-left, right: s-right, bottom: none),
-        none,
-      ))
-    }
+    rows.push(line-cell(
+      colspan: total-cols + 2,
+      inset: null-dir + (top: item-inset.top),
+      stroke: item-stroke + (bottom: none),
+      none,
+    ))
 
     // --- SECTION: MAIN ITEM ROW ---
+    rows.push(left-spacer)
+
     let col-tracker = 0
     if layout.show-pos {
-      rows.push(make-cell(
-        if is-sub-item { "" } else { str(index) },
-        col-tracker,
+      rows.push(line-cell(
+        [#index],
         align: center,
       ))
       col-tracker += 1
     }
 
-    rows.push(make-cell(
+    rows.push(line-cell(
       do-render-title(ctx, item, layout, styles),
-      col-tracker,
+      inset: cell-inset,
       align: left,
     ))
     col-tracker += 1
@@ -414,31 +418,39 @@
           item.unmodified-total
         } else { item.total }
       }
-      rows.push(make-cell(content, col-tracker, align: right))
+      rows.push(line-cell(content, align: right))
       col-tracker += 1
     }
 
+    rows.push(right-spacer)
+
     // --- SECTION: DESCRIPTION ROW ---
-    if item.at("has-description", default: false) and layout.show-descriptions {
+    if has-description {
       let d-col-tracker = 0
+      rows.push(left-spacer)
+
       if layout.show-pos {
-        rows.push(make-cell([], d-col-tracker))
+        rows.push(line-cell(inset: 0pt, none))
         d-col-tracker += 1
       }
-      rows.push(
-        make-cell(
-          do-render-desc(ctx, item, layout, styles),
-          d-col-tracker,
-          colspan: abs-description-colspan,
-          align: left,
-        ),
-      )
       d-col-tracker += abs-description-colspan
+
+      rows.push(line-cell(
+        do-render-desc(ctx, item, layout, styles),
+        colspan: abs-description-colspan,
+        inset: cell-inset + (top: 0pt),
+        align: left,
+      ))
 
       let remaining = total-cols - desc-idx - abs-description-colspan
       if remaining > 0 {
-        rows.push(make-cell([], d-col-tracker, colspan: remaining))
+        rows.push(line-cell(
+          none,
+          colspan: remaining,
+        ))
       }
+
+      rows.push(right-spacer)
     }
 
     // --- SECTION: MODIFIER ROWS ---
@@ -446,8 +458,10 @@
       let m-row = ()
       let m-col-tracker = 0
 
+      m-row.push(left-spacer)
+
       if layout.show-pos {
-        m-row.push(make-cell([], m-col-tracker))
+        m-row.push(line-cell(none, inset: 0pt))
         m-col-tracker += 1
       }
 
@@ -458,102 +472,93 @@
         is-discount: is-discount,
       )
 
-      if indices.total != none {
-        if indices.percent != none {
-          let span1 = indices.percent - indices.desc
-          m-row.push(make-cell(
-            mod-content.label,
-            m-col-tracker,
-            colspan: span1,
-            align: left,
-          ))
-          m-col-tracker += span1
-
-          m-row.push(make-cell(
-            mod-content.percent,
-            m-col-tracker,
-            align: right,
-          ))
-          m-col-tracker += 1
-
-          m-row.push(make-cell(
-            mod-content.absolute,
-            m-col-tracker,
-            align: right,
-          ))
-          m-col-tracker += 1
-        } else {
-          let span1 = indices.total - indices.desc
-          m-row.push(make-cell(
-            mod-content.label,
-            m-col-tracker,
-            colspan: span1,
-            align: left,
-          ))
-          m-col-tracker += span1
-
-          m-row.push(make-cell(
-            [#mod-content.percent #mod-content.absolute],
-            m-col-tracker,
-            align: right,
-          ))
-          m-col-tracker += 1
-        }
-        let remaining = indices.total-count - m-col-tracker
-        if remaining > 0 {
-          m-row.push(make-cell([], m-col-tracker, colspan: remaining))
-        }
-      } else {
-        let span1 = indices.total-count - indices.left - 1
-        m-row.push(make-cell(
+      if indices.percent != none {
+        let span1 = indices.percent - indices.desc
+        m-row.push(line-cell(
           mod-content.label,
-          m-col-tracker,
+          inset: cell-inset + (top: 0pt),
           colspan: span1,
           align: left,
         ))
         m-col-tracker += span1
 
-        m-row.push(make-cell(
-          [#mod-content.percent #mod-content.absolute],
-          m-col-tracker,
+        m-row.push(line-cell(
+          mod-content.percent,
+          inset: cell-inset + (top: 0pt),
           align: right,
         ))
+        m-col-tracker += 1
+
+        m-row.push(line-cell(
+          mod-content.absolute,
+          inset: cell-inset + (top: 0pt),
+          align: right,
+        ))
+        m-col-tracker += 1
+      } else {
+        let span1 = indices.total - indices.desc
+        m-row.push(line-cell(
+          mod-content.label,
+          inset: cell-inset + (top: 0pt),
+          colspan: span1,
+          align: left,
+        ))
+        m-col-tracker += span1
+
+        m-row.push(line-cell(
+          [#mod-content.percent #mod-content.absolute],
+          inset: cell-inset + (top: 0pt),
+          align: right,
+        ))
+        m-col-tracker += 1
       }
+      let remaining = indices.total-count - m-col-tracker
+      if remaining > 0 {
+        m-row.push(line-cell(colspan: remaining, inset: 0pt))
+      }
+
+      m-row.push(right-spacer)
+
       return m-row
     }
 
     if has-mods {
       if item.at("has-discounts", default: false) {
-        for d in item.discounts { rows += build-modifier-row(d, true) }
+        for discount in item.discounts {
+          rows += build-modifier-row(discount, true)
+        }
       }
+
       if item.at("has-surcharge", default: false) {
-        for s in item.surcharge { rows += build-modifier-row(s, false) }
+        for surcharge in item.surcharge {
+          rows += build-modifier-row(surcharge, false)
+        }
       }
 
       // --- SECTION: SUBTOTAL ROW ---
+      rows.push(left-spacer)
       let sub-col-tracker = 0
+
       if layout.show-pos {
-        rows.push(make-cell([], sub-col-tracker))
+        rows.push(line-cell(inset: 0pt, none))
         sub-col-tracker += 1
       }
 
       // Label (aligned with description)
       let span1 = indices.total - indices.desc
-      rows.push(make-cell(
+      rows.push(line-cell(
         text(
           weight: styles.weight-bold,
           size: styles.size-subtitle,
         )[#li-str.subtotal],
-        sub-col-tracker,
         colspan: span1,
         align: left,
       ))
       sub-col-tracker += span1
 
       // Total Value
-      rows.push(make-cell(
+      rows.push(line-cell(
         text(weight: styles.weight-bold)[#item.total],
-        sub-col-tracker,
         align: right,
       ))
       sub-col-tracker += 1
@@ -561,25 +566,24 @@
       // Fill remaining
       let remaining = total-cols - sub-col-tracker
       if remaining > 0 {
-        rows.push(make-cell([], sub-col-tracker, colspan: remaining))
+        rows.push(line-cell(
+          none,
+          inset: 0pt,
+          colspan: remaining,
+        ))
       }
-    }
-
-    if "sub-items" in item {
-      for sub in item.sub-items {
-        rows += build-item-rows(sub, index, is-sub-item: true)
-      }
+      rows.push(right-spacer)
     }
 
     // --- BOTTOM CAP: Padding & Border ---
-    if out-bot != 0pt or s-bot != none {
-      rows.push(table.cell(
-        colspan: total-cols,
-        fill: bg,
-        inset: (top: 0pt, bottom: out-bot, left: 0pt, right: 0pt),
-        stroke: (bottom: s-bot, left: s-left, right: s-right, top: none),
-      )[#block(height: 0pt)])
-    }
+    rows.push(line-cell(
+      colspan: total-cols + 2,
+      inset: null-dir + (bottom: item-inset.bottom),
+      stroke: item-stroke + (top: none),
+      [],
+    ))
+
+    rows.push(empty-cell(colspan: total-cols + 2))
 
     rows
   }
@@ -588,15 +592,16 @@
   let display-index = 1
   for item in data.items {
     item-rows += build-item-rows(item, display-index)
-    if not item.at("is-group", default: false) { display-index += 1 }
+    display-index += 1
   }
 
   table(
-    columns: cols,
+    columns: (auto,) + cols + (auto,),
     stroke: none,
-    align: auto, // Let cells define alignment
+    align: auto,
     table-header,
     ..item-rows,
+    empty-cell(colspan: total-cols + 2),
     ..table-footer,
     table.hline(stroke: styles.stroke-table-bottom)
   )

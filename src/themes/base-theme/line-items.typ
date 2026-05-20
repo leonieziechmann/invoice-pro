@@ -9,8 +9,8 @@
     body,
     color-subtitle: luma(80),
     color-desc: luma(100),
-    color-row-odd: rgb("e2e8f0"),
-    color-row-even: none,
+    color-row-odd: none,
+    color-row-even: rgb("e2e8f0"),
     color-discount: rgb("b22222"),
     color-surcharge: rgb("333333"),
     color-vat-label: rgb("475569"),
@@ -21,11 +21,12 @@
     stroke-thin: 0.5pt,
     stroke-regular: 1pt,
     stroke-thick: 2pt,
-    cell-inset: (top: 0.125em, bottom: 0.125em),
-    header-cell-inset: (top: 0.5em, bottom: 0.5em),
+    cell-inset: .4em,
+    item-inset: .3em,
+    header-cell-inset: (x: .4em, y: .6em),
     totals-width: 66%,
     totals-row-gutter: 0.6em,
-    tax-suffix-style: "inline",
+    tax-suffix-style: "newline",
   )
 }
 
@@ -46,6 +47,9 @@
     stroke-table-bottom: 0.5pt + black,
     stroke-thin: 0.5pt + black,
     header-cell-inset: (y: 0.8em),
+    cell-inset: (y: .4em),
+    item-stroke: (bottom: .5pt + gray),
+    item-inset: (y: .4em, x: .2em),
     totals-width: 50%,
     tax-suffix-style: (unit-price: none, total: "inline"),
     // Header Customization
@@ -96,9 +100,6 @@
         )))
         modifier-rows.push(table.cell(inset: 0pt, []))
         modifier-rows.push(table.cell(inset: 0pt, []))
-
-        // Start with Subtotal if modifiers exist (or always for exclusive)
-        //modifier-rows += (none, ..elements.subtotal)
 
         // Add all modifiers
         for m in elements.modifiers {
@@ -182,6 +183,8 @@
     stroke-header-bottom: none,
     stroke-table-bottom: 2pt + accent,
     tax-suffix-style: "none",
+    item-inset: (y: .4em),
+    cell-inset: .4em,
     // Header
     render-header: (ctx, content, styles) => {
       align(center + horizon)[

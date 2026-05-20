@@ -39,7 +39,6 @@
   render-description: auto,
   description-colspan: ("quantity", "unit-price"),
   render-modifier: auto,
-  render-group: auto,
   // Header/Footer parameters
   header-bg: none,
   header-color: black,
@@ -81,7 +80,6 @@
     stroke-regular: stroke-regular,
     cell-inset: cell-inset,
     item-inset: item-inset,
-    item-internal-inset: item-internal-inset,
     item-stroke: item-stroke,
     header-cell-inset: header-cell-inset,
 
@@ -90,7 +88,6 @@
     render-title: render-title,
     render-description: render-description,
     render-modifier: render-modifier,
-    render-group: render-group,
 
     header-bg: header-bg,
     header-color: header-color,
