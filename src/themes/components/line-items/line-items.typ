@@ -51,6 +51,8 @@
   // Tax suffix parameters
   tax-suffix-style: "newline",
   render-tax-suffix: auto,
+  align-header: auto,
+  align-body: auto,
   // Totals parameters
   totals-cell-wrapper: auto,
   render-totals-body: auto,
@@ -100,6 +102,8 @@
 
     tax-suffix-style: tax-suffix-style,
     render-tax-suffix: render-tax-suffix,
+    align-header: align-header,
+    align-body: align-body,
   )
 
   v(-1em)

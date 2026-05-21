@@ -27,6 +27,8 @@
     totals-width: 66%,
     totals-row-gutter: 0.6em,
     tax-suffix-style: "newline",
+    align-header: (center, left, right, center, center, center),
+    align-body: (center, left, right, right, right, right),
   )
 }
 
@@ -185,6 +187,7 @@
     tax-suffix-style: "none",
     item-inset: (y: .4em),
     cell-inset: .4em,
+    align-header: (center, center, center, center, center),
     // Header
     render-header: (ctx, content, styles) => {
       align(center + horizon)[
@@ -193,9 +196,14 @@
           height: 100%,
           fill: accent,
           radius: 1em,
-          outset: (x: 0.2em, y: 0.4em),
+          outset: (x: -.2em),
         ))
-        #pad(x: 0.4em, text(fill: white, weight: "bold", size: 0.8em, content))
+        #pad(x: 2em, y: .75em, text(
+          fill: white,
+          weight: "bold",
+          size: 0.8em,
+          content,
+        ))
       ]
     },
   )

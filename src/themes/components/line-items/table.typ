@@ -148,6 +148,8 @@
   column-order: ("quantity", "unit-price", "tax-rate", "total-price"),
   description-colspan: auto,
   tax-suffix-style: "newline",
+  align-header: auto,
+  align-body: auto,
   // Callbacks
   render-title: auto,
   render-description: auto,
@@ -156,6 +158,30 @@
   render-table-footer: auto,
   render-tax-suffix: auto,
 ) = {
+  let resolve-align(spec, key, idx, default) = {
+    if spec == auto {
+      default
+    } else if type(spec) == dictionary {
+      spec.at(key, default: default)
+    } else if type(spec) == array {
+      if idx < spec.len() {
+        spec.at(idx)
+      } else {
+        default
+      }
+    } else if type(spec) == function {
+      spec(key)
+    } else {
+      spec
+    }
+  }
+
+  let get-default-align(key) = {
+    if key == "pos" { center } else if key == "description" { left } else {
+      right
+    }
+  }
+
   let layout = data.layout-information
   let is-net = data.tax-mode == "exclusive"
   let li-str = ctx.locale.strings.line-items
@@ -172,7 +198,7 @@
   } else { (left: value, right: value, top: value, bottom: value) }
 
   let resolve-auto(value, fallback) = if value == auto { fallback } else {
-    auto
+    value
   }
 
   let normalized-cell-inset = normalize-directional(cell-inset)
@@ -251,30 +277,46 @@
     total-count: total-cols,
   )
 
-  // Header Construction
-  let raw-headers = ()
-  if layout.show-pos { raw-headers.push([*#li-str.position*]) }
-  raw-headers.push([*#li-str.description*])
+  let content-keys = ()
+  if layout.show-pos {
+    content-keys.push("pos")
+  }
+  content-keys.push("description")
+  for key in active-cols-keys {
+    content-keys.push(key)
+  }
 
-  let available-cols = (
-    "quantity": align(right, block[*#li-str.quantity*]),
-    "unit-price": align(
-      right,
-      block[*#li-str.unit-price*#get-suffix("unit-price")],
-    ),
-    "tax-rate": align(right, block[*#li-str.vat*]),
-    "total-price": align(right, block[*#li-str.total*#get-suffix("total")]),
+  // Header Construction
+  let header-contents = (:)
+  if layout.show-pos {
+    header-contents.insert("pos", [*#li-str.position*])
+  }
+  header-contents.insert("description", [*#li-str.description*])
+
+  let available-header-cols = (
+    "quantity": [*#li-str.quantity*],
+    "unit-price": block[*#li-str.unit-price*#get-suffix("unit-price")],
+    "tax-rate": [*#li-str.vat*],
+    "total-price": block[*#li-str.total*#get-suffix("total")],
   )
-  for key in active-cols-keys { raw-headers.push(available-cols.at(key)) }
+  for key in active-cols-keys {
+    header-contents.insert(key, available-header-cols.at(key))
+  }
 
   let empty-cell = table.cell.with(inset: 0pt, none)
 
   let table-header-cells = (
     (empty-cell(),)
-      + raw-headers.map(h => table.cell(
-        fill: styles.header-bg,
-        inset: styles.header-cell-inset,
-      )[#do-render-header(ctx, h, styles)])
+      + content-keys.map(key => {
+        let default-align = get-default-align(key)
+        let idx = content-keys.position(k => k == key)
+        let cell-align = resolve-align(align-header, key, idx, default-align)
+        table.cell(
+          fill: styles.header-bg,
+          inset: styles.header-cell-inset,
+          align: cell-align,
+        )[#do-render-header(ctx, header-contents.at(key), styles)]
+      })
       + (empty-cell(),)
   )
 
@@ -313,38 +355,6 @@
     let cell-inset = styles.cell-inset
     let item-inset = styles.item-inset
     let item-stroke = styles.item-stroke
-
-    // [ Item ] [ Description ] [ Qty ] [ Unit Price ] [ Tax ] [ Total ]
-    // Item: cell-inset
-    // Qty: cell-inset
-    // Unit Price: cell-inset
-    // Tax: cell-inset
-    // Total: cell-inset
-
-    // Description:
-    // First Row Header + Date : (left, top, right) from cell-inset + (bottom: 0pt)
-    // Description Row: (left, right) from cell-inset + (bottom: 0pt, top: item-description-spacing)
-    // Add ghost row with height cell-inset.bottom
-    // If modifier add row ghost row with internal-row-spacing height
-    // Modifier rows; (left, right) from cell-inset + (top, bottom) from modifier-spacing
-    // If modifier add row ghost row with internal-row-spacing height
-    // If modifier subtotal with spacing
-
-    // Example Table structure
-    // [ Ghost Row item-inset.top ]
-    // [ Ghost Column item-inset.left ] [ Item `1` ] [ Description `Titel + Date` ] [ Qty `1 pc` ] [ Unit Price `100` ] [ Tax `19%` ] [ Total `100` ] [ Ghost Column item-inset.right ]
-    // [ none ] [ none ] [ item description ] ..
-    // [ Ghost Row cell-inset.bottom ]
-    // [ Ghost Row internal-row-spacing ]
-    // [ none ] [ none ] [ Modifer `Discount 1` ] [ (-10%) ] [ -10 ]
-    // [ none ] [ none ] [ Modifer `Discount 2` ] [ (-10%) ] [ -10 ]
-    // [ Ghost Row internal-row-spacing ]
-    // [ none ] [ none ] [ Subtoal ] [ `1000` ]
-    // [ Ghost Row item-inset.bottom ]
-
-    // Idea is that we have multiple logical connected cells
-    // There are single cells like Item, Qty, Unit Price etc.
-    // And There are connected blocks like Item description (title-date + description) and (Modifier)
 
     // Centralized cell generator for internal row elements
     let line-cell = table.cell.with(
@@ -392,17 +402,28 @@
 
     let col-tracker = 0
     if layout.show-pos {
+      let default-align = get-default-align("pos")
+      let idx = content-keys.position(k => k == "pos")
+      let cell-align = resolve-align(align-body, "pos", idx, default-align)
       rows.push(line-cell(
         [#index],
-        align: center,
+        align: cell-align,
       ))
       col-tracker += 1
     }
 
+    let default-desc-align = get-default-align("description")
+    let desc-idx = content-keys.position(k => k == "description")
+    let desc-cell-align = resolve-align(
+      align-body,
+      "description",
+      desc-idx,
+      default-desc-align,
+    )
     rows.push(line-cell(
       do-render-title(ctx, item, layout, styles),
       inset: cell-inset,
-      align: left,
+      align: desc-cell-align,
     ))
     col-tracker += 1
 
@@ -418,7 +439,10 @@
           item.unmodified-total
         } else { item.total }
       }
-      rows.push(line-cell(content, align: right))
+      let default-align = get-default-align(key)
+      let idx = content-keys.position(k => k == key)
+      let cell-align = resolve-align(align-body, key, idx, default-align)
+      rows.push(line-cell(content, align: cell-align))
       col-tracker += 1
     }
 
@@ -435,11 +459,20 @@
       }
       d-col-tracker += abs-description-colspan
 
+      let default-desc-align = get-default-align("description")
+      let desc-idx = content-keys.position(k => k == "description")
+      let desc-cell-align = resolve-align(
+        align-body,
+        "description",
+        desc-idx,
+        default-desc-align,
+      )
+
       rows.push(line-cell(
         do-render-desc(ctx, item, layout, styles),
         colspan: abs-description-colspan,
         inset: cell-inset + (top: 0pt),
-        align: left,
+        align: desc-cell-align,
       ))
 
       let remaining = total-cols - desc-idx - abs-description-colspan
@@ -472,27 +505,45 @@
         is-discount: is-discount,
       )
 
+      let default-desc-align = get-default-align("description")
+      let desc-idx = content-keys.position(k => k == "description")
+      let desc-cell-align = resolve-align(
+        align-body,
+        "description",
+        desc-idx,
+        default-desc-align,
+      )
+
+      let default-total-align = get-default-align("total-price")
+      let total-idx = content-keys.position(k => k == "total-price")
+      let total-cell-align = resolve-align(
+        align-body,
+        "total-price",
+        total-idx,
+        default-total-align,
+      )
+
       if indices.percent != none {
         let span1 = indices.percent - indices.desc
         m-row.push(line-cell(
           mod-content.label,
           inset: cell-inset + (top: 0pt),
           colspan: span1,
-          align: left,
+          align: desc-cell-align,
         ))
         m-col-tracker += span1
 
         m-row.push(line-cell(
           mod-content.percent,
           inset: cell-inset + (top: 0pt),
-          align: right,
+          align: total-cell-align,
         ))
         m-col-tracker += 1
 
         m-row.push(line-cell(
           mod-content.absolute,
           inset: cell-inset + (top: 0pt),
-          align: right,
+          align: total-cell-align,
         ))
         m-col-tracker += 1
       } else {
@@ -501,14 +552,14 @@
           mod-content.label,
           inset: cell-inset + (top: 0pt),
           colspan: span1,
-          align: left,
+          align: desc-cell-align,
         ))
         m-col-tracker += span1
 
         m-row.push(line-cell(
           [#mod-content.percent #mod-content.absolute],
           inset: cell-inset + (top: 0pt),
-          align: right,
+          align: total-cell-align,
         ))
         m-col-tracker += 1
       }
@@ -544,6 +595,24 @@
         sub-col-tracker += 1
       }
 
+      let default-desc-align = get-default-align("description")
+      let desc-idx = content-keys.position(k => k == "description")
+      let desc-cell-align = resolve-align(
+        align-body,
+        "description",
+        desc-idx,
+        default-desc-align,
+      )
+
+      let default-total-align = get-default-align("total-price")
+      let total-idx = content-keys.position(k => k == "total-price")
+      let total-cell-align = resolve-align(
+        align-body,
+        "total-price",
+        total-idx,
+        default-total-align,
+      )
+
       // Label (aligned with description)
       let span1 = indices.total - indices.desc
       rows.push(line-cell(
@@ -552,14 +621,14 @@
           size: styles.size-subtitle,
         )[#li-str.subtotal],
         colspan: span1,
-        align: left,
+        align: desc-cell-align,
       ))
       sub-col-tracker += span1
 
       // Total Value
       rows.push(line-cell(
         text(weight: styles.weight-bold)[#item.total],
-        align: right,
+        align: total-cell-align,
       ))
       sub-col-tracker += 1
 

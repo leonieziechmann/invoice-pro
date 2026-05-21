@@ -17,7 +17,7 @@
   footer: [],
   /// Layout of the aggregated line item data.
   /// -> (ctx, dictionary, content) => content
-  line-items: render-line-items,
+  line-items: render-line-items-vibrant,
   /// Layout of the bank-details the customer should send the payment to.
   /// -> (ctx, dictionary) => content
   bank-details: render-bank-details,
