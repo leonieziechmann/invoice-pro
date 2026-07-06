@@ -54,6 +54,11 @@
   /// -> bool
   tax-exempt-small-biz: false,
 
+  /// ZUGFeRD / Factur-X profile for embedding machine-readable XML into the PDF.
+  /// Requires exporting with PDF/A-3 (`typst compile --pdf-standard=a-3b`).
+  /// -> none | "minimum" | "basic-wl" | "basic" | "en16931"
+  zugferd: none,
+
   /// The content of the invoice, typically containing line-items and other components.
   /// -> content
   body,
@@ -82,6 +87,7 @@
   types.require(tax, "invoice::tax", none, auto, types.tax-like)
   types.require(tax-mode, "invoice::tax-mode", "inclusive", "exclusive")
   types.require(tax-exempt-small-biz, "invoice::tax-exempt-small-biz", bool)
+  types.require(zugferd, "invoice::zugferd", none, "minimum", "basic-wl", "basic", "en16931")
 
   /** Input Calculations **/
   let eval-theme = theme()
@@ -129,6 +135,8 @@
     tax: document-tax,
     tax-mode: tax-mode,
     tax-exempt-small-biz: tax-exempt-small-biz,
+
+    zugferd: zugferd,
   )
 
   /** Data Calculations **/

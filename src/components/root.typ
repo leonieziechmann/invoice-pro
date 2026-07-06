@@ -1,4 +1,5 @@
 #import "../loom-wrapper.typ": loom, managed-motif
+#import "../zugferd/build.typ": build-zugferd-xml
 
 /// The internal root container that wraps the invoice body.
 /// It initializes the global context and provides the base document structure to the theme.
@@ -70,16 +71,38 @@
       )
       let line-items = all-line-itmes.first(default: (:))
 
+      let all-bank-details = loom.query.collect-signals(
+        children,
+        kind: "bank-details",
+      )
+      let bank-signal = all-bank-details.first(default: none)
+
       let public = (
         total: line-items.at("total", default: (:)),
         formated-total: line-items.at("formated-total", default: (:)),
+        raw: line-items.at("raw", default: (:)),
+        bank: bank-signal,
       )
 
       return (public, none)
     },
     draw: (ctx, _, _, body) => {
       set text(lang: ctx.locale.lang)
-      (ctx.theme.document)(ctx, body)
+      if ctx.at("zugferd", default: none) != none {
+        let xml-bytes = build-zugferd-xml(ctx)
+        [
+          #pdf.attach(
+            "factur-x.xml",
+            xml-bytes,
+            relationship: "alternative",
+            mime-type: "text/xml",
+            description: "ZUGFeRD / Factur-X invoice data",
+          )
+          #(ctx.theme.document)(ctx, body)
+        ]
+      } else {
+        (ctx.theme.document)(ctx, body)
+      }
     },
     body,
   )

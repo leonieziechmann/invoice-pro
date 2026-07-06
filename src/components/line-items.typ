@@ -345,6 +345,13 @@
           gross: tax-applicator.gross-total,
         ),
         formated-total: formated-total,
+        raw: (
+          items: items,
+          taxes: tax-applicator.taxes,
+          net-total: tax-applicator.net-total,
+          gross-total: tax-applicator.gross-total,
+          tax-mode: ctx.tax-mode,
+        ),
       )
 
       return (public, view)
