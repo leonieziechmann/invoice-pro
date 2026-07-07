@@ -1,4 +1,4 @@
-#import "xml.typ": fmt-amount, fmt-date, fmt-rate, xml-escape
+#import "xml.typ": dict-to-xml, fmt-amount, fmt-date, fmt-rate, xml-escape
 
 #let profile-urn(profile) = {
   if profile == "minimum" { "urn:factur-x.eu:1p0:minimum" } else if (
@@ -26,84 +26,184 @@
   } else if u in ("l", "liter") { "LTR" } else { "C62" }
 }
 
-#let build-line-item(item, pos) = {
-  let unit-code = map-unit-code(item.unit)
+// Emits the exchanged document context dictionary
+#let build-document-context(profile) = (
+  "ram:GuidelineSpecifiedDocumentContextParameter": (
+    "ram:ID": profile-urn(profile),
+  ),
+)
 
-  let item-id-xml = (
+// Emits the exchanged document details
+#let build-exchanged-document(invoice-nr, invoice-date) = (
+  "ram:ID": if invoice-nr != none { invoice-nr } else { "" },
+  "ram:TypeCode": "380",
+  "ram:IssueDateTime": (
+    "udt:DateTimeString": (
+      "@format": "102",
+      "": fmt-date(invoice-date),
+    ),
+  ),
+)
+
+// Emits the seller trade party details
+#let build-seller-trade-party(
+  name,
+  address,
+  city,
+  country,
+  tax-nr,
+  include-addresses,
+) = {
+  let address-dict = if include-addresses {
     (
-      () => {
-        let id = item.at("item-id", default: none)
-        if id == none { return }
-        if type(id) != dictionary { return }
+      "ram:PostalTradeAddress": (
+        "ram:LineOne": address,
+        "ram:CityName": city,
+        "ram:CountryID": country,
+      ),
+    )
+  } else { (:) }
 
-        return {
-          if "standard" in id {
-            (
-              "        <ram:GlobalID schemeID=\"0160\">"
-                + xml-escape(id.standard)
-                + "</ram:GlobalID>\n"
-            )
-          }
-
-          if "seller" in id {
-            (
-              "        <ram:SellerAssignedID>"
-                + xml-escape(id.seller)
-                + "</ram:SellerAssignedID>\n"
-            )
-          }
-        }
-      }
-    )()
-      + ""
-  )
+  let tax-registration = if tax-nr != none {
+    (
+      "ram:SpecifiedTaxRegistration": (
+        "ram:ID": (
+          "@schemeID": "VA",
+          "": tax-nr,
+        ),
+      ),
+    )
+  } else { (:) }
 
   (
-    "    <ram:IncludedSupplyChainTradeLineItem>\n"
-      + "      <ram:AssociatedDocumentLineDocument>\n"
-      + "        <ram:LineID>"
-      + str(pos)
-      + "</ram:LineID>\n"
-      + "      </ram:AssociatedDocumentLineDocument>\n"
-      + "      <ram:SpecifiedTradeProduct>\n"
-      + "        <ram:Name>"
-      + xml-escape(item.name)
-      + "</ram:Name>\n"
-      + item-id-xml
-      + "      </ram:SpecifiedTradeProduct>\n"
-      + "      <ram:SpecifiedLineTradeAgreement>\n"
-      + "        <ram:NetPriceProductTradePrice>\n"
-      + "          <ram:ChargeAmount>"
-      + fmt-amount(item.price)
-      + "</ram:ChargeAmount>\n"
-      + "        </ram:NetPriceProductTradePrice>\n"
-      + "      </ram:SpecifiedLineTradeAgreement>\n"
-      + "      <ram:SpecifiedLineTradeDelivery>\n"
-      + "        <ram:BilledQuantity unitCode=\""
-      + unit-code
-      + "\">"
-      + fmt-amount(item.quantity)
-      + "</ram:BilledQuantity>\n"
-      + "      </ram:SpecifiedLineTradeDelivery>\n"
-      + "      <ram:SpecifiedLineTradeSettlement>\n"
-      + "        <ram:ApplicableTradeTax>\n"
-      + "          <ram:TypeCode>VAT</ram:TypeCode>\n"
-      + "          <ram:CategoryCode>"
-      + xml-escape(item.tax.category)
-      + "</ram:CategoryCode>\n"
-      + "          <ram:RateApplicablePercent>"
-      + fmt-rate(item.tax.rate)
-      + "</ram:RateApplicablePercent>\n"
-      + "        </ram:ApplicableTradeTax>\n"
-      + "        <ram:SpecifiedTradeSettlementLineMonetarySummation>\n"
-      + "          <ram:LineTotalAmount>"
-      + fmt-amount(item.total)
-      + "</ram:LineTotalAmount>\n"
-      + "        </ram:SpecifiedTradeSettlementLineMonetarySummation>\n"
-      + "      </ram:SpecifiedLineTradeSettlement>\n"
-      + "    </ram:IncludedSupplyChainTradeLineItem>\n"
+    (
+      "ram:Name": name,
+    )
+      + address-dict
+      + tax-registration
   )
 }
+
+// Emits the buyer trade party details
+#let build-buyer-trade-party(name) = (
+  "ram:Name": name,
+)
+
+// Emits a single supply chain line item
+#let build-line-item(
+  pos,
+  name,
+  item-id,
+  price,
+  quantity,
+  unit,
+  tax-category,
+  tax-rate,
+  total,
+) = {
+  let unit-code = map-unit-code(unit)
+
+  let item-ids = (:)
+  if type(item-id) == dictionary {
+    if "standard" in item-id and item-id.standard != none {
+      item-ids.insert("ram:GlobalID", (
+        "@schemeID": "0160",
+        "": item-id.standard,
+      ))
+    }
+    if "seller" in item-id and item-id.seller != none {
+      item-ids.insert("ram:SellerAssignedID", item-id.seller)
+    }
+  }
+
+  (
+    "ram:AssociatedDocumentLineDocument": (
+      "ram:LineID": str(pos),
+    ),
+    "ram:SpecifiedTradeProduct": (
+      "ram:Name": name,
+    )
+      + item-ids,
+    "ram:SpecifiedLineTradeAgreement": (
+      "ram:NetPriceProductTradePrice": (
+        "ram:ChargeAmount": fmt-amount(price),
+      ),
+    ),
+    "ram:SpecifiedLineTradeDelivery": (
+      "ram:BilledQuantity": (
+        "@unitCode": unit-code,
+        "": fmt-amount(quantity),
+      ),
+    ),
+    "ram:SpecifiedLineTradeSettlement": (
+      "ram:ApplicableTradeTax": (
+        "ram:TypeCode": "VAT",
+        "ram:CategoryCode": tax-category,
+        "ram:RateApplicablePercent": fmt-rate(tax-rate),
+      ),
+      "ram:SpecifiedTradeSettlementLineMonetarySummation": (
+        "ram:LineTotalAmount": fmt-amount(total),
+      ),
+    ),
+  )
+}
+
+// Emits the payment means block
+#let build-payment-means(bank-iban, bank-bic) = {
+  if bank-iban == none or bank-iban == "" {
+    return none
+  }
+
+  let bic = if bank-bic != none and bank-bic != "" {
+    (
+      "ram:PayeeSpecifiedCreditorFinancialInstitution": (
+        "ram:BICID": bank-bic,
+      ),
+    )
+  } else { (:) }
+
+  (
+    (
+      "ram:TypeCode": "58",
+      "ram:PayeePartyCreditorFinancialAccount": (
+        "ram:IBANID": bank-iban,
+      ),
+    )
+      + bic
+  )
+}
+
+// Emits the tax breakdown block
+#let build-applicable-trade-tax(tax-list) = {
+  tax-list.map(tax => {
+    let exemption = if tax.at("grounds", default: none) != none {
+      ("ram:ExemptionReason": tax.grounds)
+    } else { (:) }
+
+    (
+      (
+        "ram:CalculatedAmount": fmt-amount(tax.absolute),
+        "ram:TypeCode": "VAT",
+        "ram:BasisAmount": fmt-amount(tax.basis),
+        "ram:CategoryCode": tax.category,
+        "ram:RateApplicablePercent": fmt-rate(tax.rate),
+      )
+        + exemption
+    )
+  })
+}
+
+// Emits the header monetary summation block
+#let build-monetary-summation(net-total, gross-total, total-tax, currency) = (
+  "ram:LineTotalAmount": fmt-amount(net-total),
+  "ram:TaxBasisTotalAmount": fmt-amount(net-total),
+  "ram:TaxTotalAmount": (
+    "@currencyID": currency,
+    "": fmt-amount(total-tax),
+  ),
+  "ram:GrandTotalAmount": fmt-amount(gross-total),
+  "ram:DuePayableAmount": fmt-amount(gross-total),
+)
 
 /// Generates a ZUGFeRD 2.x / Factur-X 1.0 CrossIndustryInvoice XML document
 /// from the fully-computed invoice context.
@@ -126,174 +226,88 @@
   let include-line-items = profile in ("basic", "en16931")
   let include-addresses = profile != "minimum"
 
-  // Line items block
-  let line-items-xml = if include-line-items {
-    items.enumerate().map(((i, item)) => build-line-item(item, i + 1)).join("")
-  } else { "" }
-
-  // Tax breakdown blocks (one per tax bracket)
   let total-tax = taxes.values().map(t => t.absolute).sum(default: decimal("0"))
-  let tax-xml = taxes
-    .values()
-    .map(tax => {
-      let exemption-xml = if tax.at("grounds", default: none) != none {
-        (
-          "      <ram:ExemptionReason>"
-            + xml-escape(tax.grounds)
-            + "</ram:ExemptionReason>\n"
+  let invoice-nr-str = if ctx.invoice-nr != none { ctx.invoice-nr } else { "" }
+
+  let line-items = if include-line-items {
+    items
+      .enumerate()
+      .map(((i, item)) => {
+        build-line-item(
+          i + 1,
+          item.name,
+          item.at("item-id", default: none),
+          item.price,
+          item.quantity,
+          item.unit,
+          item.tax.category,
+          item.tax.rate,
+          item.total,
         )
-      } else { "" }
-      (
-        "    <ram:ApplicableTradeTax>\n"
-          + "      <ram:CalculatedAmount>"
-          + fmt-amount(tax.absolute)
-          + "</ram:CalculatedAmount>\n"
-          + "      <ram:TypeCode>VAT</ram:TypeCode>\n"
-          + exemption-xml
-          + "      <ram:BasisAmount>"
-          + fmt-amount(tax.basis)
-          + "</ram:BasisAmount>\n"
-          + "      <ram:CategoryCode>"
-          + xml-escape(tax.category)
-          + "</ram:CategoryCode>\n"
-          + "      <ram:RateApplicablePercent>"
-          + fmt-rate(tax.rate)
-          + "</ram:RateApplicablePercent>\n"
-          + "    </ram:ApplicableTradeTax>\n"
-      )
-    })
-    .join("")
+      })
+  } else { () }
 
-  // Payment means block (SEPA credit transfer = type code 58)
-  let payment-xml = if bank != none and bank.iban != "" {
-    let bic-xml = if bank.bic != "" {
-      (
-        "      <ram:PayeeSpecifiedCreditorFinancialInstitution>\n"
-          + "        <ram:BICID>"
-          + xml-escape(bank.bic)
-          + "</ram:BICID>\n"
-          + "      </ram:PayeeSpecifiedCreditorFinancialInstitution>\n"
-      )
-    } else { "" }
-    (
-      "    <ram:SpecifiedTradeSettlementPaymentMeans>\n"
-        + "      <ram:TypeCode>58</ram:TypeCode>\n"
-        + "      <ram:PayeePartyCreditorFinancialAccount>\n"
-        + "        <ram:IBANID>"
-        + xml-escape(bank.iban)
-        + "</ram:IBANID>\n"
-        + "      </ram:PayeePartyCreditorFinancialAccount>\n"
-        + bic-xml
-        + "    </ram:SpecifiedTradeSettlementPaymentMeans>\n"
-    )
-  } else { "" }
-
-  // Seller postal address (omitted in minimum profile)
-  let seller-address-xml = if include-addresses {
-    (
-      "        <ram:PostalTradeAddress>\n"
-        + "          <ram:LineOne>"
-        + xml-escape(ctx.sender.address)
-        + "</ram:LineOne>\n"
-        + "          <ram:CityName>"
-        + xml-escape(ctx.sender.city)
-        + "</ram:CityName>\n"
-        + "          <ram:CountryID>"
-        + country
-        + "</ram:CountryID>\n"
-        + "        </ram:PostalTradeAddress>\n"
-    )
-  } else { "" }
-
-  let tax-nr-xml = if ctx.tax-nr != none {
-    (
-      "        <ram:SpecifiedTaxRegistration>\n"
-        + "          <ram:ID schemeID=\"VA\">"
-        + xml-escape(ctx.tax-nr)
-        + "</ram:ID>\n"
-        + "        </ram:SpecifiedTaxRegistration>\n"
-    )
-  } else { "" }
-
-  let invoice-nr-str = if ctx.invoice-nr != none {
-    xml-escape(ctx.invoice-nr)
-  } else { "" }
-
-  let xml = (
-    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-      + "<rsm:CrossIndustryInvoice"
-      + " xmlns:rsm=\"urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100\""
-      + " xmlns:qdt=\"urn:un:unece:uncefact:data:standard:QualifiedDataType:100\""
-      + " xmlns:ram=\"urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100\""
-      + " xmlns:udt=\"urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100\""
-      + " xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n"
-      + "  <rsm:ExchangedDocumentContext>\n"
-      + "    <ram:GuidelineSpecifiedDocumentContextParameter>\n"
-      + "      <ram:ID>"
-      + profile-urn(profile)
-      + "</ram:ID>\n"
-      + "    </ram:GuidelineSpecifiedDocumentContextParameter>\n"
-      + "  </rsm:ExchangedDocumentContext>\n"
-      + "  <rsm:ExchangedDocument>\n"
-      + "    <ram:ID>"
-      + invoice-nr-str
-      + "</ram:ID>\n"
-      + "    <ram:TypeCode>380</ram:TypeCode>\n"
-      + "    <ram:IssueDateTime>\n"
-      + "      <udt:DateTimeString format=\"102\">"
-      + fmt-date(ctx.invoice-date)
-      + "</udt:DateTimeString>\n"
-      + "    </ram:IssueDateTime>\n"
-      + "  </rsm:ExchangedDocument>\n"
-      + "  <rsm:SupplyChainTradeTransaction>\n"
-      + line-items-xml
-      + "    <ram:ApplicableHeaderTradeAgreement>\n"
-      + "      <ram:SellerTradeParty>\n"
-      + "        <ram:Name>"
-      + xml-escape(ctx.sender.name)
-      + "</ram:Name>\n"
-      + seller-address-xml
-      + tax-nr-xml
-      + "      </ram:SellerTradeParty>\n"
-      + "      <ram:BuyerTradeParty>\n"
-      + "        <ram:Name>"
-      + xml-escape(ctx.recipient.name)
-      + "</ram:Name>\n"
-      + "      </ram:BuyerTradeParty>\n"
-      + "    </ram:ApplicableHeaderTradeAgreement>\n"
-      + "    <ram:ApplicableHeaderTradeDelivery/>\n"
-      + "    <ram:ApplicableHeaderTradeSettlement>\n"
-      + "      <ram:PaymentReference>"
-      + invoice-nr-str
-      + "</ram:PaymentReference>\n"
-      + "      <ram:InvoiceCurrencyCode>"
-      + currency
-      + "</ram:InvoiceCurrencyCode>\n"
-      + payment-xml
-      + tax-xml
-      + "      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>\n"
-      + "        <ram:LineTotalAmount>"
-      + fmt-amount(net-total)
-      + "</ram:LineTotalAmount>\n"
-      + "        <ram:TaxBasisTotalAmount>"
-      + fmt-amount(net-total)
-      + "</ram:TaxBasisTotalAmount>\n"
-      + "        <ram:TaxTotalAmount currencyID=\""
-      + currency
-      + "\">"
-      + fmt-amount(total-tax)
-      + "</ram:TaxTotalAmount>\n"
-      + "        <ram:GrandTotalAmount>"
-      + fmt-amount(gross-total)
-      + "</ram:GrandTotalAmount>\n"
-      + "        <ram:DuePayableAmount>"
-      + fmt-amount(gross-total)
-      + "</ram:DuePayableAmount>\n"
-      + "      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>\n"
-      + "    </ram:ApplicableHeaderTradeSettlement>\n"
-      + "  </rsm:SupplyChainTradeTransaction>\n"
-      + "</rsm:CrossIndustryInvoice>"
+  let trade-settlement = (
+    "ram:PaymentReference": invoice-nr-str,
+    "ram:InvoiceCurrencyCode": currency,
   )
 
+  let bank-iban = if bank != none { bank.iban } else { "" }
+  let bank-bic = if bank != none { bank.bic } else { "" }
+  let payment-means = build-payment-means(bank-iban, bank-bic)
+  if payment-means != none {
+    trade-settlement.insert(
+      "ram:SpecifiedTradeSettlementPaymentMeans",
+      payment-means,
+    )
+  }
+
+  let applicable-taxes = build-applicable-trade-tax(taxes.values())
+  if applicable-taxes != () {
+    trade-settlement.insert("ram:ApplicableTradeTax", applicable-taxes)
+  }
+
+  trade-settlement.insert(
+    "ram:SpecifiedTradeSettlementHeaderMonetarySummation",
+    build-monetary-summation(net-total, gross-total, total-tax, currency),
+  )
+
+  let transaction = (
+    "ram:ApplicableHeaderTradeAgreement": (
+      "ram:SellerTradeParty": build-seller-trade-party(
+        ctx.sender.name,
+        ctx.sender.address,
+        ctx.sender.city,
+        country,
+        ctx.tax-nr,
+        include-addresses,
+      ),
+      "ram:BuyerTradeParty": build-buyer-trade-party(ctx.recipient.name),
+    ),
+    "ram:ApplicableHeaderTradeDelivery": (:),
+    "ram:ApplicableHeaderTradeSettlement": trade-settlement,
+  )
+
+  if line-items != () {
+    transaction.insert("ram:IncludedSupplyChainTradeLineItem", line-items)
+  }
+
+  let data = (
+    "rsm:CrossIndustryInvoice": (
+      "@xmlns:rsm": "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100",
+      "@xmlns:qdt": "urn:un:unece:uncefact:data:standard:QualifiedDataType:100",
+      "@xmlns:ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100",
+      "@xmlns:udt": "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100",
+      "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+      "rsm:ExchangedDocumentContext": build-document-context(profile),
+      "rsm:ExchangedDocument": build-exchanged-document(
+        ctx.invoice-nr,
+        ctx.invoice-date,
+      ),
+      "rsm:SupplyChainTradeTransaction": transaction,
+    ),
+  )
+
+  let xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + dict-to-xml(data)
   bytes(xml)
 }

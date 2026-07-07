@@ -27,3 +27,54 @@
 // Format a datetime as YYYYMMDD for the ZUGFeRD date format code 102.
 #let fmt-date(date) = date.display("[year][month][day]")
 
+// Serialize a Typst dictionary/value to XML format.
+#let dict-to-xml(data) = {
+  if data == none {
+    return ""
+  }
+  if type(data) != dictionary {
+    return xml-escape(data)
+  }
+
+  data
+    .pairs()
+    .map(((tag, body)) => {
+      if body == none {
+        return ""
+      }
+
+      if type(body) == array {
+        return body.map(item => dict-to-xml(((tag): item))).join()
+      }
+
+      if type(body) == dictionary {
+        let attrs = body
+          .pairs()
+          .filter(((k, _)) => k.starts-with("@"))
+          .map(((k, v)) => " " + k.slice(1) + "=\"" + xml-escape(v) + "\"")
+          .join()
+
+        let children = body
+          .pairs()
+          .filter(((k, _)) => not k.starts-with("@"))
+          .map(((k, v)) => {
+            if k == "" {
+              dict-to-xml(v)
+            } else {
+              dict-to-xml(((k): v))
+            }
+          })
+          .join()
+
+        return if children == "" {
+          "<" + tag + attrs + " />"
+        } else {
+          "<" + tag + attrs + ">" + children + "</" + tag + ">"
+        }
+      }
+
+      return "<" + tag + ">" + xml-escape(body) + "</" + tag + ">"
+    })
+    .join()
+}
+
