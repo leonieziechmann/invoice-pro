@@ -46,6 +46,7 @@ Here is an example of how to create an invoice using the new v0.3.0 API:
     name: "Your Company / Name",
     address: "1 Example Street",
     city: "12345 Example City",
+    tax-nr: "123/456/789",
   ),
   recipient: (
     name: "Customer Name",
@@ -53,7 +54,6 @@ Here is an example of how to create an invoice using the new v0.3.0 API:
     city: "98765 Customer City",
   ),
   invoice-nr: "2026-01",
-  tax-nr: "123/456/789",
 )
 
 // Add Invoice Items inside a scoped block

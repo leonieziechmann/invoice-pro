@@ -57,9 +57,8 @@ Below is a foundational structural blueprint illustrating how the modules intera
 
 // 1. Invoice Module: Establish the document root and global context
 #show: invoice.with(
-  sender: (name: "Acme Corp"),
+  sender: (name: "Acme Corp", vat-id: "DE123456789"), // Legally required identifier
   recipient: (name: "Jane Doe"),
-  tax-nr: "DE123456789", // Legally required identifier
   invoice-nr: "INV-2026-001",
 )
 

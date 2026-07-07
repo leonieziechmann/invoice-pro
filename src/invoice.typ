@@ -7,6 +7,7 @@
 #import "locale/locale.typ"
 #import "locale/lang/base.typ": base-language
 #import "locale/region/base.typ": base-region
+#import "logic/country.typ": normalize-party
 
 /// The main entry point for creating an invoice document.
 /// It orchestrates the theme, localization, and data calculation passes.
@@ -39,9 +40,6 @@
   /// The unique identifier or number of the invoice.
   /// -> none | string | content
   invoice-nr: none,
-  /// Your unique tax identifier
-  /// -> none | string | content
-  tax-nr: none,
 
   /// The default tax rate to apply if not specified elsewhere.
   /// If `auto`, it is inferred from the locale.
@@ -82,16 +80,32 @@
     )),
   )
   types.require(invoice-nr, "invoice::invoice-nr", none, str, content)
-  types.require(tax-nr, "invoice::tax-nr", none, str, content)
 
   types.require(tax, "invoice::tax", none, auto, types.tax-like)
   types.require(tax-mode, "invoice::tax-mode", "inclusive", "exclusive")
   types.require(tax-exempt-small-biz, "invoice::tax-exempt-small-biz", bool)
-  types.require(zugferd, "invoice::zugferd", none, "minimum", "basic-wl", "basic", "en16931")
+  types.require(
+    zugferd,
+    "invoice::zugferd",
+    none,
+    "minimum",
+    "basic-wl",
+    "basic",
+    "en16931",
+  )
 
   /** Input Calculations **/
   let eval-theme = theme()
   let eval-locale = locale(base-language, base-region)
+
+  let default-region = eval-locale.meta.region
+  let normalized-sender = normalize-party(sender, default-region)
+  let normalized-recipient = normalize-party(
+    recipient,
+    default-region,
+    is-recipient: true,
+    sender-country-code: normalized-sender.country.code,
+  )
 
   if subject == auto { subject = eval-locale.strings.document.invoice }
 
@@ -108,8 +122,12 @@
   }
 
   let document-references = ()
-  if tax-nr != none {
-    document-references.push((eval-locale.strings.reference.tax-number, tax-nr))
+  let sender-tax-nr = normalized-sender.tax-nr
+  if sender-tax-nr != none and sender-tax-nr != "" {
+    document-references.push((
+      eval-locale.strings.reference.tax-number,
+      sender-tax-nr,
+    ))
   }
 
   if type(references) == array { document-references = references } else if (
@@ -123,14 +141,13 @@
     locale: eval-locale,
     format: eval-locale.at("format", default: (:)),
 
-    sender: sender,
-    recipient: recipient,
+    sender: normalized-sender,
+    recipient: normalized-recipient,
 
     invoice-date: date,
     subject: document-subject,
     references: document-references,
     invoice-nr: invoice-nr,
-    tax-nr: tax-nr,
 
     tax: document-tax,
     tax-mode: tax-mode,

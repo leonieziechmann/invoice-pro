@@ -28,7 +28,6 @@ Initializes the document and orchestrates the data calculation passes.
 | `subject`              | `str` \| `content` \| `auto`                | The subject line of the invoice. If `auto`, it is inferred from the [locale](./locale) (e.g., "Rechnung" in German).                                               |
 | `references`           | `none` \| `dictionary` \| `array`           | Reference information for the document header (e.g., customer number, order date). Accepts a dictionary of key-value pairs or an array of `(label, value)` tuples. |
 | `invoice-nr`           | `none` \| `str` \| `content`                | The unique identifier or number of the invoice.                                                                                                                    |
-| `tax-nr`               | `none` \| `str` \| `content`                | Your company's unique tax identifier / VAT ID.                                                                                                                     |
 | `tax`                  | `auto` \| `ratio` \| `dictionary` \| `none` | The default tax rate for the document. See [Tax](#tax--tax-exempt-small-biz) below.                                                                                |
 | `tax-mode`             | `"exclusive"` \| `"inclusive"`              | Sets the global baseline for tax calculation. `"exclusive"` treats standard prices as net. `"inclusive"` treats standard prices as gross.                          |
 | `tax-exempt-small-biz` | `bool`                                      | If `true`, applies the small business tax exemption logic based on the selected locale.                                                                            |
@@ -42,7 +41,7 @@ While the table above lists all available options, a few parameters dictate the 
 
 These parameters define the contact details for the invoicing party (sender) and the customer (recipient). Both parameters accept a standard dictionary.
 
-Standard keys generally include `name`, `street`, and `city`. Additionally, you can use the `extra` key to provide arbitrary supplementary information (like phone numbers, email addresses, or commercial register numbers) styled according to your theme.
+Standard keys generally include `name`, `address`, and `city`. Additionally, you can use the `extra` key to provide arbitrary supplementary information (like phone numbers, email addresses, or commercial register numbers) styled according to your theme.
 
 Just like the header `references`, the `extra` field accepts either a dictionary of key-value pairs or an array of `(label, value)` tuples.
 
@@ -51,7 +50,7 @@ Just like the header `references`, the `extra` field accepts either a dictionary
 ```typst
 sender: (
   name: "Max Mustermann",
-  street: "Musterstraße 1",
+  address: "Musterstraße 1",
   city: "12345 Musterstadt",
   extra: (
     "Phone": "+49 123 456789",
@@ -61,7 +60,7 @@ sender: (
 ),
 recipient: (
   name: "Acme Corporation",
-  street: "Business Blvd 42",
+  address: "Business Blvd 42",
   city: "54321 Metropolis",
   extra: (
     ("Contact Person", "Jane Doe"),
@@ -143,16 +142,16 @@ Here is an example of the minimal boilerplate needed to get started:
 #show: invoice.with(
   sender: (
     name: "Max Mustermann",
-    street: "Musterstraße 1",
+    address: "Musterstraße 1",
     city: "12345 Musterstadt",
+    vat-id: "DE123456789",
   ),
   recipient: (
     name: "Acme Corporation",
-    street: "Business Blvd 42",
+    address: "Business Blvd 42",
     city: "54321 Metropolis",
   ),
   invoice-nr: "INV-2026-001",
-  tax-nr: "DE123456789",
 )
 
 // The document body starts here

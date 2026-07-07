@@ -6,10 +6,10 @@
   locale: locale.en-de,
   sender: (
     name: "Consulting Group LLC",
-    street: "Consulting Street 1",
+    address: "Consulting Street 1",
     city: "Berlin",
   ),
-  recipient: (name: "Acme Corp", street: "Acme Street 1", city: "Munich"),
+  recipient: (name: "Acme Corp", address: "Acme Street 1", city: "Munich"),
   invoice-nr: "INV-2026-001",
 )
 

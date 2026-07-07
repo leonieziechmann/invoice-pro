@@ -25,8 +25,8 @@ The power of `invoice-pro` lies in its conciseness. Below is a minimal example o
 #show: invoice.with(
   // Set the locale for language, formatting, and legal behaviors
   locale: locale.en-de,
-  sender: (name: "Consulting Group LLC", street: "Consulting Street 1", city: "Berlin"),
-  recipient: (name: "Acme Corp", street: "Acme Street 1", city: "Munich"),
+  sender: (name: "Consulting Group LLC", address: "Consulting Street 1", city: "Berlin"),
+  recipient: (name: "Acme Corp", address: "Acme Street 1", city: "Munich"),
   invoice-nr: "INV-2026-001",
 )
 

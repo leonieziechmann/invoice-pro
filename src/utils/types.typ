@@ -80,3 +80,44 @@
   description: _matcher.choice(none, text-like),
   amount: _matcher.choice(ratio-like, decimal-like),
 )
+
+// --- Polymorphic & Address Fields Matchers ---
+#let polymorphic-text = _matcher.choice(
+  none,
+  str,
+  content,
+  _matcher.many(_matcher.choice(str, content)),
+)
+
+#let city-type = (
+  name: _matcher.choice(none, str, content),
+  post-code: _matcher.choice(none, str, content),
+  state: _matcher.choice(none, str, content),
+  display: _matcher.choice(none, str, content),
+  inline-display: _matcher.choice(none, str, content),
+)
+
+#let city-like = _matcher.choice(
+  none,
+  str,
+  content,
+  city-type,
+)
+
+#let country-like = _matcher.choice(
+  none,
+  auto,
+  function,
+  dictionary,
+)
+
+#let party-type = (
+  name: polymorphic-text,
+  address: polymorphic-text,
+  city: city-like,
+  country: country-like,
+  tax-nr: _matcher.choice(none, str, content),
+  vat-id: _matcher.choice(none, str, content),
+  extra: _matcher.choice(none, array, dictionary),
+)
+

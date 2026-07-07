@@ -1,4 +1,5 @@
-#import "@preview/invoice-pro:0.3.2": *
+//#import "@preview/invoice-pro:0.3.2": *
+#import "../src/lib.typ": *
 
 /*
  * Invoice Pro by Leonie Ziechmann
@@ -16,6 +17,7 @@
     name: "Your Company / Name",
     address: "123 Example Street",
     city: "12345 Example City",
+    tax-nr: "123/456/789",
     extra: (
       "Tel": "+49 123 4567890",
       "E-Mail": "my-mail@domain.com",
@@ -27,7 +29,6 @@
     city: "98765 Customer City",
   ),
   invoice-nr: "2026-01",
-  tax-nr: "123/456/789",
 )
 #set text(10pt)
 

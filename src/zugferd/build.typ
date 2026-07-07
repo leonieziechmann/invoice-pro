@@ -1,4 +1,5 @@
 #import "xml.typ": dict-to-xml, fmt-amount, fmt-date, fmt-rate, xml-escape
+#import "../utils/coercion.typ": to-string
 
 #let profile-urn(profile) = {
   if profile == "minimum" { "urn:factur-x.eu:1p0:minimum" } else if (
@@ -11,7 +12,7 @@
 // Map common invoice-pro unit strings to UN/ECE recommendation 20 unit codes.
 #let map-unit-code(unit) = {
   let u = if type(unit) == str { unit } else if unit == none { "" } else {
-    str(unit)
+    to-string(unit)
   }
   if u in ("HUR", "DAY", "MON", "ANN", "KGM", "GRM", "MTR", "LTR", "C62") {
     u
@@ -50,28 +51,47 @@
   name,
   address,
   city,
+  postcode,
   country,
   tax-nr,
+  vat-id,
   include-addresses,
 ) = {
-  let address-dict = if include-addresses {
+  let address-dict = if include-addresses and address != none {
+    let addr = (
+      "ram:LineOne": address,
+      "ram:CityName": city,
+      "ram:CountryID": country,
+    )
+    if postcode != none and postcode != "" {
+      addr.insert("ram:PostcodeCode", postcode)
+    }
     (
-      "ram:PostalTradeAddress": (
-        "ram:LineOne": address,
-        "ram:CityName": city,
-        "ram:CountryID": country,
-      ),
+      "ram:PostalTradeAddress": addr,
     )
   } else { (:) }
 
-  let tax-registration = if tax-nr != none {
-    (
-      "ram:SpecifiedTaxRegistration": (
-        "ram:ID": (
-          "@schemeID": "VA",
-          "": tax-nr,
-        ),
+  let tax-registrations = ()
+  if vat-id != none and vat-id != "" {
+    tax-registrations.push((
+      "ram:ID": (
+        "@schemeID": "VA",
+        "": vat-id,
       ),
+    ))
+  }
+  if tax-nr != none and tax-nr != "" {
+    tax-registrations.push((
+      "ram:ID": (
+        "@schemeID": "FC",
+        "": tax-nr,
+      ),
+    ))
+  }
+
+  let tax-registration-dict = if tax-registrations.len() > 0 {
+    (
+      "ram:SpecifiedTaxRegistration": tax-registrations,
     )
   } else { (:) }
 
@@ -80,14 +100,67 @@
       "ram:Name": name,
     )
       + address-dict
-      + tax-registration
+      + tax-registration-dict
   )
 }
 
 // Emits the buyer trade party details
-#let build-buyer-trade-party(name) = (
-  "ram:Name": name,
-)
+#let build-buyer-trade-party(
+  name,
+  address,
+  city,
+  postcode,
+  country,
+  tax-nr,
+  vat-id,
+  include-addresses,
+) = {
+  let address-dict = if include-addresses and address != none {
+    let addr = (
+      "ram:LineOne": address,
+      "ram:CityName": city,
+      "ram:CountryID": country,
+    )
+    if postcode != none and postcode != "" {
+      addr.insert("ram:PostcodeCode", postcode)
+    }
+    (
+      "ram:PostalTradeAddress": addr,
+    )
+  } else { (:) }
+
+  let tax-registrations = ()
+  if vat-id != none and vat-id != "" {
+    tax-registrations.push((
+      "ram:ID": (
+        "@schemeID": "VA",
+        "": vat-id,
+      ),
+    ))
+  }
+  if tax-nr != none and tax-nr != "" {
+    tax-registrations.push((
+      "ram:ID": (
+        "@schemeID": "FC",
+        "": tax-nr,
+      ),
+    ))
+  }
+
+  let tax-registration-dict = if tax-registrations.len() > 0 {
+    (
+      "ram:SpecifiedTaxRegistration": tax-registrations,
+    )
+  } else { (:) }
+
+  (
+    (
+      "ram:Name": name,
+    )
+      + address-dict
+      + tax-registration-dict
+  )
+}
 
 // Emits a single supply chain line item
 #let build-line-item(
@@ -214,7 +287,7 @@
 #let build-zugferd-xml(ctx, item-data) = {
   let profile = ctx.zugferd
   let currency = ctx.locale.currency.code
-  let country = upper(ctx.locale.meta.region)
+  let country = ctx.sender.country.code
 
   let bank = ctx.global.at("bank", default: none)
 
@@ -275,14 +348,25 @@
   let transaction = (
     "ram:ApplicableHeaderTradeAgreement": (
       "ram:SellerTradeParty": build-seller-trade-party(
-        ctx.sender.name,
-        ctx.sender.address,
-        ctx.sender.city,
-        country,
-        ctx.tax-nr,
+        ctx.sender.name-inline,
+        ctx.sender.address-inline,
+        ctx.sender.city-name,
+        ctx.sender.post-code,
+        ctx.sender.country.code,
+        ctx.sender.tax-nr,
+        ctx.sender.vat-id,
         include-addresses,
       ),
-      "ram:BuyerTradeParty": build-buyer-trade-party(ctx.recipient.name),
+      "ram:BuyerTradeParty": build-buyer-trade-party(
+        ctx.recipient.name-inline,
+        ctx.recipient.address-inline,
+        ctx.recipient.city-name,
+        ctx.recipient.post-code,
+        ctx.recipient.country.code,
+        ctx.recipient.tax-nr,
+        ctx.recipient.vat-id,
+        include-addresses,
+      ),
     ),
     "ram:ApplicableHeaderTradeDelivery": (:),
     "ram:ApplicableHeaderTradeSettlement": trade-settlement,
