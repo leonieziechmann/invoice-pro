@@ -345,7 +345,8 @@
           gross: tax-applicator.gross-total,
         ),
         formated-total: formated-total,
-        raw: (
+        // ZUGFeRD Data
+        item-data: (
           items: items,
           taxes: tax-applicator.taxes,
           net-total: tax-applicator.net-total,

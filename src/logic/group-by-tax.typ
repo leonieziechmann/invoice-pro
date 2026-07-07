@@ -12,7 +12,7 @@
         tax: (
           rate: item.tax.rate,
           category: item.tax.category,
-          grounds: item.tax.at("grounds", default: none),
+          grounds: item.tax.grounds,
         ),
         ..if include-items { (items: ()) },
       ))

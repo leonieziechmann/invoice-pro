@@ -1,7 +1,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(),
+  theme: themes.DIN-5008(font: "libertinus serif"),
   locale: locale.de-de,
   zugferd: "en16931",
   sender: (
@@ -22,7 +22,13 @@
 
 #line-items[
   #item([Beratungsleistung], price: 100.00, quantity: 10, unit: "hrs")
-  #item([Software-Lizenz], price: 49.90, quantity: 2, unit: "pcs", tax: tax.lower-rate(7%))
+  #item(
+    [Software-Lizenz],
+    price: 49.90,
+    quantity: 2,
+    unit: "pcs",
+    tax: tax.lower-rate(7%),
+  )
 ]
 
 #payment-goal(days: 14)

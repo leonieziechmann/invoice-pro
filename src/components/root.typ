@@ -46,6 +46,7 @@
       })
 
       ensure("theme", "document", (.., body) => body)
+      ensure("zugferd", none)
 
       // Internally Calculated
       nest("global", {
@@ -71,38 +72,51 @@
       )
       let line-items = all-line-itmes.first(default: (:))
 
-      let all-bank-details = loom.query.collect-signals(
-        children,
-        kind: "bank-details",
+      let bank-signal = loom
+        .query
+        .collect-signals(
+          children,
+          kind: "bank-details",
+        )
+        .first(default: none)
+
+      let item-data = loom.mutator.batch(
+        line-items.at("item-data", default: (:)),
+        {
+          import loom.mutator: *
+          ensure("items", ())
+          ensure("taxes", (:))
+          ensure("net-total", decimal("0"))
+          ensure("gross-total", decimal("0"))
+        },
       )
-      let bank-signal = all-bank-details.first(default: none)
 
       let public = (
         total: line-items.at("total", default: (:)),
         formated-total: line-items.at("formated-total", default: (:)),
-        raw: line-items.at("raw", default: (:)),
         bank: bank-signal,
       )
 
-      return (public, none)
+      let view = (
+        item-data: item-data,
+      )
+
+      return (public, view)
     },
-    draw: (ctx, _, _, body) => {
+    draw: (ctx, _, view, body) => {
       set text(lang: ctx.locale.lang)
-      if ctx.at("zugferd", default: none) != none {
-        let xml-bytes = build-zugferd-xml(ctx)
-        [
-          #pdf.attach(
-            "factur-x.xml",
-            xml-bytes,
-            relationship: "alternative",
-            mime-type: "text/xml",
-            description: "ZUGFeRD / Factur-X invoice data",
-          )
-          #(ctx.theme.document)(ctx, body)
-        ]
-      } else {
-        (ctx.theme.document)(ctx, body)
+
+      if ctx.zugferd != none {
+        pdf.attach(
+          "/factur-x.xml",
+          build-zugferd-xml(ctx, view.item-data),
+          relationship: "alternative",
+          mime-type: "text/xml",
+          description: "ZUGFeRD / Factur-X invoice data",
+        )
       }
+
+      (ctx.theme.document)(ctx, body)
     },
     body,
   )
