@@ -46,7 +46,7 @@ jobs:
       - name: Download Mustangproject validator
         run: |
           curl -L -o /tmp/mustang.jar \
-            https://github.com/ZUGFeRD/mustangproject/releases/download/v2.14.0/Mustang-CLI-2.14.0.jar
+            https://github.com/ZUGFeRD/mustangproject/releases/download/core-2.14.0/Mustang-CLI-2.14.0.jar
 
       - name: Validate ZUGFeRD XML
         run: |
