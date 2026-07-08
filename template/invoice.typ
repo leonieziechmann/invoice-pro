@@ -6,26 +6,40 @@
  * GitHub: https://github.com/leonieziechmann/invoice-pro
  * If you have feature requests or find outdated information,
  * please create an Issue or Pull Request on GitHub.
+ *
+ * ZUGFeRD (experimental): Export as PDF/A-3B to embed XML.
+ * - Web App: File > Export As -> PDF -> PDF/A-3B -> download icon
+ * - CLI: typst compile --pdf-standard a-3b file.typ
  */
 
 
 #show: invoice.with(
   theme: themes.DIN-5008(form: "A"),
-  locale: locale.en-de,
+  locale: locale.de-de,
+  zugferd: "en16931",
   sender: (
-    name: "Your Company / Name",
-    address: "123 Example Street",
-    city: "12345 Example City",
-    tax-nr: "123/456/789",
+    name: "Jane Doe",
+    address: "Musterstraße 1",
+    city: "12345 Musterstadt",
+    tax-nr: "123/456/78901",
+    vat-id: "DE123456789",
+    contact: (
+      name: "Jane Doe",
+      phone: "+49 123 4567890",
+      email: "jane.doe@example.com",
+    ),
     extra: (
+      "USt-IdNr.": "DE123456789",
       "Tel": "+49 123 4567890",
-      "E-Mail": "my-mail@domain.com",
+      "E-Mail": "jane.doe@example.com",
     ),
   ),
   recipient: (
-    name: "Customer Name",
-    address: "5 Customer Street",
-    city: "98765 Customer City",
+    name: "Client Corp",
+    address: "Kundenweg 5",
+    city: "54321 Kundenstadt",
+    vat-id: "DE987654321",
+    buyer-reference: "DE123456789-12345-12",
   ),
   invoice-nr: "2026-01",
 )
@@ -110,7 +124,7 @@
 #payment-goal(days: 14)
 
 #bank-details(
-  bank: "Example Bank",
+  bank: "Musterbank",
   iban: "DE07100202005821158846",
   bic: "EXAMPLEBICX",
 )

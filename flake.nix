@@ -79,32 +79,44 @@
             exit 1
           fi
 
-          TMP_DIR=$(mktemp -d)
-          trap 'rm -rf "$TMP_DIR"' EXIT
+          validate_file() {
+            local src_file="$1"
+            local name
+            name=$(basename "$src_file" .typ)
 
-          PDF_PATH="$TMP_DIR/zugferd-test.pdf"
-          EXTRACT_DIR="''${1:-$TMP_DIR/extracted}"
-          mkdir -p "$EXTRACT_DIR"
+            local tmp_dir
+            tmp_dir=$(mktemp -d)
 
-          echo "Compiling ZUGFeRD PDF..."
-          ${typstEnv}/bin/typst compile \
-            --root . \
-            --pdf-standard=a-3b \
-            tests/integration/zugferd-basic/test.typ \
-            "$PDF_PATH"
+            local pdf_path="$tmp_dir/$name.pdf"
+            local extract_dir="$tmp_dir/extracted"
+            mkdir -p "$extract_dir"
 
-          echo "Extracting factur-x.xml..."
-          ${pkgs.poppler-utils}/bin/pdfdetach -saveall -o "$EXTRACT_DIR" "$PDF_PATH"
+            echo "Compiling ZUGFeRD PDF for $src_file..."
+            ${typstEnv}/bin/typst compile \
+              --root . \
+              --pdf-standard=a-3b \
+              "$src_file" \
+              "$pdf_path"
 
-          if [ ! -f "$EXTRACT_DIR/factur-x.xml" ]; then
-            echo "Error: factur-x.xml not found in compiled PDF!" >&2
-            exit 1
-          fi
+            echo "Extracting factur-x.xml..."
+            ${pkgs.poppler-utils}/bin/pdfdetach -saveall -o "$extract_dir" "$pdf_path"
 
-          echo "Validating ZUGFeRD XML..."
-          ${mustang-cli}/bin/mustang-cli --action validate --source "$EXTRACT_DIR/factur-x.xml"
+            if [ ! -f "$extract_dir/factur-x.xml" ]; then
+              echo "Error: factur-x.xml not found in compiled PDF!" >&2
+              rm -rf "$tmp_dir"
+              exit 1
+            fi
 
-          echo "✔ ZUGFeRD validation passed!"
+            echo "Validating ZUGFeRD XML..."
+            ${mustang-cli}/bin/mustang-cli --action validate --source "$extract_dir/factur-x.xml"
+
+            rm -rf "$tmp_dir"
+          }
+
+          validate_file "tests/integration/zugferd-basic/test.typ"
+          validate_file "template/invoice.typ"
+
+          echo "✔ All ZUGFeRD validations passed!"
         '';
 
       in

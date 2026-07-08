@@ -224,3 +224,26 @@
     ))
   ]
 ]
+
+// --- Test sender/recipient country inheritance from region ---
+#{
+  import "/src/logic/country.typ": normalize-party
+  import "/src/lib.typ": country
+
+  // 1. region as string
+  let p1 = normalize-party((region: "FR"), "DE")
+  assert.eq(p1.country.code, "FR")
+
+  // 2. region as function (country)
+  let p2 = normalize-party((region: country.at), "DE")
+  assert.eq(p2.country.code, "AT")
+
+  // 3. region as function (region)
+  import "/src/locale/region/region.typ"
+  let p3 = normalize-party((region: region.ch), "DE")
+  assert.eq(p3.country.code, "CH")
+
+  // 4. country overrides region
+  let p4 = normalize-party((region: "FR", country: country.de), "DE")
+  assert.eq(p4.country.code, "DE")
+}

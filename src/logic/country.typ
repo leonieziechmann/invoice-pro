@@ -312,6 +312,67 @@
   us: us,
 )
 
+#let normalize-region-to-string(region-opt, fallback) = {
+  if region-opt == none or region-opt == auto {
+    return fallback
+  }
+  if type(region-opt) == str {
+    return region-opt
+  }
+  if type(region-opt) == dictionary {
+    if (
+      "meta" in region-opt
+        and type(region-opt.meta) == dictionary
+        and "region" in region-opt.meta
+    ) {
+      return region-opt.meta.region
+    }
+    if "code" in region-opt and type(region-opt.code) == str {
+      return region-opt.code
+    }
+  }
+  if type(region-opt) == function {
+    import "../locale/region/region.typ"
+    if region-opt == region.at { "at" } else if region-opt == region.ch {
+      "ch"
+    } else if region-opt == region.de { "de" } else if region-opt == region.es {
+      "es"
+    } else if region-opt == region.fr { "fr" } else if region-opt == region.it {
+      "it"
+    } else if region-opt == de { "de" } else if region-opt == at {
+      "at"
+    } else if region-opt == ch { "ch" } else if region-opt == fr {
+      "fr"
+    } else if region-opt == it { "it" } else if region-opt == es {
+      "es"
+    } else if region-opt == be { "be" } else if region-opt == bg {
+      "bg"
+    } else if region-opt == cy { "cy" } else if region-opt == cz {
+      "cz"
+    } else if region-opt == dk { "dk" } else if region-opt == ee {
+      "ee"
+    } else if region-opt == gr { "gr" } else if region-opt == hr {
+      "hr"
+    } else if region-opt == hu { "hu" } else if region-opt == ie {
+      "ie"
+    } else if region-opt == lt { "lt" } else if region-opt == lu {
+      "lu"
+    } else if region-opt == lv { "lv" } else if region-opt == mt {
+      "mt"
+    } else if region-opt == nl { "nl" } else if region-opt == pl {
+      "pl"
+    } else if region-opt == pt { "pt" } else if region-opt == ro {
+      "ro"
+    } else if region-opt == se { "se" } else if region-opt == si {
+      "si"
+    } else if region-opt == sk { "sk" } else if region-opt == uk {
+      "gb"
+    } else if region-opt == us { "us" } else { fallback }
+  } else {
+    fallback
+  }
+}
+
 #let resolve-country(country-opt, default-region) = {
   if type(country-opt) == function {
     country-opt()
@@ -337,8 +398,14 @@
   if type(party) != dictionary { return party }
 
   // 1. Resolve country
+  let party-region-raw = party.at("region", default: none)
+  let party-region = normalize-region-to-string(
+    party-region-raw,
+    default-region,
+  )
+
   let country-opt = party.at("country", default: auto)
-  let resolved-country = resolve-country(country-opt, default-region)
+  let resolved-country = resolve-country(country-opt, party-region)
 
   // 2. Parse / extract city data
   let city-raw = party.at("city", default: none)
