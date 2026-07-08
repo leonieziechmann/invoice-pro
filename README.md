@@ -166,6 +166,7 @@ This template relies on these amazing packages:
 **Acknowledgements:**
 
 - Special thanks to [classy-german-invoice](https://github.com/erictapen/typst-invoice) by Kerstin Humm, which served as inspiration and provided the logic for the EPC-QR-Code implementation.
+- The ZUGFeRD e-invoicing implementation was contributed by [Michael Fuchs (theexiile1305)](https://github.com/theexiile1305).
 
 ## License
 

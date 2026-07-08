@@ -100,8 +100,10 @@ The current architecture relies on the following optimized packages:
 
 :::info
 **Acknowledgements:**
-Special thanks to [classy-german-invoice](https://github.com/erictapen/typst-invoice) by Kerstin Humm, which served as architectural inspiration and provided the foundational logic for the EPC-QR-Code implementation.
-:::
+
+- Special thanks to [classy-german-invoice](https://github.com/erictapen/typst-invoice) by Kerstin Humm, which served as architectural inspiration and provided the foundational logic for the EPC-QR-Code implementation.
+- The ZUGFeRD e-invoicing implementation was contributed by [Michael Fuchs (theexiile1305)](https://github.com/theexiile1305).
+  :::
 
 ## License
 

@@ -172,3 +172,9 @@ Here is a full example of a ZUGFeRD-compliant invoice configuration:
   bic: "GBBADEFFXXX",
 )
 ```
+
+---
+
+## Contributions
+
+The ZUGFeRD implementation in `invoice-pro` was contributed by [Michael Fuchs (theexiile1305)](https://github.com/theexiile1305).
