@@ -123,7 +123,14 @@
 
   types.require(quantity, "item::quantity", auto, types.decimal-like)
   types.require(base-quantity, "item::base-quantity", auto, types.decimal-like)
-  types.require(unit, "item::unit", none, auto, types.text-like, types.unit-input-type)
+  types.require(
+    unit,
+    "item::unit",
+    none,
+    auto,
+    types.text-like,
+    types.unit-input-type,
+  )
 
   types.require(date, "item::date", none, auto, types.date-like)
 

@@ -62,7 +62,14 @@
     auto,
     types.decimal-like,
   )
-  types.require(unit, "bundle::unit", none, auto, types.text-like, types.unit-input-type)
+  types.require(
+    unit,
+    "bundle::unit",
+    none,
+    auto,
+    types.text-like,
+    types.unit-input-type,
+  )
 
   types.require(date, "bundle::date", none, auto, types.date-like)
 

@@ -18,21 +18,21 @@ If you forget the show rule, your components will remain invisible because they 
 
 Initializes the document and orchestrates the data calculation passes.
 
-| Key                    | Type                                        | Description                                                                                                                                                        |
-| :--------------------- | :------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `theme`                | `function`                                  | The visual theme to apply to the invoice. See [Themes](#theme) below.                                                                                              |
-| `locale`               | `function`                                  | The locale settings for language and number formatting. See [Locales](#locale) below.                                                                              |
-| `sender`               | `dictionary`                                | Sender details (e.g., name, address, contact info).                                                                                                                |
-| `recipient`            | `dictionary`                                | Recipient details (e.g., name, address, customer ID).                                                                                                              |
-| `date`                 | `datetime`                                  | The date of the invoice. Defaults to `datetime.today()`.                                                                                                           |
-| `subject`              | `str` \| `content` \| `auto`                | The subject line of the invoice. If `auto`, it is inferred from the [locale](./locale) (e.g., "Rechnung" in German).                                               |
-| `references`           | `none` \| `dictionary` \| `array`           | Reference information for the document header (e.g., customer number, order date). Accepts a dictionary of key-value pairs or an array of `(label, value)` tuples. |
-| `invoice-nr`           | `none` \| `str` \| `content`                | The unique identifier or number of the invoice.                                                                                                                    |
-| `tax`                  | `auto` \| `ratio` \| `dictionary` \| `none` | The default tax rate for the document. See [Tax](#tax--tax-exempt-small-biz) below.                                                                                |
-| `tax-mode`             | `"exclusive"` \| `"inclusive"`              | Sets the global baseline for tax calculation. `"exclusive"` treats standard prices as net. `"inclusive"` treats standard prices as gross.                          |
-| `tax-exempt-small-biz` | `bool`                                      | If `true`, applies the small business tax exemption logic based on the selected locale.                                                                            |
-| `zugferd`              | `none` \| `"minimum"` \| `"basic-wl"` \| `"basic"` \| `"en16931"` | _(Experimental)_ Embeds a machine-readable ZUGFeRD / Factur-X XML into the PDF. Requires compiling with `--pdf-standard=a-3b`. |
-| `body`                 | `content`                                   | The content of the invoice, containing your containing your [`line-items`](./line-items) and other layout components.                                              |
+| Key                    | Type                                                              | Description                                                                                                                                                        |
+| :--------------------- | :---------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme`                | `function`                                                        | The visual theme to apply to the invoice. See [Themes](#theme) below.                                                                                              |
+| `locale`               | `function`                                                        | The locale settings for language and number formatting. See [Locales](#locale) below.                                                                              |
+| `sender`               | `dictionary`                                                      | Sender details (e.g., name, address, contact info).                                                                                                                |
+| `recipient`            | `dictionary`                                                      | Recipient details (e.g., name, address, customer ID).                                                                                                              |
+| `date`                 | `datetime`                                                        | The date of the invoice. Defaults to `datetime.today()`.                                                                                                           |
+| `subject`              | `str` \| `content` \| `auto`                                      | The subject line of the invoice. If `auto`, it is inferred from the [locale](./locale) (e.g., "Rechnung" in German).                                               |
+| `references`           | `none` \| `dictionary` \| `array`                                 | Reference information for the document header (e.g., customer number, order date). Accepts a dictionary of key-value pairs or an array of `(label, value)` tuples. |
+| `invoice-nr`           | `none` \| `str` \| `content`                                      | The unique identifier or number of the invoice.                                                                                                                    |
+| `tax`                  | `auto` \| `ratio` \| `dictionary` \| `none`                       | The default tax rate for the document. See [Tax](#tax--tax-exempt-small-biz) below.                                                                                |
+| `tax-mode`             | `"exclusive"` \| `"inclusive"`                                    | Sets the global baseline for tax calculation. `"exclusive"` treats standard prices as net. `"inclusive"` treats standard prices as gross.                          |
+| `tax-exempt-small-biz` | `bool`                                                            | If `true`, applies the small business tax exemption logic based on the selected locale.                                                                            |
+| `zugferd`              | `none` \| `"minimum"` \| `"basic-wl"` \| `"basic"` \| `"en16931"` | _(Experimental)_ Embeds a machine-readable ZUGFeRD / Factur-X XML into the PDF. Requires compiling with `--pdf-standard=a-3b`.                                     |
+| `body`                 | `content`                                                         | The content of the invoice, containing your containing your [`line-items`](./line-items) and other layout components.                                              |
 
 ## Key Parameters Explained
 
@@ -145,12 +145,12 @@ typst compile --pdf-standard=a-3b invoice.typ
 
 **Available profiles:**
 
-| Profile | Description |
-| --- | --- |
-| `"minimum"` | Header-only data (seller, buyer, date, total). No line items. |
-| `"basic-wl"` | Header + payment details. No line items. |
-| `"basic"` | Full line items included. |
-| `"en16931"` | Full EN 16931 compliance with complete line-item data (recommended). |
+| Profile      | Description                                                          |
+| ------------ | -------------------------------------------------------------------- |
+| `"minimum"`  | Header-only data (seller, buyer, date, total). No line items.        |
+| `"basic-wl"` | Header + payment details. No line items.                             |
+| `"basic"`    | Full line items included.                                            |
+| `"en16931"`  | Full EN 16931 compliance with complete line-item data (recommended). |
 
 **Example:**
 

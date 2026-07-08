@@ -57,19 +57,19 @@ _Price vs. Total:_
 You must provide either a `price` (unit price) **or** a `total` (fixed line total), but not both. The system will automatically perform forward/backward calculations based on your `input-gross` settings.
 :::
 
-| Key             | Type                                      | Description                                                                                                                                          |
-| --------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`          | `str` \| `content`                        | The primary title of the item.                                                                                                                       |
-| `description`   | `str` \| `content` \| `auto` \| `none`    | Detailed text appearing below the name.                                                                                                              |
-| `quantity`      | `number` \| `auto`                        | The numeric amount being billed (defaults to 1).                                                                                                     |
-| `base-quantity` | `number` \| `auto`                        | The reference quantity for the price (e.g., pricing per 100g).                                                                                       |
-| `unit`          | `str` \| `content` \| `dictionary` \| `auto` \| `none` | The unit of measurement (e.g., `"h"`, `"pcs"`). Pass a dictionary for ZUGFeRD compliance — see below.                                         |
-| `date`          | `datetime` \| `array` \| `auto` \| `none` | When the service was provided. Use a single `datetime` or a range array `(datetime, datetime)`.                                                      |
-| `price`         | `number` \| `auto`                        | The price per unit.                                                                                                                                  |
-| `total`         | `number` \| `auto`                        | The fixed total price for the line item.                                                                                                             |
-| `item-id`       | `str` \| `dictionary` \| `auto` \| `none` | If a `str`, it is treated as a standard item ID. Can also be a dictionary: `(seller: "id", buyer: "id", standard: "id")`. Not all keys are required. |
-| `input-gross`   | `bool` \| `auto`                          | Overrides the parent `input-gross` setting specifically for this item.                                                                               |
-| `tax`           | `ratio` \| `dictionary` \| `auto`         | Overrides the parent `tax` setting specifically for this item.                                                                                       |
+| Key             | Type                                                   | Description                                                                                                                                          |
+| --------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`          | `str` \| `content`                                     | The primary title of the item.                                                                                                                       |
+| `description`   | `str` \| `content` \| `auto` \| `none`                 | Detailed text appearing below the name.                                                                                                              |
+| `quantity`      | `number` \| `auto`                                     | The numeric amount being billed (defaults to 1).                                                                                                     |
+| `base-quantity` | `number` \| `auto`                                     | The reference quantity for the price (e.g., pricing per 100g).                                                                                       |
+| `unit`          | `str` \| `content` \| `dictionary` \| `auto` \| `none` | The unit of measurement (e.g., `"h"`, `"pcs"`). Pass a dictionary for ZUGFeRD compliance — see below.                                                |
+| `date`          | `datetime` \| `array` \| `auto` \| `none`              | When the service was provided. Use a single `datetime` or a range array `(datetime, datetime)`.                                                      |
+| `price`         | `number` \| `auto`                                     | The price per unit.                                                                                                                                  |
+| `total`         | `number` \| `auto`                                     | The fixed total price for the line item.                                                                                                             |
+| `item-id`       | `str` \| `dictionary` \| `auto` \| `none`              | If a `str`, it is treated as a standard item ID. Can also be a dictionary: `(seller: "id", buyer: "id", standard: "id")`. Not all keys are required. |
+| `input-gross`   | `bool` \| `auto`                                       | Overrides the parent `input-gross` setting specifically for this item.                                                                               |
+| `tax`           | `ratio` \| `dictionary` \| `auto`                      | Overrides the parent `tax` setting specifically for this item.                                                                                       |
 
 ### The `unit` Dictionary (ZUGFeRD Compliance)
 
@@ -81,10 +81,10 @@ For reliable compliance, pass a dictionary instead:
 unit: (display: "Std.", code: "HUR")
 ```
 
-| Key | Type | Description |
-| --- | --- | --- |
-| `display` | `str` \| `content` | Text shown on the printed invoice. |
-| `code` | `str` | UN/CEFACT Rec. 20 unit code written into the ZUGFeRD XML (e.g., `"HUR"`, `"DAY"`, `"C62"`). |
+| Key       | Type               | Description                                                                                 |
+| --------- | ------------------ | ------------------------------------------------------------------------------------------- |
+| `display` | `str` \| `content` | Text shown on the printed invoice.                                                          |
+| `code`    | `str`              | UN/CEFACT Rec. 20 unit code written into the ZUGFeRD XML (e.g., `"HUR"`, `"DAY"`, `"C62"`). |
 
 This dictionary form is recommended whenever `zugferd` is set on the invoice. If you only pass a plain string, the package attempts a best-effort mapping and falls back to `"C62"` for unrecognised values.
 
@@ -111,17 +111,17 @@ For a complete list of standardized tax functions, margin schemes, and how to cr
 
 Groups multiple items together as a virtual single item while automatically aggregating their totals and dates.
 
-| Key             | Type                                      | Description                                                                                                        |
-| --------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `name`          | `str` \| `content`                        | The name of the bundle.                                                                                            |
-| `description`   | `str` \| `content` \| `auto` \| `none`    | If set to `auto`, it automatically generates a comma-separated list of all child item names.                       |
-| `quantity`      | `number` \| `auto`                        | The quantity of the bundle itself.                                                                                 |
-| `base-quantity` | `number` \| `auto`                        | The reference quantity for the price (e.g., pricing per 100g).                                                     |
-| `unit`          | `str` \| `content` \| `dictionary` \| `auto` \| `none` | The unit of measurement for the bundle. Accepts the same dictionary form as `item` for ZUGFeRD compliance.   |
-| `date`          | `datetime` \| `array` \| `auto` \| `none` | If set to `auto`, calculates the date range based on the earliest and latest dates of the items inside the bundle. |
-| `input-gross`   | `bool` \| `auto`                          | Overrides the parent `input-gross` setting specifically for children.                                              |
-| `tax`           | `ratio` \| `dictionary` \| `auto`         | Overrides the parent `tax` setting specifically for children.                                                      |
-| `body`          | `content`                                 | The nested items, modifiers, or sub-bundles belonging to this group.                                               |
+| Key             | Type                                                   | Description                                                                                                        |
+| --------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `name`          | `str` \| `content`                                     | The name of the bundle.                                                                                            |
+| `description`   | `str` \| `content` \| `auto` \| `none`                 | If set to `auto`, it automatically generates a comma-separated list of all child item names.                       |
+| `quantity`      | `number` \| `auto`                                     | The quantity of the bundle itself.                                                                                 |
+| `base-quantity` | `number` \| `auto`                                     | The reference quantity for the price (e.g., pricing per 100g).                                                     |
+| `unit`          | `str` \| `content` \| `dictionary` \| `auto` \| `none` | The unit of measurement for the bundle. Accepts the same dictionary form as `item` for ZUGFeRD compliance.         |
+| `date`          | `datetime` \| `array` \| `auto` \| `none`              | If set to `auto`, calculates the date range based on the earliest and latest dates of the items inside the bundle. |
+| `input-gross`   | `bool` \| `auto`                                       | Overrides the parent `input-gross` setting specifically for children.                                              |
+| `tax`           | `ratio` \| `dictionary` \| `auto`                      | Overrides the parent `tax` setting specifically for children.                                                      |
+| `body`          | `content`                                              | The nested items, modifiers, or sub-bundles belonging to this group.                                               |
 
 ### Mixed Tax Brackets
 
