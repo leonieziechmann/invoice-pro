@@ -59,7 +59,7 @@ The power of `invoice-pro` lies in its conciseness. Below is a minimal example o
 
 Generating compliant invoices requires handling specific tax logic and regional rules. `invoice-pro` natively supports the EU VAT system and works seamlessly for countries utilizing similar tax models, such as Switzerland and Norway.
 
-The template helps you establish the correct **Grounds** for tax justifications easily. Because our data logic is decoupled from the layout layer, the visual layout can be entirely swapped out without altering your business data. This separation of concerns paves the way for our planned future support of **EN 16931** compliant e-invoicing standards (such as ZUGFeRD).
+The template helps you establish the correct **Grounds** for tax justifications easily. Because our data logic is decoupled from the layout layer, the visual layout can be entirely swapped out without altering your business data. This separation of concerns allows us to offer experimental support for **EN 16931** compliant e-invoicing standards (such as ZUGFeRD / Factur-X). See the [E-Invoicing](./e-invoicing.md) guide for more details.
 
 :::info
 The visual layout (such as the German **DIN 5008** standard) is merely a presentation layer. You can swap themes at any time, and your underlying data structure remains perfectly intact.

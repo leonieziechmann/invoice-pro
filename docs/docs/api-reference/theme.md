@@ -7,7 +7,7 @@ sidebar_position: 6
 :::warning
 **Unstable API**
 
-The theming API is currently in a foundational state and is considered highly unstable. It will be fully finalized and locked in **v0.4**. Proceed with caution when building highly custom visual layouts, as breaking changes to the rendering pipeline are expected.
+The theming API is currently in a foundational state and is considered highly unstable. It will be fully finalized and locked in **v0.5.0**. Proceed with caution when building highly custom visual layouts, as breaking changes to the rendering pipeline are expected.
 :::
 
 The `invoice-pro` theming engine provides a **Cascading** approach to document styling. Themes control the visual layout, typographic choices, and structural positioning of the underlying **Normalized** data objects evaluated during the invoice compilation process.

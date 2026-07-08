@@ -98,7 +98,7 @@ With the major refactoring introduced in version 0.2.0, the package structure is
 
 - **Invoice Header (`invoice` arguments):** **Mostly Stable**. The core invoice configuration is established. Future updates to the header will be non-breaking and will primarily consist of adding new optional fields.
 - **Data Model (`#line-items`, `#bundle`, `#item`):** **Stable**. The new block-based data model is considered almost finished and safe to use.
-  - _Exception:_ The `unit` argument in `#item` and `#bundle` will change in a future release to strictly comply with the standardized unit formats and codes required for upcoming ZUGFeRD e-invoicing support.
+  - _Note:_ The `unit` argument in `#item` and `#bundle` supports dictionary inputs (e.g., `(display: "Std.", code: "HUR")`) to comply with the standardized unit formats and codes required for ZUGFeRD e-invoicing.
 - **Theming (`theme`):** **Under Construction**. The theming engine is still evolving and will most likely experience breaking changes in the next updates as we refine customization capabilities.
 - **Localization (`locale`):** **Under Construction**. The localization and internationalization systems are actively being worked on and are subject to change.
 
@@ -148,9 +148,9 @@ I am actively working on improving this template. Here is what's planned for fut
 
 - [x] (v0.2.0) **Refactored API:** Moving away from global states to a more robust, scoped API (inspired by CeTZ) for better stability and flexibility.
 - [x] (v0.3.0) **Internationalization (i18n):** Built-in support for English and other languages (currently creates German invoices by default).
+- [x] (v0.4.0) **ZUGFeRD Support:** (Experimental) Embedding XML data for fully compliant e-invoicing.
 - [ ] (WIP) **Theming Engine:** Allow easy customization of accent colors and fonts to match corporate identities.
 - [ ] **Data Loading:** Helper functions to load invoice items directly from JSON, CSV, or YAML files.
-- [ ] **ZUGFeRD Support:** (Long-term goal) Embedding XML data for fully compliant e-invoicing.
 
 Have an idea? Feel free to open an issue or pull request!
 
