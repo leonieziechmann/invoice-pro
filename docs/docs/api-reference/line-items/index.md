@@ -26,7 +26,7 @@ By default, the `show-column` parameter works automatically and tries to minimiz
 | ------------------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `input-gross`      | `bool` \| `auto`                         | If `auto`, it matches the document's `tax-mode`. If manually set, it specifies if prices of items are entered as net or gross, triggering forward or backward tax calculations.                                  |
 | `tax`              | `ratio` \| `dictionary` \| `auto`        | If `auto`, inherited from the locale default. If a `ratio` (e.g., `19%`), the tax-bracket/code is inferred by the locale system. If a `dictionary`, it should be set by the `tax` module (e.g., `tax.vat(19%)`). |
-| `tax-mode`         | `"exclusive"` \| `"inclusive"` \| `auto` | Sets the tax mode. If `auto`, it matches the [document root's `tax-mode`](../invoice). _It is highly recommended not to change this value here unless absolutely necessary._                                     |
+| `tax-mode`         | `"exclusive"` \| `"inclusive"` \| `auto` | Sets the tax mode. If `auto`, it matches the [document root's `tax-mode`](../invoice/index.md). _It is highly recommended not to change this value here unless absolutely necessary._                            |
 | `show-column`      | `dictionary` \| `auto`                   | Overrides the default automatic column visibility. Used to manually toggle columns like `pos`, `quantity`, `unit-price`, etc.                                                                                    |
 | `show-total`       | `bool` \| `auto`                         | Shows the total summary block of the line items. Defaults to `true`.                                                                                                                                             |
 | `show-information` | `bool` \| `auto`                         | Shows annotations after the total about the content of the line-items (e.g., tax exemptions). Defaults to `true`.                                                                                                |
@@ -98,7 +98,7 @@ The package provides three ways to pass the `unit` parameter:
 3. **Plain String:**
    A simple fallback string (e.g., `"hrs"` or `"pcs"`). The package performs a best-effort mapping to map it to standard codes (e.g., `"hrs"` to `"HUR"`), and falls back to `"C62"` (one/unit) if unrecognized.
 
-For a full list of predefined units and aliases, see the [Unit API Reference](./unit) subpage.
+For a full list of predefined units and aliases, see the [Unit API Reference](./unit.md) subpage.
 
 ### The `tax` Parameter
 
@@ -106,7 +106,7 @@ While items generally inherit their tax settings from the parent `line-items` co
 
 You can define the tax in two ways:
 
-1. **Simple Ratio:** Provide a percentage directly (e.g., `tax: 19%`). The system will attempt to automatically infer the correct standard tax category based on your [locale](../locale).
+1. **Simple Ratio:** Provide a percentage directly (e.g., `tax: 19%`). The system will attempt to automatically infer the correct standard tax category based on your [locale](../locale/index.md).
 2. **The `tax` Module:** For specialized scenarios—such as reverse charge, tax exemptions, or if your region has multiple tax categories with the same percentage—you must use functions from the `tax` module (e.g., `tax.vat(19%)`, `tax.reverse-charge()`).
 
 :::info
@@ -114,7 +114,7 @@ Passing a simple ratio only works safely if the tax rate is **unambiguous** with
 :::
 
 :::tip
-For a complete list of standardized tax functions, margin schemes, and how to create custom tax categories, please read the [Tax Module API Reference](../tax).
+For a complete list of standardized tax functions, margin schemes, and how to create custom tax categories, please read the [Tax Module API Reference](../tax.md).
 :::
 
 ---

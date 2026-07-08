@@ -7,7 +7,7 @@ sidebar_position: 1
 The `invoice` function is the main entry point of the `invoice-pro` package. It sets up the page layout, visual theme, localization settings, and the global tax configuration for the entire document.
 
 :::info
-Every invoice document must start with a `#show: invoice.with(..)` rule. All other components, such as `line-items` or [`payment-goal`](../components#payment-goal), must be placed **after** this show rule.
+Every invoice document must start with a `#show: invoice.with(..)` rule. All other components, such as `line-items` or [`payment-goal`](../components.md#payment-goal), must be placed **after** this show rule.
 
 If you forget the show rule, your components will remain invisible because they rely on the underlying `loom` state engine to render properly.
 :::
@@ -25,14 +25,14 @@ Initializes the document and orchestrates the data calculation passes.
 | `sender`               | `dictionary`                                                      | Sender details (e.g., name, address, contact info).                                                                                                                |
 | `recipient`            | `dictionary`                                                      | Recipient details (e.g., name, address, customer ID).                                                                                                              |
 | `date`                 | `datetime`                                                        | The date of the invoice. Defaults to `datetime.today()`.                                                                                                           |
-| `subject`              | `str` \| `content` \| `auto`                                      | The subject line of the invoice. If `auto`, it is inferred from the [locale](../locale) (e.g., "Rechnung" in German).                                              |
+| `subject`              | `str` \| `content` \| `auto`                                      | The subject line of the invoice. If `auto`, it is inferred from the [locale](../locale/index.md) (e.g., "Rechnung" in German).                                     |
 | `references`           | `none` \| `dictionary` \| `array`                                 | Reference information for the document header (e.g., customer number, order date). Accepts a dictionary of key-value pairs or an array of `(label, value)` tuples. |
 | `invoice-nr`           | `none` \| `str` \| `content`                                      | The unique identifier or number of the invoice.                                                                                                                    |
 | `tax`                  | `auto` \| `ratio` \| `dictionary` \| `none`                       | The default tax rate for the document. See [Tax](#tax--tax-exempt-small-biz) below.                                                                                |
 | `tax-mode`             | `"exclusive"` \| `"inclusive"`                                    | Sets the global baseline for tax calculation. `"exclusive"` treats standard prices as net. `"inclusive"` treats standard prices as gross.                          |
 | `tax-exempt-small-biz` | `bool`                                                            | If `true`, applies the small business tax exemption logic based on the selected locale.                                                                            |
 | `zugferd`              | `none` \| `"minimum"` \| `"basic-wl"` \| `"basic"` \| `"en16931"` | _(Experimental)_ Embeds a machine-readable ZUGFeRD / Factur-X XML into the PDF. Requires compiling with `--pdf-standard=a-3b`.                                     |
-| `body`                 | `content`                                                         | The content of the invoice, containing your containing your [`line-items`](../line-items) and other layout components.                                             |
+| `body`                 | `content`                                                         | The content of the invoice, containing your containing your [`line-items`](../line-items/index.md) and other layout components.                                    |
 
 ## Key Parameters Explained
 
@@ -83,7 +83,7 @@ recipient: (
 ```
 
 :::tip
-To configure country-specific formatting for the address block (like UK postcodes or US state formats) and specify the ZUGFeRD-compliant country code, use the predefined country configurations from the `country` module. See the [Country API](./country) subpage for detailed specifications.
+To configure country-specific formatting for the address block (like UK postcodes or US state formats) and specify the ZUGFeRD-compliant country code, use the predefined country configurations from the `country` module. See the [Country API](./country.md) subpage for detailed specifications.
 :::
 
 ### `locale`
@@ -97,7 +97,7 @@ Locales are structured as `locale.<lang>-<region>`.
 
 **Example:** `locale: locale.en-de` (English language formatting, but German regional tax defaults).
 
-_See the [Locale API Reference](../locale) for the full list and customization options._
+_See the [Locale API Reference](../locale/index.md) for the full list and customization options._
 
 ### `theme`
 
@@ -110,7 +110,7 @@ The theming engine is currently undergoing expansion. At the moment, there are t
 - `themes.base`: A minimal, bare-bones layout.
   :::
 
-_See the [Theme API Reference](../theme) for more details._
+_See the [Theme API Reference](../theme.md) for more details._
 
 ### `tax` & `tax-exempt-small-biz`
 
@@ -122,7 +122,7 @@ If you run a small business that is exempt from charging VAT (e.g., the _Kleinun
 If you enable the small business exemption, the system automatically applies the correct legal tax code and 0% rate for your region. Therefore, you should leave the `tax` parameter set to `auto`. If you manually set a custom `tax` rate while `tax-exempt-small-biz` is `true`, the compiler will throw an error to prevent conflicting configurations.
 :::
 
-_See the [Tax Module API Reference](../tax) for a detailed breakdown of all available tax codes and margin schemes._
+_See the [Tax Module API Reference](../tax.md) for a detailed breakdown of all available tax codes and margin schemes._
 
 ### `references`
 
@@ -188,7 +188,7 @@ typst compile --pdf-standard=a-3b invoice.typ
 )
 ```
 
-For accurate UN/CEFACT unit codes in the embedded XML, use the dictionary form for `unit` on your line items — see the [Line Items API](../line-items#item) for details.
+For accurate UN/CEFACT unit codes in the embedded XML, use the dictionary form for `unit` on your line items — see the [Line Items API](../line-items/index.md#item) for details.
 
 ---
 

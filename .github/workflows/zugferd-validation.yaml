@@ -29,30 +29,10 @@ jobs:
           name: typ-flow
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
-      - name: Compile ZUGFeRD PDF
+      - name: Validate ZUGFeRD PDF
         run: |
-          nix develop --accept-flake-config --command typst compile \
-            --root . \
-            --pdf-standard=a-3b \
-            tests/integration/zugferd-basic/test.typ \
-            /tmp/zugferd-test.pdf
-
-      - name: Extract factur-x.xml
-        run: |
-          sudo apt-get install -y poppler-utils
           mkdir -p /tmp/extracted
-          pdfdetach -saveall -o /tmp/extracted /tmp/zugferd-test.pdf
-
-      - name: Download Mustangproject validator
-        run: |
-          curl -L -o /tmp/mustang.jar \
-            https://github.com/ZUGFeRD/mustangproject/releases/download/core-2.14.0/Mustang-CLI-2.14.0.jar
-
-      - name: Validate ZUGFeRD XML
-        run: |
-          java -jar /tmp/mustang.jar \
-            --action validate \
-            --source /tmp/extracted/factur-x.xml
+          nix run .#validate-zugferd --accept-flake-config -- /tmp/extracted
 
       - name: Archive extracted XML
         uses: actions/upload-artifact@v4

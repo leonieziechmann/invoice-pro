@@ -48,6 +48,65 @@
           ];
         };
 
+        mustang-cli = pkgs.stdenv.mkDerivation rec {
+          pname = "mustang-cli";
+          version = "2.14.0";
+
+          src = pkgs.fetchurl {
+            url = "https://github.com/ZUGFeRD/mustangproject/releases/download/core-${version}/Mustang-CLI-${version}.jar";
+            sha256 = "0yj3knyjp7rnmcvb8snm3f8famg2rankxfcfaqsnymkn4zc1lnb5";
+          };
+
+          dontUnpack = true;
+
+          nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
+
+          installPhase = ''
+            mkdir -p $out/share/java
+            cp $src $out/share/java/mustang-cli.jar
+
+            makeWrapper ${pkgs.jre_headless}/bin/java $out/bin/mustang-cli \
+              --add-flags "-jar $out/share/java/mustang-cli.jar"
+          '';
+        };
+
+        validate-zugferd = pkgs.writeScriptBin "validate-zugferd" ''
+          #!/usr/bin/env bash
+          set -e
+
+          if [ ! -f "typst.toml" ]; then
+            echo "Error: validate-zugferd must be run from the root of the invoice-pro repository." >&2
+            exit 1
+          fi
+
+          TMP_DIR=$(mktemp -d)
+          trap 'rm -rf "$TMP_DIR"' EXIT
+
+          PDF_PATH="$TMP_DIR/zugferd-test.pdf"
+          EXTRACT_DIR="''${1:-$TMP_DIR/extracted}"
+          mkdir -p "$EXTRACT_DIR"
+
+          echo "Compiling ZUGFeRD PDF..."
+          ${typstEnv}/bin/typst compile \
+            --root . \
+            --pdf-standard=a-3b \
+            tests/integration/zugferd-basic/test.typ \
+            "$PDF_PATH"
+
+          echo "Extracting factur-x.xml..."
+          ${pkgs.poppler-utils}/bin/pdfdetach -saveall -o "$EXTRACT_DIR" "$PDF_PATH"
+
+          if [ ! -f "$EXTRACT_DIR/factur-x.xml" ]; then
+            echo "Error: factur-x.xml not found in compiled PDF!" >&2
+            exit 1
+          fi
+
+          echo "Validating ZUGFeRD XML..."
+          ${mustang-cli}/bin/mustang-cli --action validate --source "$EXTRACT_DIR/factur-x.xml"
+
+          echo "✔ ZUGFeRD validation passed!"
+        '';
+
       in
       {
         apps.default = {
@@ -63,6 +122,8 @@
         };
 
         packages.default = invoice-proPackage;
+
+        packages.validate-zugferd = validate-zugferd;
 
         packages.documentation = pkgs.buildNpmPackage {
           pname = "invoice-pro-documentation";
@@ -122,16 +183,20 @@
           echo "========================"
 
           echo ""
-          echo "[1/3] Running linter..."
+          echo "[1/4] Running linter..."
           nix build .#checks.''${system}.lint --print-build-logs
 
           echo ""
-          echo "[2/3] Running tests..."
+          echo "[2/4] Running tests..."
           nix develop .#test --accept-flake-config --command tt run
 
           echo ""
-          echo "[3/3] Building documentation..."
+          echo "[3/4] Building documentation..."
           nix build .#documentation --print-build-logs
+
+          echo ""
+          echo "[4/4] Validating ZUGFeRD PDF..."
+          nix run .#validate-zugferd --accept-flake-config
 
           echo ""
           echo "✔ All checks passed successfully!"
@@ -159,6 +224,7 @@
             tytanic.packages.${system}.default
             self.packages.${system}.check-version
             self.packages.${system}.check-pr
+            self.packages.${system}.validate-zugferd
           ] ++ self.checks.${system}.pre-commit-check.enabledPackages;
 
           shellHook = ''
