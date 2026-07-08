@@ -70,24 +70,33 @@ For the generated XML payload to be valid, your input data must satisfy strict s
 
 Both the `sender` and `recipient` dictionaries must include:
 
-- **Country:** Must be a valid two-letter ISO country code (e.g., `"DE"`, `"FR"`, `"US"`).
-- **City and Postal Code:** Must be fully specified. To ensure correct splitting for XML generation, you can define your city as a dictionary:
-  ```typst
-  city: (name: "Berlin", post-code: "10115")
-  ```
+- **Country:** Must be a predefined country configuration from the `country` module (e.g., `country.de`, `country.fr`, `country.us`). See the [Country API](./api-reference/invoice/country.md) documentation for details.
+- **Address:** ZUGFeRD supports up to three distinct address lines (`ram:LineOne`, `ram:LineTwo`, and `ram:LineThree`). You can specify the address in any of the following polymorphic forms, which are fully supported:
+  - **A single string or content:** Maps entirely to `ram:LineOne` (e.g., `"123 Main St"`).
+  - **An array of strings or content:** Maps sequentially to the three lines. If there are more than three elements in the array, the remaining elements are joined automatically into `ram:LineThree` using a comma separator (e.g., `("123 Main St", "Suite 100", "4th Floor", "Room 402")` maps to `"123 Main St"`, `"Suite 100"`, and `"4th Floor, Room 402"` respectively).
+- **City and Postal Code:** Must be fully specified. To ensure correct splitting for XML generation, you can provide this in one of two ways:
+  - **As a String (Parsed Automatically):** Pass the city and postal code as a single string (e.g., `"10115 Berlin"`). If the `country` parameter is configured correctly, the engine will use region-specific parsers to automatically extract the post code and city name.
+  - **As a Dictionary (Explicit Definition):** Alternatively, explicitly define the name and post-code using a dictionary to prevent any parsing ambiguity:
+    ```typst
+    city: (name: "Berlin", post-code: "10115")
+    ```
 - **Tax Identifiers:**
   - The **sender** should include a `tax-nr` (national tax number) and/or `vat-id` (value-added tax identifier).
   - The **recipient** (buyer) should include a `vat-id` if applicable.
 
 ### 2. Standardized Unit Codes
 
-ZUGFeRD requires line-item units to comply with the **UN/ECE Recommendation 20** unit code standard.
+ZUGFeRD requires line-item units to comply with the **UN/ECE Recommendation 20** unit code standard. To ensure a fully compliant configuration, the following approaches are supported (in order of preference):
 
-- **Automatic Mapping:** Common strings in `invoice-pro` (like `"h"`, `"hrs"`, `"Std."` for hours, or `"days"`, `"Tag"` for days) are automatically mapped to official codes (`HUR`, `DAY`, etc.).
-- **Manual / Custom Codes:** If you have custom units, pass them as a dictionary containing both the display text and the official UN/ECE code:
+- **Predefined Units (Recommended):** Use the predefined unit builder functions from the `unit` module (e.g., `unit.hour`, `unit.day`, `unit.piece`, etc.). These are automatically resolved using the document's global locale and map to compliant UN/ECE codes. See the [Unit API Reference](./api-reference/line-items/unit.md) for details.
+  ```typst
+  unit: unit.hour
+  ```
+- **Custom / Dictionary Units:** If you have special or custom unit requirements, pass a dictionary containing both the display text and the official UN/ECE code:
   ```typst
   unit: (display: "Piece", code: "C62")
   ```
+- **Automatic Mapping:** As a fallback, common unit strings (such as `"h"`, `"hrs"`, `"Std."` for hours, or `"days"`, `"Tag"` for days) are automatically mapped to their official codes.
 
 ### 3. Tax Category Codes
 
@@ -116,8 +125,8 @@ Here is a full example of a ZUGFeRD-compliant invoice configuration:
   sender: (
     name: "Consulting Group GmbH",
     address: "Tech Avenue 42",
-    city: (name: "München", post-code: "80331"),
-    country: "DE",
+    city: "80331 München",
+    country: country.de,
     tax-nr: "143/123/45678",
     vat-id: "DE123456789",
   ),
@@ -126,7 +135,7 @@ Here is a full example of a ZUGFeRD-compliant invoice configuration:
     name: "Acme Corp",
     address: "Industrial Road 1",
     city: (name: "Stuttgart", post-code: "70173"),
-    country: "DE",
+    country: country.de,
     vat-id: "DE987654321",
   ),
 
@@ -140,11 +149,11 @@ Here is a full example of a ZUGFeRD-compliant invoice configuration:
 = Project Deliverables
 
 #line-items[
-  // Using an automatically mapped unit
+  // Using a predefined unit from the unit module (resolved dynamically)
   #item(
     [Senior Software Development],
     quantity: 40,
-    unit: "h",
+    unit: unit.hour,
     price: 120.00,
   )
 

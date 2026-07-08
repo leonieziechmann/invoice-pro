@@ -60,50 +60,55 @@
   vat-id,
   include-addresses,
 ) = {
-  let address-dict = if include-addresses and address != none {
-    let addr = (:)
-    if postcode != none and postcode != "" {
-      addr.insert("ram:PostcodeCode", postcode)
+  let tax-registrations = {
+    if vat-id != none and vat-id != "" {
+      (
+        (
+          "ram:ID": (
+            "@schemeID": "VA",
+            "": vat-id,
+          ),
+        ),
+      )
     }
-    addr.insert("ram:LineOne", address)
-    addr.insert("ram:CityName", city)
-    addr.insert("ram:CountryID", country)
+    if tax-nr != none and tax-nr != "" {
+      (
+        (
+          "ram:ID": (
+            "@schemeID": "FC",
+            "": tax-nr,
+          ),
+        ),
+      )
+    }
+  }
+
+  ("ram:Name": name)
+  if include-addresses and address != none and address != () {
     (
-      "ram:PostalTradeAddress": addr,
+      "ram:PostalTradeAddress": {
+        if postcode != none and postcode != "" {
+          ("ram:PostcodeCode": postcode)
+        }
+        if type(address) == array {
+          if address.len() > 0 { ("ram:LineOne": address.at(0)) }
+          if address.len() > 1 { ("ram:LineTwo": address.at(1)) }
+          if address.len() > 2 {
+            ("ram:LineThree": address.slice(2).join(", "))
+          }
+        } else {
+          ("ram:LineOne": address)
+        }
+        ("ram:CityName": city)
+        ("ram:CountryID": country)
+      },
     )
-  } else { (:) }
-
-  let tax-registrations = ()
-  if vat-id != none and vat-id != "" {
-    tax-registrations.push((
-      "ram:ID": (
-        "@schemeID": "VA",
-        "": vat-id,
-      ),
-    ))
   }
-  if tax-nr != none and tax-nr != "" {
-    tax-registrations.push((
-      "ram:ID": (
-        "@schemeID": "FC",
-        "": tax-nr,
-      ),
-    ))
-  }
-
-  let tax-registration-dict = if tax-registrations.len() > 0 {
+  if tax-registrations.len() > 0 {
     (
       "ram:SpecifiedTaxRegistration": tax-registrations,
     )
-  } else { (:) }
-
-  (
-    (
-      "ram:Name": name,
-    )
-      + address-dict
-      + tax-registration-dict
-  )
+  }
 }
 
 // Emits the buyer trade party details
@@ -121,20 +126,28 @@
   vat-id,
   include-addresses,
 ) = {
-  let address-dict = if include-addresses and address != none {
-    let addr = (:)
-    if postcode != none and postcode != "" {
-      addr.insert("ram:PostcodeCode", postcode)
-    }
-    addr.insert("ram:LineOne", address)
-    addr.insert("ram:CityName", city)
-    addr.insert("ram:CountryID", country)
+  ("ram:Name": name)
+  if include-addresses and address != none and address != () {
     (
-      "ram:PostalTradeAddress": addr,
+      "ram:PostalTradeAddress": {
+        if postcode != none and postcode != "" {
+          ("ram:PostcodeCode": postcode)
+        }
+        if type(address) == array {
+          if address.len() > 0 { ("ram:LineOne": address.at(0)) }
+          if address.len() > 1 { ("ram:LineTwo": address.at(1)) }
+          if address.len() > 2 {
+            ("ram:LineThree": address.slice(2).join(", "))
+          }
+        } else {
+          ("ram:LineOne": address)
+        }
+        ("ram:CityName": city)
+        ("ram:CountryID": country)
+      },
     )
-  } else { (:) }
-
-  let tax-registration-dict = if vat-id != none and vat-id != "" {
+  }
+  if vat-id != none and vat-id != "" {
     (
       "ram:SpecifiedTaxRegistration": (
         "ram:ID": (
@@ -143,15 +156,7 @@
         ),
       ),
     )
-  } else { (:) }
-
-  (
-    (
-      "ram:Name": name,
-    )
-      + address-dict
-      + tax-registration-dict
-  )
+  }
 }
 
 // Emits a single supply chain line item
@@ -380,7 +385,7 @@
   transaction.insert("ram:ApplicableHeaderTradeAgreement", (
     "ram:SellerTradeParty": build-seller-trade-party(
       ctx.sender.name-inline,
-      ctx.sender.address-inline,
+      ctx.sender.address-lines,
       ctx.sender.city-name,
       ctx.sender.post-code,
       ctx.sender.country.code,
@@ -390,7 +395,7 @@
     ),
     "ram:BuyerTradeParty": build-buyer-trade-party(
       ctx.recipient.name-inline,
-      ctx.recipient.address-inline,
+      ctx.recipient.address-lines,
       ctx.recipient.city-name,
       ctx.recipient.post-code,
       ctx.recipient.country.code,

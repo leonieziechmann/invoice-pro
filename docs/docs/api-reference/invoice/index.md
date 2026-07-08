@@ -46,12 +46,24 @@ Standard keys generally include `name`, `address`, and `city`. Additionally, you
 
 Just like the header `references`, the `extra` field accepts either a dictionary of key-value pairs or an array of `(label, value)` tuples.
 
+#### Polymorphic Address Support
+
+The `address` key is polymorphic, accepting strings, content blocks, or arrays of string/content:
+
+- **`str` or `content`**: A single-line address (e.g. `"Musterstraße 1"` or `[Musterstraße 1]`).
+- **`array`**: Multiple address lines (e.g. `("Musterstraße 1", "Hinterhaus 2")`).
+
+**Layout Formatting:**
+
+- In vertical layouts (e.g., envelope address window block), lines are separated by line breaks (`\`).
+- In horizontal layouts (e.g., inline details block), lines are separated by commas (`", "`).
+
 **Example:**
 
 ```typst
 sender: (
   name: "Max Mustermann",
-  address: "Musterstraße 1",
+  address: ("Musterstraße 1", "Hinterhaus 2"),
   city: "12345 Musterstadt",
   extra: (
     "Phone": "+49 123 456789",

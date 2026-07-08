@@ -28,6 +28,7 @@
         ensure("state", "#sender.state")
         ensure("tax-nr", "#sender.tax-nr")
         ensure("vat-id", "#sender.vat-id")
+        ensure("address-lines", ())
 
         ensure("extra", ())
         update("extra", x => if type(x) == dictionary { x.pairs() } else { x })
@@ -46,6 +47,7 @@
         ensure("state", "#recipient.state")
         ensure("tax-nr", "#recipient.tax-nr")
         ensure("vat-id", "#recipient.vat-id")
+        ensure("address-lines", ())
 
         ensure("extra", ())
         update("extra", x => if type(x) == dictionary { x.pairs() } else { x })

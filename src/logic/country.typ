@@ -372,6 +372,15 @@
   let address-vertical = format-poly-block(address-raw)
   let address-inline = format-poly-inline(address-raw)
 
+  import "../utils/coercion.typ": to-string
+  let address-lines = if address-raw == none {
+    ()
+  } else if type(address-raw) == array {
+    address-raw.map(to-string)
+  } else {
+    (to-string(address-raw),)
+  }
+
   // 4. Format city (handling international country name printing)
   let display-country-name = none
   if (
@@ -403,28 +412,33 @@
   } else { none }
 
   // 5. Build normalized dictionary
-  let result = party
-  result.insert("name", name-vertical)
-  result.insert("address", address-vertical)
-  result.insert("city", city-vertical)
-  result.insert("name-inline", name-inline)
-  result.insert("address-inline", address-inline)
-  result.insert("city-inline", city-inline)
-  result.insert("country", resolved-country)
+  {
+    party
+    (
+      name: name-vertical,
+      address-lines: address-lines,
+      address: address-vertical,
+      city: city-vertical,
+      name-inline: name-inline,
+      address-inline: address-inline,
+      city-inline: city-inline,
+      country: resolved-country,
+      city-name: none,
+      post-code: none,
+      state: none,
+      tax-nr: party.at("tax-nr", default: none),
+      vat-id: party.at("vat-id", default: none),
+    )
 
-  // Expose parsed fields
-  result.insert("city-name", if parsed-city != none {
-    parsed-city.at("name", default: none)
-  } else { none })
-  result.insert("post-code", if parsed-city != none {
-    parsed-city.at("post-code", default: none)
-  } else { none })
-  result.insert("state", if parsed-city != none {
-    parsed-city.at("state", default: none)
-  } else { none })
-  result.insert("tax-nr", party.at("tax-nr", default: none))
-  result.insert("vat-id", party.at("vat-id", default: none))
-
-  result
+    if parsed-city != none {
+      (city-name: parsed-city.at("name", default: none))
+    }
+    if parsed-city != none {
+      (post-code: parsed-city.at("post-code", default: none))
+    }
+    if parsed-city != none {
+      (state: parsed-city.at("state", default: none))
+    }
+  }
 }
 

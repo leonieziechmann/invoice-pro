@@ -76,6 +76,104 @@
   ))
 }
 
+// --- Test ZUGFeRD address lines formatting ---
+#{
+  import "/src/zugferd/build.typ": (
+    build-buyer-trade-party, build-seller-trade-party,
+  )
+
+  // 1. Test Seller Trade Party with single string address
+  let seller-single = build-seller-trade-party(
+    "Name",
+    "Street 1",
+    "City",
+    "12345",
+    "DE",
+    "12/345/6789",
+    "DE987654321",
+    true,
+  )
+  assert.eq(
+    seller-single.at("ram:PostalTradeAddress").at("ram:LineOne"),
+    "Street 1",
+  )
+  assert.eq(
+    seller-single.at("ram:PostalTradeAddress").at("ram:LineTwo", default: none),
+    none,
+  )
+
+  // 2. Test Seller Trade Party with array address <= 3 elements
+  let seller-array-3 = build-seller-trade-party(
+    "Name",
+    ("Street 1", "Suite 100", "Floor 3"),
+    "City",
+    "12345",
+    "DE",
+    "12/345/6789",
+    "DE987654321",
+    true,
+  )
+  assert.eq(
+    seller-array-3.at("ram:PostalTradeAddress").at("ram:LineOne"),
+    "Street 1",
+  )
+  assert.eq(
+    seller-array-3.at("ram:PostalTradeAddress").at("ram:LineTwo"),
+    "Suite 100",
+  )
+  assert.eq(
+    seller-array-3.at("ram:PostalTradeAddress").at("ram:LineThree"),
+    "Floor 3",
+  )
+
+  // 3. Test Seller Trade Party with array address > 3 elements
+  let seller-array-4 = build-seller-trade-party(
+    "Name",
+    ("Street 1", "Suite 100", "Floor 3", "Apartment 4B"),
+    "City",
+    "12345",
+    "DE",
+    "12/345/6789",
+    "DE987654321",
+    true,
+  )
+  assert.eq(
+    seller-array-4.at("ram:PostalTradeAddress").at("ram:LineOne"),
+    "Street 1",
+  )
+  assert.eq(
+    seller-array-4.at("ram:PostalTradeAddress").at("ram:LineTwo"),
+    "Suite 100",
+  )
+  assert.eq(
+    seller-array-4.at("ram:PostalTradeAddress").at("ram:LineThree"),
+    "Floor 3, Apartment 4B",
+  )
+
+  // 4. Test Buyer Trade Party with array address
+  let buyer-array = build-buyer-trade-party(
+    "Name",
+    ("Street A", "Suite B"),
+    "City",
+    "54321",
+    "FR",
+    "FR123456789",
+    true,
+  )
+  assert.eq(
+    buyer-array.at("ram:PostalTradeAddress").at("ram:LineOne"),
+    "Street A",
+  )
+  assert.eq(
+    buyer-array.at("ram:PostalTradeAddress").at("ram:LineTwo"),
+    "Suite B",
+  )
+  assert.eq(
+    buyer-array.at("ram:PostalTradeAddress").at("ram:LineThree", default: none),
+    none,
+  )
+}
+
 // --- Test items and bundles resolving units via ctx ---
 #import "/tests/data-test.typ": data-test
 #import "/tests/test-locale.typ": test-locale
