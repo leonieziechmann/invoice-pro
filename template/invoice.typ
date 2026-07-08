@@ -36,20 +36,20 @@
   #bundle(
     [Website Relaunch 2026],
     date: (date(10, 2, 2026), date(5, 3, 2026)),
-    unit: "flat",
+    unit: unit.flat,
   )[
     #item(
       [Concept & Wireframing],
       price: 1200.00,
       quantity: 1,
-      unit: "flat",
+      unit: unit.flat,
     )
-    #item([UI/UX Design], price: 85.00, quantity: 15, unit: "hrs")
+    #item([UI/UX Design], price: 85.00, quantity: 15, unit: unit.flat)
     #item(
       [Frontend & Backend Development],
       price: 95.00,
       quantity: 40,
-      unit: "hrs",
+      unit: unit.h,
     )
 
     #discount([Package Discount (10% on development services)], amount: 10%)
@@ -59,7 +59,7 @@
         [Keyword Research & Strategy],
         price: 90.00,
         quantity: 5,
-        unit: "hrs",
+        unit: unit.h,
       )
       #item([Setup Google Analytics & Tag Manager], price: 150.00, quantity: 1)
     ]
@@ -70,13 +70,13 @@
       [Textbook: "Modern Web Design"],
       price: 49.90,
       quantity: 2,
-      unit: "pcs",
+      unit: unit.pcs,
     )
     #item(
       [Textbook: "SEO for Beginners"],
       price: 29.90,
       quantity: 1,
-      unit: "pcs",
+      unit: unit.pcs,
     )
   ]
 
@@ -84,7 +84,7 @@
     [Premium Hosting],
     price: 15.00,
     quantity: 12,
-    unit: "months",
+    unit: unit.mo,
     date: datetime.today(),
   )
 
@@ -92,7 +92,7 @@
     [Domain Registration (.com)],
     total: 11.90,
     input-gross: true,
-    unit: "flat",
+    unit: unit.flat,
   )
 
   #item(
@@ -100,7 +100,7 @@
     price: 0,
     tax: tax.zero(),
     description: "Included service as per framework agreement",
-    unit: "flat",
+    unit: unit.flat,
   )
 
   #discount([Promo Voucher "NEWCUSTOMER50"], amount: 50)

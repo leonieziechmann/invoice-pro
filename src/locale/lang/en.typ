@@ -60,6 +60,27 @@
     date: "Service date for all items:",
   ),
 
+  units: (
+    piece: "piece",
+    "set": "set",
+    pair: "pair",
+    "lump-sum": "lump sum",
+    hour: "hour",
+    day: "day",
+    month: "month",
+    year: "year",
+    kilogram: "kilogram",
+    gram: "gram",
+    tonne: "tonne",
+    metre: "metre",
+    "square-metre": "square metre",
+    millimetre: "millimetre",
+    centimetre: "centimetre",
+    kilometre: "kilometre",
+    litre: "litre",
+    "cubic-metre": "cubic metre",
+  ),
+
   /// Designations for bank and payment details
   bank-details: (
     account-holder: "Account Holder",

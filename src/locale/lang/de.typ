@@ -55,6 +55,27 @@
     date: "Leistungsdatum für alle Artikel:",
   ),
 
+  units: (
+    piece: "Stück",
+    "set": "Satz",
+    pair: "Paar",
+    "lump-sum": "Pauschale",
+    hour: "Stunde",
+    day: "Tag",
+    month: "Monat",
+    year: "Jahr",
+    kilogram: "Kilogramm",
+    gram: "Gramm",
+    tonne: "Tonne",
+    metre: "Meter",
+    "square-metre": "Quadratmeter",
+    millimetre: "Millimeter",
+    centimetre: "Zentimeter",
+    kilometre: "Kilometer",
+    litre: "Liter",
+    "cubic-metre": "Kubikmeter",
+  ),
+
   bank-details: (
     account-holder: "Kontoinhaber:in",
     bank: "Kreditinstitut",

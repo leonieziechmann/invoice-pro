@@ -3,8 +3,9 @@
 #import "../logic/calc-bundle.typ": calculate-bundle
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
-#import "../data/unit.typ" as m-unit
+#import "../data/unit.typ"
 #import "../data/tax.typ" as m-tax
+#import "../public/unit.typ" as m-unit
 
 /// A container used to group multiple items together under a single overarching item.
 /// It aggregates the totals and dates of its bundled children and acts as a virtual item
@@ -69,6 +70,7 @@
     auto,
     types.text-like,
     types.unit-input-type,
+    function,
   )
 
   types.require(date, "bundle::date", none, auto, types.date-like)
@@ -101,7 +103,11 @@
         coercion.to-decimal(base-quantity),
         default: decimal("1"),
       )
-      derive("unit", unit, default: [pc.])
+      derive(
+        "unit",
+        if type(unit) == function { unit(ctx.locale) } else { unit },
+        default: (m-unit.pcs)(ctx.locale),
+      )
 
       derive("date", date)
       put("bundle-date", ctx.at("date", default: date))

@@ -60,6 +60,27 @@
     date: "Fecha de servicio para todos los artículos:",
   ),
 
+  units: (
+    piece: "unidad",
+    "set": "juego",
+    pair: "par",
+    "lump-sum": "suma global",
+    hour: "hora",
+    day: "día",
+    month: "mes",
+    year: "año",
+    kilogram: "kilogramo",
+    gram: "gramo",
+    tonne: "tonelada",
+    metre: "metro",
+    "square-metre": "metro cuadrado",
+    millimetre: "milímetro",
+    centimetre: "centímetro",
+    kilometre: "kilómetro",
+    litre: "litro",
+    "cubic-metre": "metro cúbico",
+  ),
+
   /// Denominaciones para detalles bancarios y de pago
   bank-details: (
     account-holder: "Titular de la cuenta",

@@ -3,6 +3,7 @@
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
 #import "../data/tax.typ" as m-tax
+#import "../public/unit.typ" as m-unit
 
 /// Normalizes a modifier input (content, dictionary, or signal) into a structured modifier object.
 ///
@@ -130,6 +131,7 @@
     auto,
     types.text-like,
     types.unit-input-type,
+    function,
   )
 
   types.require(date, "item::date", none, auto, types.date-like)
@@ -172,7 +174,11 @@
         coercion.to-decimal(base-quantity),
         default: decimal("1"),
       )
-      derive("unit", unit, default: [Stk.])
+      derive(
+        "unit",
+        if type(unit) == function { unit(ctx.locale) } else { unit },
+        default: (m-unit.pc)(ctx.locale),
+      )
 
       derive("date", coercion.to-date(date))
 

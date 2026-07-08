@@ -60,6 +60,27 @@
     date: "Data della prestazione per tutti gli articoli:",
   ),
 
+  units: (
+    piece: "pezzo",
+    "set": "set",
+    pair: "paio",
+    "lump-sum": "a forfait",
+    hour: "ora",
+    day: "giorno",
+    month: "mese",
+    year: "anno",
+    kilogram: "chilogrammo",
+    gram: "grammo",
+    tonne: "tonnellata",
+    metre: "metro",
+    "square-metre": "metro quadrato",
+    millimetre: "millimetro",
+    centimetre: "centimetro",
+    kilometre: "chilometro",
+    litre: "litro",
+    "cubic-metre": "metro cubo",
+  ),
+
   /// Denominazioni per i dettagli bancari e di pagamento
   bank-details: (
     account-holder: "Intestatario del conto",
