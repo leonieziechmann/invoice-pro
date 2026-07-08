@@ -32,6 +32,7 @@ jobs:
       - name: Compile ZUGFeRD PDF
         run: |
           nix develop --accept-flake-config --command typst compile \
+            --root . \
             --pdf-standard=a-3b \
             tests/integration/zugferd-basic/test.typ \
             /tmp/zugferd-test.pdf
