@@ -84,8 +84,8 @@
   /// The reference quantity for the price, useful for calculating price-per-unit ratios. Automatically defaults to `1`.
   /// -> int | float | decimal | str | auto
   base-quantity: auto,
-  /// The unit of measurement.
-  /// -> str | content | auto | none
+  /// The unit of measurement. For ZUGFeRD compliance, pass a dictionary: `(display: "Std.", code: "HUR")`.
+  /// -> str | content | dictionary | auto | none
   unit: auto,
 
   /// The date or a date range `(datetime, datetime)` the item or service was provided.
@@ -123,7 +123,7 @@
 
   types.require(quantity, "item::quantity", auto, types.decimal-like)
   types.require(base-quantity, "item::base-quantity", auto, types.decimal-like)
-  types.require(unit, "item::unit", none, auto, types.text-like)
+  types.require(unit, "item::unit", none, auto, types.text-like, types.unit-input-type)
 
   types.require(date, "item::date", none, auto, types.date-like)
 

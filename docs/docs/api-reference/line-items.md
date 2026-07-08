@@ -63,7 +63,7 @@ You must provide either a `price` (unit price) **or** a `total` (fixed line tota
 | `description`   | `str` \| `content` \| `auto` \| `none`    | Detailed text appearing below the name.                                                                                                              |
 | `quantity`      | `number` \| `auto`                        | The numeric amount being billed (defaults to 1).                                                                                                     |
 | `base-quantity` | `number` \| `auto`                        | The reference quantity for the price (e.g., pricing per 100g).                                                                                       |
-| `unit`          | `str` \| `content` \| `auto` \| `none`    | The unit of measurement (e.g., `"h"`, `"pcs"`).                                                                                                      |
+| `unit`          | `str` \| `content` \| `dictionary` \| `auto` \| `none` | The unit of measurement (e.g., `"h"`, `"pcs"`). Pass a dictionary for ZUGFeRD compliance — see below.                                         |
 | `date`          | `datetime` \| `array` \| `auto` \| `none` | When the service was provided. Use a single `datetime` or a range array `(datetime, datetime)`.                                                      |
 | `price`         | `number` \| `auto`                        | The price per unit.                                                                                                                                  |
 | `total`         | `number` \| `auto`                        | The fixed total price for the line item.                                                                                                             |
@@ -71,10 +71,22 @@ You must provide either a `price` (unit price) **or** a `total` (fixed line tota
 | `input-gross`   | `bool` \| `auto`                          | Overrides the parent `input-gross` setting specifically for this item.                                                                               |
 | `tax`           | `ratio` \| `dictionary` \| `auto`         | Overrides the parent `tax` setting specifically for this item.                                                                                       |
 
-:::warning
-_Future ZUGFeRD Updates:_
-The behavior of the `unit` parameter will undergo changes in future versions to ensure full compatibility with the ZUGFeRD e-invoicing standard.
-:::
+### The `unit` Dictionary (ZUGFeRD Compliance)
+
+When generating ZUGFeRD / Factur-X XML, each line item requires a precise [UN/CEFACT Recommendation 20](https://unece.org/trade/uncefact/cl-recommendations) unit code. The plain-string fallback (`"hrs"` → `"HUR"`) only covers common cases and may produce `"C62"` (generic unit) for anything unrecognised.
+
+For reliable compliance, pass a dictionary instead:
+
+```typst
+unit: (display: "Std.", code: "HUR")
+```
+
+| Key | Type | Description |
+| --- | --- | --- |
+| `display` | `str` \| `content` | Text shown on the printed invoice. |
+| `code` | `str` | UN/CEFACT Rec. 20 unit code written into the ZUGFeRD XML (e.g., `"HUR"`, `"DAY"`, `"C62"`). |
+
+This dictionary form is recommended whenever `zugferd` is set on the invoice. If you only pass a plain string, the package attempts a best-effort mapping and falls back to `"C62"` for unrecognised values.
 
 ### The `tax` Parameter
 
@@ -105,7 +117,7 @@ Groups multiple items together as a virtual single item while automatically aggr
 | `description`   | `str` \| `content` \| `auto` \| `none`    | If set to `auto`, it automatically generates a comma-separated list of all child item names.                       |
 | `quantity`      | `number` \| `auto`                        | The quantity of the bundle itself.                                                                                 |
 | `base-quantity` | `number` \| `auto`                        | The reference quantity for the price (e.g., pricing per 100g).                                                     |
-| `unit`          | `str` \| `content` \| `auto` \| `none`    | The unit of measurement for the bundle.                                                                            |
+| `unit`          | `str` \| `content` \| `dictionary` \| `auto` \| `none` | The unit of measurement for the bundle. Accepts the same dictionary form as `item` for ZUGFeRD compliance.   |
 | `date`          | `datetime` \| `array` \| `auto` \| `none` | If set to `auto`, calculates the date range based on the earliest and latest dates of the items inside the bundle. |
 | `input-gross`   | `bool` \| `auto`                          | Overrides the parent `input-gross` setting specifically for children.                                              |
 | `tax`           | `ratio` \| `dictionary` \| `auto`         | Overrides the parent `tax` setting specifically for children.                                                      |

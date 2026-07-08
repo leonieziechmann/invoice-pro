@@ -31,6 +31,7 @@ Initializes the document and orchestrates the data calculation passes.
 | `tax`                  | `auto` \| `ratio` \| `dictionary` \| `none` | The default tax rate for the document. See [Tax](#tax--tax-exempt-small-biz) below.                                                                                |
 | `tax-mode`             | `"exclusive"` \| `"inclusive"`              | Sets the global baseline for tax calculation. `"exclusive"` treats standard prices as net. `"inclusive"` treats standard prices as gross.                          |
 | `tax-exempt-small-biz` | `bool`                                      | If `true`, applies the small business tax exemption logic based on the selected locale.                                                                            |
+| `zugferd`              | `none` \| `"minimum"` \| `"basic-wl"` \| `"basic"` \| `"en16931"` | _(Experimental)_ Embeds a machine-readable ZUGFeRD / Factur-X XML into the PDF. Requires compiling with `--pdf-standard=a-3b`. |
 | `body`                 | `content`                                   | The content of the invoice, containing your containing your [`line-items`](./line-items) and other layout components.                                              |
 
 ## Key Parameters Explained
@@ -127,6 +128,51 @@ You can provide this data in two formats:
     ("Order Date", "2026-04-10")
   )
   ```
+
+### `zugferd` — ZUGFeRD / Factur-X _(Experimental)_
+
+:::caution Experimental Feature
+ZUGFeRD / Factur-X support is experimental. The generated XML has not yet been validated against all edge cases of the EN 16931 standard. Do not rely on it for legally binding e-invoices without independent validation.
+:::
+
+Setting `zugferd` to a profile string embeds a machine-readable `factur-x.xml` file inside the PDF according to the ZUGFeRD 2.x / Factur-X 1.0 standard. This allows accounting software to automatically import your invoice data.
+
+**Required CLI flag:** You must compile with PDF/A-3b support for the attachment to be valid:
+
+```bash
+typst compile --pdf-standard=a-3b invoice.typ
+```
+
+**Available profiles:**
+
+| Profile | Description |
+| --- | --- |
+| `"minimum"` | Header-only data (seller, buyer, date, total). No line items. |
+| `"basic-wl"` | Header + payment details. No line items. |
+| `"basic"` | Full line items included. |
+| `"en16931"` | Full EN 16931 compliance with complete line-item data (recommended). |
+
+**Example:**
+
+```typst
+#show: invoice.with(
+  zugferd: "en16931",
+  sender: (
+    name: "Musterfirma GmbH",
+    address: "Musterstraße 1",
+    city: "12345 Musterstadt",
+    vat-id: "DE123456789",
+  ),
+  recipient: (
+    name: "Kunde AG",
+    address: "Kundenweg 5",
+    city: "54321 Kundenstadt",
+  ),
+  invoice-nr: "INV-2026-001",
+)
+```
+
+For accurate UN/CEFACT unit codes in the embedded XML, use the dictionary form for `unit` on your line items — see the [Line Items API](./line-items#item) for details.
 
 ---
 

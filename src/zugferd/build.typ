@@ -11,6 +11,9 @@
 
 // Map common invoice-pro unit strings to UN/ECE recommendation 20 unit codes.
 #let map-unit-code(unit) = {
+  if type(unit) == dictionary and "code" in unit {
+    return unit.code
+  }
   let u = if type(unit) == str { unit } else if unit == none { "" } else {
     to-string(unit)
   }

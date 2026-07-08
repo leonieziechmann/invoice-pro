@@ -143,7 +143,7 @@
         update("quantity", format.number)
         update("base-quantity", format.number)
 
-        update("unit", x => [#x])
+        update("unit", x => if type(x) == dictionary and "display" in x { [#(x.display)] } else { [#x] })
 
         update("price", format.currency-fine)
         update("total", format.currency)

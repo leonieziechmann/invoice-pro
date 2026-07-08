@@ -26,8 +26,8 @@
   /// The reference quantity for the bundle's price calculation. Automatically defaults to `1`.
   /// -> int | float | decimal | str | auto
   base-quantity: auto,
-  /// The unit of measurement for the bundle.
-  /// -> str | content | auto | none
+  /// The unit of measurement for the bundle. For ZUGFeRD compliance, pass a dictionary: `(display: "Std.", code: "HUR")`.
+  /// -> str | content | dictionary | auto | none
   unit: auto,
 
   /// The date or date range for the bundle. If `auto`, it calculates a single date or date range based on the dates of the bundled items.
@@ -62,7 +62,7 @@
     auto,
     types.decimal-like,
   )
-  types.require(unit, "bundle::unit", none, auto, types.text-like)
+  types.require(unit, "bundle::unit", none, auto, types.text-like, types.unit-input-type)
 
   types.require(date, "bundle::date", none, auto, types.date-like)
 

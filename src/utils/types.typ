@@ -75,6 +75,13 @@
 
 #let unit-like = _matcher.choice(str, unit-type)
 
+// Dictionary form for ZUGFeRD-compliant unit specification.
+// `display` is rendered on the PDF; `code` is the UN/CEFACT Rec. 20 code embedded in the XML.
+#let unit-input-type = (
+  display: text-like,
+  code: str,
+)
+
 #let modifier-type = (
   name: _matcher.choice(text-like),
   description: _matcher.choice(none, text-like),

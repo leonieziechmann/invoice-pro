@@ -26,6 +26,12 @@
 #line-items[
   #item([Beratungsleistung], price: 100.00, quantity: 10, unit: "hrs")
   #item(
+    [Beratungsleistung (ZUGFeRD-konform)],
+    price: 120.00,
+    quantity: 5,
+    unit: (display: "Std.", code: "HUR"),
+  )
+  #item(
     [Software-Lizenz],
     price: 49.90,
     quantity: 2,
