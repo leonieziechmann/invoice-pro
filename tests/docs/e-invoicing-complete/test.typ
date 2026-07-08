@@ -1,6 +1,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
+  theme: themes.DIN-5008(font: "libertinus serif"),
   // Enable the comfort EN 16931 e-invoicing profile
   zugferd: "en16931",
 
@@ -11,6 +12,11 @@
     country: country.de,
     tax-nr: "143/123/45678",
     vat-id: "DE123456789",
+    contact: (
+      name: "Max Mustermann",
+      phone: "+49 89 1234567",
+      email: "max@consultinggroup.de",
+    ),
   ),
 
   recipient: (
@@ -19,6 +25,7 @@
     city: (name: "Stuttgart", post-code: "70173"),
     country: country.de,
     vat-id: "DE987654321",
+    buyer-reference: "DE123456789-12345-12",
   ),
 
   invoice-nr: "INV-2026-102",

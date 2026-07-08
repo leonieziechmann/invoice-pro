@@ -92,6 +92,7 @@
     "basic-wl",
     "basic",
     "en16931",
+    "xrechnung",
   )
 
   /** Input Calculations **/

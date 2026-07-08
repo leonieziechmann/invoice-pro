@@ -161,12 +161,17 @@ typst compile --pdf-standard=a-3b invoice.typ
 
 **Available profiles:**
 
-| Profile      | Description                                                          |
-| ------------ | -------------------------------------------------------------------- |
-| `"minimum"`  | Header-only data (seller, buyer, date, total). No line items.        |
-| `"basic-wl"` | Header + payment details. No line items.                             |
-| `"basic"`    | Full line items included.                                            |
-| `"en16931"`  | Full EN 16931 compliance with complete line-item data (recommended). |
+| Profile       | Description                                                                                    |
+| ------------- | ---------------------------------------------------------------------------------------------- |
+| `"minimum"`   | Header-only data (seller, buyer, date, total). No line items.                                  |
+| `"basic-wl"`  | Header + payment details. No line items.                                                       |
+| `"basic"`     | Full line items included.                                                                      |
+| `"en16931"`   | Full EN 16931 compliance with complete line-item data (recommended).                           |
+| `"xrechnung"` | Identical to `"en16931"` but specifies full compliance with the German XRechnung 3.0 standard. |
+
+:::info
+If `zugferd` is set to `"en16931"` and both the sender and recipient are located in Germany (`DE`), the system automatically promotes the profile internally to `"xrechnung"` to comply with German national e-invoicing requirements (specification identifier).
+:::
 
 **Example:**
 
@@ -178,11 +183,18 @@ typst compile --pdf-standard=a-3b invoice.typ
     address: "Musterstraße 1",
     city: "12345 Musterstadt",
     vat-id: "DE123456789",
+    contact: (
+      name: "Max Mustermann",
+      phone: "+49 123 456789",
+      email: "max@musterfirma.de",
+    ),
   ),
   recipient: (
     name: "Kunde AG",
     address: "Kundenweg 5",
     city: "54321 Kundenstadt",
+    vat-id: "DE987654321",
+    buyer-reference: "DE123456789-12345-12",
   ),
   invoice-nr: "INV-2026-001",
 )

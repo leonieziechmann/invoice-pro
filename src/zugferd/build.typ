@@ -6,7 +6,44 @@
     profile == "basic-wl"
   ) { "urn:factur-x.eu:1p0:basicwl" } else if profile == "basic" {
     "urn:factur-x.eu:1p0:basic"
+  } else if profile == "xrechnung" {
+    "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0"
   } else { "urn:cen.eu:en16931:2017" }
+}
+
+// Retrieve the electronic address for a party, or derive it from the VAT ID if available.
+#let get-electronic-address(party) = {
+  if "electronic-address" in party and party.electronic-address != none {
+    return party.electronic-address
+  }
+  let vat-id = party.at("vat-id", default: none)
+  let country-code = if (
+    "country" in party and type(party.country) == dictionary
+  ) {
+    party.country.at("code", default: none)
+  } else {
+    none
+  }
+  if vat-id != none and vat-id != "" and country-code != none {
+    let code = lower(country-code)
+    let eas-codes = (
+      de: "9930",
+      at: "9914",
+      ch: "9927",
+      be: "9925",
+      fr: "9918",
+      nl: "9944",
+      gb: "9932",
+      uk: "9932",
+      ie: "9935",
+      it: "9906",
+      es: "9920",
+    )
+    if code in eas-codes {
+      return (scheme: eas-codes.at(code), id: vat-id)
+    }
+  }
+  none
 }
 
 // Map common invoice-pro unit strings to UN/ECE recommendation 20 unit codes.
@@ -31,11 +68,24 @@
 }
 
 // Emits the exchanged document context dictionary
-#let build-document-context(profile) = (
-  "ram:GuidelineSpecifiedDocumentContextParameter": (
-    "ram:ID": profile-urn(profile),
-  ),
-)
+#let build-document-context(profile) = {
+  let doc-context = (:)
+  if profile in ("en16931", "xrechnung") {
+    doc-context.insert(
+      "ram:BusinessProcessSpecifiedDocumentContextParameter",
+      (
+        "ram:ID": "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+      ),
+    )
+  }
+  doc-context.insert(
+    "ram:GuidelineSpecifiedDocumentContextParameter",
+    (
+      "ram:ID": profile-urn(profile),
+    ),
+  )
+  doc-context
+}
 
 // Emits the exchanged document details
 #let build-exchanged-document(invoice-nr, invoice-date) = (
@@ -59,6 +109,8 @@
   tax-nr,
   vat-id,
   include-addresses,
+  electronic-address: none,
+  contact: none,
 ) = {
   let tax-registrations = {
     if vat-id != none and vat-id != "" {
@@ -83,32 +135,61 @@
     }
   }
 
-  ("ram:Name": name)
+  let res = ("ram:Name": name)
+
+  if contact != none {
+    let details = (:)
+    if "name" in contact and contact.name != none and contact.name != "" {
+      details.insert("ram:PersonName", contact.name)
+    }
+    if "phone" in contact and contact.phone != none and contact.phone != "" {
+      details.insert("ram:TelephoneUniversalCommunication", (
+        "ram:CompleteNumber": contact.phone,
+      ))
+    }
+    if "email" in contact and contact.email != none and contact.email != "" {
+      details.insert("ram:EmailURIUniversalCommunication", (
+        "ram:URIID": contact.email,
+      ))
+    }
+    if details.len() > 0 {
+      res.insert("ram:DefinedTradeContact", details)
+    }
+  }
+
   if include-addresses and address != none and address != () {
-    (
-      "ram:PostalTradeAddress": {
-        if postcode != none and postcode != "" {
-          ("ram:PostcodeCode": postcode)
-        }
-        if type(address) == array {
-          if address.len() > 0 { ("ram:LineOne": address.at(0)) }
-          if address.len() > 1 { ("ram:LineTwo": address.at(1)) }
-          if address.len() > 2 {
-            ("ram:LineThree": address.slice(2).join(", "))
-          }
-        } else {
-          ("ram:LineOne": address)
-        }
-        ("ram:CityName": city)
-        ("ram:CountryID": country)
-      },
-    )
+    let postal = (:)
+    if postcode != none and postcode != "" {
+      postal.insert("ram:PostcodeCode", postcode)
+    }
+    if type(address) == array {
+      if address.len() > 0 { postal.insert("ram:LineOne", address.at(0)) }
+      if address.len() > 1 { postal.insert("ram:LineTwo", address.at(1)) }
+      if address.len() > 2 {
+        postal.insert("ram:LineThree", address.slice(2).join(", "))
+      }
+    } else {
+      postal.insert("ram:LineOne", address)
+    }
+    postal.insert("ram:CityName", city)
+    postal.insert("ram:CountryID", country)
+    res.insert("ram:PostalTradeAddress", postal)
   }
+
+  if electronic-address != none {
+    res.insert("ram:URIUniversalCommunication", (
+      "ram:URIID": (
+        "@schemeID": electronic-address.scheme,
+        "": electronic-address.id,
+      ),
+    ))
+  }
+
   if tax-registrations.len() > 0 {
-    (
-      "ram:SpecifiedTaxRegistration": tax-registrations,
-    )
+    res.insert("ram:SpecifiedTaxRegistration", tax-registrations)
   }
+
+  res
 }
 
 // Emits the buyer trade party details
@@ -125,38 +206,48 @@
   country,
   vat-id,
   include-addresses,
+  electronic-address: none,
 ) = {
-  ("ram:Name": name)
+  let res = ("ram:Name": name)
+
   if include-addresses and address != none and address != () {
-    (
-      "ram:PostalTradeAddress": {
-        if postcode != none and postcode != "" {
-          ("ram:PostcodeCode": postcode)
-        }
-        if type(address) == array {
-          if address.len() > 0 { ("ram:LineOne": address.at(0)) }
-          if address.len() > 1 { ("ram:LineTwo": address.at(1)) }
-          if address.len() > 2 {
-            ("ram:LineThree": address.slice(2).join(", "))
-          }
-        } else {
-          ("ram:LineOne": address)
-        }
-        ("ram:CityName": city)
-        ("ram:CountryID": country)
-      },
-    )
+    let postal = (:)
+    if postcode != none and postcode != "" {
+      postal.insert("ram:PostcodeCode", postcode)
+    }
+    if type(address) == array {
+      if address.len() > 0 { postal.insert("ram:LineOne", address.at(0)) }
+      if address.len() > 1 { postal.insert("ram:LineTwo", address.at(1)) }
+      if address.len() > 2 {
+        postal.insert("ram:LineThree", address.slice(2).join(", "))
+      }
+    } else {
+      postal.insert("ram:LineOne", address)
+    }
+    postal.insert("ram:CityName", city)
+    postal.insert("ram:CountryID", country)
+    res.insert("ram:PostalTradeAddress", postal)
   }
-  if vat-id != none and vat-id != "" {
-    (
-      "ram:SpecifiedTaxRegistration": (
-        "ram:ID": (
-          "@schemeID": "VA",
-          "": vat-id,
-        ),
+
+  if electronic-address != none {
+    res.insert("ram:URIUniversalCommunication", (
+      "ram:URIID": (
+        "@schemeID": electronic-address.scheme,
+        "": electronic-address.id,
       ),
-    )
+    ))
   }
+
+  if vat-id != none and vat-id != "" {
+    res.insert("ram:SpecifiedTaxRegistration", (
+      "ram:ID": (
+        "@schemeID": "VA",
+        "": vat-id,
+      ),
+    ))
+  }
+
+  res
 }
 
 // Emits a single supply chain line item
@@ -314,6 +405,13 @@
 /// -> bytes
 #let build-zugferd-xml(ctx, item-data, payment-goal) = {
   let profile = ctx.zugferd
+  if (
+    profile == "en16931"
+      and ctx.sender.country.code == "DE"
+      and ctx.recipient.country.code == "DE"
+  ) {
+    profile = "xrechnung"
+  }
   let currency = ctx.locale.currency.code
   let country = ctx.sender.country.code
 
@@ -324,7 +422,7 @@
   let net-total = item-data.net-total
   let gross-total = item-data.gross-total
 
-  let include-line-items = profile in ("basic", "en16931")
+  let include-line-items = profile in ("basic", "en16931", "xrechnung")
   let include-addresses = profile != "minimum"
 
   let total-tax = taxes.values().map(t => t.absolute).sum(default: decimal("0"))
@@ -378,12 +476,37 @@
     build-monetary-summation(net-total, gross-total, total-tax, currency),
   )
 
-  let transaction = (:)
-  if line-items != () {
-    transaction.insert("ram:IncludedSupplyChainTradeLineItem", line-items)
+  let seller-eas = get-electronic-address(ctx.sender)
+  let buyer-eas = get-electronic-address(ctx.recipient)
+
+  let seller-contact = {
+    let contact = ctx.sender.at("contact", default: none)
+    if contact != none {
+      contact
+    } else {
+      let contact-name = ctx.sender.at("contact-name", default: none)
+      let phone = ctx.sender.at("phone", default: none)
+      let email = ctx.sender.at("email", default: none)
+      if contact-name != none or phone != none or email != none {
+        (name: contact-name, phone: phone, email: email)
+      } else {
+        none
+      }
+    }
   }
-  transaction.insert("ram:ApplicableHeaderTradeAgreement", (
-    "ram:SellerTradeParty": build-seller-trade-party(
+
+  let buyer-ref = ctx.recipient.at("buyer-reference", default: ctx.recipient.at(
+    "leitweg-id",
+    default: none,
+  ))
+
+  let header-agreement = (:)
+  if buyer-ref != none {
+    header-agreement.insert("ram:BuyerReference", buyer-ref)
+  }
+  header-agreement.insert(
+    "ram:SellerTradeParty",
+    build-seller-trade-party(
       ctx.sender.name-inline,
       ctx.sender.address-lines,
       ctx.sender.city-name,
@@ -392,8 +515,13 @@
       ctx.sender.tax-nr,
       ctx.sender.vat-id,
       include-addresses,
+      electronic-address: seller-eas,
+      contact: seller-contact,
     ),
-    "ram:BuyerTradeParty": build-buyer-trade-party(
+  )
+  header-agreement.insert(
+    "ram:BuyerTradeParty",
+    build-buyer-trade-party(
       ctx.recipient.name-inline,
       ctx.recipient.address-lines,
       ctx.recipient.city-name,
@@ -401,8 +529,15 @@
       ctx.recipient.country.code,
       ctx.recipient.vat-id,
       include-addresses,
+      electronic-address: buyer-eas,
     ),
-  ))
+  )
+
+  let transaction = (:)
+  if line-items != () {
+    transaction.insert("ram:IncludedSupplyChainTradeLineItem", line-items)
+  }
+  transaction.insert("ram:ApplicableHeaderTradeAgreement", header-agreement)
   transaction.insert("ram:ApplicableHeaderTradeDelivery", (:))
   transaction.insert("ram:ApplicableHeaderTradeSettlement", trade-settlement)
 

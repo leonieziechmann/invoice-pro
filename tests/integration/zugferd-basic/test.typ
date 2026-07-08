@@ -10,6 +10,11 @@
     city: "12345 Musterstadt",
     tax-nr: "123/456/78901",
     vat-id: "DE123456789",
+    contact: (
+      name: "Max Mustermann",
+      phone: "+49 123 456789",
+      email: "max@mustermann.de",
+    ),
     extra: ("USt-IdNr.": "DE123456789"),
   ),
   recipient: (
@@ -18,6 +23,7 @@
     city: "54321 Kundenstadt",
     tax-nr: "987/654/32109",
     vat-id: "DE987654321",
+    buyer-reference: "DE123456789-12345-12",
   ),
   invoice-nr: "ZUG-2026-001",
   date: datetime(year: 2026, month: 7, day: 6),
