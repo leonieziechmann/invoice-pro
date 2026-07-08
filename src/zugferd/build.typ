@@ -6,7 +6,7 @@
     profile == "basic-wl"
   ) { "urn:factur-x.eu:1p0:basicwl" } else if profile == "basic" {
     "urn:factur-x.eu:1p0:basic"
-  } else { "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:en16931" }
+  } else { "urn:cen.eu:en16931:2017" }
 }
 
 // Map common invoice-pro unit strings to UN/ECE recommendation 20 unit codes.
@@ -61,14 +61,13 @@
   include-addresses,
 ) = {
   let address-dict = if include-addresses and address != none {
-    let addr = (
-      "ram:LineOne": address,
-      "ram:CityName": city,
-      "ram:CountryID": country,
-    )
+    let addr = (:)
     if postcode != none and postcode != "" {
       addr.insert("ram:PostcodeCode", postcode)
     }
+    addr.insert("ram:LineOne", address)
+    addr.insert("ram:CityName", city)
+    addr.insert("ram:CountryID", country)
     (
       "ram:PostalTradeAddress": addr,
     )
@@ -108,51 +107,41 @@
 }
 
 // Emits the buyer trade party details
+//
+// Note: unlike the seller, EN16931 only defines a VAT identifier (BT-48,
+// schemeID "VA") for the buyer — there is no buyer equivalent of the
+// seller's national tax number (BT-32, schemeID "FC"), so `tax-nr` is
+// intentionally not used here.
 #let build-buyer-trade-party(
   name,
   address,
   city,
   postcode,
   country,
-  tax-nr,
   vat-id,
   include-addresses,
 ) = {
   let address-dict = if include-addresses and address != none {
-    let addr = (
-      "ram:LineOne": address,
-      "ram:CityName": city,
-      "ram:CountryID": country,
-    )
+    let addr = (:)
     if postcode != none and postcode != "" {
       addr.insert("ram:PostcodeCode", postcode)
     }
+    addr.insert("ram:LineOne", address)
+    addr.insert("ram:CityName", city)
+    addr.insert("ram:CountryID", country)
     (
       "ram:PostalTradeAddress": addr,
     )
   } else { (:) }
 
-  let tax-registrations = ()
-  if vat-id != none and vat-id != "" {
-    tax-registrations.push((
-      "ram:ID": (
-        "@schemeID": "VA",
-        "": vat-id,
-      ),
-    ))
-  }
-  if tax-nr != none and tax-nr != "" {
-    tax-registrations.push((
-      "ram:ID": (
-        "@schemeID": "FC",
-        "": tax-nr,
-      ),
-    ))
-  }
-
-  let tax-registration-dict = if tax-registrations.len() > 0 {
+  let tax-registration-dict = if vat-id != none and vat-id != "" {
     (
-      "ram:SpecifiedTaxRegistration": tax-registrations,
+      "ram:SpecifiedTaxRegistration": (
+        "ram:ID": (
+          "@schemeID": "VA",
+          "": vat-id,
+        ),
+      ),
     )
   } else { (:) }
 
@@ -252,20 +241,17 @@
 // Emits the tax breakdown block
 #let build-applicable-trade-tax(tax-list) = {
   tax-list.map(tax => {
-    let exemption = if tax.at("grounds", default: none) != none {
-      ("ram:ExemptionReason": tax.grounds)
-    } else { (:) }
-
-    (
-      (
-        "ram:CalculatedAmount": fmt-amount(tax.absolute),
-        "ram:TypeCode": "VAT",
-        "ram:BasisAmount": fmt-amount(tax.basis),
-        "ram:CategoryCode": tax.category,
-        "ram:RateApplicablePercent": fmt-rate(tax.rate),
-      )
-        + exemption
+    let entry = (
+      "ram:CalculatedAmount": fmt-amount(tax.absolute),
+      "ram:TypeCode": "VAT",
     )
+    if tax.at("grounds", default: none) != none {
+      entry.insert("ram:ExemptionReason", tax.grounds)
+    }
+    entry.insert("ram:BasisAmount", fmt-amount(tax.basis))
+    entry.insert("ram:CategoryCode", tax.category)
+    entry.insert("ram:RateApplicablePercent", fmt-rate(tax.rate))
+    entry
   })
 }
 
@@ -281,13 +267,47 @@
   "ram:DuePayableAmount": fmt-amount(gross-total),
 )
 
+// Emits the SpecifiedTradePaymentTerms block from a `payment-goal` signal
+// (see `components/payment-goal.typ`), if any data is available.
+#let build-payment-terms(payment-goal, invoice-date) = {
+  if payment-goal == none {
+    return none
+  }
+
+  let due-date = if type(payment-goal.date) == datetime {
+    payment-goal.date
+  } else if payment-goal.days != none {
+    invoice-date + duration(days: payment-goal.days)
+  } else { none }
+
+  if due-date != none {
+    return (
+      "ram:DueDateDateTime": (
+        "udt:DateTimeString": (
+          "@format": "102",
+          "": fmt-date(due-date),
+        ),
+      ),
+    )
+  }
+
+  if payment-goal.date != none {
+    let description = to-string(payment-goal.date)
+    if description != "" {
+      return ("ram:Description": description)
+    }
+  }
+
+  none
+}
+
 /// Generates a ZUGFeRD 2.x / Factur-X 1.0 CrossIndustryInvoice XML document
 /// from the fully-computed invoice context.
 ///
 /// The XML is returned as `bytes` suitable for embedding via `pdf.attach()`.
 ///
 /// -> bytes
-#let build-zugferd-xml(ctx, item-data) = {
+#let build-zugferd-xml(ctx, item-data, payment-goal) = {
   let profile = ctx.zugferd
   let currency = ctx.locale.currency.code
   let country = ctx.sender.country.code
@@ -343,41 +363,43 @@
     trade-settlement.insert("ram:ApplicableTradeTax", applicable-taxes)
   }
 
+  let payment-terms = build-payment-terms(payment-goal, ctx.invoice-date)
+  if payment-terms != none {
+    trade-settlement.insert("ram:SpecifiedTradePaymentTerms", payment-terms)
+  }
+
   trade-settlement.insert(
     "ram:SpecifiedTradeSettlementHeaderMonetarySummation",
     build-monetary-summation(net-total, gross-total, total-tax, currency),
   )
 
-  let transaction = (
-    "ram:ApplicableHeaderTradeAgreement": (
-      "ram:SellerTradeParty": build-seller-trade-party(
-        ctx.sender.name-inline,
-        ctx.sender.address-inline,
-        ctx.sender.city-name,
-        ctx.sender.post-code,
-        ctx.sender.country.code,
-        ctx.sender.tax-nr,
-        ctx.sender.vat-id,
-        include-addresses,
-      ),
-      "ram:BuyerTradeParty": build-buyer-trade-party(
-        ctx.recipient.name-inline,
-        ctx.recipient.address-inline,
-        ctx.recipient.city-name,
-        ctx.recipient.post-code,
-        ctx.recipient.country.code,
-        ctx.recipient.tax-nr,
-        ctx.recipient.vat-id,
-        include-addresses,
-      ),
-    ),
-    "ram:ApplicableHeaderTradeDelivery": (:),
-    "ram:ApplicableHeaderTradeSettlement": trade-settlement,
-  )
-
+  let transaction = (:)
   if line-items != () {
     transaction.insert("ram:IncludedSupplyChainTradeLineItem", line-items)
   }
+  transaction.insert("ram:ApplicableHeaderTradeAgreement", (
+    "ram:SellerTradeParty": build-seller-trade-party(
+      ctx.sender.name-inline,
+      ctx.sender.address-inline,
+      ctx.sender.city-name,
+      ctx.sender.post-code,
+      ctx.sender.country.code,
+      ctx.sender.tax-nr,
+      ctx.sender.vat-id,
+      include-addresses,
+    ),
+    "ram:BuyerTradeParty": build-buyer-trade-party(
+      ctx.recipient.name-inline,
+      ctx.recipient.address-inline,
+      ctx.recipient.city-name,
+      ctx.recipient.post-code,
+      ctx.recipient.country.code,
+      ctx.recipient.vat-id,
+      include-addresses,
+    ),
+  ))
+  transaction.insert("ram:ApplicableHeaderTradeDelivery", (:))
+  transaction.insert("ram:ApplicableHeaderTradeSettlement", trade-settlement)
 
   let data = (
     "rsm:CrossIndustryInvoice": (

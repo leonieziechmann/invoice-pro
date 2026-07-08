@@ -50,7 +50,7 @@
         total: ctx.global.total.gross,
       )
 
-      (none, data)
+      (data, data)
     },
     draw: (ctx, _, view, ..) => (ctx.theme.payment-goal)(ctx, view),
     none,

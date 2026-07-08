@@ -98,6 +98,16 @@
         )
         .first(default: none)
 
+      let all-payment-goals = loom.query.collect-signals(
+        children,
+        kind: "payment-goal",
+      )
+      assert(
+        all-payment-goals.len() <= 1,
+        message: "There can only be one `payment-goal` element in the document!",
+      )
+      let payment-goal-signal = all-payment-goals.first(default: none)
+
       let item-data = loom.mutator.batch(
         line-items.at("item-data", default: (:)),
         {
@@ -117,6 +127,7 @@
 
       let view = (
         item-data: item-data,
+        payment-goal: payment-goal-signal,
       )
 
       return (public, view)
@@ -127,7 +138,7 @@
       if ctx.zugferd != none {
         pdf.attach(
           "/factur-x.xml",
-          build-zugferd-xml(ctx, view.item-data),
+          build-zugferd-xml(ctx, view.item-data, view.payment-goal),
           relationship: "alternative",
           mime-type: "text/xml",
           description: "ZUGFeRD / Factur-X invoice data",
