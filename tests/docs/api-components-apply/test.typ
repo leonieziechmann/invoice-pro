@@ -8,7 +8,7 @@
 )
 
 #line-items[
-  #apply(tax: tax.lower-rate(7%))[
+  #apply(tax: tax.vat(7%))[
     #item(
       [Textbook: "Modern Web Design"],
       price: 49.90,

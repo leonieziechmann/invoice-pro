@@ -7,11 +7,11 @@
     if rate == 22% {
       return tax.vat(22%) // Standard IVA
     } else if rate == 10% {
-      return tax.lower-rate(10%) // Reduced (e.g., hotels, restaurants, specific foods)
+      return tax.vat(10%) // Reduced (e.g., hotels, restaurants, specific foods)
     } else if rate == 5% {
-      return tax.lower-rate(5%) // Super-reduced (e.g., some health services, specific foods)
+      return tax.vat(5%) // Super-reduced (e.g., some health services, specific foods)
     } else if rate == 4% {
-      return tax.lower-rate(4%) // Super-reduced (e.g., basic necessities, books)
+      return tax.vat(4%) // Super-reduced (e.g., basic necessities, books)
     } else if rate == 0% {
       panic(
         lang.errors.ambiguous-tax

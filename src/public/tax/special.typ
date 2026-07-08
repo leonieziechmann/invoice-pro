@@ -10,6 +10,7 @@
   // special tax/duty scenarios
   exempt-for-resale,
   higher-rate,
+  lower-rate,
   vat-not-due,
   mixed,
   transferred,

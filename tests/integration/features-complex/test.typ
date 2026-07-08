@@ -38,7 +38,7 @@
       [Backend Setup],
       price: 5000.00,
       quantity: 1,
-      tax: tax.lower-rate(7%),
+      tax: tax.vat(7%),
     )
     #item(
       [Frontend Setup],

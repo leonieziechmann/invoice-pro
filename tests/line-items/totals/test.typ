@@ -97,7 +97,7 @@
       [Item C — Reduced Rate],
       price: 80.00,
       quantity: 5,
-      tax: tax.lower-rate(7%),
+      tax: tax.vat(7%),
     )
 
     // Item D: zero-rated, using total instead of price×quantity

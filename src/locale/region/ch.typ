@@ -23,9 +23,9 @@
     if rate == 8.1% {
       tax.vat(8.1%) // Standard rate
     } else if rate == 2.6% {
-      tax.lower-rate(2.6%) // Reduced rate (e.g., food, books, medicine)
+      tax.vat(2.6%) // Reduced rate (e.g., food, books, medicine)
     } else if rate == 2.5% {
-      tax.lower-rate(2.5%) // Special rate for accommodation/lodging
+      tax.vat(2.5%) // Special rate for accommodation/lodging
     } else if rate == 0% {
       panic(
         "Ambiguous 0% tax rate in region 'ch'. Please explicitly use tax.zero(), tax.exempt(), tax.export(), or tax.outside-scope() from tax.typ instead of passing 0%.",
