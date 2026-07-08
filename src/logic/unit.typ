@@ -148,3 +148,25 @@
 #let cubic-meter = cubic-metre
 #let cubic-meters = cubic-metre
 #let m3 = cubic-metre
+
+#let resolve(unit, locale, default: none) = {
+  let resolved = if type(unit) == function {
+    unit(locale)
+  } else if unit == auto {
+    if type(default) == function {
+      default(locale)
+    } else {
+      default
+    }
+  } else {
+    unit
+  }
+  if type(resolved) == dictionary {
+    if "display" in resolved and "name" not in resolved {
+      resolved = resolved + (name: resolved.display)
+    } else if "name" in resolved and "display" not in resolved {
+      resolved = resolved + (display: resolved.name)
+    }
+  }
+  resolved
+}

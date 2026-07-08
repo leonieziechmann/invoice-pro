@@ -4,6 +4,7 @@
 #import "../utils/coercion.typ"
 #import "../data/tax.typ" as m-tax
 #import "../public/unit.typ" as m-unit
+#import "../logic/unit.typ" as unit-logic
 
 /// Normalizes a modifier input (content, dictionary, or signal) into a structured modifier object.
 ///
@@ -176,8 +177,7 @@
       )
       derive(
         "unit",
-        if type(unit) == function { unit(ctx.locale) } else { unit },
-        default: (m-unit.pc)(ctx.locale),
+        unit-logic.resolve(unit, ctx.locale, default: m-unit.pc),
       )
 
       derive("date", coercion.to-date(date))

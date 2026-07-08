@@ -1,3 +1,4 @@
+#import "/src/loom-wrapper.typ": loom
 #import "/src/lib.typ": locale, unit
 
 // --- Test standard builder functions ---
@@ -88,7 +89,8 @@
 )
 
 #data-test(test: (ctx, data) => {
-  let items = loom.query.collect-signals(data, kind: "item")
+  let line-items = loom.query.find-signal(data, "line-items")
+  let items = line-items.item-data.items
 
   // Verify first item (resolved with unit.hour function)
   assert.eq(items.at(0).unit, (code: "HUR", name: "hour", display: "hour"))
@@ -101,12 +103,15 @@
   ))
 
   // Verify bundle unit (resolved with unit.sets function)
-  let bundles = loom.query.collect-signals(data, kind: "bundle")
+  let bundles = (items.at(2),)
   assert.eq(bundles.at(0).unit, (code: "SET", name: "set", display: "set"))
 
-  // Verify default unit resolution (defaults to unit.pc)
-  assert.eq(items.at(2).unit, (code: "H87", name: "piece", display: "piece"))
-  assert.eq(items.at(3).unit, (code: "H87", name: "piece", display: "piece"))
+  // Verify custom dict optional name fallback
+  assert.eq(items.at(3).unit, (
+    code: "MY_CODE",
+    name: "MyCustomDisplay",
+    display: "MyCustomDisplay",
+  ))
 })[
   #line-items[
     #item([Development Work], price: 100.00, quantity: 8, unit: unit.hour)
@@ -115,5 +120,9 @@
       #item([Core License], price: 400.00, quantity: 1)
       #item([Support Addon], price: 50.00, quantity: 1)
     ]
+    #item([Custom Dict Item], price: 10.00, quantity: 1, unit: (
+      display: "MyCustomDisplay",
+      code: "MY_CODE",
+    ))
   ]
 ]

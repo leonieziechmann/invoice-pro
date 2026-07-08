@@ -5,7 +5,7 @@
 #import "../utils/coercion.typ"
 #import "../data/unit.typ"
 #import "../data/tax.typ" as m-tax
-#import "../public/unit.typ" as m-unit
+#import "../logic/unit.typ" as m-unit
 
 /// A container used to group multiple items together under a single overarching item.
 /// It aggregates the totals and dates of its bundled children and acts as a virtual item
@@ -105,8 +105,7 @@
       )
       derive(
         "unit",
-        if type(unit) == function { unit(ctx.locale) } else { unit },
-        default: (m-unit.pcs)(ctx.locale),
+        m-unit.resolve(unit, ctx.locale, default: m-unit.pcs),
       )
 
       derive("date", date)
