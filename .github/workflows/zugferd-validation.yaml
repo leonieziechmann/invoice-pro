@@ -39,7 +39,7 @@ jobs:
           nix run .#validate-zugferd --accept-flake-config -- "tests/integration/zugferd-basic/test.typ" "/tmp/extracted/zugferd-basic.pdf"
           nix run .#validate-zugferd --accept-flake-config -- "tests/integration/zugferd-small-biz/test.typ" "/tmp/extracted/zugferd-small-biz.pdf"
           nix run .#validate-zugferd --accept-flake-config -- "template/invoice.typ" "/tmp/extracted/invoice.pdf"
-          nix shell nixpkgs#poppler_utils --command bash -c "
+          nix shell ".#poppler-utils" --command bash -c "
             pdfdetach -saveall -o /tmp/extracted/zugferd-basic /tmp/extracted/zugferd-basic.pdf
             pdfdetach -saveall -o /tmp/extracted/zugferd-small-biz /tmp/extracted/zugferd-small-biz.pdf
             pdfdetach -saveall -o /tmp/extracted/invoice /tmp/extracted/invoice.pdf

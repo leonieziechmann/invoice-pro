@@ -169,6 +169,7 @@
 
         packages.validate-zugferd = validate-zugferd;
         packages.validate-all-zugferd = validate-all-zugferd;
+        packages.poppler-utils = pkgs.poppler-utils;
 
         packages.documentation = pkgs.buildNpmPackage {
           pname = "invoice-pro-documentation";
