@@ -118,6 +118,9 @@
           ensure("taxes", (:))
           ensure("net-total", decimal("0"))
           ensure("gross-total", decimal("0"))
+          ensure("unmodified-net-total", decimal("0"))
+          ensure("discounts", ())
+          ensure("surcharges", ())
         },
       )
 

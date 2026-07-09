@@ -250,6 +250,44 @@
   res
 }
 
+// Emits a single ram:SpecifiedTradeAllowanceCharge (discount/surcharge) entry.
+//
+// `tax-category`/`tax-rate` are mandatory for document-level allowances/charges
+// (BR-53), but intentionally omitted at line level, since the line already
+// declares its own tax category via its own ApplicableTradeTax.
+#let build-allowance-charge(
+  is-charge,
+  amount,
+  reason,
+  tax-category: none,
+  tax-rate: none,
+) = {
+  let entry = (
+    "ram:ChargeIndicator": (
+      "udt:Indicator": if is-charge { "true" } else { "false" },
+    ),
+    "ram:ActualAmount": fmt-amount(calc.abs(amount)),
+  )
+  if reason != none and reason != "" {
+    entry.insert("ram:Reason", reason)
+  }
+  if tax-category != none {
+    entry.insert("ram:CategoryTradeTax", (
+      "ram:TypeCode": "VAT",
+      "ram:CategoryCode": tax-category,
+      "ram:RateApplicablePercent": fmt-rate(tax-rate),
+    ))
+  }
+  entry
+}
+
+// Emits the line-level SpecifiedTradeAllowanceCharge entries for an item's
+// own discounts/surcharges (from `item()`/`bundle()` modifiers).
+#let build-line-allowance-charges(discounts, surcharges) = (
+  discounts.map(d => build-allowance-charge(false, d.absolute, to-string(d.name)))
+    + surcharges.map(s => build-allowance-charge(true, s.absolute, to-string(s.name)))
+)
+
 // Emits a single supply chain line item
 #let build-line-item(
   pos,
@@ -261,6 +299,8 @@
   tax-category,
   tax-rate,
   total,
+  discounts,
+  surcharges,
 ) = {
   let unit-code = map-unit-code(unit)
 
@@ -276,6 +316,27 @@
       item-ids.insert("ram:SellerAssignedID", item-id.seller)
     }
   }
+
+  let line-settlement = (
+    "ram:ApplicableTradeTax": (
+      "ram:TypeCode": "VAT",
+      "ram:CategoryCode": tax-category,
+      "ram:RateApplicablePercent": fmt-rate(tax-rate),
+    ),
+  )
+
+  let line-allowance-charges = build-line-allowance-charges(discounts, surcharges)
+  if line-allowance-charges != () {
+    line-settlement.insert(
+      "ram:SpecifiedTradeAllowanceCharge",
+      line-allowance-charges,
+    )
+  }
+
+  line-settlement.insert(
+    "ram:SpecifiedTradeSettlementLineMonetarySummation",
+    ("ram:LineTotalAmount": fmt-amount(total)),
+  )
 
   (
     "ram:AssociatedDocumentLineDocument": (
@@ -296,16 +357,7 @@
         "": fmt-amount(quantity),
       ),
     ),
-    "ram:SpecifiedLineTradeSettlement": (
-      "ram:ApplicableTradeTax": (
-        "ram:TypeCode": "VAT",
-        "ram:CategoryCode": tax-category,
-        "ram:RateApplicablePercent": fmt-rate(tax-rate),
-      ),
-      "ram:SpecifiedTradeSettlementLineMonetarySummation": (
-        "ram:LineTotalAmount": fmt-amount(total),
-      ),
-    ),
+    "ram:SpecifiedLineTradeSettlement": line-settlement,
   )
 }
 
@@ -351,17 +403,52 @@
   })
 }
 
-// Emits the header monetary summation block
-#let build-monetary-summation(net-total, gross-total, total-tax, currency) = (
-  "ram:LineTotalAmount": fmt-amount(net-total),
-  "ram:TaxBasisTotalAmount": fmt-amount(net-total),
-  "ram:TaxTotalAmount": (
+// Emits the header-level SpecifiedTradeAllowanceCharge entries for the
+// document's global discounts/surcharges. A modifier spanning multiple tax
+// categories is fanned out into one entry per category (BR-53).
+#let build-header-allowance-charges(discounts, surcharges) = {
+  let expand(modifiers, is-charge) = modifiers
+    .map(mod => mod.split.values().map(group => build-allowance-charge(
+      is-charge,
+      group.absolute,
+      to-string(mod.name),
+      tax-category: group.tax.category,
+      tax-rate: group.tax.rate,
+    )))
+    .flatten()
+  expand(discounts, false) + expand(surcharges, true)
+}
+
+// Emits the header monetary summation block.
+//
+// `line-total` (BT-131) is the sum of line net amounts *before* document-level
+// allowances/charges, while `net-total` (BT-109) is the total *after* them —
+// they only coincide when there are no global discounts/surcharges.
+#let build-monetary-summation(
+  line-total,
+  net-total,
+  gross-total,
+  total-tax,
+  allowance-total,
+  charge-total,
+  currency,
+) = {
+  let summation = ("ram:LineTotalAmount": fmt-amount(line-total))
+  if charge-total > decimal("0") {
+    summation.insert("ram:ChargeTotalAmount", fmt-amount(charge-total))
+  }
+  if allowance-total > decimal("0") {
+    summation.insert("ram:AllowanceTotalAmount", fmt-amount(allowance-total))
+  }
+  summation.insert("ram:TaxBasisTotalAmount", fmt-amount(net-total))
+  summation.insert("ram:TaxTotalAmount", (
     "@currencyID": currency,
     "": fmt-amount(total-tax),
-  ),
-  "ram:GrandTotalAmount": fmt-amount(gross-total),
-  "ram:DuePayableAmount": fmt-amount(gross-total),
-)
+  ))
+  summation.insert("ram:GrandTotalAmount", fmt-amount(gross-total))
+  summation.insert("ram:DuePayableAmount", fmt-amount(gross-total))
+  summation
+}
 
 // Emits the SpecifiedTradePaymentTerms block from a `payment-goal` signal
 // (see `components/payment-goal.typ`), if any data is available.
@@ -421,6 +508,12 @@
   let taxes = item-data.taxes
   let net-total = item-data.net-total
   let gross-total = item-data.gross-total
+  let unmodified-net-total = item-data.at(
+    "unmodified-net-total",
+    default: net-total,
+  )
+  let discounts = item-data.at("discounts", default: ())
+  let surcharges = item-data.at("surcharges", default: ())
 
   let include-line-items = profile in ("basic", "en16931", "xrechnung")
   let include-addresses = profile != "minimum"
@@ -442,6 +535,8 @@
           item.tax.category,
           item.tax.rate,
           item.total,
+          item.discounts,
+          item.surcharge,
         )
       })
   } else { () }
@@ -466,14 +561,40 @@
     trade-settlement.insert("ram:ApplicableTradeTax", applicable-taxes)
   }
 
+  let header-allowance-charges = build-header-allowance-charges(
+    discounts,
+    surcharges,
+  )
+  if header-allowance-charges != () {
+    trade-settlement.insert(
+      "ram:SpecifiedTradeAllowanceCharge",
+      header-allowance-charges,
+    )
+  }
+
   let payment-terms = build-payment-terms(payment-goal, ctx.invoice-date)
   if payment-terms != none {
     trade-settlement.insert("ram:SpecifiedTradePaymentTerms", payment-terms)
   }
 
+  let allowance-total = discounts
+    .map(d => calc.abs(d.absolute))
+    .sum(default: decimal("0"))
+  let charge-total = surcharges
+    .map(s => s.absolute)
+    .sum(default: decimal("0"))
+
   trade-settlement.insert(
     "ram:SpecifiedTradeSettlementHeaderMonetarySummation",
-    build-monetary-summation(net-total, gross-total, total-tax, currency),
+    build-monetary-summation(
+      unmodified-net-total,
+      net-total,
+      gross-total,
+      total-tax,
+      allowance-total,
+      charge-total,
+      currency,
+    ),
   )
 
   let seller-eas = get-electronic-address(ctx.sender)

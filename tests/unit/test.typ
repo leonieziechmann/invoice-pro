@@ -247,3 +247,183 @@
   let p4 = normalize-party((region: "FR", country: country.de), "DE")
   assert.eq(p4.country.code, "DE")
 }
+
+// --- Test ZUGFeRD allowance/charge (discount & surcharge) serialization ---
+#{
+  import "/src/zugferd/build.typ": (
+    build-allowance-charge, build-header-allowance-charges, build-line-item,
+    build-monetary-summation,
+  )
+
+  // 1. build-allowance-charge: ActualAmount is always a positive magnitude —
+  //    ChargeIndicator alone carries the discount/surcharge sign.
+  let discount-entry = build-allowance-charge(false, decimal("-50.00"), "Loyalty")
+  assert.eq(discount-entry.at("ram:ChargeIndicator"), ("udt:Indicator": "false"))
+  assert.eq(discount-entry.at("ram:ActualAmount"), "50.00")
+  assert.eq(discount-entry.at("ram:Reason"), "Loyalty")
+  assert.eq(discount-entry.at("ram:CategoryTradeTax", default: none), none)
+  assert.eq(
+    discount-entry.keys(),
+    ("ram:ChargeIndicator", "ram:ActualAmount", "ram:Reason"),
+  )
+
+  // 2. build-allowance-charge: header-level surcharge with a tax category.
+  let charge-entry = build-allowance-charge(
+    true,
+    decimal("25.00"),
+    "Express Fee",
+    tax-category: "S",
+    tax-rate: 19%,
+  )
+  assert.eq(charge-entry.at("ram:ChargeIndicator"), ("udt:Indicator": "true"))
+  assert.eq(charge-entry.at("ram:CategoryTradeTax"), (
+    "ram:TypeCode": "VAT",
+    "ram:CategoryCode": "S",
+    "ram:RateApplicablePercent": "19.00",
+  ))
+  assert.eq(
+    charge-entry.keys(),
+    (
+      "ram:ChargeIndicator",
+      "ram:ActualAmount",
+      "ram:Reason",
+      "ram:CategoryTradeTax",
+    ),
+  )
+
+  // 3. build-header-allowance-charges fans a global modifier's per-tax-category
+  //    `split` out into one SpecifiedTradeAllowanceCharge per category (BR-53).
+  let discounts = (
+    (
+      name: "Volume Discount",
+      split: (
+        "19-S": (tax: (rate: 19%, category: "S"), absolute: decimal("-10.00")),
+        "7-AA": (tax: (rate: 7%, category: "AA"), absolute: decimal("-5.00")),
+      ),
+    ),
+  )
+  let header-entries = build-header-allowance-charges(discounts, ())
+  assert.eq(header-entries.len(), 2)
+  for entry in header-entries {
+    assert.eq(entry.at("ram:ChargeIndicator"), ("udt:Indicator": "false"))
+  }
+  assert.eq(
+    header-entries.map(e => e.at("ram:ActualAmount")).sorted(),
+    ("10.00", "5.00").sorted(),
+  )
+
+  // 4. build-line-item embeds line-level SpecifiedTradeAllowanceCharge between
+  //    ApplicableTradeTax and the monetary summation, only when non-empty.
+  let item-discounts = (
+    (
+      name: "Rebate",
+      description: none,
+      type: "absolute",
+      display: decimal("-20.00"),
+      absolute: decimal("-20.00"),
+    ),
+  )
+  let item-surcharges = (
+    (
+      name: "Rush Fee",
+      description: none,
+      type: "absolute",
+      display: decimal("15.00"),
+      absolute: decimal("15.00"),
+    ),
+  )
+
+  let line-with-modifiers = build-line-item(
+    1,
+    "Widget",
+    none,
+    decimal("100.00"),
+    decimal("1"),
+    "C62",
+    "S",
+    19%,
+    decimal("95.00"),
+    item-discounts,
+    item-surcharges,
+  )
+  let settlement = line-with-modifiers.at("ram:SpecifiedLineTradeSettlement")
+  assert.eq(
+    settlement.keys(),
+    (
+      "ram:ApplicableTradeTax",
+      "ram:SpecifiedTradeAllowanceCharge",
+      "ram:SpecifiedTradeSettlementLineMonetarySummation",
+    ),
+  )
+  assert.eq(settlement.at("ram:SpecifiedTradeAllowanceCharge").len(), 2)
+
+  let line-without-modifiers = build-line-item(
+    1,
+    "Widget",
+    none,
+    decimal("100.00"),
+    decimal("1"),
+    "C62",
+    "S",
+    19%,
+    decimal("100.00"),
+    (),
+    (),
+  )
+  assert.eq(
+    line-without-modifiers.at("ram:SpecifiedLineTradeSettlement").keys(),
+    (
+      "ram:ApplicableTradeTax",
+      "ram:SpecifiedTradeSettlementLineMonetarySummation",
+    ),
+  )
+
+  // 5. build-monetary-summation: LineTotalAmount vs TaxBasisTotalAmount only
+  //    diverge (and Charge/AllowanceTotalAmount only appear) when there are
+  //    document-level allowances/charges (BR-CO-13).
+  let summation-plain = build-monetary-summation(
+    decimal("1000.00"),
+    decimal("1000.00"),
+    decimal("1190.00"),
+    decimal("190.00"),
+    decimal("0"),
+    decimal("0"),
+    "EUR",
+  )
+  assert.eq(
+    summation-plain.keys(),
+    (
+      "ram:LineTotalAmount",
+      "ram:TaxBasisTotalAmount",
+      "ram:TaxTotalAmount",
+      "ram:GrandTotalAmount",
+      "ram:DuePayableAmount",
+    ),
+  )
+
+  let summation-modified = build-monetary-summation(
+    decimal("1000.00"),
+    decimal("950.00"),
+    decimal("1130.50"),
+    decimal("180.50"),
+    decimal("100.00"),
+    decimal("50.00"),
+    "EUR",
+  )
+  assert.eq(
+    summation-modified.keys(),
+    (
+      "ram:LineTotalAmount",
+      "ram:ChargeTotalAmount",
+      "ram:AllowanceTotalAmount",
+      "ram:TaxBasisTotalAmount",
+      "ram:TaxTotalAmount",
+      "ram:GrandTotalAmount",
+      "ram:DuePayableAmount",
+    ),
+  )
+  assert.eq(summation-modified.at("ram:LineTotalAmount"), "1000.00")
+  assert.eq(summation-modified.at("ram:TaxBasisTotalAmount"), "950.00")
+  assert.eq(summation-modified.at("ram:ChargeTotalAmount"), "50.00")
+  assert.eq(summation-modified.at("ram:AllowanceTotalAmount"), "100.00")
+}

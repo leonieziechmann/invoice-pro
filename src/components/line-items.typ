@@ -353,7 +353,10 @@
           taxes: tax-applicator.taxes,
           net-total: tax-applicator.net-total,
           gross-total: tax-applicator.gross-total,
+          unmodified-net-total: tax-applicator.unmodified-net-total,
           tax-mode: ctx.tax-mode,
+          discounts: modifier-applicator.modifier.discounts,
+          surcharges: modifier-applicator.modifier.surcharges,
         ),
       )
 

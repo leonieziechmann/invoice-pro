@@ -44,6 +44,9 @@
     unit: "pcs",
     tax: tax.exempt(grounds: "I like money."),
   )
+
+  #discount([Treuerabatt], amount: 5%)
+  #surcharge([Express-Zuschlag], amount: 25.00)
 ]
 
 #payment-goal(days: 14)
