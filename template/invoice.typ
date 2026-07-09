@@ -44,7 +44,6 @@
 )
 #set text(10pt)
 
-
 #line-items[
   #bundle(
     [Website Relaunch 2026],
@@ -85,12 +84,6 @@
       quantity: 2,
       unit: unit.pcs,
     )
-    #item(
-      [Textbook: "SEO for Beginners"],
-      price: 29.90,
-      quantity: 1,
-      unit: unit.pcs,
-    )
   ]
 
   #item(
@@ -127,7 +120,5 @@
   iban: "DE07100202005821158846",
   bic: "EXAMPLEBICX",
 )
-
-#v(-.5em)
 
 #signature()
