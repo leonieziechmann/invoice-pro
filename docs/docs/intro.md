@@ -5,13 +5,15 @@ sidebar_position: 1
 
 # Introduction
 
-Welcome to the official documentation for `invoice-pro`, an open-source, automated invoicing template designed for Typst. Our goal is to provide a DRY (Don't Repeat Yourself) and declarative API that makes generating compliant invoices straightforward and reliable.
+Welcome to the official documentation for `invoice-pro`, an open-source, automated invoicing template designed for Typst. Our goal is to provide a DRY (Don't Repeat Yourself) and declarative API that makes generating compliant invoices straightforward and reliable. Meaning we work hard on making the template derive as much data as possible from your inputs and focus strong on sane defaults and ease of use.
+
+The target group for this template are small businesses in the EU/Schengen Area that want to create high quality B2B and B2C invoices.
 
 ## The Engine and Paradigm
 
-At its core, `invoice-pro` relies on a highly optimized, block-based API. This architecture completely decouples your data model from the visual representation. You define _what_ you are billing for, and the template calculates _how_ it should be displayed.
+At its core, `invoice-pro` relies on an innovative block-based API. This architecture completely decouples your data model from the visual representation. The template not only calculates how it should be displayed but also embeds the data into the document.
 
-The underlying system utilizes a robust pipeline packed with quality-of-life features, such as **Forward/Backward Calculation**. Whether you input gross totals or net unit prices, all mathematical dependencies are resolved automatically, ensuring a mathematically sound document.
+The system is focused around ease of use and quality of life. Trying to provide an API that is as intuitive and able to reflect your invoicing needs as possible. Such features include Forward/Backward Calculation, Localization, Smart Item Bundles and e-invoicing. For the future a powerful and extendible theming engine is also planned.
 
 Additionally, the engine handles different `tax-mode` configurations natively. By easily switching between net and gross calculations, `invoice-pro` effortlessly supports both B2B and B2C invoice workflows.
 
@@ -25,16 +27,24 @@ The power of `invoice-pro` lies in its conciseness. Below is a minimal example o
 #show: invoice.with(
   // Set the locale for language, formatting, and legal behaviors
   locale: locale.en-de,
-  sender: (name: "Consulting Group LLC", address: "Consulting Street 1", city: "Berlin"),
-  recipient: (name: "Acme Corp", address: "Acme Street 1", city: "Munich"),
+  sender: (
+    name: "Consulting Group LLC",
+    address: "Consulting Street 1",
+    city: "Berlin"
+  ),
+  recipient: (
+    name: "Acme Corp",
+    address: "Acme Street 1",
+    city: "Munich"
+  ),
   invoice-nr: "INV-2026-001",
 )
 
 // A strictly scoped block where children inherit parameters automatically
 #line-items[
-  #item([Strategic IT Consulting], quantity: 10, unit: "h", price: 150.00)
+  #item([Strategic IT Consulting], quantity: 10, unit: unit.h, price: 150.00)
   #item([Server Infrastructure Audit], price: 1200.00)
-  #item([Cloud Migration Support], quantity: 5, unit: "h", price: 120.00)
+  #item([Cloud Migration Support], quantity: 5, unit: unit.h, price: 120.00)
 
   // Modifiers automatically apply to the context they are placed in
   #discount([Long-term Client Discount], amount: 10%)
@@ -50,10 +60,10 @@ The power of `invoice-pro` lies in its conciseness. Below is a minimal example o
 
 ## Key Capabilities
 
-- **Locale System:** An advanced and extensible locale system that contains not just language translations, but also regional formatting and legal information/behavior.
-- **Cascading Information:** Children naturally inherit parameters from their parent blocks. This **Cascading** behavior means significantly less typing for you and no need for complex overriding logic.
+- **Locale:** An advanced and extensible locale system that contains not just language translations, but also regional formatting and legal information/behavior.
 - **Payment Automation:** Quality-of-life features like automatic EPC-QR-Code (GiroCode) generation make it easier for clients to pay instantly via mobile banking applications.
-- **Theming API:** In the next major release, the theming engine will be reworked to include support for multiple distinct visual themes out of the box.
+- **E-Invoicing:** Experimental support for standard e-invoicing formats (such as ZUGFeRD / Factur-X), allowing digital readability alongside human-readable invoices.
+- **Theming API (Planned):** A powerful and extendible theming engine designed to allow multiple distinct visual designs out of the box.
 
 ## Compliance and Ecosystem
 

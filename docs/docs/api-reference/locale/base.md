@@ -51,6 +51,7 @@ Designations for header metadata.
 | :--------------- | :---- | :------------------------------------------------------------ |
 | `tax-number`     | `str` | Label for the sender's tax identification (e.g., `"Tax ID"`). |
 | `invoice-number` | `str` | Label for the document identifier (e.g., `"Invoice Number"`). |
+| `vat-id`         | `str` | Label for the Value Added Tax identifier (e.g., `"VAT ID"`).  |
 
 ### `line-items`
 
@@ -93,6 +94,31 @@ Static labels and dynamic text generators placed below the table.
 | `unit`          | `str`                                    | Fallback text if a uniform unit applies to all items.                                              |
 | `quantity`      | `str`                                    | Fallback text if a uniform quantity applies to all items.                                          |
 | `date`          | `str`                                    | Fallback text if a uniform service date applies to all items.                                      |
+
+### `units`
+
+Designations for common units of measure.
+
+| Key            | Type  | Description                                               |
+| :------------- | :---- | :-------------------------------------------------------- |
+| `piece`        | `str` | Label for a singular item (e.g., `"piece"`).              |
+| `set`          | `str` | Label for a set of items (e.g., `"set"`).                 |
+| `pair`         | `str` | Label for a pair of items (e.g., `"pair"`).               |
+| `lump-sum`     | `str` | Label for a lump-sum amount (e.g., `"lump sum"`).         |
+| `hour`         | `str` | Label for hours of service (e.g., `"hour"`).              |
+| `day`          | `str` | Label for days of service (e.g., `"day"`).                |
+| `month`        | `str` | Label for monthly billing (e.g., `"month"`).              |
+| `year`         | `str` | Label for yearly billing (e.g., `"year"`).                |
+| `kilogram`     | `str` | Label for weight in kilograms (e.g., `"kilogram"`).       |
+| `gram`         | `str` | Label for weight in grams (e.g., `"gram"`).               |
+| `tonne`        | `str` | Label for weight in tonnes (e.g., `"tonne"`).             |
+| `metre`        | `str` | Label for length in metres (e.g., `"metre"`).             |
+| `square-metre` | `str` | Label for area in square metres (e.g., `"square metre"`). |
+| `millimetre`   | `str` | Label for length in millimetres (e.g., `"millimetre"`).   |
+| `centimetre`   | `str` | Label for length in centimetres (e.g., `"centimetre"`).   |
+| `kilometre`    | `str` | Label for distance in kilometres (e.g., `"kilometre"`).   |
+| `litre`        | `str` | Label for volume in litres (e.g., `"litre"`).             |
+| `cubic-metre`  | `str` | Label for volume in cubic metres (e.g., `"cubic metre"`). |
 
 ### `bank-details`
 
@@ -159,10 +185,9 @@ Exercise extreme caution when overriding functions in the `normalize` block. Ret
 
 Contains core metadata about the region configuration.
 
-| Key            | Type  | Description                                                                  |
-| :------------- | :---- | :--------------------------------------------------------------------------- |
-| `region`       | `str` | The internal, lower-case identifier of the region (e.g., `"de"`, `"us"`).    |
-| `country-code` | `str` | The 2-letter ISO 3166-1 alpha-2 country code (e.g., `"DE"`, `"CH"`, `"US"`). |
+| Key      | Type  | Description                                                               |
+| :------- | :---- | :------------------------------------------------------------------------ |
+| `region` | `str` | The internal, lower-case identifier of the region (e.g., `"de"`, `"us"`). |
 
 ### `currency`
 
