@@ -60,6 +60,9 @@
 
       nest("locale", {
         ensure("lang", "de")
+        nest("meta", {
+          ensure("region", "de")
+        })
         nest("format", {
           ensure("date", (..) => panic("locale::format::date is not provided"))
         })
@@ -138,7 +141,11 @@
       return (public, view)
     },
     draw: (ctx, _, view, body) => {
-      set text(lang: ctx.locale.lang)
+      let region = ctx.locale.meta.at("region", default: none)
+      let region-code = if type(region) == str and region.len() == 2 {
+        region
+      } else { none }
+      set text(lang: ctx.locale.lang, region: region-code)
 
       if ctx.zugferd != none {
         pdf.attach(

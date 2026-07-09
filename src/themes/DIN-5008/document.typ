@@ -61,9 +61,18 @@
     extra: ctx.sender.at("extra", default: none),
   )
 
+  let document-keywords = ("Invoice",)
+  if ctx.zugferd != none {
+    document-keywords.push("ZUGFeRD")
+    document-keywords.push("Factur-X")
+  }
+
   set document(
     title: subject,
     author: sender.at("name", default: ""),
+    date: ctx.invoice-date,
+    description: subject,
+    keywords: document-keywords,
   )
 
   set text(font: font)
