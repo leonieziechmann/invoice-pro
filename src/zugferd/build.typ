@@ -531,6 +531,34 @@
   none
 }
 
+// Determine delivery date or period from items
+#let determine-delivery-dates(ctx, items) = {
+  let all-dates = ()
+  for item in items {
+    let item-date = item.at("date", default: none)
+    if item-date == auto or item-date == none {
+      all-dates.push(ctx.invoice-date)
+    } else if type(item-date) == datetime {
+      all-dates.push(item-date)
+    } else if type(item-date) == array {
+      for d in item-date {
+        if type(d) == datetime {
+          all-dates.push(d)
+        }
+      }
+    }
+  }
+
+  let sorted-dates = all-dates.sorted().dedup()
+  if sorted-dates.len() == 0 {
+    (date: ctx.invoice-date, period: none)
+  } else if sorted-dates.len() == 1 {
+    (date: sorted-dates.first(), period: none)
+  } else {
+    (date: none, period: (sorted-dates.first(), sorted-dates.last()))
+  }
+}
+
 /// Generates a ZUGFeRD 2.x / Factur-X 1.0 CrossIndustryInvoice XML document
 /// from the fully-computed invoice context.
 ///
@@ -572,11 +600,16 @@
     items
       .enumerate()
       .map(((i, item)) => {
+        let net-price = if item.quantity != decimal("0") {
+          item.total / item.quantity
+        } else {
+          item.price
+        }
         build-line-item(
           i + 1,
           item.name,
           item.at("item-id", default: none),
-          item.price,
+          net-price,
           item.quantity,
           item.unit,
           item.tax.category,
@@ -587,6 +620,11 @@
         )
       })
   } else { () }
+
+  let (date: delivery-date, period: delivery-period) = determine-delivery-dates(
+    ctx,
+    items,
+  )
 
   let trade-settlement = (
     "ram:PaymentReference": invoice-nr-str,
@@ -606,6 +644,26 @@
   let applicable-taxes = build-applicable-trade-tax(taxes.values())
   if applicable-taxes != () {
     trade-settlement.insert("ram:ApplicableTradeTax", applicable-taxes)
+  }
+
+  if profile != "minimum" and delivery-period != none {
+    trade-settlement.insert(
+      "ram:BillingSpecifiedPeriod",
+      (
+        "ram:StartDateTime": (
+          "udt:DateTimeString": (
+            "@format": "102",
+            "": fmt-date(delivery-period.first()),
+          ),
+        ),
+        "ram:EndDateTime": (
+          "udt:DateTimeString": (
+            "@format": "102",
+            "": fmt-date(delivery-period.last()),
+          ),
+        ),
+      ),
+    )
   }
 
   let header-allowance-charges = build-header-allowance-charges(
@@ -714,7 +772,20 @@
     transaction.insert("ram:IncludedSupplyChainTradeLineItem", line-items)
   }
   transaction.insert("ram:ApplicableHeaderTradeAgreement", header-agreement)
-  transaction.insert("ram:ApplicableHeaderTradeDelivery", (:))
+  let header-delivery = (:)
+  if profile != "minimum" and delivery-date != none {
+    header-delivery = (
+      "ram:ActualDeliverySupplyChainEvent": (
+        "ram:OccurrenceDateTime": (
+          "udt:DateTimeString": (
+            "@format": "102",
+            "": fmt-date(delivery-date),
+          ),
+        ),
+      ),
+    )
+  }
+  transaction.insert("ram:ApplicableHeaderTradeDelivery", header-delivery)
   transaction.insert("ram:ApplicableHeaderTradeSettlement", trade-settlement)
 
   let data = (

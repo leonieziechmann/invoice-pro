@@ -551,3 +551,72 @@
     "panicked with: \"Top-level 'tax-nr' is not allowed when 'zugferd' (e-invoicing) is enabled. Please specify 'tax-nr' inside the 'sender' dictionary instead.\"",
   )
 }
+
+// --- Test ZUGFeRD delivery date determination ---
+#{
+  import "/src/zugferd/build.typ": determine-delivery-dates
+
+  let ctx = (invoice-date: datetime(year: 2026, month: 7, day: 9))
+
+  // 1. Empty items list
+  assert.eq(
+    determine-delivery-dates(ctx, ()),
+    (date: datetime(year: 2026, month: 7, day: 9), period: none),
+  )
+
+  // 2. Items with no date / auto
+  assert.eq(
+    determine-delivery-dates(ctx, (
+      (name: "A", date: auto),
+      (name: "B", date: none),
+    )),
+    (date: datetime(year: 2026, month: 7, day: 9), period: none),
+  )
+
+  // 3. Items with single shared date
+  assert.eq(
+    determine-delivery-dates(ctx, (
+      (name: "A", date: datetime(year: 2026, month: 7, day: 1)),
+      (name: "B", date: datetime(year: 2026, month: 7, day: 1)),
+      (name: "C", date: auto), // resolves to invoice date
+    )),
+    (
+      date: none,
+      period: (
+        datetime(year: 2026, month: 7, day: 1),
+        datetime(year: 2026, month: 7, day: 9),
+      ),
+    ),
+  )
+
+  // 4. Items with single shared date (without auto falling back to invoice-date)
+  assert.eq(
+    determine-delivery-dates(ctx, (
+      (name: "A", date: datetime(year: 2026, month: 7, day: 1)),
+      (name: "B", date: datetime(year: 2026, month: 7, day: 1)),
+    )),
+    (date: datetime(year: 2026, month: 7, day: 1), period: none),
+  )
+
+  // 5. Items with range / multiple dates
+  assert.eq(
+    determine-delivery-dates(ctx, (
+      (
+        name: "A",
+        date: (
+          datetime(year: 2026, month: 7, day: 1),
+          datetime(year: 2026, month: 7, day: 5),
+        ),
+      ),
+      (name: "B", date: datetime(year: 2026, month: 7, day: 3)),
+    )),
+    (
+      date: none,
+      period: (
+        datetime(year: 2026, month: 7, day: 1),
+        datetime(year: 2026, month: 7, day: 5),
+      ),
+    ),
+  )
+}
+
