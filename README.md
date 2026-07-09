@@ -2,7 +2,7 @@
 
 Modern Invoice Template for Typst
 
-A professional, compliant, and automated invoice template for [Typst](https://typst.app). This package follows the German **DIN 5008** standard (Form A & B) and automates calculations, VAT handling, and payment details.
+A professional, compliant, and automated invoice template for [Typst](https://typst.app) with integrated ZUGFeRD e-invoicing support. This package follows the German **DIN 5008** standard (Form A & B) and automates calculations, VAT handling, and payment details.
 
 ![Example Invoice](thumbnail.png)
 
@@ -10,6 +10,7 @@ A professional, compliant, and automated invoice template for [Typst](https://ty
 
 - **Internationalization (i18n) (New in v0.3.0):** Built-in support for English and German out of the box, plus a highly flexible `locale` API to inject custom translations for any language.
 - **DIN 5008 Compliant:** Supports both Form A and Form B layouts natively via the flexible Theming API.
+- **ZUGFeRD e-invoicing (New in v0.4.0):** (Experimental) Embed EN 16931-compliant Factur-X/ZUGFeRD XML metadata into your generated PDF/A-3B invoices for automated digital processing.
 - **Block-based API:** Clean, scoped, and declarative data structure using `#line-items`, `#item`, and `#bundle`—inspired by CeTZ, keeping your document clutter-free.
 - **Automatic Calculations:** Effortlessly handles line items, nested bundles, sub-totals, and calculates taxes automatically.
 - **EPC QR-Code (GiroCode):** Automatically generates a scannable banking QR code for quick and easy payments using banking apps.
