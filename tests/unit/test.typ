@@ -433,3 +433,104 @@
   assert.eq(summation-modified.at("ram:ChargeTotalAmount"), "50.00")
   assert.eq(summation-modified.at("ram:AllowanceTotalAmount"), "100.00")
 }
+
+// --- Test backwards compatibility for 'street' ---
+#{
+  import "/src/logic/country.typ": normalize-party
+
+  // 1. Check that 'street' is correctly transformed to 'address'
+  let party-street = normalize-party(
+    (name: "John Doe", street: "Musterstraße 1", city: "12345 Berlin"),
+    "de",
+  )
+  assert.eq(party-street.address, "Musterstraße 1")
+  assert.eq(party-street.address-lines, ("Musterstraße 1",))
+
+  // 2. Check normal behavior with 'address'
+  let party-address = normalize-party(
+    (name: "John Doe", address: "Musterstraße 1", city: "12345 Berlin"),
+    "de",
+  )
+  assert.eq(party-address.address, "Musterstraße 1")
+  assert.eq(party-address.address-lines, ("Musterstraße 1",))
+
+  // 3. Check mutual exclusion panic behavior
+  assert.eq(
+    catch(() => normalize-party(
+      (
+        name: "John Doe",
+        street: "Musterstraße 1",
+        address: "Musterstraße 2",
+        city: "12345 Berlin",
+      ),
+      "de",
+    )),
+    "panicked with: \"Both 'street' and 'address' are populated for sender, but they are mutually exclusive.\"",
+  )
+  assert.eq(
+    catch(() => normalize-party(
+      (
+        name: "John Doe",
+        street: "Musterstraße 1",
+        address: "Musterstraße 2",
+        city: "12345 Berlin",
+      ),
+      "de",
+      is-recipient: true,
+    )),
+    "panicked with: \"Both 'street' and 'address' are populated for recipient, but they are mutually exclusive.\"",
+  )
+}
+
+// --- Test backwards compatibility for 'tax-nr' ---
+#{
+  import "/src/lib.typ": invoice, themes
+  import "/tests/test-locale.typ": test-locale
+
+  // Helper function to test invoice signature behavior
+  let test-invoice(..args) = {
+    invoice(
+      theme: themes.blank,
+      locale: test-locale,
+      sender: (name: "Test Sender", address: "Street 1", city: "City"),
+      recipient: (name: "Test Recipient", address: "Street 2", city: "City"),
+      ..args,
+      [],
+    )
+  }
+
+  // 1. Check that top-level tax-nr is supported and merges with sender details
+  let res = catch(() => test-invoice(tax-nr: "123/456/78901"))
+  assert.eq(res, none)
+
+  // 2. Check mutual exclusion with sender.tax-nr
+  let res-conflict = catch(() => {
+    invoice(
+      theme: themes.blank,
+      locale: test-locale,
+      sender: (
+        name: "Test Sender",
+        address: "Street 1",
+        city: "City",
+        tax-nr: "999/999/99999",
+      ),
+      recipient: (name: "Test Recipient", address: "Street 2", city: "City"),
+      tax-nr: "123/456/78901",
+      [],
+    )
+  })
+  assert.eq(
+    res-conflict,
+    "panicked with: \"Both the top-level 'tax-nr' parameter and 'sender.tax-nr' are populated, but they are mutually exclusive.\"",
+  )
+
+  // 3. Check mutual exclusion with zugferd (e-invoicing)
+  let res-zugferd = catch(() => test-invoice(
+    tax-nr: "123/456/78901",
+    zugferd: "basic",
+  ))
+  assert.eq(
+    res-zugferd,
+    "panicked with: \"Top-level 'tax-nr' is not allowed when 'zugferd' (e-invoicing) is enabled. Please specify 'tax-nr' inside the 'sender' dictionary instead.\"",
+  )
+}

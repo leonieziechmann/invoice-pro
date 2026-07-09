@@ -4,12 +4,16 @@ on:
     branches: [main]
     paths:
       - "src/**"
-      - "tests/integration/zugferd-basic/**"
+      - "tests/integration/**"
+      - "template/**"
+      - "flake.nix"
   pull_request:
     branches: [main]
     paths:
       - "src/**"
-      - "tests/integration/zugferd-basic/**"
+      - "tests/integration/**"
+      - "template/**"
+      - "flake.nix"
 
 jobs:
   validate:
@@ -31,8 +35,15 @@ jobs:
 
       - name: Validate ZUGFeRD PDF
         run: |
-          mkdir -p /tmp/extracted
-          nix run .#validate-zugferd --accept-flake-config -- /tmp/extracted
+          mkdir -p /tmp/extracted/zugferd-basic /tmp/extracted/zugferd-small-biz /tmp/extracted/invoice
+          nix run .#validate-zugferd --accept-flake-config -- "tests/integration/zugferd-basic/test.typ" "/tmp/extracted/zugferd-basic.pdf"
+          nix run .#validate-zugferd --accept-flake-config -- "tests/integration/zugferd-small-biz/test.typ" "/tmp/extracted/zugferd-small-biz.pdf"
+          nix run .#validate-zugferd --accept-flake-config -- "template/invoice.typ" "/tmp/extracted/invoice.pdf"
+          nix shell nixpkgs#poppler_utils --command bash -c "
+            pdfdetach -saveall -o /tmp/extracted/zugferd-basic /tmp/extracted/zugferd-basic.pdf
+            pdfdetach -saveall -o /tmp/extracted/zugferd-small-biz /tmp/extracted/zugferd-small-biz.pdf
+            pdfdetach -saveall -o /tmp/extracted/invoice /tmp/extracted/invoice.pdf
+          "
 
       - name: Archive extracted XML
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -12,11 +12,13 @@
 }
 
 // Retrieve the electronic address for a party, or derive it from the VAT ID if available.
-#let get-electronic-address(party) = {
+#let get-electronic-address(party, is-outside-scope: false) = {
   if "electronic-address" in party and party.electronic-address != none {
     return party.electronic-address
   }
-  let vat-id = party.at("vat-id", default: none)
+  let vat-id = if is-outside-scope { none } else {
+    party.at("vat-id", default: none)
+  }
   let country-code = if (
     "country" in party and type(party.country) == dictionary
   ) {
@@ -42,6 +44,25 @@
     if code in eas-codes {
       return (scheme: eas-codes.at(code), id: vat-id)
     }
+  }
+
+  // Fallback to email
+  let email = {
+    if (
+      "contact" in party
+        and type(party.contact) == dictionary
+        and "email" in party.contact
+        and party.contact.email != none
+    ) {
+      party.contact.email
+    } else if "email" in party and party.email != none {
+      party.email
+    } else {
+      none
+    }
+  }
+  if email != none and email != "" {
+    return (scheme: "EM", id: email)
   }
   none
 }
@@ -111,7 +132,9 @@
   include-addresses,
   electronic-address: none,
   contact: none,
+  is-outside-scope: false,
 ) = {
+  let vat-id = if is-outside-scope { none } else { vat-id }
   let tax-registrations = {
     if vat-id != none and vat-id != "" {
       (
@@ -135,7 +158,15 @@
     }
   }
 
-  let res = ("ram:Name": name)
+  let res = (:)
+
+  if vat-id == none or vat-id == "" {
+    if tax-nr != none and tax-nr != "" {
+      res.insert("ram:ID", tax-nr)
+    }
+  }
+
+  res.insert("ram:Name", name)
 
   if contact != none {
     let details = (:)
@@ -207,7 +238,9 @@
   vat-id,
   include-addresses,
   electronic-address: none,
+  is-outside-scope: false,
 ) = {
+  let vat-id = if is-outside-scope { none } else { vat-id }
   let res = ("ram:Name": name)
 
   if include-addresses and address != none and address != () {
@@ -321,12 +354,16 @@
     }
   }
 
+  let applicable-trade-tax = (
+    "ram:TypeCode": "VAT",
+    "ram:CategoryCode": tax-category,
+  )
+  if tax-category != "O" {
+    applicable-trade-tax.insert("ram:RateApplicablePercent", fmt-rate(tax-rate))
+  }
+
   let line-settlement = (
-    "ram:ApplicableTradeTax": (
-      "ram:TypeCode": "VAT",
-      "ram:CategoryCode": tax-category,
-      "ram:RateApplicablePercent": fmt-rate(tax-rate),
-    ),
+    "ram:ApplicableTradeTax": applicable-trade-tax,
   )
 
   let line-allowance-charges = build-line-allowance-charges(
@@ -605,8 +642,16 @@
     ),
   )
 
-  let seller-eas = get-electronic-address(ctx.sender)
-  let buyer-eas = get-electronic-address(ctx.recipient)
+  let is-outside-scope = taxes.values().any(t => t.category == "O")
+
+  let seller-eas = get-electronic-address(
+    ctx.sender,
+    is-outside-scope: is-outside-scope,
+  )
+  let buyer-eas = get-electronic-address(
+    ctx.recipient,
+    is-outside-scope: is-outside-scope,
+  )
 
   let seller-contact = {
     let contact = ctx.sender.at("contact", default: none)
@@ -646,6 +691,7 @@
       include-addresses,
       electronic-address: seller-eas,
       contact: seller-contact,
+      is-outside-scope: is-outside-scope,
     ),
   )
   header-agreement.insert(
@@ -659,6 +705,7 @@
       ctx.recipient.vat-id,
       include-addresses,
       electronic-address: buyer-eas,
+      is-outside-scope: is-outside-scope,
     ),
   )
 

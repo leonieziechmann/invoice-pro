@@ -79,43 +79,65 @@
             exit 1
           fi
 
-          validate_file() {
-            local src_file="$1"
-            local name
+          if [ -z "$1" ]; then
+            echo "Usage: validate-zugferd <typst-document> [output-path]" >&2
+            exit 1
+          fi
+
+          src_file="$1"
+          output_path="$2"
+
+          tmp_dir=$(mktemp -d)
+          # Cleanup temp dir on exit unless it is empty/deleted
+          trap 'rm -rf "$tmp_dir"' EXIT
+
+          if [ -n "$output_path" ]; then
+            pdf_path="$output_path"
+          else
             name=$(basename "$src_file" .typ)
+            pdf_path="$tmp_dir/$name.pdf"
+          fi
 
-            local tmp_dir
-            tmp_dir=$(mktemp -d)
+          extract_dir="$tmp_dir/extracted"
+          mkdir -p "$extract_dir"
 
-            local pdf_path="$tmp_dir/$name.pdf"
-            local extract_dir="$tmp_dir/extracted"
-            mkdir -p "$extract_dir"
+          echo "Compiling ZUGFeRD PDF for $src_file..."
+          ${typstEnv}/bin/typst compile \
+            --root . \
+            --pdf-standard=a-3b \
+            "$src_file" \
+            "$pdf_path"
 
-            echo "Compiling ZUGFeRD PDF for $src_file..."
-            ${typstEnv}/bin/typst compile \
-              --root . \
-              --pdf-standard=a-3b \
-              "$src_file" \
-              "$pdf_path"
+          echo "Extracting factur-x.xml..."
+          ${pkgs.poppler-utils}/bin/pdfdetach -saveall -o "$extract_dir" "$pdf_path"
 
-            echo "Extracting factur-x.xml..."
-            ${pkgs.poppler-utils}/bin/pdfdetach -saveall -o "$extract_dir" "$pdf_path"
+          if [ ! -f "$extract_dir/factur-x.xml" ]; then
+            echo "Error: factur-x.xml not found in compiled PDF!" >&2
+            exit 1
+          fi
 
-            if [ ! -f "$extract_dir/factur-x.xml" ]; then
-              echo "Error: factur-x.xml not found in compiled PDF!" >&2
-              rm -rf "$tmp_dir"
-              exit 1
-            fi
+          echo "Validating ZUGFeRD XML..."
+          ${mustang-cli}/bin/mustang-cli --action validate --source "$extract_dir/factur-x.xml"
+        '';
 
-            echo "Validating ZUGFeRD XML..."
-            ${mustang-cli}/bin/mustang-cli --action validate --source "$extract_dir/factur-x.xml"
+        validate-all-zugferd = pkgs.writeScriptBin "validate-all-zugferd" ''
+          #!/usr/bin/env bash
+          set -e
 
-            rm -rf "$tmp_dir"
-          }
+          if [ ! -f "typst.toml" ]; then
+            echo "Error: validate-all-zugferd must be run from the root of the invoice-pro repository." >&2
+            exit 1
+          fi
 
-          validate_file "tests/integration/zugferd-basic/test.typ"
-          validate_file "template/invoice.typ"
+          echo "========================"
+          echo " Running all ZUGFeRD validations... "
+          echo "========================"
 
+          ${validate-zugferd}/bin/validate-zugferd "tests/integration/zugferd-basic/test.typ"
+          ${validate-zugferd}/bin/validate-zugferd "tests/integration/zugferd-small-biz/test.typ"
+          ${validate-zugferd}/bin/validate-zugferd "template/invoice.typ"
+
+          echo ""
           echo "✔ All ZUGFeRD validations passed!"
         '';
 
@@ -133,9 +155,20 @@
           ''}/bin/typst-wrapper";
         };
 
+        apps.validate-zugferd = {
+          type = "app";
+          program = "${validate-zugferd}/bin/validate-zugferd";
+        };
+
+        apps.validate-all-zugferd = {
+          type = "app";
+          program = "${validate-all-zugferd}/bin/validate-all-zugferd";
+        };
+
         packages.default = invoice-proPackage;
 
         packages.validate-zugferd = validate-zugferd;
+        packages.validate-all-zugferd = validate-all-zugferd;
 
         packages.documentation = pkgs.buildNpmPackage {
           pname = "invoice-pro-documentation";
@@ -206,9 +239,9 @@
           echo "[3/4] Building documentation..."
           nix build .#documentation --print-build-logs
 
-          echo ""
-          echo "[4/4] Validating ZUGFeRD PDF..."
-          nix run .#validate-zugferd --accept-flake-config
+           echo ""
+           echo "[4/4] Validating ZUGFeRD PDF..."
+           nix run .#validate-all-zugferd --accept-flake-config
 
           echo ""
           echo "✔ All checks passed successfully!"
@@ -237,6 +270,7 @@
             self.packages.${system}.check-version
             self.packages.${system}.check-pr
             self.packages.${system}.validate-zugferd
+            self.packages.${system}.validate-all-zugferd
           ] ++ self.checks.${system}.pre-commit-check.enabledPackages;
 
           shellHook = ''

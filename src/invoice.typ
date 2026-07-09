@@ -28,6 +28,10 @@
   /// -> dictionary
   recipient: (:),
 
+  /// Your company's unique tax identifier / VAT ID (backwards compatibility).
+  /// -> none | string | content (deprecated)
+  tax-nr: none,
+
   /// The date of the invoice. Defaults to today.
   /// -> datetime
   date: datetime.today(),
@@ -80,6 +84,7 @@
     )),
   )
   types.require(invoice-nr, "invoice::invoice-nr", none, str, content)
+  types.require(tax-nr, "invoice::tax-nr", none, str, content)
 
   types.require(tax, "invoice::tax", none, auto, types.tax-like)
   types.require(tax-mode, "invoice::tax-mode", "inclusive", "exclusive")
@@ -100,6 +105,21 @@
   let eval-locale = locale(base-language, base-region)
 
   let default-region = eval-locale.meta.region
+  let sender = sender
+  if tax-nr != none {
+    if zugferd != none {
+      panic(
+        "Top-level 'tax-nr' is not allowed when 'zugferd' (e-invoicing) is enabled. Please specify 'tax-nr' inside the 'sender' dictionary instead.",
+      )
+    }
+    if "tax-nr" in sender and sender.tax-nr != none {
+      panic(
+        "Both the top-level 'tax-nr' parameter and 'sender.tax-nr' are populated, but they are mutually exclusive.",
+      )
+    }
+    sender.insert("tax-nr", tax-nr)
+  }
+
   let normalized-sender = normalize-party(sender, default-region)
   let normalized-recipient = normalize-party(
     recipient,

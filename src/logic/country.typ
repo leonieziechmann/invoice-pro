@@ -397,6 +397,16 @@
 ) = {
   if type(party) != dictionary { return party }
 
+  let has-street = "street" in party and party.street != none
+  let has-address = "address" in party and party.address != none
+  if has-street and has-address {
+    panic(
+      "Both 'street' and 'address' are populated for "
+        + (if is-recipient { "recipient" } else { "sender" })
+        + ", but they are mutually exclusive.",
+    )
+  }
+
   // 1. Resolve country
   let party-region-raw = party.at("region", default: none)
   let party-region = normalize-region-to-string(
@@ -435,7 +445,9 @@
   let name-vertical = format-poly-block(name-raw)
   let name-inline = format-poly-inline(name-raw)
 
-  let address-raw = party.at("address", default: none)
+  let address-raw = if has-street { party.street } else {
+    party.at("address", default: none)
+  }
   let address-vertical = format-poly-block(address-raw)
   let address-inline = format-poly-inline(address-raw)
 
