@@ -377,6 +377,12 @@
     )
   }
 
+  let agreement-block = (
+    "ram:NetPriceProductTradePrice": (
+      "ram:ChargeAmount": fmt-amount(price),
+    ),
+  )
+
   line-settlement.insert(
     "ram:SpecifiedTradeSettlementLineMonetarySummation",
     ("ram:LineTotalAmount": fmt-amount(total)),
@@ -390,11 +396,7 @@
       "ram:Name": name,
     )
       + item-ids,
-    "ram:SpecifiedLineTradeAgreement": (
-      "ram:NetPriceProductTradePrice": (
-        "ram:ChargeAmount": fmt-amount(price),
-      ),
-    ),
+    "ram:SpecifiedLineTradeAgreement": agreement-block,
     "ram:SpecifiedLineTradeDelivery": (
       "ram:BilledQuantity": (
         "@unitCode": unit-code,
@@ -600,16 +602,11 @@
     items
       .enumerate()
       .map(((i, item)) => {
-        let net-price = if item.quantity != decimal("0") {
-          item.total / item.quantity
-        } else {
-          item.price
-        }
         build-line-item(
           i + 1,
           item.name,
           item.at("item-id", default: none),
-          net-price,
+          item.price,
           item.quantity,
           item.unit,
           item.tax.category,

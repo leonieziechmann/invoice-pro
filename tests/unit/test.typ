@@ -369,6 +369,11 @@
     item-discounts,
     item-surcharges,
   )
+  assert.eq(
+    line-with-modifiers.at("ram:SpecifiedLineTradeAgreement").keys(),
+    ("ram:NetPriceProductTradePrice",),
+  )
+
   let settlement = line-with-modifiers.at("ram:SpecifiedLineTradeSettlement")
   assert.eq(
     settlement.keys(),
