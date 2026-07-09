@@ -7,7 +7,7 @@ on:
 jobs:
   publish:
     # Use the shared workflow from this repo
-    uses: leonieziechmann/typst-nix-utils/.github/workflows/publish-package.yaml@main
+    uses: leonieziechmann/typst-nix-utils/.github/workflows/publish-package.yaml@c7716772f14f3c658e06d2e01fbc9a978862b560
     with:
       # Target fork where the PR branch will be pushed
       fork_repo: leonieziechmann/packages
