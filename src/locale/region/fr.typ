@@ -23,11 +23,11 @@
     if rate == 20% {
       return tax.vat(20%) // Taux normal
     } else if rate == 10% {
-      return tax.lower-rate(10%) // Taux intermédiaire (restaurants, transport)
+      return tax.vat(10%) // Taux intermédiaire (restaurants, transport)
     } else if rate == 5.5% {
-      return tax.lower-rate(5.5%) // Taux réduit (food, water, books)
+      return tax.vat(5.5%) // Taux réduit (food, water, books)
     } else if rate == 2.1% {
-      return tax.lower-rate(2.1%) // Taux particulier (press, specific medicines)
+      return tax.vat(2.1%) // Taux particulier (press, specific medicines)
     } else if rate == 0% {
       panic(
         "Ambiguous 0% tax rate in region 'fr'. Please explicitly use tax.zero(), tax.exempt(), tax.export(), or tax.outside-scope() from tax.typ instead of passing 0%.\n"

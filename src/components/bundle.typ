@@ -3,8 +3,9 @@
 #import "../logic/calc-bundle.typ": calculate-bundle
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
-#import "../data/unit.typ" as m-unit
+#import "../data/unit.typ"
 #import "../data/tax.typ" as m-tax
+#import "../logic/unit.typ" as m-unit
 
 /// A container used to group multiple items together under a single overarching item.
 /// It aggregates the totals and dates of its bundled children and acts as a virtual item
@@ -26,8 +27,8 @@
   /// The reference quantity for the bundle's price calculation. Automatically defaults to `1`.
   /// -> int | float | decimal | str | auto
   base-quantity: auto,
-  /// The unit of measurement for the bundle.
-  /// -> str | content | auto | none
+  /// The unit of measurement for the bundle. For ZUGFeRD compliance, pass a dictionary: `(display: "Std.", code: "HUR")`.
+  /// -> str | content | dictionary | auto | none
   unit: auto,
 
   /// The date or date range for the bundle. If `auto`, it calculates a single date or date range based on the dates of the bundled items.
@@ -62,7 +63,15 @@
     auto,
     types.decimal-like,
   )
-  types.require(unit, "bundle::unit", none, auto, types.text-like)
+  types.require(
+    unit,
+    "bundle::unit",
+    none,
+    auto,
+    types.text-like,
+    types.unit-input-type,
+    function,
+  )
 
   types.require(date, "bundle::date", none, auto, types.date-like)
 
@@ -94,7 +103,10 @@
         coercion.to-decimal(base-quantity),
         default: decimal("1"),
       )
-      derive("unit", unit, default: [pc.])
+      derive(
+        "unit",
+        m-unit.resolve(unit, ctx.locale, default: m-unit.pcs),
+      )
 
       derive("date", date)
       put("bundle-date", ctx.at("date", default: date))

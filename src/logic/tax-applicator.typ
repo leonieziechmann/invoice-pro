@@ -75,12 +75,15 @@
     let tax = (
       rate: group.tax.rate,
       category: group.tax.category,
+      grounds: group.tax.at("grounds", default: none),
       absolute: decimal("0"),
+      basis: decimal("0"),
     )
 
     if is-net-based {
       let tax-amount = norm-money(group-total * tax.rate)
       tax.absolute = tax-amount
+      tax.basis = group-total
       net-total += group-total
       gross-total += group-total + tax-amount
 
@@ -90,6 +93,7 @@
     } else {
       let net = norm-money(group-total / (1 + tax.rate))
       tax.absolute = group-total - net
+      tax.basis = net
       net-total += net
       gross-total += group-total
 

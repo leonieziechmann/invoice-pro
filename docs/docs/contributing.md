@@ -85,9 +85,9 @@ The following milestones are planned for future releases of the core engine:
 
 - [x] (v0.2.0) **Refactored API:** Moving away from global states to a more robust, scoped API for better stability and flexibility.
 - [x] (v0.3.0) **Internationalization (i18n):** Built-in support for English and other locales (currently generates German invoices by default).
+- [x] (v0.4.0) **ZUGFeRD Support:** (Experimental) Embedding XML data for fully compliant, **Normalized** e-invoicing based on standards like **UNTDID 5305**.
 - [ ] (WIP) **Theming Engine:** Allow easy customization of accent colors and fonts to match corporate identities.
 - [ ] **Data Loading:** Helper functions to load invoice items directly from JSON, CSV, or YAML data sources.
-- [ ] **ZUGFeRD Support:** (Long-term goal) Embedding XML data for fully compliant, **Normalized** e-invoicing based on standards like **UNTDID 5305**.
 
 ## Existing Dependencies
 
@@ -100,8 +100,10 @@ The current architecture relies on the following optimized packages:
 
 :::info
 **Acknowledgements:**
-Special thanks to [classy-german-invoice](https://github.com/erictapen/typst-invoice) by Kerstin Humm, which served as architectural inspiration and provided the foundational logic for the EPC-QR-Code implementation.
-:::
+
+- Special thanks to [classy-german-invoice](https://github.com/erictapen/typst-invoice) by Kerstin Humm, which served as architectural inspiration and provided the foundational logic for the EPC-QR-Code implementation.
+- The ZUGFeRD e-invoicing implementation was contributed by [Michael Fuchs (theexiile1305)](https://github.com/theexiile1305).
+  :::
 
 ## License
 

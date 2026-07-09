@@ -20,6 +20,7 @@
   reference: (
     tax-number: "N° de TVA",
     invoice-number: "N° de facture",
+    vat-id: "N° de TVA intra.",
   ),
 
   /// Column headers and labels for the line-items table
@@ -57,6 +58,27 @@
     unit: "Unité pour tous les articles :",
     quantity: "Quantité pour tous les articles :",
     date: "Date de prestation pour tous les articles :",
+  ),
+
+  units: (
+    piece: "pièce",
+    "set": "ensemble",
+    pair: "paire",
+    "lump-sum": "forfait",
+    hour: "heure",
+    day: "jour",
+    month: "mois",
+    year: "an",
+    kilogram: "kilogramme",
+    gram: "gramme",
+    tonne: "tonne",
+    metre: "mètre",
+    "square-metre": "mètre carré",
+    millimetre: "millimètre",
+    centimetre: "centimètre",
+    kilometre: "kilomètre",
+    litre: "litre",
+    "cubic-metre": "mètre cube",
   ),
 
   /// Designations for bank and payment details

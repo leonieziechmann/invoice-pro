@@ -61,9 +61,18 @@
     extra: ctx.sender.at("extra", default: none),
   )
 
+  let document-keywords = ("Invoice",)
+  if ctx.zugferd != none {
+    document-keywords.push("ZUGFeRD")
+    document-keywords.push("Factur-X")
+  }
+
   set document(
     title: subject,
     author: sender.at("name", default: ""),
+    date: ctx.invoice-date,
+    description: subject,
+    keywords: document-keywords,
   )
 
   set text(font: font)
@@ -120,8 +129,8 @@
   ]
 
   let sender-box = sender-box(
-    name: sender.name,
-    [#sender.address, #sender.city],
+    name: ctx.sender.name-inline,
+    [#ctx.sender.address-inline, #ctx.sender.city-inline],
   )
   let annotations-box = annotations-box(annotations)
   let recipient-box = recipient-box([#recipient-content])
@@ -150,7 +159,11 @@
       columns: (1fr, auto),
       heading(subject),
       {
-        let cityname = extract-city-name(sender.city)
+        let cityname = if ctx.sender.at("city-name", default: none) != none {
+          ctx.sender.city-name
+        } else {
+          extract-city-name(sender.city)
+        }
         if cityname != none [#cityname, ]
 
         if type(ctx.invoice-date) == datetime {

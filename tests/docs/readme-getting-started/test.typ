@@ -7,6 +7,7 @@
     name: "Your Company / Name",
     address: "1 Example Street",
     city: "12345 Example City",
+    tax-nr: "123/456/789",
   ),
   recipient: (
     name: "Customer Name",
@@ -14,7 +15,6 @@
     city: "98765 Customer City",
   ),
   invoice-nr: "2026-01",
-  tax-nr: "123/456/789",
 )
 
 // Add Invoice Items inside a scoped block

@@ -3,6 +3,8 @@
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
 #import "../data/tax.typ" as m-tax
+#import "../public/unit.typ" as m-unit
+#import "../logic/unit.typ" as unit-logic
 
 /// Normalizes a modifier input (content, dictionary, or signal) into a structured modifier object.
 ///
@@ -84,8 +86,8 @@
   /// The reference quantity for the price, useful for calculating price-per-unit ratios. Automatically defaults to `1`.
   /// -> int | float | decimal | str | auto
   base-quantity: auto,
-  /// The unit of measurement.
-  /// -> str | content | auto | none
+  /// The unit of measurement. For ZUGFeRD compliance, pass a dictionary: `(display: "Std.", code: "HUR")`.
+  /// -> str | content | dictionary | auto | none
   unit: auto,
 
   /// The date or a date range `(datetime, datetime)` the item or service was provided.
@@ -123,7 +125,15 @@
 
   types.require(quantity, "item::quantity", auto, types.decimal-like)
   types.require(base-quantity, "item::base-quantity", auto, types.decimal-like)
-  types.require(unit, "item::unit", none, auto, types.text-like)
+  types.require(
+    unit,
+    "item::unit",
+    none,
+    auto,
+    types.text-like,
+    types.unit-input-type,
+    function,
+  )
 
   types.require(date, "item::date", none, auto, types.date-like)
 
@@ -165,7 +175,10 @@
         coercion.to-decimal(base-quantity),
         default: decimal("1"),
       )
-      derive("unit", unit, default: [Stk.])
+      derive(
+        "unit",
+        unit-logic.resolve(unit, ctx.locale, default: m-unit.pc),
+      )
 
       derive("date", coercion.to-date(date))
 

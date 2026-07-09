@@ -6,28 +6,41 @@
  * GitHub: https://github.com/leonieziechmann/invoice-pro
  * If you have feature requests or find outdated information,
  * please create an Issue or Pull Request on GitHub.
+ *
+ * ZUGFeRD (experimental): Export as PDF/A-3B to embed XML.
+ * - Web App: File > Export As -> PDF -> PDF/A-3B -> download icon
+ * - CLI: typst compile --pdf-standard a-3b file.typ
  */
 
 
 #show: invoice.with(
   theme: themes.DIN-5008(form: "A"),
-  locale: locale.en-de,
+  locale: locale.de-de,
+  zugferd: "en16931",
   sender: (
-    name: "Your Company / Name",
-    address: "123 Example Street",
-    city: "12345 Example City",
+    name: "Jane Doe",
+    address: "Musterstraße 1",
+    city: "12345 Musterstadt",
+    tax-nr: "123/456/78901",
+    vat-id: "DE123456789",
+    contact: (
+      name: "Jane Doe",
+      phone: "+49 123 4567890",
+      email: "jane.doe@example.com",
+    ),
     extra: (
       "Tel": "+49 123 4567890",
-      "E-Mail": "my-mail@domain.com",
+      "E-Mail": "jane.doe@example.com",
     ),
   ),
   recipient: (
-    name: "Customer Name",
-    address: "5 Customer Street",
-    city: "98765 Customer City",
+    name: "Client Corp",
+    address: "Kundenweg 5",
+    city: "54321 Kundenstadt",
+    vat-id: "DE987654321",
+    buyer-reference: "DE123456789-12345-12",
   ),
   invoice-nr: "2026-01",
-  tax-nr: "123/456/789",
 )
 #set text(10pt)
 
@@ -36,20 +49,20 @@
   #bundle(
     [Website Relaunch 2026],
     date: (date(10, 2, 2026), date(5, 3, 2026)),
-    unit: "flat",
+    unit: unit.flat,
   )[
     #item(
       [Concept & Wireframing],
       price: 1200.00,
       quantity: 1,
-      unit: "flat",
+      unit: unit.flat,
     )
-    #item([UI/UX Design], price: 85.00, quantity: 15, unit: "hrs")
+    #item([UI/UX Design], price: 85.00, quantity: 15, unit: unit.flat)
     #item(
       [Frontend & Backend Development],
       price: 95.00,
       quantity: 40,
-      unit: "hrs",
+      unit: unit.h,
     )
 
     #discount([Package Discount (10% on development services)], amount: 10%)
@@ -59,24 +72,24 @@
         [Keyword Research & Strategy],
         price: 90.00,
         quantity: 5,
-        unit: "hrs",
+        unit: unit.h,
       )
       #item([Setup Google Analytics & Tag Manager], price: 150.00, quantity: 1)
     ]
   ]
 
-  #apply(tax: tax.lower-rate(7%))[
+  #apply(tax: tax.vat(7%))[
     #item(
       [Textbook: "Modern Web Design"],
       price: 49.90,
       quantity: 2,
-      unit: "pcs",
+      unit: unit.pcs,
     )
     #item(
       [Textbook: "SEO for Beginners"],
       price: 29.90,
       quantity: 1,
-      unit: "pcs",
+      unit: unit.pcs,
     )
   ]
 
@@ -84,7 +97,7 @@
     [Premium Hosting],
     price: 15.00,
     quantity: 12,
-    unit: "months",
+    unit: unit.mo,
     date: datetime.today(),
   )
 
@@ -92,7 +105,7 @@
     [Domain Registration (.com)],
     total: 11.90,
     input-gross: true,
-    unit: "flat",
+    unit: unit.flat,
   )
 
   #item(
@@ -100,7 +113,7 @@
     price: 0,
     tax: tax.zero(),
     description: "Included service as per framework agreement",
-    unit: "flat",
+    unit: unit.flat,
   )
 
   #discount([Promo Voucher "NEWCUSTOMER50"], amount: 50)
@@ -110,7 +123,7 @@
 #payment-goal(days: 14)
 
 #bank-details(
-  bank: "Example Bank",
+  bank: "Musterbank",
   iban: "DE07100202005821158846",
   bic: "EXAMPLEBICX",
 )

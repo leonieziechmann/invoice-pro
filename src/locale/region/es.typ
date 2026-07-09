@@ -7,9 +7,9 @@
     if rate == 21% {
       return tax.vat(21%) // Standard IVA rate
     } else if rate == 10% {
-      return tax.lower-rate(10%) // Reduced rate (e.g., passenger transport, some foods, water)
+      return tax.vat(10%) // Reduced rate (e.g., passenger transport, some foods, water)
     } else if rate == 4% {
-      return tax.lower-rate(4%) // Super-reduced rate (e.g., basic foods, books, medicines)
+      return tax.vat(4%) // Super-reduced rate (e.g., basic foods, books, medicines)
     } else if rate == 0% {
       panic(
         "Ambiguous 0% tax rate in region 'es'. Please explicitly use tax.zero(), tax.exempt(), tax.export(), or tax.outside-scope() from tax.typ instead of passing 0%.",

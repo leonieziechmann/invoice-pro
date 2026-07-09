@@ -143,7 +143,9 @@
         update("quantity", format.number)
         update("base-quantity", format.number)
 
-        update("unit", x => [#x])
+        update("unit", x => if type(x) == dictionary and "display" in x {
+          [#(x.display)]
+        } else { [#x] })
 
         update("price", format.currency-fine)
         update("total", format.currency)
@@ -345,6 +347,17 @@
           gross: tax-applicator.gross-total,
         ),
         formated-total: formated-total,
+        // ZUGFeRD Data
+        item-data: (
+          items: items,
+          taxes: tax-applicator.taxes,
+          net-total: tax-applicator.net-total,
+          gross-total: tax-applicator.gross-total,
+          unmodified-net-total: tax-applicator.unmodified-net-total,
+          tax-mode: ctx.tax-mode,
+          discounts: modifier-applicator.modifier.discounts,
+          surcharges: modifier-applicator.modifier.surcharges,
+        ),
       )
 
       return (public, view)

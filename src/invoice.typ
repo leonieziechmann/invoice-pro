@@ -7,6 +7,9 @@
 #import "locale/locale.typ"
 #import "locale/lang/base.typ": base-language
 #import "locale/region/base.typ": base-region
+#import "logic/country.typ": (
+  normalize-party, normalize-region-to-string, resolve-country,
+)
 
 /// The main entry point for creating an invoice document.
 /// It orchestrates the theme, localization, and data calculation passes.
@@ -27,6 +30,10 @@
   /// -> dictionary
   recipient: (:),
 
+  /// Your company's unique tax identifier / VAT ID (backwards compatibility).
+  /// -> none | string | content (deprecated)
+  tax-nr: none,
+
   /// The date of the invoice. Defaults to today.
   /// -> datetime
   date: datetime.today(),
@@ -39,9 +46,6 @@
   /// The unique identifier or number of the invoice.
   /// -> none | string | content
   invoice-nr: none,
-  /// Your unique tax identifier
-  /// -> none | string | content
-  tax-nr: none,
 
   /// The default tax rate to apply if not specified elsewhere.
   /// If `auto`, it is inferred from the locale.
@@ -53,6 +57,11 @@
   /// If true, applies small business tax exemption logic according to the locale.
   /// -> bool
   tax-exempt-small-biz: false,
+
+  /// ZUGFeRD / Factur-X profile for embedding machine-readable XML into the PDF.
+  /// Requires exporting with PDF/A-3 (`typst compile --pdf-standard=a-3b`).
+  /// -> none | "minimum" | "basic-wl" | "basic" | "en16931"
+  zugferd: none,
 
   /// The content of the invoice, typically containing line-items and other components.
   /// -> content
@@ -82,10 +91,57 @@
   types.require(tax, "invoice::tax", none, auto, types.tax-like)
   types.require(tax-mode, "invoice::tax-mode", "inclusive", "exclusive")
   types.require(tax-exempt-small-biz, "invoice::tax-exempt-small-biz", bool)
+  types.require(
+    zugferd,
+    "invoice::zugferd",
+    none,
+    "minimum",
+    "basic-wl",
+    "basic",
+    "en16931",
+    "xrechnung",
+  )
 
   /** Input Calculations **/
   let eval-theme = theme()
   let eval-locale = locale(base-language, base-region)
+
+  let default-region = eval-locale.meta.region
+  let sender = sender
+  if tax-nr != none {
+    if zugferd != none {
+      panic(
+        "Top-level 'tax-nr' is not allowed when 'zugferd' (e-invoicing) is enabled. Please specify 'tax-nr' inside the 'sender' dictionary instead.",
+      )
+    }
+    if "tax-nr" in sender and sender.tax-nr != none {
+      panic(
+        "Both the top-level 'tax-nr' parameter and 'sender.tax-nr' are populated, but they are mutually exclusive.",
+      )
+    }
+    sender.insert("tax-nr", tax-nr)
+  }
+
+  let recipient-region = normalize-region-to-string(
+    recipient.at("region", default: none),
+    default-region,
+  )
+  let resolved-recipient-country = resolve-country(
+    recipient.at("country", default: auto),
+    recipient-region,
+  )
+
+  let normalized-sender = normalize-party(
+    sender,
+    default-region,
+    recipient-country-code: resolved-recipient-country.code,
+  )
+  let normalized-recipient = normalize-party(
+    recipient,
+    default-region,
+    is-recipient: true,
+    sender-country-code: normalized-sender.country.code,
+  )
 
   if subject == auto { subject = eval-locale.strings.document.invoice }
 
@@ -102,8 +158,19 @@
   }
 
   let document-references = ()
-  if tax-nr != none {
-    document-references.push((eval-locale.strings.reference.tax-number, tax-nr))
+  let sender-tax-nr = normalized-sender.tax-nr
+  if sender-tax-nr != none and sender-tax-nr != "" {
+    document-references.push((
+      eval-locale.strings.reference.tax-number,
+      sender-tax-nr,
+    ))
+  }
+  let sender-vat-id = normalized-sender.vat-id
+  if sender-vat-id != none and sender-vat-id != "" {
+    document-references.push((
+      eval-locale.strings.reference.vat-id,
+      sender-vat-id,
+    ))
   }
 
   if type(references) == array { document-references = references } else if (
@@ -117,18 +184,19 @@
     locale: eval-locale,
     format: eval-locale.at("format", default: (:)),
 
-    sender: sender,
-    recipient: recipient,
+    sender: normalized-sender,
+    recipient: normalized-recipient,
 
     invoice-date: date,
     subject: document-subject,
     references: document-references,
     invoice-nr: invoice-nr,
-    tax-nr: tax-nr,
 
     tax: document-tax,
     tax-mode: tax-mode,
     tax-exempt-small-biz: tax-exempt-small-biz,
+
+    zugferd: zugferd,
   )
 
   /** Data Calculations **/

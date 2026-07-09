@@ -161,7 +161,7 @@ Key details:
 - **`loom.query.find-signal(data, "line-items")`** extracts the signal published by the `#line-items` component, which contains the full totals breakdown.
 - **`decimal("100")`** — use `decimal()` for exact numeric comparisons (avoids floating-point mismatches).
 - **`themes.blank`** — use the blank theme when you only care about data, not visual output.
-- **Tax constructors** — use `tax.vat(rate)` for the standard rate, `tax.lower-rate(rate)` for reduced rates, and `tax.zero()` for zero-rated items. Each produces a different tax category.
+- Tax constructors — use `tax.vat(rate)` for standard or reduced rates, and `tax.zero()` for zero-rated items. Each produces a different tax category.
 - **Assertion messages** — always include both the expected and actual value in the message for fast debugging. Use the pattern: `"Field: expected <value>, got " + repr(actual)`. The `repr()` function ensures the actual value is displayed in a readable format.
 - **Valid IBAN/BIC** — when using `bank-details` in tests or docs, always use values that pass validation checks. Use IBAN `DE75512108001245126199` and a valid 9 or 11 character BIC (e.g., `SOLADEST600`). Fake values like `DE12 3456 7890...` or `EXAMPLEBICX` will fail IBAN/BIC validation.
 - Always combine `data-test` with `test-locale` for deterministic results.

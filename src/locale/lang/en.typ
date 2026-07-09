@@ -20,6 +20,7 @@
   reference: (
     tax-number: "Tax ID",
     invoice-number: "Invoice Number",
+    vat-id: "VAT ID",
   ),
 
   /// Column headers and labels for the line-items table
@@ -58,6 +59,27 @@
     unit: "Unit for all items:",
     quantity: "Quantity for all items:",
     date: "Service date for all items:",
+  ),
+
+  units: (
+    piece: "piece",
+    "set": "set",
+    pair: "pair",
+    "lump-sum": "lump sum",
+    hour: "hour",
+    day: "day",
+    month: "month",
+    year: "year",
+    kilogram: "kilogram",
+    gram: "gram",
+    tonne: "tonne",
+    metre: "metre",
+    "square-metre": "square metre",
+    millimetre: "millimetre",
+    centimetre: "centimetre",
+    kilometre: "kilometre",
+    litre: "litre",
+    "cubic-metre": "cubic metre",
   ),
 
   /// Designations for bank and payment details

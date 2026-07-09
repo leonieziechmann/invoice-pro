@@ -19,16 +19,15 @@ The `grounds` parameter:
 All tax functions accept an optional `grounds` parameter (a string). This is used to provide the legal justification for the tax application. **Providing a `grounds` text is highly recommended (and often legally required) for any 0% tax rate or exemption.**
 :::
 
-| Function                          | Code   | Description                                                                                              |
-| :-------------------------------- | :----- | :------------------------------------------------------------------------------------------------------- |
-| `vat(rate, grounds: none)`        | **S**  | **Standard Rate**: The default VAT/GST rate for your region (e.g., `tax.vat(19%)`).                      |
-| `lower-rate(rate, grounds: none)` | **AA** | **Lower Rate**: Used for reduced tax brackets like food or books.                                        |
-| `exempt(grounds: none)`           | **E**  | **Exempt from Tax**: General tax exemption (always 0%).                                                  |
-| `reverse-charge(grounds: none)`   | **AE** | **VAT Reverse Charge**: Tax liability is shifted to the recipient (always 0%).                           |
-| `intra-community(grounds: none)`  | **K**  | **Intra-community Supply**: VAT exempt for EEA intra-community supply of goods and services (always 0%). |
-| `export(grounds: none)`           | **G**  | **Free export item**: Tax not charged for exports outside the tax zone (always 0%).                      |
-| `outside-scope(grounds: none)`    | **O**  | **Outside Scope**: Services that fall completely outside the scope of the tax system (always 0%).        |
-| `zero(grounds: none)`             | **Z**  | **Zero Rated Goods**: Standard zero-rated items (always 0%).                                             |
+| Function                         | Code   | Description                                                                                              |
+| :------------------------------- | :----- | :------------------------------------------------------------------------------------------------------- |
+| `vat(rate, grounds: none)`       | **S**  | **Standard Rate**: The default VAT/GST rate for your region (e.g., `tax.vat(19%)`).                      |
+| `exempt(grounds: none)`          | **E**  | **Exempt from Tax**: General tax exemption (always 0%).                                                  |
+| `reverse-charge(grounds: none)`  | **AE** | **VAT Reverse Charge**: Tax liability is shifted to the recipient (always 0%).                           |
+| `intra-community(grounds: none)` | **K**  | **Intra-community Supply**: VAT exempt for EEA intra-community supply of goods and services (always 0%). |
+| `export(grounds: none)`          | **G**  | **Free export item**: Tax not charged for exports outside the tax zone (always 0%).                      |
+| `outside-scope(grounds: none)`   | **O**  | **Outside Scope**: Services that fall completely outside the scope of the tax system (always 0%).        |
+| `zero(grounds: none)`            | **Z**  | **Zero Rated Goods**: Standard zero-rated items (always 0%).                                             |
 
 **Example Usage:**
 
@@ -70,9 +69,10 @@ You can access these via `tax.special.<function-name>`.
 
 | Function                                   | Code   | Description                              |
 | :----------------------------------------- | :----- | :--------------------------------------- |
+| `mixed(rate, grounds: none)`               | **A**  | Mixed tax rate.                          |
+| `lower-rate(rate, grounds: none)`          | **AA** | Lower tax rate (reduced rate).           |
 | `exempt-for-resale(grounds: none)`         | **AB** | Exempt for resale (always 0%).           |
 | `vat-not-due(rate, grounds: none)`         | **AC** | Value Added Tax not now due for payment. |
-| `mixed(rate, grounds: none)`               | **A**  | Mixed tax rate.                          |
 | `transferred(rate, grounds: none)`         | **B**  | Transferred VAT.                         |
 | `duty-paid(rate, grounds: none)`           | **C**  | Duty paid by supplier.                   |
 | `higher-rate(rate, grounds: none)`         | **H**  | Higher tax rate.                         |

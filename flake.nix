@@ -48,6 +48,99 @@
           ];
         };
 
+        mustang-cli = pkgs.stdenv.mkDerivation rec {
+          pname = "mustang-cli";
+          version = "2.14.0";
+
+          src = pkgs.fetchurl {
+            url = "https://github.com/ZUGFeRD/mustangproject/releases/download/core-${version}/Mustang-CLI-${version}.jar";
+            sha256 = "0yj3knyjp7rnmcvb8snm3f8famg2rankxfcfaqsnymkn4zc1lnb5";
+          };
+
+          dontUnpack = true;
+
+          nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
+
+          installPhase = ''
+            mkdir -p $out/share/java
+            cp $src $out/share/java/mustang-cli.jar
+
+            makeWrapper ${pkgs.jre_headless}/bin/java $out/bin/mustang-cli \
+              --add-flags "-jar $out/share/java/mustang-cli.jar"
+          '';
+        };
+
+        validate-zugferd = pkgs.writeScriptBin "validate-zugferd" ''
+          #!/usr/bin/env bash
+          set -e
+
+          if [ ! -f "typst.toml" ]; then
+            echo "Error: validate-zugferd must be run from the root of the invoice-pro repository." >&2
+            exit 1
+          fi
+
+          if [ -z "$1" ]; then
+            echo "Usage: validate-zugferd <typst-document> [output-path]" >&2
+            exit 1
+          fi
+
+          src_file="$1"
+          output_path="$2"
+
+          tmp_dir=$(mktemp -d)
+          # Cleanup temp dir on exit unless it is empty/deleted
+          trap 'rm -rf "$tmp_dir"' EXIT
+
+          if [ -n "$output_path" ]; then
+            pdf_path="$output_path"
+          else
+            name=$(basename "$src_file" .typ)
+            pdf_path="$tmp_dir/$name.pdf"
+          fi
+
+          extract_dir="$tmp_dir/extracted"
+          mkdir -p "$extract_dir"
+
+          echo "Compiling ZUGFeRD PDF for $src_file..."
+          ${typstEnv}/bin/typst compile \
+            --root . \
+            --pdf-standard=a-3b \
+            "$src_file" \
+            "$pdf_path"
+
+          echo "Extracting factur-x.xml..."
+          ${pkgs.poppler-utils}/bin/pdfdetach -saveall -o "$extract_dir" "$pdf_path"
+
+          if [ ! -f "$extract_dir/factur-x.xml" ]; then
+            echo "Error: factur-x.xml not found in compiled PDF!" >&2
+            exit 1
+          fi
+
+          echo "Validating ZUGFeRD XML..."
+          ${mustang-cli}/bin/mustang-cli --action validate --source "$extract_dir/factur-x.xml"
+        '';
+
+        validate-all-zugferd = pkgs.writeScriptBin "validate-all-zugferd" ''
+          #!/usr/bin/env bash
+          set -e
+
+          if [ ! -f "typst.toml" ]; then
+            echo "Error: validate-all-zugferd must be run from the root of the invoice-pro repository." >&2
+            exit 1
+          fi
+
+          echo "========================"
+          echo " Running all ZUGFeRD validations... "
+          echo "========================"
+
+          ${validate-zugferd}/bin/validate-zugferd "tests/integration/zugferd-basic/test.typ"
+          ${validate-zugferd}/bin/validate-zugferd "tests/integration/zugferd-small-biz/test.typ"
+          ${validate-zugferd}/bin/validate-zugferd "template/invoice.typ"
+
+          echo ""
+          echo "✔ All ZUGFeRD validations passed!"
+        '';
+
       in
       {
         apps.default = {
@@ -62,7 +155,21 @@
           ''}/bin/typst-wrapper";
         };
 
+        apps.validate-zugferd = {
+          type = "app";
+          program = "${validate-zugferd}/bin/validate-zugferd";
+        };
+
+        apps.validate-all-zugferd = {
+          type = "app";
+          program = "${validate-all-zugferd}/bin/validate-all-zugferd";
+        };
+
         packages.default = invoice-proPackage;
+
+        packages.validate-zugferd = validate-zugferd;
+        packages.validate-all-zugferd = validate-all-zugferd;
+        packages.poppler-utils = pkgs.poppler-utils;
 
         packages.documentation = pkgs.buildNpmPackage {
           pname = "invoice-pro-documentation";
@@ -122,16 +229,20 @@
           echo "========================"
 
           echo ""
-          echo "[1/3] Running linter..."
+          echo "[1/4] Running linter..."
           nix build .#checks.''${system}.lint --print-build-logs
 
           echo ""
-          echo "[2/3] Running tests..."
+          echo "[2/4] Running tests..."
           nix develop .#test --accept-flake-config --command tt run
 
           echo ""
-          echo "[3/3] Building documentation..."
+          echo "[3/4] Building documentation..."
           nix build .#documentation --print-build-logs
+
+           echo ""
+           echo "[4/4] Validating ZUGFeRD PDF..."
+           nix run .#validate-all-zugferd --accept-flake-config
 
           echo ""
           echo "✔ All checks passed successfully!"
@@ -159,6 +270,8 @@
             tytanic.packages.${system}.default
             self.packages.${system}.check-version
             self.packages.${system}.check-pr
+            self.packages.${system}.validate-zugferd
+            self.packages.${system}.validate-all-zugferd
           ] ++ self.checks.${system}.pre-commit-check.enabledPackages;
 
           shellHook = ''

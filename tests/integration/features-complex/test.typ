@@ -7,6 +7,7 @@
     name: "Complex Setup Corp",
     address: "99 Complex Blvd",
     city: "54321 High Tech City",
+    tax-nr: "999/888/777",
     extra: (
       "Tel": "+49 111 222333",
       "E-Mail": "hello@complex.test",
@@ -18,7 +19,6 @@
     city: "10101 Metropolis",
   ),
   invoice-nr: "TEST-COMPLEX-001",
-  tax-nr: "999/888/777",
   tax-mode: "exclusive",
 )
 
@@ -38,7 +38,7 @@
       [Backend Setup],
       price: 5000.00,
       quantity: 1,
-      tax: tax.lower-rate(7%),
+      tax: tax.vat(7%),
     )
     #item(
       [Frontend Setup],

@@ -4,9 +4,9 @@
   // --- Helper Functions ---
   let infer-tax-at(rate) = {
     if rate == 20% { return tax.vat(20%) } else if rate == 13% {
-      return tax.lower-rate(13%)
+      return tax.vat(13%)
     } else if rate == 10% {
-      return tax.lower-rate(10%)
+      return tax.vat(10%)
     } else if rate == 0% {
       panic(
         lang.errors.ambiguous-tax

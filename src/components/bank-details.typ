@@ -112,7 +112,14 @@
         },
       )
 
-      (none, data)
+      // Expose IBAN/BIC/reference as a public signal so root can embed them in ZUGFeRD XML.
+      let public = (
+        iban: iban,
+        bic: bic,
+        reference: ctx.reference,
+      )
+
+      (public, data)
     },
     draw: (ctx, _, view, ..) => (ctx.theme.bank-details)(ctx, view),
     none,

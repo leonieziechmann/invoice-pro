@@ -4,7 +4,7 @@
   // --- Helper Functions ---
   let infer-tax-de(rate) = {
     if rate == 19% { return tax.vat(19%) } else if rate == 7% {
-      return tax.lower-rate(7%)
+      return tax.vat(7%)
     } else if rate == 0% {
       panic(
         lang.errors.ambiguous-tax

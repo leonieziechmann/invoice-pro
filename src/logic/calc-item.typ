@@ -82,6 +82,7 @@
   let final-tax = (
     rate: ctx.tax.rate,
     category: ctx.tax.category,
+    grounds: ctx.tax.grounds,
   )
 
   // 6. Return Data

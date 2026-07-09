@@ -120,7 +120,7 @@
     #item(
       [Content Production],
       total: 500.00,
-      tax: tax.lower-rate(7%),
+      tax: tax.vat(7%),
       modifier: surcharge([Rush Delivery], amount: 25.00),
     )
 
@@ -137,7 +137,7 @@
         [Documentation],
         price: 150.00,
         quantity: 1,
-        tax: tax.lower-rate(7%),
+        tax: tax.vat(7%),
       )
 
       // Discount applied within the bundle scope
