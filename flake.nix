@@ -175,7 +175,7 @@
           pname = "invoice-pro-documentation";
           inherit version;
           src = ./docs;
-          npmDepsHash = "sha256-XjBCbNybXdX87+3uYERtGPFjj+zrsop5DYRVgIgvIfI=";
+          npmDepsHash = "sha256-G51i2btlv0pBO4XDAkVOB5MCTJhTBp5vutr5slpwD+I=";
           installPhase = ''
             mkdir -p $out
             cp -r build/* $out/
