@@ -284,8 +284,12 @@
 // Emits the line-level SpecifiedTradeAllowanceCharge entries for an item's
 // own discounts/surcharges (from `item()`/`bundle()` modifiers).
 #let build-line-allowance-charges(discounts, surcharges) = (
-  discounts.map(d => build-allowance-charge(false, d.absolute, to-string(d.name)))
-    + surcharges.map(s => build-allowance-charge(true, s.absolute, to-string(s.name)))
+  discounts.map(d => build-allowance-charge(false, d.absolute, to-string(
+    d.name,
+  )))
+    + surcharges.map(s => build-allowance-charge(true, s.absolute, to-string(
+      s.name,
+    )))
 )
 
 // Emits a single supply chain line item
@@ -325,7 +329,10 @@
     ),
   )
 
-  let line-allowance-charges = build-line-allowance-charges(discounts, surcharges)
+  let line-allowance-charges = build-line-allowance-charges(
+    discounts,
+    surcharges,
+  )
   if line-allowance-charges != () {
     line-settlement.insert(
       "ram:SpecifiedTradeAllowanceCharge",
@@ -408,13 +415,16 @@
 // categories is fanned out into one entry per category (BR-53).
 #let build-header-allowance-charges(discounts, surcharges) = {
   let expand(modifiers, is-charge) = modifiers
-    .map(mod => mod.split.values().map(group => build-allowance-charge(
-      is-charge,
-      group.absolute,
-      to-string(mod.name),
-      tax-category: group.tax.category,
-      tax-rate: group.tax.rate,
-    )))
+    .map(mod => mod
+      .split
+      .values()
+      .map(group => build-allowance-charge(
+        is-charge,
+        group.absolute,
+        to-string(mod.name),
+        tax-category: group.tax.category,
+        tax-rate: group.tax.rate,
+      )))
     .flatten()
   expand(discounts, false) + expand(surcharges, true)
 }
@@ -580,9 +590,7 @@
   let allowance-total = discounts
     .map(d => calc.abs(d.absolute))
     .sum(default: decimal("0"))
-  let charge-total = surcharges
-    .map(s => s.absolute)
-    .sum(default: decimal("0"))
+  let charge-total = surcharges.map(s => s.absolute).sum(default: decimal("0"))
 
   trade-settlement.insert(
     "ram:SpecifiedTradeSettlementHeaderMonetarySummation",

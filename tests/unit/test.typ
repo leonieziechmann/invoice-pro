@@ -257,8 +257,14 @@
 
   // 1. build-allowance-charge: ActualAmount is always a positive magnitude —
   //    ChargeIndicator alone carries the discount/surcharge sign.
-  let discount-entry = build-allowance-charge(false, decimal("-50.00"), "Loyalty")
-  assert.eq(discount-entry.at("ram:ChargeIndicator"), ("udt:Indicator": "false"))
+  let discount-entry = build-allowance-charge(
+    false,
+    decimal("-50.00"),
+    "Loyalty",
+  )
+  assert.eq(discount-entry.at("ram:ChargeIndicator"), (
+    "udt:Indicator": "false",
+  ))
   assert.eq(discount-entry.at("ram:ActualAmount"), "50.00")
   assert.eq(discount-entry.at("ram:Reason"), "Loyalty")
   assert.eq(discount-entry.at("ram:CategoryTradeTax", default: none), none)
