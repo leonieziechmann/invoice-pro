@@ -29,6 +29,7 @@
   folding-marks: true,
 
   margin: (:),
+  footer: none,
 ) = (ctx, body) => {
   let format = "DIN-5008-" + form
   let subject = ctx.subject
@@ -143,17 +144,21 @@
     )
   }
 
-  letter-generic(
+  let letter-generic-args = (
     format: format,
-
     header: header,
-
     folding-marks: folding-marks,
     hole-mark: hole-mark,
-
     address-box: address-box,
     reference-signs: reference-signs,
     margin: margin,
+  )
+  if footer != none {
+    letter-generic-args.insert("footer", footer)
+  }
+
+  letter-generic(
+    ..letter-generic-args,
   )[
     #grid(
       columns: (1fr, auto),

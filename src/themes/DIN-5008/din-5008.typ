@@ -10,6 +10,7 @@
   folding-marks: true,
 
   margin: (:),
+  footer: none,
 ) = {
   types.require(form, "theme::DIN-5008::form", "A", "B")
 
@@ -22,6 +23,7 @@
       folding-marks: folding-marks,
 
       margin: margin,
+      footer: footer,
     ),
   )
 }
