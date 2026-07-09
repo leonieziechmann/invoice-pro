@@ -20,6 +20,7 @@
   reference: (
     tax-number: "N° de TVA",
     invoice-number: "N° de facture",
+    vat-id: "N° de TVA intra.",
   ),
 
   /// Column headers and labels for the line-items table

@@ -20,6 +20,7 @@
   reference: (
     tax-number: "NIF/CIF",
     invoice-number: "Número de factura",
+    vat-id: "NIF IVA",
   ),
 
   /// Encabezados de columna y etiquetas para la tabla de artículos

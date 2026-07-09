@@ -72,15 +72,15 @@
   assert.eq(ctx.recipient.vat-id, "GB123456789", message: "Recipient vat-id")
   assert.eq(ctx.recipient.tax-nr, "987/654/32109", message: "Recipient tax-nr")
 
-  // Recipient city vertical should include London \ SW1A 2AA \ United Kingdom (international destination)
+  // Recipient city vertical should include London \ SW1A 2AA \ GB - United Kingdom (international destination)
   assert.eq(
     ctx.recipient.city,
-    [London \ SW1A 2AA \ United Kingdom],
+    [London \ SW1A 2AA \ ] + "GB - United Kingdom",
     message: "Recipient city vertical",
   )
   assert.eq(
     ctx.recipient.city-inline,
-    "London, SW1A 2AA, United Kingdom",
+    "London, SW1A 2AA, GB - United Kingdom",
     message: "Recipient city inline",
   )
 })[

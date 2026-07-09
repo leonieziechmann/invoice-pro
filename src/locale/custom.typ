@@ -38,12 +38,14 @@
 /// Customizes the metadata and reference numbers labels.
 /// - tax-number (auto, str): e.g., "Tax ID", "Steuernummer"
 /// - invoice-number (auto, str): e.g., "Invoice Number", "Rechnungsnummer"
+/// - vat-id (auto, str): e.g., "VAT ID", "USt-IdNr."
 /// -> dictionary
-#let reference(tax-number: auto, invoice-number: auto) = (
+#let reference(tax-number: auto, invoice-number: auto, vat-id: auto) = (
   {
     let payload = _clean-auto((
       tax-number: tax-number,
       invoice-number: invoice-number,
+      vat-id: vat-id,
     ))
     return (strings: (reference: payload))
   },

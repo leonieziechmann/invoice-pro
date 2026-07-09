@@ -246,6 +246,23 @@
   // 4. country overrides region
   let p4 = normalize-party((region: "FR", country: country.de), "DE")
   assert.eq(p4.country.code, "DE")
+
+  // 5. Test international country formatting: country code prefixing (like FR - France)
+  let p5 = normalize-party(
+    (region: "FR", city: "75001 Paris"),
+    "DE",
+    is-recipient: true,
+    sender-country-code: "DE",
+  )
+  assert.eq(p5.city, [75001 Paris \ ] + "FR - France")
+
+  // 6. Test show-always behavior override
+  let de-always = country.de.with(show-always: true)
+  let p6 = normalize-party(
+    (region: "DE", city: "10115 Berlin", country: de-always),
+    "DE",
+  )
+  assert.eq(p6.city, [10115 Berlin \ ] + "DE - Deutschland")
 }
 
 // --- Test ZUGFeRD allowance/charge (discount & surcharge) serialization ---

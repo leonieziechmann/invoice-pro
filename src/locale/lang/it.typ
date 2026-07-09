@@ -20,6 +20,7 @@
   reference: (
     tax-number: "P. IVA",
     invoice-number: "Numero fattura",
+    vat-id: "P. IVA",
   ),
 
   /// Intestazioni di colonna ed etichette per la tabella degli articoli

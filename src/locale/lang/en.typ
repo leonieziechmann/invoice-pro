@@ -20,6 +20,7 @@
   reference: (
     tax-number: "Tax ID",
     invoice-number: "Invoice Number",
+    vat-id: "VAT ID",
   ),
 
   /// Column headers and labels for the line-items table

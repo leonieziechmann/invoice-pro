@@ -29,7 +29,6 @@
       email: "jane.doe@example.com",
     ),
     extra: (
-      "USt-IdNr.": "DE123456789",
       "Tel": "+49 123 4567890",
       "E-Mail": "jane.doe@example.com",
     ),

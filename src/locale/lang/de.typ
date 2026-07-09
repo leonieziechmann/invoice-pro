@@ -16,6 +16,7 @@
   reference: (
     tax-number: "Steuernummer",
     invoice-number: "Rechnungsnummer",
+    vat-id: "USt-IdNr.",
   ),
 
   line-items: (

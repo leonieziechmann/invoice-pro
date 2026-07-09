@@ -135,6 +135,7 @@
 #let make-country(
   name: "",
   code: "",
+  show-always: false,
   format-city: format-city-euro,
   format-inline-city: format-city-euro,
   parse-city-raw: parse-city-euro,
@@ -169,6 +170,7 @@
   (
     name: name,
     code: code,
+    show-always: show-always,
     parse-city: parse-city,
     format-address: (name, address, city, country-name: none) => {
       let lines = ()
@@ -233,46 +235,156 @@
 
 // --- Exported Country Functions ---
 
-#let de(name: "Deutschland", code: "DE") = make-country(name: name, code: code)
-#let at(name: "Österreich", code: "AT") = make-country(name: name, code: code)
-#let ch(name: "Schweiz", code: "CH") = make-country(name: name, code: code)
-#let fr(name: "France", code: "FR") = make-country(name: name, code: code)
-#let it(name: "Italia", code: "IT") = make-country(name: name, code: code)
-#let es(name: "España", code: "ES") = make-country(name: name, code: code)
-
-#let be(name: "België", code: "BE") = make-country(name: name, code: code)
-#let bg(name: "Bulgaria", code: "BG") = make-country(name: name, code: code)
-#let cy(name: "Cyprus", code: "CY") = make-country(name: name, code: code)
-#let cz(name: "Česko", code: "CZ") = make-country(name: name, code: code)
-#let dk(name: "Danmark", code: "DK") = make-country(name: name, code: code)
-#let ee(name: "Eesti", code: "EE") = make-country(name: name, code: code)
-#let gr(name: "Greece", code: "GR") = make-country(name: name, code: code)
-#let hr(name: "Hrvatska", code: "HR") = make-country(name: name, code: code)
-#let hu(name: "Magyarország", code: "HU") = make-country(name: name, code: code)
-#let ie(name: "Ireland", code: "IE") = make-country(name: name, code: code)
-#let lt(name: "Lietuva", code: "LT") = make-country(name: name, code: code)
-#let lu(name: "Luxembourg", code: "LU") = make-country(name: name, code: code)
-#let lv(name: "Latvija", code: "LV") = make-country(name: name, code: code)
-#let mt(name: "Malta", code: "MT") = make-country(name: name, code: code)
-#let nl(name: "Nederland", code: "NL") = make-country(name: name, code: code)
-#let pl(name: "Polska", code: "PL") = make-country(name: name, code: code)
-#let pt(name: "Portugal", code: "PT") = make-country(name: name, code: code)
-#let ro(name: "România", code: "RO") = make-country(name: name, code: code)
-#let se(name: "Sverige", code: "SE") = make-country(name: name, code: code)
-#let si(name: "Slovenija", code: "SI") = make-country(name: name, code: code)
-#let sk(name: "Slovensko", code: "SK") = make-country(name: name, code: code)
-
-#let uk(name: "United Kingdom", code: "GB") = make-country(
+#let de(name: "Deutschland", code: "DE", show-always: false) = make-country(
   name: name,
   code: code,
+  show-always: show-always,
+)
+#let at(name: "Österreich", code: "AT", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let ch(name: "Schweiz", code: "CH", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let fr(name: "France", code: "FR", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let it(name: "Italia", code: "IT", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let es(name: "España", code: "ES", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+
+#let be(name: "België", code: "BE", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let bg(name: "Bulgaria", code: "BG", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let cy(name: "Cyprus", code: "CY", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let cz(name: "Česko", code: "CZ", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let dk(name: "Danmark", code: "DK", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let ee(name: "Eesti", code: "EE", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let gr(name: "Greece", code: "GR", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let hr(name: "Hrvatska", code: "HR", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let hu(name: "Magyarország", code: "HU", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let ie(name: "Ireland", code: "IE", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let lt(name: "Lietuva", code: "LT", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let lu(name: "Luxembourg", code: "LU", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let lv(name: "Latvija", code: "LV", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let mt(name: "Malta", code: "MT", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let nl(name: "Nederland", code: "NL", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let pl(name: "Polska", code: "PL", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let pt(name: "Portugal", code: "PT", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let ro(name: "România", code: "RO", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let se(name: "Sverige", code: "SE", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let si(name: "Slovenija", code: "SI", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+#let sk(name: "Slovensko", code: "SK", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
+)
+
+#let uk(name: "United Kingdom", code: "GB", show-always: false) = make-country(
+  name: name,
+  code: code,
+  show-always: show-always,
   format-city: format-city-uk,
   format-inline-city: format-inline-city-uk,
   parse-city-raw: parse-city-uk,
 )
 
-#let us(name: "United States", code: "US") = make-country(
+#let us(name: "United States", code: "US", show-always: false) = make-country(
   name: name,
   code: code,
+  show-always: show-always,
   format-city: format-city-us,
   format-inline-city: format-city-us,
   parse-city-raw: parse-city-us,
@@ -394,6 +506,7 @@
   default-region,
   is-recipient: false,
   sender-country-code: none,
+  recipient-country-code: none,
 ) = {
   if type(party) != dictionary { return party }
 
@@ -462,13 +575,46 @@
 
   // 4. Format city (handling international country name printing)
   let display-country-name = none
-  if (
-    is-recipient
-      and sender-country-code != none
-      and resolved-country.code != none
-  ) {
-    if resolved-country.code != sender-country-code {
-      display-country-name = resolved-country.name
+  if resolved-country.code != none and lower(resolved-country.code) != "base" {
+    let show-country = resolved-country.at("show-always", default: false)
+    if not show-country {
+      if is-recipient {
+        if (
+          (
+            sender-country-code != none
+              and lower(resolved-country.code) != lower(sender-country-code)
+          )
+            or (
+              default-region != "base"
+                and lower(resolved-country.code) != lower(default-region)
+            )
+        ) {
+          show-country = true
+        }
+      } else {
+        if (
+          (
+            recipient-country-code != none
+              and lower(resolved-country.code) != lower(recipient-country-code)
+          )
+            or (
+              default-region != "base"
+                and lower(resolved-country.code) != lower(default-region)
+            )
+        ) {
+          show-country = true
+        }
+      }
+    }
+
+    if show-country {
+      display-country-name = if (
+        resolved-country.name != none and resolved-country.name != ""
+      ) {
+        resolved-country.code + " - " + resolved-country.name
+      } else {
+        resolved-country.code
+      }
     }
   }
 

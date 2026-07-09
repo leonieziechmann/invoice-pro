@@ -7,7 +7,9 @@
 #import "locale/locale.typ"
 #import "locale/lang/base.typ": base-language
 #import "locale/region/base.typ": base-region
-#import "logic/country.typ": normalize-party
+#import "logic/country.typ": (
+  normalize-party, normalize-region-to-string, resolve-country,
+)
 
 /// The main entry point for creating an invoice document.
 /// It orchestrates the theme, localization, and data calculation passes.
@@ -120,7 +122,20 @@
     sender.insert("tax-nr", tax-nr)
   }
 
-  let normalized-sender = normalize-party(sender, default-region)
+  let recipient-region = normalize-region-to-string(
+    recipient.at("region", default: none),
+    default-region,
+  )
+  let resolved-recipient-country = resolve-country(
+    recipient.at("country", default: auto),
+    recipient-region,
+  )
+
+  let normalized-sender = normalize-party(
+    sender,
+    default-region,
+    recipient-country-code: resolved-recipient-country.code,
+  )
   let normalized-recipient = normalize-party(
     recipient,
     default-region,
@@ -148,6 +163,13 @@
     document-references.push((
       eval-locale.strings.reference.tax-number,
       sender-tax-nr,
+    ))
+  }
+  let sender-vat-id = normalized-sender.vat-id
+  if sender-vat-id != none and sender-vat-id != "" {
+    document-references.push((
+      eval-locale.strings.reference.vat-id,
+      sender-vat-id,
     ))
   }
 
