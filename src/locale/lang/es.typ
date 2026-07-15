@@ -21,6 +21,8 @@
     tax-number: "NIF/CIF",
     invoice-number: "Número de factura",
     vat-id: "NIF IVA",
+    invoice-date: "Fecha de la factura",
+    service-time: "Periodo de servicio",
   ),
 
   /// Encabezados de columna y etiquetas para la tabla de artículos

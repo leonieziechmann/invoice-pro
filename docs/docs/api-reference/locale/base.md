@@ -47,11 +47,13 @@ Labels indicating the address blocks.
 
 Designations for header metadata.
 
-| Key              | Type  | Description                                                   |
-| :--------------- | :---- | :------------------------------------------------------------ |
-| `tax-number`     | `str` | Label for the sender's tax identification (e.g., `"Tax ID"`). |
-| `invoice-number` | `str` | Label for the document identifier (e.g., `"Invoice Number"`). |
-| `vat-id`         | `str` | Label for the Value Added Tax identifier (e.g., `"VAT ID"`).  |
+| Key              | Type  | Description                                                    |
+| :--------------- | :---- | :------------------------------------------------------------- |
+| `tax-number`     | `str` | Label for the sender's tax identification (e.g., `"Tax ID"`).  |
+| `invoice-number` | `str` | Label for the document identifier (e.g., `"Invoice Number"`).  |
+| `vat-id`         | `str` | Label for the Value Added Tax identifier (e.g., `"VAT ID"`).   |
+| `invoice-date`   | `str` | Label for the date of the invoice (e.g., `"Invoice Date"`).    |
+| `service-time`   | `str` | Label for the period of service (e.g., `"Period of Service"`). |
 
 ### `line-items`
 

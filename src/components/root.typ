@@ -147,6 +147,51 @@
       } else { none }
       set text(lang: ctx.locale.lang, region: region-code)
 
+      let eval-ctx = (
+        ctx
+          + (
+            items: view.item-data.items,
+          )
+      )
+
+      let eval-ref(fn) = {
+        import "../public/references.typ"
+        if (
+          fn == references.tax-nr
+            or fn == references.vat-id
+            or fn == references.invoice-nr
+            or fn == references.invoice-date
+            or fn == references.service-time
+        ) {
+          (fn())(eval-ctx)
+        } else {
+          fn(eval-ctx)
+        }
+      }
+
+      let normalized-references = ctx.references.map(s => {
+        if type(s) == function {
+          eval-ref(s)
+        } else if type(s) == array and s.len() == 2 {
+          let (k, v) = s
+          if type(v) == function {
+            let val = eval-ref(v)
+            let val-extracted = if type(val) == array and val.len() == 2 {
+              val.last()
+            } else {
+              val
+            }
+            (k, val-extracted)
+          } else {
+            (k, v)
+          }
+        } else {
+          s
+        }
+      })
+
+      let ctx = ctx + (references: normalized-references)
+
       if ctx.zugferd != none {
         pdf.attach(
           "/factur-x.xml",

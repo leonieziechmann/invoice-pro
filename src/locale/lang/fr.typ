@@ -21,6 +21,8 @@
     tax-number: "N° de TVA",
     invoice-number: "N° de facture",
     vat-id: "N° de TVA intra.",
+    invoice-date: "Date de facturation",
+    service-time: "Période de prestation",
   ),
 
   /// Column headers and labels for the line-items table

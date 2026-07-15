@@ -625,3 +625,87 @@
   )
 }
 
+// --- Test dynamic references module ---
+#{
+  import "/src/public/references.typ"
+
+  let mock-locale = (
+    strings: (
+      reference: (
+        tax-number: "Mock Tax ID",
+        vat-id: "Mock VAT ID",
+        invoice-number: "Mock Invoice Number",
+        invoice-date: "Mock Date",
+        service-time: "Mock Service Time",
+      ),
+    ),
+    format: (
+      date: d => str(d.year()) + "-" + str(d.month()) + "-" + str(d.day()),
+    ),
+  )
+
+  let mock-ctx = (
+    locale: mock-locale,
+    sender: (
+      tax-nr: "123-TAX",
+      vat-id: "DE987654",
+    ),
+    invoice-nr: "INV-001",
+    invoice-date: datetime(year: 2026, month: 7, day: 15),
+    items: (
+      (name: "Item 1", date: datetime(year: 2026, month: 7, day: 10)),
+      (
+        name: "Item 2",
+        date: (
+          datetime(year: 2026, month: 7, day: 12),
+          datetime(year: 2026, month: 7, day: 14),
+        ),
+      ),
+    ),
+  )
+
+  // 1. Test basic resolution with auto values
+  assert.eq((references.tax-nr())(mock-ctx), ("Mock Tax ID", "123-TAX"))
+  assert.eq((references.vat-id())(mock-ctx), ("Mock VAT ID", "DE987654"))
+  assert.eq((references.invoice-nr())(mock-ctx), (
+    "Mock Invoice Number",
+    "INV-001",
+  ))
+  assert.eq((references.invoice-date())(mock-ctx), ("Mock Date", "2026-7-15"))
+  assert.eq((references.service-time())(mock-ctx), (
+    "Mock Service Time",
+    "2026-7-10 " + sym.dash + " 2026-7-14",
+  ))
+
+  // 2. Test resolution with overrides
+  assert.eq(
+    (references.tax-nr(label: "Custom Tax Label", value: "TAX-CUSTOM"))(
+      mock-ctx,
+    ),
+    (
+      "Custom Tax Label",
+      "TAX-CUSTOM",
+    ),
+  )
+  assert.eq((references.vat-id(value: "VAT-CUSTOM"))(mock-ctx), (
+    "Mock VAT ID",
+    "VAT-CUSTOM",
+  ))
+  assert.eq((references.invoice-date(label: "Custom Date Label"))(mock-ctx), (
+    "Custom Date Label",
+    "2026-7-15",
+  ))
+  assert.eq((references.service-time(value: "Custom Service Time"))(mock-ctx), (
+    "Mock Service Time",
+    "Custom Service Time",
+  ))
+
+  // 3. Test service-time fallback to invoice-date when no items/dates are present
+  let mock-ctx-no-dates = mock-ctx
+  mock-ctx-no-dates.items = ()
+  assert.eq((references.service-time())(mock-ctx-no-dates), (
+    "Mock Service Time",
+    "2026-7-15",
+  ))
+}
+

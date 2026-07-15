@@ -128,7 +128,7 @@ _See the [Tax Module API Reference](../tax.md) for a detailed breakdown of all a
 
 The `references` parameter allows you to add custom metadata to the information block of the invoice (usually positioned in the top-right corner near the date and invoice number). This is the perfect place for Customer IDs, Order Dates, or Delivery Numbers.
 
-You can provide this data in two formats:
+You can provide this data in three formats:
 
 - **As a Dictionary:** The simplest method for key-value pairs.
   ```typst
@@ -144,6 +144,23 @@ You can provide this data in two formats:
     ("Order Date", "2026-04-10")
   )
   ```
+- **Dynamic References:** You can selectively position, sort, and override localized reference fields (such as VAT ID, tax number, invoice number, invoice date, and service period/timeframe) by using the `references` module.
+
+  ```typst
+  #import "@preview/invoice-pro:0.4.0": invoice, references
+
+  #show: invoice.with(
+    references: (
+      references.invoice-date,
+      ("Your Order", "PO-9912"),
+      references.vat-id,
+      references.tax-nr,
+    ),
+    // ...
+  )
+  ```
+
+For a comprehensive guide on the available reference builder functions and advanced customization options, see the [Dynamic References guide](./references.md).
 
 ### `zugferd` — ZUGFeRD / Factur-X _(Experimental)_
 

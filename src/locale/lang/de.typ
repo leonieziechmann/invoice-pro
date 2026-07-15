@@ -17,6 +17,8 @@
     tax-number: "Steuernummer",
     invoice-number: "Rechnungsnummer",
     vat-id: "USt-IdNr.",
+    invoice-date: "Rechnungsdatum",
+    service-time: "Leistungszeitraum",
   ),
 
   line-items: (

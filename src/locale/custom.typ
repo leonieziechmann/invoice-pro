@@ -39,13 +39,23 @@
 /// - tax-number (auto, str): e.g., "Tax ID", "Steuernummer"
 /// - invoice-number (auto, str): e.g., "Invoice Number", "Rechnungsnummer"
 /// - vat-id (auto, str): e.g., "VAT ID", "USt-IdNr."
+/// - invoice-date (auto, str): e.g., "Invoice Date", "Rechnungsdatum"
+/// - service-time (auto, str): e.g., "Period of Service", "Leistungszeitraum"
 /// -> dictionary
-#let reference(tax-number: auto, invoice-number: auto, vat-id: auto) = (
+#let reference(
+  tax-number: auto,
+  invoice-number: auto,
+  vat-id: auto,
+  invoice-date: auto,
+  service-time: auto,
+) = (
   {
     let payload = _clean-auto((
       tax-number: tax-number,
       invoice-number: invoice-number,
       vat-id: vat-id,
+      invoice-date: invoice-date,
+      service-time: service-time,
     ))
     return (strings: (reference: payload))
   },

@@ -79,10 +79,10 @@
     references,
     "invoice::references",
     none,
-    loom.matcher.dict(types.text-like),
-    loom.matcher.many((
-      types.text-like,
-      types.text-like,
+    loom.matcher.dict(loom.matcher.choice(types.text-like, function)),
+    loom.matcher.many(loom.matcher.choice(
+      function,
+      (types.text-like, types.text-like),
     )),
   )
   types.require(invoice-nr, "invoice::invoice-nr", none, str, content)

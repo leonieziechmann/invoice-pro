@@ -23,6 +23,8 @@
     tax-number: "Tax ID",
     invoice-number: "Invoice Number",
     vat-id: "VAT ID",
+    invoice-date: "Invoice Date",
+    service-time: "Period of Service",
   ),
 
   /// Column headers and labels for the line-items table
