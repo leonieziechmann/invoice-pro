@@ -1,4 +1,7 @@
 /// English language overrides.
+#let plurals(name) = n => if n > 1 { n + " " + name + "s" } else {
+  "1 " + name
+};
 #let en = (
   meta: (
     /// The ISO 639-1 language code of the file.
@@ -80,24 +83,24 @@
   ),
 
   units: (
-    piece: "piece",
-    "set": "set",
-    pair: "pair",
-    "lump-sum": "lump sum",
-    hour: "hour",
-    day: "day",
-    month: "month",
-    year: "year",
-    kilogram: "kilogram",
-    gram: "gram",
-    tonne: "tonne",
-    metre: "metre",
-    "square-metre": "square metre",
-    millimetre: "millimetre",
-    centimetre: "centimetre",
-    kilometre: "kilometre",
-    litre: "litre",
-    "cubic-metre": "cubic metre",
+    piece: plurals("piece"),
+    "set": plurals("set"),
+    pair: plurals("pair"),
+    "lump-sum": plurals("lump sum"),
+    hour: plurals("hour"),
+    day: plurals("day"),
+    month: plurals("month"),
+    year: plurals("year"),
+    kilogram: plurals("kilogram"),
+    gram: plurals("gram"),
+    tonne: plurals("tonne"),
+    metre: plurals("metre"),
+    "square-metre": plurals("square metre"),
+    millimetre: plurals("millimetre"),
+    centimetre: plurals("centimetre"),
+    kilometre: plurals("kilometre"),
+    litre: plurals("litre"),
+    "cubic-metre": plurals("cubic metre"),
   ),
 
   /// Designations for bank and payment details

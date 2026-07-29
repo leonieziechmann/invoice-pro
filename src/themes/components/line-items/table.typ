@@ -1,4 +1,5 @@
 #import "../../../utils/types.typ"
+#import "../../../utils/trans.typ"
 #import "columns.typ": get-column-metadata
 
 // --- Default Renderers (Content Only) ---
@@ -429,7 +430,9 @@
 
     for key in active-cols-keys {
       let content = if key == "quantity" {
-        if layout.show-units { [#item.quantity #item.unit] } else {
+        if layout.show-units {
+          trans(item.unit, (u, q) => [#q #u], item.quantity)
+        } else {
           [#item.quantity]
         }
       } else if key == "unit-price" { item.price } else if key == "tax-rate" {

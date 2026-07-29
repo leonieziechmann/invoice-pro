@@ -1,4 +1,10 @@
 /// German language overrides.
+#let plurals(name, plural: none) = {
+  let plural = if plural != none { name + "n" } else { plural }
+  n => if n > 1 {
+    n + " " + plural
+  } else { "1 " + name }
+};
 #let de = (
   meta: (
     lang: "de",
@@ -76,16 +82,16 @@
 
   units: (
     piece: "Stück",
-    "set": "Satz",
-    pair: "Paar",
-    "lump-sum": "Pauschale",
-    hour: "Stunde",
-    day: "Tag",
-    month: "Monat",
-    year: "Jahr",
+    "set": plurals("Satz", "Sätze"),
+    pair: plurals("Paar", "Paare"),
+    "lump-sum": plurals("Pauschale"),
+    hour: plurals("Stunde"),
+    day: plurals("Tag", "Tage"),
+    month: plurals("Monat", "Monate"),
+    year: plurals("Jahr", "Jahre"),
     kilogram: "Kilogramm",
     gram: "Gramm",
-    tonne: "Tonne",
+    tonne: plurals("Tonne"),
     metre: "Meter",
     "square-metre": "Quadratmeter",
     millimetre: "Millimeter",
