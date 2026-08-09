@@ -22,9 +22,13 @@
   /// -> none | string
   bic: none,
 
-  /// The payment reference to be used by the customer.
+  /// The structured payment reference to be used by the customer.
   /// -> auto | none | string
   reference: auto,
+
+  /// The unstructured payment reference text to be used by the customer.
+  /// -> none | string
+  text: none,
 
   /// The specific amount to be paid. If `auto`, it uses the document total.
   /// -> auto | none | decimal | float | int
@@ -48,6 +52,7 @@
   types.require(bic, "bank-details::bic", none, str)
 
   types.require(reference, "bank-details::reference", none, auto, str)
+  types.require(text, "bank-details::text", none, str)
   types.require(
     payment-amount,
     "bank-details::payment-amount",
@@ -57,6 +62,11 @@
   )
 
   types.require(show-reference, "bank-details::show-reference", bool)
+
+  assert(
+    (reference == auto or reference == none) or text == none,
+    message: "Cannot specify both 'reference' and 'text'. Use one or the other.",
+  )
 
   if name == none { name = "" }
   if iban == none { iban = "" }
@@ -74,8 +84,14 @@
 
       derive("sender", "name", name, default: "")
 
-      put("reference", ctx.invoice-nr)
-      derive("reference", reference)
+      if text != none {
+        put("text", text)
+        put("reference", none)
+      } else {
+        put("text", none)
+        put("reference", ctx.invoice-nr)
+        derive("reference", reference)
+      }
 
       nest("theme", {
         ensure("bank-details", (..) => panic(
@@ -104,6 +120,7 @@
         ),
 
         reference: ctx.reference,
+        text: ctx.text,
         show-reference: show-reference,
         payment-amount: if payment-amount == auto {
           ctx.global.total.gross
@@ -117,6 +134,7 @@
         iban: iban,
         bic: bic,
         reference: ctx.reference,
+        text: ctx.text,
       )
 
       (public, data)

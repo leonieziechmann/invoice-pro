@@ -20,7 +20,7 @@
         width: view.qr-code.size,
         height: view.qr-code.size,
       )
-        + if view.reference != none { (reference: view.reference) },
+        + if view.text != none { (text: view.text) } else if view.reference != none { (reference: view.reference) },
     )
   }
 
@@ -39,6 +39,8 @@
       #bd-str.iban: *#ibanator.iban(view.sender.iban)* \
       #if view.sender.bic != "" [#bd-str.bic: #view.sender.bic \ ]
       #if (
+        view.show-reference and view.text != none
+      ) [#bd-str.reference: *#view.text*] else if (
         view.show-reference and view.reference != none
       ) [#bd-str.reference: *#view.reference*] \
       #h(6.5cm)
