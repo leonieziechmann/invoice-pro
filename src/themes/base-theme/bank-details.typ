@@ -37,7 +37,7 @@
       #bd-str.account-holder: #view.sender.name \
       #bd-str.bank: #view.sender.bank \
       #bd-str.iban: *#ibanator.iban(view.sender.iban)* \
-      #bd-str.bic: #view.sender.bic \
+      #if view.sender.bic != "" [#bd-str.bic: #view.sender.bic \ ]
       #if (
         view.show-reference and view.reference != none
       ) [#bd-str.reference: *#view.reference*] \
