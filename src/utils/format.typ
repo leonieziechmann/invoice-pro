@@ -48,9 +48,11 @@
   number-format += (padding: number-format.at("padding", default: true))
 
   let formated-string = number(value, ..number-format)
-  if location == start { currency + formated-string } else if location == end {
-    formated-string + currency
-  } else { panic("Inavalid Location!") }
+  if location == start {
+    currency + sym.space.nobreak.narrow + formated-string
+  } else if location == end {
+    formated-string + sym.space.nobreak.narrow + currency
+  } else { panic("Invalid Location!") }
 }
 
 /// Helper function to reduce formatting boilerplate in concrete regions.
