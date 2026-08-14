@@ -57,7 +57,7 @@
       tax-text,
       rate,
       vat-tax,
-    ) => [All items are #tax-text #rate #vat-tax],
+    ) => [All items are #tax-text #rate #vat-tax.],
     unit: "Unit for all items:",
     quantity: "Quantity for all items:",
     date: "Service date for all items:",
