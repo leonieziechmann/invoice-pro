@@ -135,27 +135,22 @@
   is-outside-scope: false,
 ) = {
   let vat-id = if is-outside-scope { none } else { vat-id }
-  let tax-registrations = {
-    if vat-id != none and vat-id != "" {
-      (
-        (
-          "ram:ID": (
-            "@schemeID": "VA",
-            "": vat-id,
-          ),
-        ),
-      )
-    }
-    if tax-nr != none and tax-nr != "" {
-      (
-        (
-          "ram:ID": (
-            "@schemeID": "FC",
-            "": tax-nr,
-          ),
-        ),
-      )
-    }
+  let tax-registrations = ()
+  if vat-id != none and vat-id != "" {
+    tax-registrations.push((
+      "ram:ID": (
+        "@schemeID": "VA",
+        "": vat-id,
+      ),
+    ))
+  }
+  if tax-nr != none and tax-nr != "" {
+    tax-registrations.push((
+      "ram:ID": (
+        "@schemeID": "FC",
+        "": tax-nr,
+      ),
+    ))
   }
 
   let res = (:)

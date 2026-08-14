@@ -135,6 +135,7 @@
 
           ${validate-zugferd}/bin/validate-zugferd "tests/integration/zugferd-basic/test.typ"
           ${validate-zugferd}/bin/validate-zugferd "tests/integration/zugferd-small-biz/test.typ"
+          ${validate-zugferd}/bin/validate-zugferd "tests/integration/zugferd-outside-scope/test.typ"
           ${validate-zugferd}/bin/validate-zugferd "template/invoice.typ"
 
           echo ""

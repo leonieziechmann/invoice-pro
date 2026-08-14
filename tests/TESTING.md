@@ -358,9 +358,10 @@ Every non-trivial code block in `docs/docs/` must be registered here. When addin
 
 Every bug reported as a GitHub issue must be registered here. When a bug is fixed, add a regression test and update the status. If the test is not yet created, mark the entry as **⚠️ not implemented**.
 
-| Issue                                                           | Description                                                                           | Test directory     | Status |
-| :-------------------------------------------------------------- | :------------------------------------------------------------------------------------ | :----------------- | :----- |
-| [#19](https://github.com/leonieziechmann/invoice-pro/issues/19) | Item-level modifier not applied; `extra` dict >2 items; decimal discount context loss | `issues/issue-19/` | ✅     |
+| Issue                                                           | Description                                                                           | Test directory                       | Status |
+| :-------------------------------------------------------------- | :------------------------------------------------------------------------------------ | :----------------------------------- | :----- |
+| [#19](https://github.com/leonieziechmann/invoice-pro/issues/19) | Item-level modifier not applied; `extra` dict >2 items; decimal discount context loss | `issues/issue-19/`                   | ✅     |
+| [#28](https://github.com/leonieziechmann/invoice-pro/issues/28) | ZUGFeRD panic with outside-scope tax when sender has vat-id but no tax-nr             | `integration/zugferd-outside-scope/` | ✅     |
 
 > _Add entries as bugs are reported._
 

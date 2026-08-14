@@ -750,3 +750,105 @@
   assert(str-with-bic.contains("[BIC]"))
   assert(str-with-bic.contains("SOLADEST600"))
 }
+
+
+// --- Test ZUGFeRD seller trade party tax registrations (outside-scope and fallback) ---
+#{
+  import "/src/zugferd/build.typ": build-seller-trade-party
+
+  // 1. Both vat-id and tax-nr provided (standard case)
+  let party-both = build-seller-trade-party(
+    "Seller GmbH",
+    ("Street 1",),
+    "München",
+    "80339",
+    "DE",
+    "123/456/78901",
+    "DE123456789",
+    true,
+    is-outside-scope: false,
+  )
+  assert.eq(party-both.at("ram:SpecifiedTaxRegistration", default: none), (
+    ("ram:ID": ("@schemeID": "VA", "": "DE123456789")),
+    ("ram:ID": ("@schemeID": "FC", "": "123/456/78901")),
+  ))
+
+  // 2. Only vat-id provided, not outside-scope
+  let party-vat-only = build-seller-trade-party(
+    "Seller GmbH",
+    ("Street 1",),
+    "München",
+    "80339",
+    "DE",
+    none,
+    "DE123456789",
+    true,
+    is-outside-scope: false,
+  )
+  assert.eq(party-vat-only.at("ram:SpecifiedTaxRegistration", default: none), (
+    ("ram:ID": ("@schemeID": "VA", "": "DE123456789")),
+  ))
+
+  // 3. vat-id provided, no tax-nr, is-outside-scope: true (Bug: used to panic on none.len())
+  let party-outside-scope-no-tax-nr = build-seller-trade-party(
+    "Seller GmbH",
+    ("Street 1",),
+    "München",
+    "80339",
+    "DE",
+    none,
+    "DE123456789",
+    true,
+    is-outside-scope: true,
+  )
+  assert.eq(
+    party-outside-scope-no-tax-nr.at(
+      "ram:SpecifiedTaxRegistration",
+      default: none,
+    ),
+    none,
+  )
+
+  // 4. vat-id and tax-nr provided, is-outside-scope: true (vat-id dropped per BR-O-02, tax-nr kept)
+  let party-outside-scope-with-tax-nr = build-seller-trade-party(
+    "Seller GmbH",
+    ("Street 1",),
+    "München",
+    "80339",
+    "DE",
+    "123/456/78901",
+    "DE123456789",
+    true,
+    is-outside-scope: true,
+  )
+  assert.eq(
+    party-outside-scope-with-tax-nr.at(
+      "ram:SpecifiedTaxRegistration",
+      default: none,
+    ),
+    (
+      ("ram:ID": ("@schemeID": "FC", "": "123/456/78901")),
+    ),
+  )
+  assert.eq(
+    party-outside-scope-with-tax-nr.at("ram:ID", default: none),
+    "123/456/78901",
+  )
+
+  // 5. Neither vat-id nor tax-nr provided
+  let party-no-tax = build-seller-trade-party(
+    "Seller GmbH",
+    ("Street 1",),
+    "München",
+    "80339",
+    "DE",
+    none,
+    none,
+    true,
+    is-outside-scope: false,
+  )
+  assert.eq(
+    party-no-tax.at("ram:SpecifiedTaxRegistration", default: none),
+    none,
+  )
+}
