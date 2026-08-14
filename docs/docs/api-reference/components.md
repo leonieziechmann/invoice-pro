@@ -21,17 +21,21 @@ Defines and renders the bank account information for payments. It can optionally
 If you leave `payment-amount` set to `auto`, the component will automatically fetch the final gross total of the invoice and use it for the display and the QR code!
 :::
 
-| Key                   | Type                         | Description                                                                                                                    |
-| --------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `name`                | `auto` \| `none` \| `str`    | The name of the account holder. If set to `auto`, it automatically defaults to the sender's name.                              |
-| `bank`                | `none` \| `str`              | The name of the banking institution.                                                                                           |
-| `iban`                | `none` \| `str`              | The International Bank Account Number (IBAN).                                                                                  |
-| `bic`                 | `none` \| `str`              | The Bank Identifier Code (BIC/SWIFT).                                                                                          |
-| `reference`           | `auto` \| `none` \| `str`    | The payment reference to be used by the customer.                                                                              |
-| `payment-amount`      | `auto` \| `none` \| `number` | The specific amount to be paid. If `auto`, it uses the document's total gross amount.                                          |
-| `show-reference`      | `bool`                       | Whether to display the reference field in the output. Defaults to `true`.                                                      |
-| `account-holder-text` | `auto`                       | Optional custom text to label the account holder field.                                                                        |
-| `qr-code`             | `dictionary`                 | Configuration for a payment QR code (e.g., EPC-QR). Accepts keys like `display` (bool) and `size` (length, defaults to `5em`). |
+:::note
+The `bic` parameter is optional. If not provided or set to `none`, the BIC row will not be displayed in the bank details block, and the EPC-QR code will be generated without a BIC.
+:::
+
+| Key                   | Type                         | Description                                                                                                                                     |
+| --------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                | `auto` \| `none` \| `str`    | The name of the account holder. If set to `auto`, it automatically defaults to the sender's name.                                               |
+| `bank`                | `none` \| `str`              | The name of the banking institution.                                                                                                            |
+| `iban`                | `none` \| `str`              | The International Bank Account Number (IBAN).                                                                                                   |
+| `bic`                 | `none` \| `str`              | The Bank Identifier Code (BIC/SWIFT). If omitted or `none`, the BIC field is hidden in the bank details block and omitted from the EPC-QR code. |
+| `reference`           | `auto` \| `none` \| `str`    | The payment reference to be used by the customer.                                                                                               |
+| `payment-amount`      | `auto` \| `none` \| `number` | The specific amount to be paid. If `auto`, it uses the document's total gross amount.                                                           |
+| `show-reference`      | `bool`                       | Whether to display the reference field in the output. Defaults to `true`.                                                                       |
+| `account-holder-text` | `auto`                       | Optional custom text to label the account holder field.                                                                                         |
+| `qr-code`             | `dictionary`                 | Configuration for a payment QR code (e.g., EPC-QR). Accepts keys like `display` (bool) and `size` (length, defaults to `5em`).                  |
 
 ---
 

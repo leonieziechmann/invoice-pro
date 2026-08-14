@@ -18,7 +18,7 @@
   /// -> none | string
   iban: none,
 
-  /// The Bank Identifier Code (BIC/SWIFT).
+  /// The Bank Identifier Code (BIC/SWIFT). If omitted or `none`, the BIC is not displayed in the bank details block.
   /// -> none | string
   bic: none,
 
