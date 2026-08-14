@@ -48,8 +48,10 @@
   number-format += (padding: number-format.at("padding", default: true))
 
   let formated-string = number(value, ..number-format)
-  if location == start { currency + [\u{202F}] + formated-string } else if location == end {
-    formated-string + [\u{202F}] + currency
+  if location == start {
+    currency + sym.space.nobreak.narrow + formated-string
+  } else if location == end {
+    formated-string + sym.space.nobreak.narrow + currency
   } else { panic("Invalid Location!") }
 }
 
@@ -66,7 +68,8 @@
 
     currency: currency.with(
       ..currency-format,
-      number-format: numeric-format + (accuracy: currency-meta.decimals, padding: true),
+      number-format: numeric-format
+        + (accuracy: currency-meta.decimals, padding: true),
     ),
 
     currency-fine: x => {
