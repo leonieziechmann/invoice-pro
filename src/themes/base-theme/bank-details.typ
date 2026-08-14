@@ -20,7 +20,8 @@
         width: view.qr-code.size,
         height: view.qr-code.size,
       )
-        + if view.text != none { (text: view.text) } else if view.reference != none { (reference: view.reference) },
+        + if view.text != none { (text: view.text) } else if view.reference
+          != none { (reference: view.reference) },
     )
   }
 
