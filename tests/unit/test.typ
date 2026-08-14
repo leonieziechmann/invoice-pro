@@ -709,3 +709,44 @@
   ))
 }
 
+// --- Test bank-details BIC visibility ---
+#{
+  import "/src/themes/base-theme/bank-details.typ": render-bank-details
+  import "/src/lib.typ": locale
+  import "/src/locale/lang/base.typ": base-language
+  import "/src/locale/region/base.typ": base-region
+
+  let ctx = (
+    locale: (locale.de-de)(base-language, base-region),
+  )
+
+  let base-view = (
+    sender: (
+      name: "Max Mustermann",
+      bank: "Musterbank",
+      iban: "DE75512108001245126199",
+      bic: "",
+    ),
+    qr-code: (
+      size: 5em,
+      display: true,
+    ),
+    reference: "INV-001",
+    show-reference: true,
+    payment-amount: 100.0,
+  )
+
+  // 1. When BIC is empty / omitted, BIC line should not be rendered
+  let res-no-bic = render-bank-details(ctx, base-view)
+  let str-no-bic = repr(res-no-bic)
+  assert(not str-no-bic.contains("[BIC]"))
+  assert(not str-no-bic.contains("SOLADEST600"))
+
+  // 2. When BIC is provided, BIC line should be rendered
+  let view-with-bic = base-view
+  view-with-bic.sender.bic = "SOLADEST600"
+  let res-with-bic = render-bank-details(ctx, view-with-bic)
+  let str-with-bic = repr(res-with-bic)
+  assert(str-with-bic.contains("[BIC]"))
+  assert(str-with-bic.contains("SOLADEST600"))
+}
