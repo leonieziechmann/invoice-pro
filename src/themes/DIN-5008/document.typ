@@ -1,3 +1,4 @@
+#import "../../loom-wrapper.typ": eval-content
 #import "@preview/letter-pro:3.0.0": (
   address-duobox, address-tribox, annotations-box, header-simple,
   letter-generic, recipient-box, sender-box,
@@ -154,7 +155,7 @@
     margin: margin,
   )
   if footer != none {
-    letter-generic-args.insert("footer", footer)
+    letter-generic-args.insert("footer", eval-content(ctx, footer))
   }
 
   letter-generic(

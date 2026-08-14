@@ -3,6 +3,8 @@
 #import "payment-goal.typ": render-payment-goal
 #import "signature.typ": render-signature
 
+#import "../../loom-wrapper.typ": eval-content
+
 #let base-theme(
   /// Document Root Styling.
   /// -> (ctx, content) => content
@@ -10,11 +12,11 @@
   /// Header that will be evaluted by the weave loop and then by appled to the
   /// document. Can include motifs/active items.
   /// -> content
-  header: [],
+  header: none,
   /// Footer that will be evaluted by the weave loop and then by appled to the
   /// document. Can include motifs/active items.
   /// -> content
-  footer: [],
+  footer: none,
   /// Layout of the aggregated line item data.
   /// -> (ctx, dictionary, content) => content
   line-items: render-line-items,
@@ -29,7 +31,15 @@
   signature: render-signature,
 ) = {
   (
-    document: document,
+    document: (ctx, body) => {
+      if header != none and header != [] {
+        set page(header: eval-content(ctx, header))
+      }
+      if footer != none and footer != [] {
+        set page(footer: eval-content(ctx, footer))
+      }
+      document(ctx, body)
+    },
     header: header,
     footer: footer,
     line-items: line-items,

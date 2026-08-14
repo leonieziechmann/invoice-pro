@@ -20,3 +20,15 @@
   measure: (_, children) => children,
   body,
 )
+
+#let eval-content(ctx, it) = {
+  if it == none { return none }
+  if type(it) == function {
+    (..args) => {
+      let res = it(..args)
+      loom.core.intertwine(ctx, res, key: loom-key, draw: true).at(0)
+    }
+  } else {
+    loom.core.intertwine(ctx, it, key: loom-key, draw: true).at(0)
+  }
+}
