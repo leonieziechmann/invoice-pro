@@ -126,41 +126,44 @@ _See the [Tax Module API Reference](../tax.md) for a detailed breakdown of all a
 
 ### `references`
 
-The `references` parameter allows you to add custom metadata to the information block of the invoice (usually positioned in the top-right corner near the date and invoice number). This is the perfect place for Customer IDs, Order Dates, or Delivery Numbers.
+The `references` parameter configures the reference information / Leitzeichen block in the document header (e.g. Customer No., Order Date, Due Date, or Leitweg-ID).
 
-You can provide this data in three formats:
+You can supply references in four formats:
 
-- **As a Dictionary:** The simplest method for key-value pairs.
+- **Preset Packages (Recommended):** Use ready-made, localized presets like `references.preset-b2b()`, `references.preset-b2g()`, `references.preset-project()`, or `references.preset-din-5008()`. Unpopulated fields are automatically omitted.
   ```typst
-  references: (
-    "Customer No.": "C-9982",
-    "Order Date": "2026-04-10"
-  )
-  ```
-- **As an Array of Tuples:** Dictionaries in Typst do not always guarantee a specific order. If the exact visual order of your reference fields is strictly required, use an array of `(label, value)` pairs instead.
-  ```typst
-  references: (
-    ("Customer No.", "C-9982"),
-    ("Order Date", "2026-04-10")
-  )
-  ```
-- **Dynamic References:** You can selectively position, sort, and override localized reference fields (such as VAT ID, tax number, invoice number, invoice date, and service period/timeframe) by using the `references` module.
-
-  ```typst
-  #import "@preview/invoice-pro:0.4.0": invoice, references
-
   #show: invoice.with(
-    references: (
-      references.invoice-date,
-      ("Your Order", "PO-9912"),
-      references.vat-id,
-      references.tax-nr,
-    ),
+    references: references.preset-b2b(),
+    customer-nr: "KD-12345",
+    order-nr: "PO-9988",
     // ...
   )
   ```
+- **Dynamic Builder Functions:** Explicitly select, order, or customize individual reference fields from the `references` module:
+  ```typst
+  references: (
+    references.invoice-nr(),
+    references.customer-nr(),
+    references.order-nr(),
+    references.due-date(),
+  )
+  ```
+- **As an Array of Tuples:** For static custom key-value pairs in a strict order.
+  ```typst
+  references: (
+    ("Customer No.", "C-9982"),
+    ("Order Date", "2026-04-10"),
+  )
+  ```
+- **As a Dictionary:** For key-value mapping with custom labels.
+  ```typst
+  references: (
+    "Our Reference": references.invoice-nr,
+    "Your Account": "C-9982",
+  )
+  ```
 
-For a comprehensive guide on the available reference builder functions and advanced customization options, see the [Dynamic References guide](./references.md).
+👉 **[See the full Dynamic References Guide](./references.md)** for the complete list of available reference signs, preset packages, and customization options.
 
 ### `zugferd` — ZUGFeRD / Factur-X _(Experimental)_
 

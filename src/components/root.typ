@@ -151,44 +151,118 @@
         ctx
           + (
             items: view.item-data.items,
+            payment-goal: view.payment-goal,
           )
       )
 
-      let eval-ref(fn) = {
-        import "../public/references.typ"
-        if (
-          fn == references.tax-nr
-            or fn == references.vat-id
-            or fn == references.invoice-nr
-            or fn == references.invoice-date
-            or fn == references.service-time
-        ) {
-          (fn())(eval-ctx)
+      import "../public/references.typ" as public-references
+      let all-builder-fns = (
+        public-references.tax-nr,
+        public-references.vat-id,
+        public-references.invoice-nr,
+        public-references.invoice-date,
+        public-references.service-time,
+        public-references.customer-nr,
+        public-references.buyer-reference,
+        public-references.recipient-vat-id,
+        public-references.recipient-tax-nr,
+        public-references.order-nr,
+        public-references.order-date,
+        public-references.project,
+        public-references.contract-nr,
+        public-references.quote-nr,
+        public-references.delivery-note-nr,
+        public-references.preceding-invoice-nr,
+        public-references.due-date,
+        public-references.payment-reference,
+        public-references.contact-person,
+        public-references.contact-phone,
+        public-references.contact-email,
+      )
+      let all-preset-fns = (
+        public-references.preset-b2b,
+        public-references.preset-b2g,
+        public-references.preset-project,
+        public-references.preset-din-5008,
+      )
+
+      let eval-single-fn(fn) = {
+        if fn in all-preset-fns {
+          let inner-list = fn()
+          inner-list.map(f => eval-single-fn(f))
+        } else if fn in all-builder-fns {
+          let closure = fn()
+          closure(eval-ctx)
         } else {
           fn(eval-ctx)
         }
       }
 
-      let normalized-references = ctx.references.map(s => {
-        if type(s) == function {
-          eval-ref(s)
-        } else if type(s) == array and s.len() == 2 {
-          let (k, v) = s
-          if type(v) == function {
-            let val = eval-ref(v)
-            let val-extracted = if type(val) == array and val.len() == 2 {
-              val.last()
-            } else {
-              val
-            }
-            (k, val-extracted)
+      let process-raw-refs(raw) = {
+        let items = ()
+        if type(raw) == function {
+          if raw in all-preset-fns {
+            items = raw()
           } else {
-            (k, v)
+            items = (raw,)
           }
-        } else {
-          s
+        } else if type(raw) == array {
+          items = raw
+        } else if type(raw) == dictionary {
+          items = raw.pairs()
         }
-      })
+
+        let flat-refs = ()
+        for item in items {
+          if type(item) == function {
+            let res = eval-single-fn(item)
+            if (
+              type(res) == array
+                and res.len() > 0
+                and type(res.first()) == array
+                and res.first().len() == 2
+            ) {
+              for pair in res {
+                if pair.len() == 2 and pair.at(1) != none {
+                  flat-refs.push(pair)
+                }
+              }
+            } else if type(res) == array and res.len() == 2 {
+              if res.at(1) != none {
+                flat-refs.push(res)
+              }
+            }
+          } else if (
+            type(item) == array
+              and item.len() == 2
+              and (type(item.first()) == str or type(item.first()) == content)
+          ) {
+            let (k, v) = item
+            if type(v) == function {
+              let val = eval-single-fn(v)
+              let val-extracted = if type(val) == array and val.len() == 2 {
+                val.last()
+              } else {
+                val
+              }
+              if val-extracted != none {
+                flat-refs.push((k, val-extracted))
+              }
+            } else {
+              if v != none {
+                flat-refs.push((k, v))
+              }
+            }
+          } else if type(item) == array {
+            for sub-item in process-raw-refs(item) {
+              flat-refs.push(sub-item)
+            }
+          }
+        }
+        flat-refs
+      }
+
+      let normalized-references = process-raw-refs(ctx.references)
 
       let ctx = ctx + (references: normalized-references)
 

@@ -41,6 +41,22 @@
 /// - vat-id (auto, str): e.g., "VAT ID", "USt-IdNr."
 /// - invoice-date (auto, str): e.g., "Invoice Date", "Rechnungsdatum"
 /// - service-time (auto, str): e.g., "Period of Service", "Leistungszeitraum"
+/// - customer-number (auto, str): e.g., "Customer No.", "Kundennummer"
+/// - buyer-reference (auto, str): e.g., "Buyer Reference", "Leitweg-ID"
+/// - recipient-vat-id (auto, str): e.g., "Buyer VAT ID", "Ihre USt-IdNr."
+/// - recipient-tax-number (auto, str): e.g., "Buyer Tax ID", "Ihre Steuernummer"
+/// - order-number (auto, str): e.g., "Order No.", "Bestellnummer"
+/// - order-date (auto, str): e.g., "Order Date", "Bestelldatum"
+/// - project (auto, str): e.g., "Project", "Projekt"
+/// - contract-number (auto, str): e.g., "Contract No.", "Vertragsnummer"
+/// - quote-number (auto, str): e.g., "Quote No.", "Angebotsnummer"
+/// - delivery-note-number (auto, str): e.g., "Delivery Note No.", "Lieferschein-Nr."
+/// - preceding-invoice-number (auto, str): e.g., "Preceding Invoice No.", "Urspr. Rechnungsnummer"
+/// - due-date (auto, str): e.g., "Due Date", "Zahlbar bis"
+/// - payment-reference (auto, str): e.g., "Payment Reference", "Verwendungszweck"
+/// - contact-person (auto, str): e.g., "Contact Person", "Ansprechpartner"
+/// - contact-phone (auto, str): e.g., "Phone", "Telefon"
+/// - contact-email (auto, str): e.g., "Email", "E-Mail"
 /// -> dictionary
 #let reference(
   tax-number: auto,
@@ -48,6 +64,22 @@
   vat-id: auto,
   invoice-date: auto,
   service-time: auto,
+  customer-number: auto,
+  buyer-reference: auto,
+  recipient-vat-id: auto,
+  recipient-tax-number: auto,
+  order-number: auto,
+  order-date: auto,
+  project: auto,
+  contract-number: auto,
+  quote-number: auto,
+  delivery-note-number: auto,
+  preceding-invoice-number: auto,
+  due-date: auto,
+  payment-reference: auto,
+  contact-person: auto,
+  contact-phone: auto,
+  contact-email: auto,
 ) = (
   {
     let payload = _clean-auto((
@@ -56,6 +88,22 @@
       vat-id: vat-id,
       invoice-date: invoice-date,
       service-time: service-time,
+      customer-number: customer-number,
+      buyer-reference: buyer-reference,
+      recipient-vat-id: recipient-vat-id,
+      recipient-tax-number: recipient-tax-number,
+      order-number: order-number,
+      order-date: order-date,
+      project: project,
+      contract-number: contract-number,
+      quote-number: quote-number,
+      delivery-note-number: delivery-note-number,
+      preceding-invoice-number: preceding-invoice-number,
+      due-date: due-date,
+      payment-reference: payment-reference,
+      contact-person: contact-person,
+      contact-phone: contact-phone,
+      contact-email: contact-email,
     ))
     return (strings: (reference: payload))
   },

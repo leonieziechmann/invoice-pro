@@ -26,6 +26,9 @@
     buyer-reference: "DE123456789-12345-12",
   ),
   invoice-nr: "2026-01",
+  order-nr: "PO-2026-9988",
+  contract-nr: "CTR-2026-001",
+  delivery-note-nr: "DEL-2026-55",
 )
 
 #line-items[

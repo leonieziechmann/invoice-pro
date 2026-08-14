@@ -41,11 +41,42 @@
   /// -> string | content
   subject: auto,
   /// Reference information for the document header (e.g., customer number).
-  /// -> none | dictionary | array
+  /// -> none | dictionary | array | function
   references: none,
   /// The unique identifier or number of the invoice.
   /// -> none | string | content
   invoice-nr: none,
+
+  /// Customer number or client identifier.
+  /// -> none | string | content
+  customer-nr: none,
+  /// Order / purchase order number (PO number).
+  /// -> none | string | content
+  order-nr: none,
+  /// Order placement date.
+  /// -> none | datetime | string | content
+  order-date: none,
+  /// Project name or reference code.
+  /// -> none | string | content
+  project: none,
+  /// Contract or framework agreement number.
+  /// -> none | string | content
+  contract-nr: none,
+  /// Quote or estimate reference number.
+  /// -> none | string | content
+  quote-nr: none,
+  /// Delivery note / shipping advice number.
+  /// -> none | string | content
+  delivery-note-nr: none,
+  /// Preceding invoice number (for credit notes / corrections).
+  /// -> none | string | content
+  preceding-invoice-nr: none,
+  /// Explicit due date for payment.
+  /// -> none | datetime | string | content
+  due-date: none,
+  /// Custom payment reference / purpose (Verwendungszweck).
+  /// -> none | string | content
+  payment-reference: none,
 
   /// The default tax rate to apply if not specified elsewhere.
   /// If `auto`, it is inferred from the locale.
@@ -79,13 +110,44 @@
     references,
     "invoice::references",
     none,
+    function,
     loom.matcher.dict(loom.matcher.choice(types.text-like, function)),
     loom.matcher.many(loom.matcher.choice(
       function,
+      array,
       (types.text-like, types.text-like),
+      (types.text-like, function),
     )),
   )
   types.require(invoice-nr, "invoice::invoice-nr", none, str, content)
+  types.require(customer-nr, "invoice::customer-nr", none, str, content)
+  types.require(order-nr, "invoice::order-nr", none, str, content)
+  types.require(order-date, "invoice::order-date", none, datetime, str, content)
+  types.require(project, "invoice::project", none, str, content)
+  types.require(contract-nr, "invoice::contract-nr", none, str, content)
+  types.require(quote-nr, "invoice::quote-nr", none, str, content)
+  types.require(
+    delivery-note-nr,
+    "invoice::delivery-note-nr",
+    none,
+    str,
+    content,
+  )
+  types.require(
+    preceding-invoice-nr,
+    "invoice::preceding-invoice-nr",
+    none,
+    str,
+    content,
+  )
+  types.require(due-date, "invoice::due-date", none, datetime, str, content)
+  types.require(
+    payment-reference,
+    "invoice::payment-reference",
+    none,
+    str,
+    content,
+  )
   types.require(tax-nr, "invoice::tax-nr", none, str, content)
 
   types.require(tax, "invoice::tax", none, auto, types.tax-like)
@@ -173,9 +235,11 @@
     ))
   }
 
-  if type(references) == array { document-references = references } else if (
-    type(references) == dictionary
-  ) {
+  if type(references) == function {
+    document-references = references
+  } else if type(references) == array {
+    document-references = references
+  } else if type(references) == dictionary {
     document-references = references.pairs()
   }
 
@@ -191,6 +255,17 @@
     subject: document-subject,
     references: document-references,
     invoice-nr: invoice-nr,
+
+    customer-nr: customer-nr,
+    order-nr: order-nr,
+    order-date: order-date,
+    project: project,
+    contract-nr: contract-nr,
+    quote-nr: quote-nr,
+    delivery-note-nr: delivery-note-nr,
+    preceding-invoice-nr: preceding-invoice-nr,
+    due-date: due-date,
+    payment-reference: payment-reference,
 
     tax: document-tax,
     tax-mode: tax-mode,

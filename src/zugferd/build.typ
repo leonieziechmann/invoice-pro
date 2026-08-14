@@ -810,6 +810,21 @@
       is-outside-scope: is-outside-scope,
     ),
   )
+  let order-nr = ctx.at("order-nr", default: ctx.recipient.at(
+    "order-nr",
+    default: ctx.at("po-nr", default: ctx.recipient.at("po-nr", default: none)),
+  ))
+  if order-nr != none and profile != "minimum" {
+    header-agreement.insert("ram:BuyerOrderReferencedDocument", (
+      "ram:IssuerAssignedID": to-string(order-nr),
+    ))
+  }
+  let contract-nr = ctx.at("contract-nr", default: none)
+  if contract-nr != none and profile != "minimum" {
+    header-agreement.insert("ram:ContractReferencedDocument", (
+      "ram:IssuerAssignedID": to-string(contract-nr),
+    ))
+  }
 
   let transaction = (:)
   if line-items != () {
@@ -818,8 +833,9 @@
   transaction.insert("ram:ApplicableHeaderTradeAgreement", header-agreement)
   let header-delivery = (:)
   if profile != "minimum" and delivery-date != none {
-    header-delivery = (
-      "ram:ActualDeliverySupplyChainEvent": (
+    header-delivery.insert(
+      "ram:ActualDeliverySupplyChainEvent",
+      (
         "ram:OccurrenceDateTime": (
           "udt:DateTimeString": (
             "@format": "102",
@@ -828,6 +844,12 @@
         ),
       ),
     )
+  }
+  let delivery-note-nr = ctx.at("delivery-note-nr", default: none)
+  if delivery-note-nr != none and profile != "minimum" {
+    header-delivery.insert("ram:DespatchAdviceReferencedDocument", (
+      "ram:IssuerAssignedID": to-string(delivery-note-nr),
+    ))
   }
   transaction.insert("ram:ApplicableHeaderTradeDelivery", header-delivery)
   transaction.insert("ram:ApplicableHeaderTradeSettlement", trade-settlement)
