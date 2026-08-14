@@ -377,6 +377,7 @@
   invoice-date(),
   service-time(),
   due-date(),
+  recipient-vat-id(),
 )
 
 #let preset-b2g() = (
@@ -386,6 +387,7 @@
   invoice-date(),
   service-time(),
   due-date(),
+  recipient-vat-id(),
 )
 
 #let preset-project() = (

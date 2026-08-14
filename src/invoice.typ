@@ -234,6 +234,13 @@
       sender-vat-id,
     ))
   }
+  let recipient-vat-id = normalized-recipient.vat-id
+  if recipient-vat-id != none and recipient-vat-id != "" {
+    document-references.push((
+      eval-locale.strings.reference.recipient-vat-id,
+      recipient-vat-id,
+    ))
+  }
 
   if type(references) == function {
     document-references = references

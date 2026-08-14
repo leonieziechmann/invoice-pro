@@ -437,8 +437,12 @@
       "ram:CalculatedAmount": fmt-amount(tax.absolute),
       "ram:TypeCode": "VAT",
     )
-    if tax.at("grounds", default: none) != none {
-      entry.insert("ram:ExemptionReason", tax.grounds)
+    let reason = tax.at("grounds", default: none)
+    if reason == none and tax.category == "AE" {
+      reason = "Reverse charge"
+    }
+    if reason != none {
+      entry.insert("ram:ExemptionReason", reason)
     }
     entry.insert("ram:BasisAmount", fmt-amount(tax.basis))
     entry.insert("ram:CategoryCode", tax.category)

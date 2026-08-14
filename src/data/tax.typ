@@ -114,7 +114,7 @@
 )
 
 // AE: VAT Reverse Charge
-#let reverse-charge(grounds: none) = new(
+#let reverse-charge(grounds: "Reverse charge") = new(
   rate: 0%,
   category: "AE",
   label: "reverse-charge",
