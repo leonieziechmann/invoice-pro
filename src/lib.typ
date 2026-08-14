@@ -11,6 +11,7 @@
 #import "components/bank-details.typ": bank-details
 #import "components/payment-goal.typ": payment-goal
 #import "components/signature.typ": signature
+#import "components/dynamic.typ": dynamic
 
 #import "loom-wrapper.typ": apply
 
@@ -19,3 +20,4 @@
 #import "public/country.typ"
 #import "public/unit.typ"
 #import "public/references.typ"
+#import "public/info.typ" as info

@@ -136,11 +136,14 @@
       let view = (
         item-data: item-data,
         payment-goal: payment-goal-signal,
+        bank: bank-signal,
+        total: line-items.at("total", default: (:)),
+        formated-total: line-items.at("formated-total", default: (:)),
       )
 
       return (public, view)
     },
-    draw: (ctx, _, view, body) => {
+    draw: (ctx, public, view, body) => {
       let region = ctx.locale.meta.at("region", default: none)
       let region-code = if type(region) == str and region.len() == 2 {
         region
@@ -264,12 +267,30 @@
 
       let normalized-references = process-raw-refs(ctx.references)
 
-      let ctx = ctx + (references: normalized-references)
+      let ctx = (
+        ctx
+          + (
+            references: normalized-references,
+            items: view.item-data.items,
+            item-data: view.item-data,
+            payment-goal: view.payment-goal,
+            bank: view.bank,
+            global: (
+              total: view.total,
+              formated-total: view.formated-total,
+              bank: view.bank,
+            ),
+          )
+      )
 
       if ctx.zugferd != none {
         pdf.attach(
           "/factur-x.xml",
-          build-zugferd-xml(ctx, view.item-data, view.payment-goal),
+          build-zugferd-xml(
+            ctx,
+            view.item-data,
+            view.payment-goal,
+          ),
           relationship: "alternative",
           mime-type: "text/xml",
           description: "ZUGFeRD / Factur-X invoice data",

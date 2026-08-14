@@ -137,3 +137,73 @@ If you have multiple items that share a specific tax rate (e.g., books with a re
 :::warning
 **Advanced Usage for Power Users:** Because `apply` interfaces directly with the internal state representation, power users can also use it to override deeper internal functions—such as temporarily changing the [`locale`](./locale), [`theme`](./theme), or formatting logic for a specific scope. However, this requires knowledge of the internal data structure and should be used with caution!
 :::
+
+---
+
+## `info` Module
+
+The `info` module provides a suite of draw-only motifs and pre-configured accessors to seamlessly embed dynamic invoice context values anywhere in your body text.
+
+### Usage in Invoice Text
+
+```typst
+#import "@preview/invoice-pro:0.4.0": *
+
+Thank you for your order #info.order-nr from #info.order-date.
+Please settle the total of #info.total.gross by #info.due-date to IBAN #info.iban.
+
+Our company #info.sender.name is registered under VAT ID #info.sender.vat-id.
+Invoiced to #info.recipient.name in #info.recipient.city.
+```
+
+### Pre-bound Properties
+
+| Field / Property                       | Description                         |
+| :------------------------------------- | :---------------------------------- |
+| `#info.invoice-nr`                     | Invoice number (`ctx.invoice-nr`)   |
+| `#info.invoice-date` (or `#info.date`) | Formatted invoice issue date        |
+| `#info.due-date`                       | Calculated payment deadline date    |
+| `#info.customer-nr`                    | Customer / Client ID                |
+| `#info.order-nr`                       | Purchase Order number               |
+| `#info.order-date`                     | Purchase Order date                 |
+| `#info.project`                        | Project name or code                |
+| `#info.contract-nr`                    | Contract reference                  |
+| `#info.quote-nr`                       | Quotation number                    |
+| `#info.delivery-note-nr`               | Delivery note number                |
+| `#info.preceding-invoice-nr`           | Preceding / original invoice number |
+| `#info.payment-reference`              | Payment reference string            |
+| `#info.buyer-reference`                | Buyer reference / Leitweg-ID        |
+| `#info.subject`                        | Document subject line               |
+| `#info.iban`                           | Payment IBAN                        |
+| `#info.bic`                            | Bank Identifier Code (BIC)          |
+
+### Nested Dictionaries
+
+- **Sender Details (`#info.sender.*`)**:
+  - `#info.sender.name`, `#info.sender.tax-nr`, `#info.sender.vat-id`
+  - `#info.sender.address`, `#info.sender.city`, `#info.sender.country`
+  - `#info.sender.email`, `#info.sender.phone`
+- **Recipient Details (`#info.recipient.*`)**:
+  - `#info.recipient.name`, `#info.recipient.tax-nr`, `#info.recipient.vat-id`
+  - `#info.recipient.address`, `#info.recipient.city`, `#info.recipient.country`
+  - `#info.recipient.buyer-reference`, `#info.recipient.customer-nr`
+- **Totals (`#info.total.*`)**:
+  - `#info.total.gross`: Formatted total gross amount (e.g. `1.190,00 €`)
+  - `#info.total.net`: Formatted total net amount (e.g. `1.000,00 €`)
+
+### Dynamic Path Queries (`#info.dynamic` / `#info.get`)
+
+For any nested or custom path not covered by standard properties:
+
+```typst
+#info.dynamic("locale", "region", "code")
+#info.dynamic("sender", "extra", default: "N/A")
+#info.dynamic("invoice-date", format: d => [Year #d.year()])
+#info.dynamic(ctx => [Issuer country code: #upper(ctx.sender.country.code)])
+```
+
+| Parameter | Type                           | Description                                                                                      |
+| :-------- | :----------------------------- | :----------------------------------------------------------------------------------------------- |
+| `..path`  | `str` \| `array` \| `function` | Path segments in `ctx` (e.g. `"locale", "region", "code"`), or a query closure `ctx => content`. |
+| `default` | `none` \| `any`                | Fallback content if the path evaluates to `none`.                                                |
+| `format`  | `auto` \| `function`           | Custom formatter `val => content`, or `auto` for context-aware formatting (e.g. dates).          |
