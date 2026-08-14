@@ -26,8 +26,7 @@
   } else {
     none
   }
-  if vat-id != none and vat-id != "" and country-code != none {
-    let code = lower(country-code)
+  if vat-id != none and vat-id != "" {
     let eas-codes = (
       de: "9930",
       at: "9914",
@@ -41,6 +40,10 @@
       it: "9906",
       es: "9920",
     )
+    let code = if country-code != none { lower(country-code) } else { none }
+    if code not in eas-codes and vat-id.len() >= 2 {
+      code = lower(vat-id.slice(0, 2))
+    }
     if code in eas-codes {
       return (scheme: eas-codes.at(code), id: vat-id)
     }
@@ -723,6 +726,55 @@
     "leitweg-id",
     default: none,
   ))
+
+  // Mandatory field validations for e-invoicing profiles
+  if profile in ("en16931", "xrechnung") {
+    if buyer-eas == none {
+      panic(
+        "e-invoicing (profile '"
+          + profile
+          + "') requires a buyer electronic address (BT-49). Set 'electronic-address', 'vat-id', or 'email' on the recipient.",
+      )
+    }
+    if seller-eas == none {
+      panic(
+        "e-invoicing (profile '"
+          + profile
+          + "') requires a seller electronic address (BT-34). Set 'electronic-address', 'vat-id', or 'email' on the sender.",
+      )
+    }
+  }
+
+  if profile == "xrechnung" {
+    if buyer-ref == none or buyer-ref == "" {
+      panic(
+        "e-invoicing (profile 'xrechnung') requires a buyer reference (BT-10). Set 'buyer-reference' or 'leitweg-id' on the recipient.",
+      )
+    }
+    if seller-contact == none {
+      panic(
+        "e-invoicing (profile 'xrechnung') requires seller contact information (BG-6). Set 'contact' (with name, phone, and email) or 'contact-name', 'phone', and 'email' on the sender.",
+      )
+    }
+    let contact-name = seller-contact.at("name", default: none)
+    let contact-phone = seller-contact.at("phone", default: none)
+    let contact-email = seller-contact.at("email", default: none)
+    if contact-name == none or contact-name == "" {
+      panic(
+        "e-invoicing (profile 'xrechnung') requires a seller contact name (BT-41). Set 'contact.name' or 'contact-name' on the sender.",
+      )
+    }
+    if contact-phone == none or contact-phone == "" {
+      panic(
+        "e-invoicing (profile 'xrechnung') requires a seller contact phone number (BT-42). Set 'contact.phone' or 'phone' on the sender.",
+      )
+    }
+    if contact-email == none or contact-email == "" {
+      panic(
+        "e-invoicing (profile 'xrechnung') requires a seller contact email address (BT-43). Set 'contact.email' or 'email' on the sender.",
+      )
+    }
+  }
 
   let header-agreement = (:)
   if buyer-ref != none {

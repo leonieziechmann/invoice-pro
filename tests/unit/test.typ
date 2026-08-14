@@ -852,3 +852,175 @@
     none,
   )
 }
+
+
+// --- Test ZUGFeRD mandatory field validations (BT-49, BT-10, BG-6, BT-41, BT-42, BT-43, BT-34) ---
+#{
+  import "/src/lib.typ": (
+    bank-details, country, invoice, item, line-items, locale, payment-goal, tax,
+    themes,
+  )
+
+  // Repro invoice from bug report (missing BT-49, BT-10, BG-6)
+  let test-e-invoice(
+    sender-overrides: (:),
+    recipient-overrides: (:),
+    zugferd: "en16931",
+  ) = {
+    let base-sender = (
+      name: "Seller GmbH",
+      address: "Street 1",
+      city: (name: "München", post-code: "80339"),
+      country: country.de,
+      vat-id: "DE123456789",
+    )
+    let base-recipient = (
+      name: "Buyer GmbH",
+      address: "Weg 5",
+      city: (name: "Berlin", post-code: "10115"),
+      country: country.de,
+    )
+    invoice(
+      theme: themes.blank,
+      locale: locale.de-de,
+      zugferd: zugferd,
+      sender: base-sender + sender-overrides,
+      recipient: base-recipient + recipient-overrides,
+      invoice-nr: "2026-01",
+      [
+        #line-items[
+          #item([Consulting], price: 100, quantity: 1, tax: tax.vat(19%))
+        ]
+        #payment-goal(days: 14)
+        #bank-details(
+          bank: "Musterbank",
+          iban: "DE89370400440532013000",
+          bic: "BANK123X",
+        )
+      ],
+    )
+  }
+
+  // 1. Initial bug repro: missing buyer electronic address (BT-49)
+  let res-bt49 = catch(() => test-e-invoice())
+  assert.eq(
+    res-bt49,
+    "panicked with: \"e-invoicing (profile 'xrechnung') requires a buyer electronic address (BT-49). Set 'electronic-address', 'vat-id', or 'email' on the recipient.\"",
+  )
+
+  // 2. Add email to recipient: next missing field is buyer reference (BT-10)
+  let res-bt10 = catch(() => test-e-invoice(
+    recipient-overrides: (email: "buyer@example.de"),
+  ))
+  assert.eq(
+    res-bt10,
+    "panicked with: \"e-invoicing (profile 'xrechnung') requires a buyer reference (BT-10). Set 'buyer-reference' or 'leitweg-id' on the recipient.\"",
+  )
+
+  // 3. Add buyer-reference to recipient: next missing field is seller contact (BG-6)
+  let res-bg6 = catch(() => test-e-invoice(
+    recipient-overrides: (
+      email: "buyer@example.de",
+      buyer-reference: "DE123456789-12345-12",
+    ),
+  ))
+  assert.eq(
+    res-bg6,
+    "panicked with: \"e-invoicing (profile 'xrechnung') requires seller contact information (BG-6). Set 'contact' (with name, phone, and email) or 'contact-name', 'phone', and 'email' on the sender.\"",
+  )
+
+  // 4. Incomplete seller contact (missing name BT-41, phone BT-42, email BT-43)
+  let res-bt41 = catch(() => test-e-invoice(
+    recipient-overrides: (
+      email: "buyer@example.de",
+      buyer-reference: "DE123456789-12345-12",
+    ),
+    sender-overrides: (
+      contact: (phone: "+49 89 123456", email: "seller@example.de"),
+    ),
+  ))
+  assert.eq(
+    res-bt41,
+    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller contact name (BT-41). Set 'contact.name' or 'contact-name' on the sender.\"",
+  )
+
+  let res-bt42 = catch(() => test-e-invoice(
+    recipient-overrides: (
+      email: "buyer@example.de",
+      buyer-reference: "DE123456789-12345-12",
+    ),
+    sender-overrides: (
+      contact: (name: "Max Mustermann", email: "seller@example.de"),
+    ),
+  ))
+  assert.eq(
+    res-bt42,
+    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller contact phone number (BT-42). Set 'contact.phone' or 'phone' on the sender.\"",
+  )
+
+  let res-bt43 = catch(() => test-e-invoice(
+    recipient-overrides: (
+      email: "buyer@example.de",
+      buyer-reference: "DE123456789-12345-12",
+    ),
+    sender-overrides: (
+      contact: (name: "Max Mustermann", phone: "+49 89 123456"),
+    ),
+  ))
+  assert.eq(
+    res-bt43,
+    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller contact email address (BT-43). Set 'contact.email' or 'email' on the sender.\"",
+  )
+
+  // 5. Missing seller electronic address (BT-34)
+  let res-bt34 = catch(() => test-e-invoice(
+    recipient-overrides: (
+      email: "buyer@example.de",
+      buyer-reference: "DE123456789-12345-12",
+    ),
+    sender-overrides: (
+      vat-id: none,
+      contact: (
+        name: "Max Mustermann",
+        phone: "+49 89 123456",
+        email: "seller@example.de",
+      ),
+    ),
+  ))
+  // When sender has contact.email, seller-eas derives from email so it should succeed:
+  assert.eq(res-bt34, none)
+
+  // But if sender has no vat-id, no electronic-address, and no email anywhere:
+  let res-no-seller-eas = catch(() => test-e-invoice(
+    recipient-overrides: (
+      email: "buyer@example.de",
+      buyer-reference: "DE123456789-12345-12",
+    ),
+    sender-overrides: (
+      vat-id: none,
+      contact-name: "Max Mustermann",
+      phone: "+49 89 123456",
+      email: none,
+    ),
+  ))
+  assert.eq(
+    res-no-seller-eas,
+    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller electronic address (BT-34). Set 'electronic-address', 'vat-id', or 'email' on the sender.\"",
+  )
+
+  // 6. Complete valid invoice with all mandatory fields satisfied
+  let res-valid = catch(() => test-e-invoice(
+    recipient-overrides: (
+      email: "buyer@example.de",
+      buyer-reference: "DE123456789-12345-12",
+    ),
+    sender-overrides: (
+      contact: (
+        name: "Max Mustermann",
+        phone: "+49 89 123456",
+        email: "seller@example.de",
+      ),
+    ),
+  ))
+  assert.eq(res-valid, none)
+}
