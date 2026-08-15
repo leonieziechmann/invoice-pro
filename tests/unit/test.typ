@@ -749,6 +749,14 @@
   let str-with-bic = repr(res-with-bic)
   assert(str-with-bic.contains("[BIC]"))
   assert(str-with-bic.contains("SOLADEST600"))
+
+  // 3. When unstructured text is provided instead of reference
+  let view-with-text = base-view
+  view-with-text.reference = none
+  view-with-text.text = "Rechnung 2026-001"
+  let res-with-text = render-bank-details(ctx, view-with-text)
+  let str-with-text = repr(res-with-text)
+  assert(str-with-text.contains("Rechnung 2026-001"))
 }
 
 
