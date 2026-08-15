@@ -51,8 +51,8 @@ nix run .#check-version -- 0.3.0
 
 | File                    | What to change                         | Example               |
 | :---------------------- | :------------------------------------- | :-------------------- |
-| `typst.toml`            | `version = "X.Y.Z"`                    | `version = "0.4.0"`   |
-| `src/loom-wrapper.typ`  | `#let loom-key = <invoice-pro:X.Y.Z>`  | `<invoice-pro:0.4.0>` |
+| `typst.toml`            | `version = "X.Y.Z"`                    | `version = "0.4.1"`   |
+| `src/loom-wrapper.typ`  | `#let loom-key = <invoice-pro:X.Y.Z>`  | `<invoice-pro:0.4.1>` |
 | `README.md`             | `#import "@preview/invoice-pro:X.Y.Z"` | 3 import statements   |
 | `template/invoice.typ`  | `#import "@preview/invoice-pro:X.Y.Z"` | 1 import statement    |
 | `docs/docs/**/*.md`     | `#import "@preview/invoice-pro:X.Y.Z"` | ~15 import statements |
