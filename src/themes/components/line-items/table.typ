@@ -1,5 +1,4 @@
 #import "../../../utils/types.typ"
-#import "../../../utils/trans.typ"
 #import "columns.typ": get-column-metadata
 
 // --- Default Renderers (Content Only) ---
@@ -431,7 +430,19 @@
     for key in active-cols-keys {
       let content = if key == "quantity" {
         if layout.show-units {
-          trans(item.unit, (u, q) => [#q #u], item.quantity)
+          let unit-disp = if type(item.unit) == dictionary {
+            item.unit.at("display", default: item.unit.at(
+              "name",
+              default: none,
+            ))
+          } else {
+            item.unit
+          }
+          if unit-disp != none {
+            [#item.quantity #unit-disp]
+          } else {
+            [#item.quantity]
+          }
         } else {
           [#item.quantity]
         }

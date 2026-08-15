@@ -1,8 +1,27 @@
+#let resolve-plural(v, n) = {
+  if type(v) != dictionary { return v }
+  if v.len() == 0 { return none }
+  let num = if type(n) == decimal or type(n) == int or type(n) == float {
+    float(n)
+  } else if type(n) == str {
+    float(n)
+  } else {
+    1.0
+  }
+  let fallback = v.pairs().first(default: (none, none)).last()
+  if num >= 0 and num < 2 {
+    v.at("singular", default: fallback)
+  } else {
+    v.at("plural", default: fallback)
+  }
+}
+
 /// French language overrides.
 #let fr = (
   meta: (
     /// The ISO 639-1 language code of the file.
     lang: "fr",
+    resolve-plural: resolve-plural,
   ),
 
   /// Designations for document types

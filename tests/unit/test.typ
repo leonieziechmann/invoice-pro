@@ -5,11 +5,11 @@
 #{
   let u-hour = unit.hour(locale.de-de)
   assert.eq(u-hour.code, "HUR")
-  assert.eq(u-hour.name, "Stunde")
+  assert.eq(u-hour.name, (singular: "Stunde", plural: "Stunden"))
 
   let u-hour-en = unit.hour(locale.en-de)
   assert.eq(u-hour-en.code, "HUR")
-  assert.eq(u-hour-en.name, "hour")
+  assert.eq(u-hour-en.name, (singular: "hour", plural: "hours"))
 
   let u-piece-de = unit.piece(locale.de-de)
   assert.eq(u-piece-de.code, "H87")
@@ -29,7 +29,7 @@
 
   let u-set-de = unit.unit-set(locale.de-de)
   assert.eq(u-set-de.code, "SET")
-  assert.eq(u-set-de.name, "Satz")
+  assert.eq(u-set-de.name, (singular: "Satz", plural: "Sätze"))
 }
 
 // --- Test alias matching ---
@@ -1031,4 +1031,43 @@
     ),
   ))
   assert.eq(res-valid, none)
+}
+
+// --- Test resolve-plural robustness and language behavior ---
+#{
+  import "/src/locale/lang/base.typ": base-language
+  import "/src/locale/region/base.typ": base-region
+  let de-res = locale.de-de(base-language, base-region).resolve-plural
+  let en-res = locale.en-de(base-language, base-region).resolve-plural
+
+  // 1. Any non-dict types (string, content, none, int) returned as-is
+  assert.eq(de-res("Stück", 5), "Stück")
+  assert.eq(de-res([Std.], 5), [Std.])
+  assert.eq(de-res(none, 5), none)
+  assert.eq(de-res(123, 5), 123)
+
+  // 2. Singular vs Plural resolution
+  let u-de = (singular: "Stunde", plural: "Stunden")
+  assert.eq(de-res(u-de, 1), "Stunde")
+  assert.eq(de-res(u-de, decimal("1")), "Stunde")
+  assert.eq(de-res(u-de, 2), "Stunden")
+  assert.eq(de-res(u-de, decimal("5.5")), "Stunden")
+  assert.eq(de-res(u-de, 0), "Stunden")
+
+  let u-en = (singular: "hour", plural: "hours")
+  assert.eq(en-res(u-en, 1), "hour")
+  assert.eq(en-res(u-en, 8), "hours")
+  assert.eq(en-res(u-en, 0), "hours")
+
+  // 3. Custom keys fallback to first pair
+  let u-one-other = (one: "piece", other: "pieces")
+  assert.eq(en-res(u-one-other, 1), "piece")
+  assert.eq(en-res(u-one-other, 5), "piece") // falls back to first element "piece"
+
+  // 5. Arbitrary custom dict fallback to first value
+  let u-arbitrary = (customA: "first-val", customB: "second-val")
+  assert.eq(de-res(u-arbitrary, 42), "first-val")
+
+  // 6. Empty dictionary returns none
+  assert.eq(de-res((:), 1), none)
 }

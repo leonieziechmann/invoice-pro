@@ -1,17 +1,47 @@
 #import "../locale/lang/base.typ": base-language
 #import "../locale/region/base.typ": base-region
 
-#let resolve-locale-strings(locale) = {
+#let resolve-locale(locale) = {
   if type(locale) == function {
-    let ctx = locale(base-language, base-region)
-    return ctx.strings
+    return locale(base-language, base-region)
   } else if type(locale) == dictionary {
-    if "strings" in locale {
-      return locale.strings
-    }
     return locale
   }
   panic("Invalid locale type: " + type(locale))
+}
+
+#let resolve-locale-strings(locale) = {
+  let ctx = resolve-locale(locale)
+  if "strings" in ctx {
+    return ctx.strings
+  }
+  return ctx
+}
+
+#let resolve-plural(locale, value, quantity) = {
+  if type(value) != dictionary or locale == none or quantity == none {
+    return value
+  }
+  let ctx = resolve-locale(locale)
+  let resolver = if "resolve-plural" in ctx {
+    ctx.resolve-plural
+  } else if (
+    "strings" in ctx
+      and "meta" in ctx.strings
+      and "resolve-plural" in ctx.strings.meta
+  ) {
+    ctx.strings.meta.resolve-plural
+  } else if "meta" in ctx and "resolve-plural" in ctx.meta {
+    ctx.meta.resolve-plural
+  } else {
+    none
+  }
+
+  if resolver != none {
+    return resolver(value, quantity)
+  }
+  let fallback = value.pairs().first(default: (none, none)).last()
+  return value.at("singular", default: fallback)
 }
 
 #let make-unit(code, name) = (code: code, name: name, display: name)
@@ -149,7 +179,7 @@
 #let cubic-meters = cubic-metre
 #let m3 = cubic-metre
 
-#let resolve(unit, locale, default: none) = {
+#let resolve(unit, locale, quantity: none, default: none) = {
   let resolved = if type(unit) == function {
     unit(locale)
   } else if unit == auto {
@@ -161,11 +191,36 @@
   } else {
     unit
   }
+
   if type(resolved) == dictionary {
-    if "display" in resolved and "name" not in resolved {
-      resolved = resolved + (name: resolved.display)
-    } else if "name" in resolved and "display" not in resolved {
-      resolved = resolved + (display: resolved.name)
+    if "display" in resolved or "name" in resolved or "code" in resolved {
+      let disp = resolved.at("display", default: resolved.at(
+        "name",
+        default: none,
+      ))
+      let name-val = resolved.at("name", default: resolved.at(
+        "display",
+        default: none,
+      ))
+
+      if quantity != none and locale != none {
+        disp = resolve-plural(locale, disp, quantity)
+        name-val = resolve-plural(locale, name-val, quantity)
+      }
+
+      resolved.insert("display", disp)
+      resolved.insert("name", name-val)
+    } else {
+      let val = if quantity != none and locale != none {
+        resolve-plural(locale, resolved, quantity)
+      } else {
+        resolved.values().first(default: none)
+      }
+      resolved = (display: val, name: val)
+    }
+  } else if type(resolved) != none {
+    if quantity != none and locale != none and type(resolved) == dictionary {
+      resolved = resolve-plural(locale, resolved, quantity)
     }
   }
   resolved
