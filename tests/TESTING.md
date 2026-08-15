@@ -358,10 +358,11 @@ Every non-trivial code block in `docs/docs/` must be registered here. When addin
 
 Every bug reported as a GitHub issue must be registered here. When a bug is fixed, add a regression test and update the status. If the test is not yet created, mark the entry as **⚠️ not implemented**.
 
-| Issue                                                           | Description                                                                           | Test directory                       | Status |
-| :-------------------------------------------------------------- | :------------------------------------------------------------------------------------ | :----------------------------------- | :----- |
-| [#19](https://github.com/leonieziechmann/invoice-pro/issues/19) | Item-level modifier not applied; `extra` dict >2 items; decimal discount context loss | `issues/issue-19/`                   | ✅     |
-| [#28](https://github.com/leonieziechmann/invoice-pro/issues/28) | ZUGFeRD panic with outside-scope tax when sender has vat-id but no tax-nr             | `integration/zugferd-outside-scope/` | ✅     |
+| Issue                                                           | Description                                                                             | Test directory     | Status |
+| :-------------------------------------------------------------- | :-------------------------------------------------------------------------------------- | :----------------- | :----- |
+| [#19](https://github.com/leonieziechmann/invoice-pro/issues/19) | Item-level modifier not applied; `extra` dict >2 items; decimal discount context loss   | `issues/issue-19/` | ✅     |
+| [#28](https://github.com/leonieziechmann/invoice-pro/issues/28) | ZUGFeRD panic with outside-scope tax when sender has vat-id but no tax-nr               | `issues/issue-28/` | ✅     |
+| [#29](https://github.com/leonieziechmann/invoice-pro/issues/29) | Validate mandatory e-invoicing fields (BT-49, BT-10, BG-6) instead of omitting silently | `issues/issue-29/` | ✅     |
 
 > _Add entries as bugs are reported._
 
@@ -378,4 +379,3 @@ Every bug reported as a GitHub issue must be registered here. When a bug is fixe
 - [ ] Committed `test.typ`, `.gitignore`, and `ref/` (if applicable)
 - [ ] Registered the test in the Documentation Test Registry (if it covers a doc code block)
 - [ ] Registered the test in the Issue Test Registry (if it reproduces a bug from an issue)
-      | [#29](https://github.com/leonieziechmann/invoice-pro/issues/29) | Validate mandatory e-invoicing fields (BT-49, BT-10, BG-6) instead of omitting silently | `integration/zugferd-en16931/` | ✅ |
