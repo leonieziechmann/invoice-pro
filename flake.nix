@@ -75,13 +75,13 @@
           export TYPST_BIN="${typstEnv}/bin/typst"
           export PDFDETACH_BIN="${pkgs.poppler-utils}/bin/pdfdetach"
           export MUSTANG_CLI_BIN="${mustang-cli}/bin/mustang-cli"
-          exec ${./scripts/validate-zugferd} "$@"
+          exec ${pkgs.bash}/bin/bash ${./scripts/validate-zugferd} "$@"
         '';
 
         validate-all-zugferd = pkgs.writeScriptBin "validate-all-zugferd" ''
           #!/usr/bin/env bash
           export VALIDATE_ZUGFERD_BIN="${validate-zugferd}/bin/validate-zugferd"
-          exec ${./scripts/validate-all-zugferd} "$@"
+          exec ${pkgs.bash}/bin/bash ${./scripts/validate-all-zugferd} "$@"
         '';
 
       in
@@ -142,12 +142,12 @@
           #!/usr/bin/env bash
           export RIPGREP_BIN="${pkgs.ripgrep}/bin/rg"
           export VERSION="${version}"
-          exec ${./scripts/check-version} "$@"
+          exec ${pkgs.bash}/bin/bash ${./scripts/check-version} "$@"
         '';
 
         packages.check-pr = pkgs.writeScriptBin "check-pr" ''
           #!/usr/bin/env bash
-          exec ${./scripts/check-pr} "$@"
+          exec ${pkgs.bash}/bin/bash ${./scripts/check-pr} "$@"
         '';
 
         checks.lint = self.checks.${system}.pre-commit-check;
