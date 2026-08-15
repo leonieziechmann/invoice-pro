@@ -7,6 +7,8 @@
   let currency-code = ctx.locale.currency.code
 
   let qr-image = none
+  let remittance-text = view.at("text", default: none)
+  let reference = view.at("reference", default: none)
 
   if currency-code == "EUR" {
     qr-image = epc-qr-code(
@@ -20,8 +22,9 @@
         width: view.qr-code.size,
         height: view.qr-code.size,
       )
-        + if view.text != none { (text: view.text) } else if view.reference
-          != none { (reference: view.reference) },
+        + if remittance-text != none {
+          (text: remittance-text)
+        } else if reference != none { (reference: reference) },
     )
   }
 
@@ -40,10 +43,10 @@
       #bd-str.iban: *#ibanator.iban(view.sender.iban)* \
       #if view.sender.bic != "" [#bd-str.bic: #view.sender.bic \ ]
       #if (
-        view.show-reference and view.text != none
-      ) [#bd-str.reference: *#view.text*] else if (
-        view.show-reference and view.reference != none
-      ) [#bd-str.reference: *#view.reference*] \
+        view.show-reference and remittance-text != none
+      ) [#bd-str.reference: *#remittance-text*] else if (
+        view.show-reference and reference != none
+      ) [#bd-str.reference: *#reference*] \
       #h(6.5cm)
     ][
       #if view.qr-code.display {
