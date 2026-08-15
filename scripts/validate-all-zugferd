@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -e
+
+if [ ! -f "typst.toml" ]; then
+  echo "Error: validate-all-zugferd must be run from the root of the invoice-pro repository." >&2
+  exit 1
+fi
+
+VALIDATE_ZUGFERD="${VALIDATE_ZUGFERD_BIN:-./scripts/validate-zugferd}"
+if ! command -v "$VALIDATE_ZUGFERD" &> /dev/null && [ ! -x "$VALIDATE_ZUGFERD" ]; then
+  VALIDATE_ZUGFERD="validate-zugferd"
+fi
+
+echo "========================"
+echo " Running all ZUGFeRD validations... "
+echo "========================"
+
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-basic/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-small-biz/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-outside-scope/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-en16931/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-reverse-charge/test.typ"
+"$VALIDATE_ZUGFERD" "template/invoice.typ"
+
+echo ""
+echo "✔ All ZUGFeRD validations passed!"

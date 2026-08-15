@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -e
+
+if [ ! -f "typst.toml" ]; then
+  echo "Error: validate-zugferd must be run from the root of the invoice-pro repository." >&2
+  exit 1
+fi
+
+if [ -z "$1" ]; then
+  echo "Usage: validate-zugferd <typst-document> [output-path]" >&2
+  exit 1
+fi
+
+TYPST="${TYPST_BIN:-typst}"
+PDFDETACH="${PDFDETACH_BIN:-pdfdetach}"
+MUSTANG="${MUSTANG_CLI_BIN:-mustang-cli}"
+
+src_file="$1"
+output_path="$2"
+
+tmp_dir=$(mktemp -d)
+# Cleanup temp dir on exit unless it is empty/deleted
+trap 'rm -rf "$tmp_dir"' EXIT
+
+if [ -n "$output_path" ]; then
+  pdf_path="$output_path"
+else
+  name=$(basename "$src_file" .typ)
+  pdf_path="$tmp_dir/$name.pdf"
+fi
+
+extract_dir="$tmp_dir/extracted"
+mkdir -p "$extract_dir"
+
+echo "Compiling ZUGFeRD PDF for $src_file..."
+"$TYPST" compile \
+  --root . \
+  --pdf-standard=a-3b \
+  "$src_file" \
+  "$pdf_path"
+
+echo "Extracting factur-x.xml..."
+"$PDFDETACH" -saveall -o "$extract_dir" "$pdf_path"
+
+if [ ! -f "$extract_dir/factur-x.xml" ]; then
+  echo "Error: factur-x.xml not found in compiled PDF!" >&2
+  exit 1
+fi
+
+echo "Validating ZUGFeRD XML..."
+"$MUSTANG" --action validate --source "$extract_dir/factur-x.xml"

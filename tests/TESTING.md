@@ -312,6 +312,10 @@ tests/issues/issue-<number>/
 
 ## Running Tests
 
+### 1. Tytanic Tests (Visual Regression & Calculation Assertions)
+
+Tytanic runs all test cases under the `tests/` directory:
+
 ```bash
 # Run all tests
 tt run
@@ -319,14 +323,99 @@ tt run
 # Run a specific test
 tt run "line-items/totals"
 
-# Run all issue regression tests
+# Run all tests in a category
 tt run "issues/"
+tt run "integration/"
+tt run "docs/"
 
 # Update reference snapshots after intentional visual changes
 tt update
 
 # Update a specific test's reference
 tt update "integration/features-complex"
+```
+
+If you are inside the Nix development shell (`nix develop`), `tt` is directly available. Outside the dev shell, run:
+
+```bash
+nix develop .#test --command tt run
+```
+
+---
+
+### 2. ZUGFeRD / Factur-X Validation (Mustang CLI)
+
+ZUGFeRD tests verify that generated invoices comply with the **EN 16931** European e-invoicing standard and the **Factur-X / ZUGFeRD 2.3** profile specifications.
+
+#### How It Works
+
+1. Compiles the Typst invoice document to **PDF/A-3b** (`--pdf-standard=a-3b`).
+2. Extracts the embedded `factur-x.xml` attachment using `pdfdetach` (from `poppler-utils`).
+3. Validates the XML syntax and Schematron business rules (including XRechnung / EN16931 rules) using the **Mustangproject CLI validator** (`mustang-cli`).
+
+#### Running Validations
+
+```bash
+# Validate a single Typst document
+./scripts/validate-zugferd "tests/integration/zugferd-basic/test.typ"
+
+# Validate a document and save the compiled PDF to a specific location
+./scripts/validate-zugferd "template/invoice.typ" "output/invoice.pdf"
+
+# Run all ZUGFeRD test suites and template validation
+./scripts/validate-all-zugferd
+```
+
+Using Nix commands:
+
+```bash
+# Validate a single document
+nix run .#validate-zugferd -- "tests/integration/zugferd-basic/test.typ"
+
+# Run all validations
+nix run .#validate-all-zugferd
+```
+
+#### Validated Test Suites
+
+The automated `validate-all-zugferd` suite covers:
+
+- `tests/integration/zugferd-basic/test.typ` — Basic profile with standard VAT.
+- `tests/integration/zugferd-small-biz/test.typ` — Small business exemption (§19 UStG, tax category `O`).
+- `tests/integration/zugferd-outside-scope/test.typ` — Tax outside scope / non-taxable transactions.
+- `tests/integration/zugferd-en16931/test.typ` — Full EN 16931 / XRechnung profile.
+- `tests/integration/zugferd-reverse-charge/test.typ` — Reverse charge mechanism (tax category `AE`).
+- `template/invoice.typ` — Default release invoice template.
+
+#### When to Run ZUGFeRD Validation
+
+- Whenever modifying XML generation logic in `src/zugferd/`.
+- Whenever altering invoice metadata, tax structures, or calculations.
+- Before cutting a release or opening a PR (automatically included in `check-pr`).
+
+#### Troubleshooting Failures
+
+If Mustang reports validation errors:
+
+1. Check the Schematron rule identifier in the output (e.g. `[BR-CO-04]`, `[BR-DE-21]`, `[BT-49]`).
+2. The error message indicates which mandatory field is missing or which calculation sum does not match.
+3. To inspect the raw generated XML, pass an output path to `validate-zugferd` and extract it manually:
+   ```bash
+   ./scripts/validate-zugferd "tests/integration/zugferd-basic/test.typ" "/tmp/test.pdf"
+   pdfdetach -saveall -o /tmp/extracted /tmp/test.pdf
+   cat /tmp/extracted/factur-x.xml
+   ```
+
+---
+
+### 3. Full Pipeline Precheck
+
+Run all checks (linting, tytanic tests, docs build, and ZUGFeRD validations) in one command:
+
+```bash
+./scripts/check-pr
+# or with Nix
+nix run .#check-pr
 ```
 
 ---

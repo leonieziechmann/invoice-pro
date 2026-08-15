@@ -72,76 +72,16 @@
 
         validate-zugferd = pkgs.writeScriptBin "validate-zugferd" ''
           #!/usr/bin/env bash
-          set -e
-
-          if [ ! -f "typst.toml" ]; then
-            echo "Error: validate-zugferd must be run from the root of the invoice-pro repository." >&2
-            exit 1
-          fi
-
-          if [ -z "$1" ]; then
-            echo "Usage: validate-zugferd <typst-document> [output-path]" >&2
-            exit 1
-          fi
-
-          src_file="$1"
-          output_path="$2"
-
-          tmp_dir=$(mktemp -d)
-          # Cleanup temp dir on exit unless it is empty/deleted
-          trap 'rm -rf "$tmp_dir"' EXIT
-
-          if [ -n "$output_path" ]; then
-            pdf_path="$output_path"
-          else
-            name=$(basename "$src_file" .typ)
-            pdf_path="$tmp_dir/$name.pdf"
-          fi
-
-          extract_dir="$tmp_dir/extracted"
-          mkdir -p "$extract_dir"
-
-          echo "Compiling ZUGFeRD PDF for $src_file..."
-          ${typstEnv}/bin/typst compile \
-            --root . \
-            --pdf-standard=a-3b \
-            "$src_file" \
-            "$pdf_path"
-
-          echo "Extracting factur-x.xml..."
-          ${pkgs.poppler-utils}/bin/pdfdetach -saveall -o "$extract_dir" "$pdf_path"
-
-          if [ ! -f "$extract_dir/factur-x.xml" ]; then
-            echo "Error: factur-x.xml not found in compiled PDF!" >&2
-            exit 1
-          fi
-
-          echo "Validating ZUGFeRD XML..."
-          ${mustang-cli}/bin/mustang-cli --action validate --source "$extract_dir/factur-x.xml"
+          export TYPST_BIN="${typstEnv}/bin/typst"
+          export PDFDETACH_BIN="${pkgs.poppler-utils}/bin/pdfdetach"
+          export MUSTANG_CLI_BIN="${mustang-cli}/bin/mustang-cli"
+          exec ${./scripts/validate-zugferd} "$@"
         '';
 
         validate-all-zugferd = pkgs.writeScriptBin "validate-all-zugferd" ''
           #!/usr/bin/env bash
-          set -e
-
-          if [ ! -f "typst.toml" ]; then
-            echo "Error: validate-all-zugferd must be run from the root of the invoice-pro repository." >&2
-            exit 1
-          fi
-
-          echo "========================"
-          echo " Running all ZUGFeRD validations... "
-          echo "========================"
-
-          ${validate-zugferd}/bin/validate-zugferd "tests/integration/zugferd-basic/test.typ"
-          ${validate-zugferd}/bin/validate-zugferd "tests/integration/zugferd-small-biz/test.typ"
-          ${validate-zugferd}/bin/validate-zugferd "tests/integration/zugferd-outside-scope/test.typ"
-          ${validate-zugferd}/bin/validate-zugferd "tests/integration/zugferd-en16931/test.typ"
-          ${validate-zugferd}/bin/validate-zugferd "tests/integration/zugferd-reverse-charge/test.typ"
-          ${validate-zugferd}/bin/validate-zugferd "template/invoice.typ"
-
-          echo ""
-          echo "✔ All ZUGFeRD validations passed!"
+          export VALIDATE_ZUGFERD_BIN="${validate-zugferd}/bin/validate-zugferd"
+          exec ${./scripts/validate-all-zugferd} "$@"
         '';
 
       in
@@ -200,55 +140,14 @@
 
         packages.check-version = pkgs.writeScriptBin "check-version" ''
           #!/usr/bin/env bash
-          EXCLUDE="-g '!docs/versioned_docs/' -g '!docs/versioned_sidebars/' -g '!docs/build/' -g '!docs/node_modules/' -g '!docs/.docusaurus/'"
-          GLOBS="-g '*.typ' -g '*.md' -g '*.toml'"
-
-          echo "Current version: ${version}"
-          echo ""
-          echo "Searching for stale version references..."
-          echo "==========================================="
-
-          if [ -z "$1" ]; then
-            echo "Usage: check-version <old-version>"
-            echo "  e.g. check-version 0.3.0"
-            exit 1
-          fi
-
-          OLD="$1"
-          echo ""
-          echo "--- Stale references to $OLD (should be empty) ---"
-          eval "${pkgs.ripgrep}/bin/rg \"$OLD\" $GLOBS $EXCLUDE" || echo "  ✔ No stale references found."
-          echo ""
-          echo "--- Current references to ${version} ---"
-          eval "${pkgs.ripgrep}/bin/rg \"${version}\" $GLOBS $EXCLUDE"
+          export RIPGREP_BIN="${pkgs.ripgrep}/bin/rg"
+          export VERSION="${version}"
+          exec ${./scripts/check-version} "$@"
         '';
 
         packages.check-pr = pkgs.writeScriptBin "check-pr" ''
           #!/usr/bin/env bash
-          set -e
-
-          echo "========================"
-          echo " Running PR checks... "
-          echo "========================"
-
-          echo ""
-          echo "[1/4] Running linter..."
-          nix build .#checks.''${system}.lint --print-build-logs
-
-          echo ""
-          echo "[2/4] Running tests..."
-          nix develop .#test --accept-flake-config --command tt run
-
-          echo ""
-          echo "[3/4] Building documentation..."
-          nix build .#documentation --print-build-logs
-
-           echo ""
-           echo "[4/4] Validating ZUGFeRD PDF..."
-           nix run .#validate-all-zugferd --accept-flake-config
-
-          echo ""
-          echo "✔ All checks passed successfully!"
+          exec ${./scripts/check-pr} "$@"
         '';
 
         checks.lint = self.checks.${system}.pre-commit-check;

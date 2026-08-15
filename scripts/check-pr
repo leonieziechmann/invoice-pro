@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -e
+
+if [ ! -f "typst.toml" ]; then
+  echo "Error: check-pr must be run from the root of the invoice-pro repository." >&2
+  exit 1
+fi
+
+echo "========================"
+echo " Running PR checks... "
+echo "========================"
+
+if command -v nix &> /dev/null; then
+  SYSTEM="$(nix eval --raw --impure --expr 'builtins.currentSystem' 2>/dev/null || echo "x86_64-linux")"
+
+  echo ""
+  echo "[1/4] Running linter..."
+  nix build ".#checks.${SYSTEM}.lint" --print-build-logs
+
+  echo ""
+  echo "[2/4] Running tests..."
+  nix develop .#test --accept-flake-config --command tt run
+
+  echo ""
+  echo "[3/4] Building documentation..."
+  nix build .#documentation --print-build-logs
+
+  echo ""
+  echo "[4/4] Validating ZUGFeRD PDF..."
+  nix run .#validate-all-zugferd --accept-flake-config
+else
+  echo "Notice: Nix not found. Running non-Nix fallback checks..."
+
+  echo ""
+  echo "[1/4] Running linter..."
+  if command -v typstyle &> /dev/null; then
+    typstyle --check src/ tests/ template/
+  fi
+  if command -v prettier &> /dev/null; then
+    prettier --check "**/*.md"
+  fi
+
+  echo ""
+  echo "[2/4] Running tests..."
+  if command -v tt &> /dev/null; then
+    tt run
+  fi
+
+  echo ""
+  echo "[3/4] Building documentation..."
+  if [ -d "docs" ] && command -v yarn &> /dev/null; then
+    (cd docs && yarn build)
+  elif [ -d "docs" ] && command -v npm &> /dev/null; then
+    (cd docs && npm run build)
+  fi
+
+  echo ""
+  echo "[4/4] Validating ZUGFeRD PDF..."
+  ./scripts/validate-all-zugferd
+fi
+
+echo ""
+echo "✔ All checks passed successfully!"
