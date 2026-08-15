@@ -429,7 +429,21 @@
 
     for key in active-cols-keys {
       let content = if key == "quantity" {
-        if layout.show-units { [#item.quantity #item.unit] } else {
+        if layout.show-units {
+          let unit-disp = if type(item.unit) == dictionary {
+            item.unit.at("display", default: item.unit.at(
+              "name",
+              default: none,
+            ))
+          } else {
+            item.unit
+          }
+          if unit-disp != none {
+            [#item.quantity #unit-disp]
+          } else {
+            [#item.quantity]
+          }
+        } else {
           [#item.quantity]
         }
       } else if key == "unit-price" { item.price } else if key == "tax-rate" {

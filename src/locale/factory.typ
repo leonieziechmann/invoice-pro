@@ -70,6 +70,7 @@
       currency: final-region.currency,
       tax: final-region.tax,
       meta: final-region.meta,
+      resolve-plural: final-lang.meta.at("resolve-plural", default: none),
     )
   }
 }

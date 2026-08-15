@@ -70,6 +70,7 @@
     auto,
     types.text-like,
     types.unit-input-type,
+    dictionary,
     function,
   )
 
@@ -105,7 +106,12 @@
       )
       derive(
         "unit",
-        m-unit.resolve(unit, ctx.locale, default: m-unit.pcs),
+        m-unit.resolve(
+          unit,
+          ctx.locale,
+          quantity: ctx.at("bundle-quantity", default: decimal("1")),
+          default: m-unit.pcs,
+        ),
       )
 
       derive("date", date)

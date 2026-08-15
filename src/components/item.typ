@@ -132,6 +132,7 @@
     auto,
     types.text-like,
     types.unit-input-type,
+    dictionary,
     function,
   )
 
@@ -177,7 +178,12 @@
       )
       derive(
         "unit",
-        unit-logic.resolve(unit, ctx.locale, default: m-unit.pc),
+        unit-logic.resolve(
+          unit,
+          ctx.locale,
+          quantity: ctx.at("quantity", default: decimal("1")),
+          default: m-unit.pc,
+        ),
       )
 
       derive("date", coercion.to-date(date))

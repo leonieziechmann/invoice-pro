@@ -38,8 +38,15 @@
   if (
     not layout.show-units and not layout.multiple-units and data.items.len() > 0
   ) {
-    let unit = data.items.first(default: (unit: none)).unit
-    global-infos.push([#info-str.unit #unit])
+    let raw-unit = data.items.first(default: (unit: none)).unit
+    let unit = if type(raw-unit) == dictionary {
+      raw-unit.at("display", default: raw-unit.at("name", default: none))
+    } else {
+      raw-unit
+    }
+    if unit != none {
+      global-infos.push([#info-str.unit #unit])
+    }
   }
 
   if not layout.show-quantity and not layout.multiple-quantities {

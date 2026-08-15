@@ -1,22 +1,37 @@
 /// English language overrides.
+#let resolve-plural(v, n) = {
+  if type(v) != dictionary { return v }
+  if v.len() == 0 { return none }
+  let num = if type(n) == decimal or type(n) == int or type(n) == float {
+    float(n)
+  } else if type(n) == str {
+    float(n)
+  } else {
+    1.0
+  }
+  let fallback = v.pairs().first(default: (none, none)).last()
+  if num == 1 {
+    v.at("singular", default: fallback)
+  } else {
+    v.at("plural", default: fallback)
+  }
+}
+
 #let en = (
   meta: (
-    /// The ISO 639-1 language code of the file.
     lang: "en",
+    resolve-plural: resolve-plural,
   ),
 
-  /// Designations for document types
   document: (
     invoice: "Invoice",
   ),
 
-  /// Address-related designations
   address: (
     recipient: "Bill To",
     sender: "From",
   ),
 
-  /// Designations for reference numbers and metadata
   reference: (
     tax-number: "Tax ID",
     invoice-number: "Invoice Number",
@@ -41,7 +56,6 @@
     contact-email: "Email",
   ),
 
-  /// Column headers and labels for the line-items table
   line-items: (
     position: "Item",
     description: "Description",
@@ -57,7 +71,6 @@
     subtotal: "Subtotal",
   ),
 
-  /// Labels for the summary section (footer of the table)
   summary: (
     sum: "Subtotal",
     vat-tax: "Tax",
@@ -66,9 +79,7 @@
     excluding: "excl.",
   ),
 
-  /// Global informational sentences (usually displayed below the line items)
   global-info: (
-    /// Sentence specifying the universal tax rate applied
     tax-statement: (
       tax-text,
       rate,
@@ -80,27 +91,26 @@
   ),
 
   units: (
-    piece: "piece",
-    "set": "set",
-    pair: "pair",
-    "lump-sum": "lump sum",
-    hour: "hour",
-    day: "day",
-    month: "month",
-    year: "year",
-    kilogram: "kilogram",
-    gram: "gram",
-    tonne: "tonne",
-    metre: "metre",
-    "square-metre": "square metre",
-    millimetre: "millimetre",
-    centimetre: "centimetre",
-    kilometre: "kilometre",
-    litre: "litre",
-    "cubic-metre": "cubic metre",
+    piece: (singular: "piece", plural: "pieces"),
+    "set": (singular: "set", plural: "sets"),
+    pair: (singular: "pair", plural: "pairs"),
+    "lump-sum": (singular: "lump sum", plural: "lump sums"),
+    hour: (singular: "hour", plural: "hours"),
+    day: (singular: "day", plural: "days"),
+    month: (singular: "month", plural: "months"),
+    year: (singular: "year", plural: "years"),
+    kilogram: (singular: "kilogram", plural: "kilograms"),
+    gram: (singular: "gram", plural: "grams"),
+    tonne: (singular: "tonne", plural: "tonnes"),
+    metre: (singular: "metre", plural: "metres"),
+    "square-metre": (singular: "square metre", plural: "square metres"),
+    millimetre: (singular: "millimetre", plural: "millimetres"),
+    centimetre: (singular: "centimetre", plural: "centimetres"),
+    kilometre: (singular: "kilometre", plural: "kilometres"),
+    litre: (singular: "litre", plural: "litres"),
+    "cubic-metre": (singular: "cubic metre", plural: "cubic metres"),
   ),
 
-  /// Designations for bank and payment details
   bank-details: (
     account-holder: "Account Holder",
     bank: "Bank",
@@ -109,39 +119,28 @@
     reference: "Reference",
   ),
 
-  /// Text blocks for payment terms
   payment: (
-    /// Generates the final payment instruction sentence.
     text: (
       sum,
       deadline,
     ) => [Please transfer the total amount of *#sum* #deadline to the account listed below.],
-
-    /// Text for a fixed target date.
     deadline-date: date => ("no later than", date).join(" "),
-
-    /// Text for a relative target date (in X days).
     deadline-days: days => (
       "within",
       str(days),
       "days",
     ).join(" "),
-
-    /// Text for immediate/prompt payment.
     deadline-soon: "upon receipt",
   ),
 
-  /// Greetings and signature area
   signature: (
     closing: "Sincerely,",
   ),
 
-  /// Standard legal texts
   legal: (
     vat-exemption: "No VAT is charged due to small business exemption.",
   ),
 
-  /// Error and warning messages for developers
   errors: (
     name-missing: "Name is missing!",
     address-missing: "Address is missing!",

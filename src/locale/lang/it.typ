@@ -1,8 +1,27 @@
+#let resolve-plural(v, n) = {
+  if type(v) != dictionary { return v }
+  if v.len() == 0 { return none }
+  let num = if type(n) == decimal or type(n) == int or type(n) == float {
+    float(n)
+  } else if type(n) == str {
+    float(n)
+  } else {
+    1.0
+  }
+  let fallback = v.pairs().first(default: (none, none)).last()
+  if num == 1 {
+    v.at("singular", default: fallback)
+  } else {
+    v.at("plural", default: fallback)
+  }
+}
+
 /// Italian language overrides.
 #let it = (
   meta: (
     /// Il codice lingua ISO 639-1 del file.
     lang: "it",
+    resolve-plural: resolve-plural,
   ),
 
   /// Denominazioni per i tipi di documento
