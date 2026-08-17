@@ -24,13 +24,19 @@ By default, the theme is configured for Form A, but Form B can easily be selecte
 
 ### Component Parameters
 
-| Key             | Type         | Description                                                                                    |
-| :-------------- | :----------- | :--------------------------------------------------------------------------------------------- |
-| `form`          | `str`        | Determines the letter form layout. Accepts `"A"` or `"B"`. Defaults to `"A"`.                  |
-| `font`          | `str`        | The primary font family applied to the document. Defaults to `"Liberation Sans"`.              |
-| `hole-mark`     | `bool`       | Toggles the rendering of the punch hole indicator mark on the left margin. Defaults to `true`. |
-| `folding-marks` | `bool`       | Toggles the rendering of folding marks on the left margin. Defaults to `true`.                 |
-| `margin`        | `dictionary` | Overrides the default document margins. Defaults to `(:)`.                                     |
+| Key              | Type              | Description                                                                                    |
+| :--------------- | :---------------- | :--------------------------------------------------------------------------------------------- |
+| `form`           | `str`             | Determines the letter form layout. Accepts `"A"` or `"B"`. Defaults to `"A"`.                  |
+| `font`           | `str`             | The primary font family applied to the document. Defaults to `"Liberation Sans"`.              |
+| `hole-mark`      | `bool`            | Toggles the rendering of the punch hole indicator mark on the left margin. Defaults to `true`. |
+| `folding-marks`  | `bool`            | Toggles the rendering of folding marks on the left margin. Defaults to `true`.                 |
+| `color-row-odd`  | `color` \| `none` | Background fill for odd line item rows (1st, 3rd, ...). Defaults to `none`.                    |
+| `color-row-even` | `color` \| `none` | Background fill for even line item rows (2nd, 4th, ...). Defaults to `rgb("e2e8f0")`.          |
+| `margin`         | `dictionary`      | Overrides the default document margins. Defaults to `(:)`.                                     |
+
+:::info
+The row fill is applied per **line item**, not per physical table row: description, discount, and subtotal rows always share the fill of the item they belong to, and page breaks do not shift the alternation. The table header and the totals block are not affected by these parameters.
+:::
 
 ### Example Usage
 
@@ -43,7 +49,8 @@ By default, the theme is configured for Form A, but Form B can easily be selecte
   theme: themes.DIN-5008(
     form: "B", // Form B pushes the address block further down
     font: "Arial", // Replacing the default Liberation Sans
-    hole-mark: false // Disabling the punch hole mark for digital-only PDFs
+    hole-mark: false, // Disabling the punch hole mark for digital-only PDFs
+    color-row-even: none // Disabling the default row striping
   ),
   sender: (name: "Acme Corp"),
   recipient: (name: "Jane Doe"),
