@@ -1,4 +1,5 @@
 #import "../base.typ": *
+#import "../base-theme/line-items.typ": render-line-items
 
 #import "document.typ": letter-document
 
@@ -8,6 +9,9 @@
 
   hole-mark: true,
   folding-marks: true,
+
+  color-row-odd: none,
+  color-row-even: rgb("e2e8f0"),
 
   margin: (:),
   footer: none,
@@ -24,6 +28,10 @@
 
       margin: margin,
       footer: footer,
+    ),
+    line-items: render-line-items.with(
+      color-row-odd: color-row-odd,
+      color-row-even: color-row-even,
     ),
   )
 }

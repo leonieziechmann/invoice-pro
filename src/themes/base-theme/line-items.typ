@@ -2,15 +2,21 @@
 #import "../components/line-items/totals.typ"
 
 /// Default base theme line items
-#let render-line-items(ctx, data, body) = {
+#let render-line-items(
+  ctx,
+  data,
+  body,
+  color-row-odd: none,
+  color-row-even: rgb("e2e8f0"),
+) = {
   generic-line-items.render-line-items(
     ctx,
     data,
     body,
     color-subtitle: luma(80),
     color-desc: luma(100),
-    color-row-odd: none,
-    color-row-even: rgb("e2e8f0"),
+    color-row-odd: color-row-odd,
+    color-row-even: color-row-even,
     color-discount: rgb("b22222"),
     color-surcharge: rgb("333333"),
     color-vat-label: rgb("475569"),
