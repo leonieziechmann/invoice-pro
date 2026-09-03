@@ -207,16 +207,40 @@
         put("has-reference", item.reference != none)
       }))
 
+      let unique-grounds = tax-applicator
+        .taxes
+        .values()
+        .map(t => t.at("grounds", default: none))
+        .filter(g => g != none and g != "" and g != [])
+        .dedup()
+
+      let marker-symbols = ("*", "**", "***", "****")
+
       let formated-taxes = tax-applicator
         .taxes
         .pairs()
         .map(((key, tax)) => {
           let formated-rate = (format.percent)(tax.rate)
           let formated-value = (format.currency)(tax.absolute)
+          let grounds = tax.at("grounds", default: none)
+          let marker = if grounds != none and grounds != "" and grounds != [] {
+            let idx = unique-grounds.position(g => g == grounds)
+            if idx != none and idx < marker-symbols.len() {
+              marker-symbols.at(idx)
+            } else if idx != none {
+              "*" + str(idx + 1)
+            } else {
+              none
+            }
+          } else {
+            none
+          }
           (
             rate: [#formated-rate],
             category: [#tax.category],
             amount: [#formated-value],
+            grounds: grounds,
+            marker: marker,
           )
         })
 

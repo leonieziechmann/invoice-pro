@@ -18,12 +18,21 @@
 
   let global-infos = ()
 
-  // Standard Tax Statement (Suppressed for small businesses)
+  let has-exemption-grounds = data
+    .at("taxes", default: ())
+    .any(t => (
+      t.at("grounds", default: none) != none
+        and t.grounds != ""
+        and t.grounds != []
+    ))
+
+  // Standard Tax Statement (Suppressed for small businesses and tax exemptions)
   if (
     not layout.show-tax-rates
       and not layout.multiple-tax-rates
       and data.items.len() > 0
       and not data.tax-exempt-small-biz
+      and not has-exemption-grounds
   ) {
     let tax-rate = data.items.first(default: (tax: (rate: [0%]))).tax.rate
     let tax-text = if is-net { sum-str.excluding } else { sum-str.including }
@@ -64,6 +73,8 @@
     global-infos.push([#info-str.date #date])
   }
 
+  let rendered-grounds = ()
+
   // Small Business Legal Clause
   if data.tax-exempt-small-biz {
     let grounds = leg-str.vat-exemption
@@ -73,10 +84,51 @@
       .small-enterprise-special-scheme
       .at("grounds", default: none)
 
-    if lang-eq-region {
-      global-infos.push(legal-grounds)
+    let sm-tax = data
+      .at("taxes", default: ())
+      .find(t => (
+        t.at("grounds", default: none) == legal-grounds or t.category == "E"
+      ))
+    let marker = if sm-tax != none {
+      sm-tax.at("marker", default: none)
     } else {
-      global-infos.push[#grounds (#legal-grounds)]
+      none
+    }
+    let marker-str = if marker != none and layout.show-total {
+      super[#marker] + [ ]
+    } else {
+      []
+    }
+
+    if lang-eq-region {
+      if legal-grounds != none {
+        global-infos.push([#marker-str#legal-grounds])
+        rendered-grounds.push(legal-grounds)
+      }
+    } else {
+      if legal-grounds != none {
+        global-infos.push([#marker-str#grounds (#legal-grounds)])
+        rendered-grounds.push(legal-grounds)
+      } else {
+        global-infos.push([#marker-str#grounds])
+      }
+    }
+  }
+
+  // Tax Exemption Grounds
+  for t in data.at("taxes", default: ()) {
+    let grounds = t.at("grounds", default: none)
+    if grounds != none and grounds != "" and grounds != [] {
+      if grounds not in rendered-grounds {
+        rendered-grounds.push(grounds)
+        let marker = t.at("marker", default: none)
+        let marker-str = if marker != none and layout.show-total {
+          super[#marker] + [ ]
+        } else {
+          []
+        }
+        global-infos.push([#marker-str#grounds])
+      }
     }
   }
 

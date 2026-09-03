@@ -168,10 +168,12 @@
   } else {
     strings.summary.including
   }
+  let marker = tax.at("marker", default: none)
+  let marker-str = if marker != none { super[#marker] } else { [] }
   (
     text(
       fill: styles.color-vat-label,
-    )[#prefix #strings.summary.vat-tax #tax.rate (#tax.category):],
+    )[#prefix #strings.summary.vat-tax #tax.rate (#tax.category)#marker-str:],
     text(fill: black)[#tax.amount],
   )
 }
