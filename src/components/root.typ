@@ -222,6 +222,10 @@
           items = raw.pairs()
         }
 
+        let is-valid-val(v) = {
+          v != none and v != "" and v != []
+        }
+
         let flat-refs = ()
         for item in items {
           if type(item) == function {
@@ -233,12 +237,12 @@
                 and res.first().len() == 2
             ) {
               for pair in res {
-                if pair.len() == 2 and pair.at(1) != none {
+                if pair.len() == 2 and is-valid-val(pair.at(1)) {
                   flat-refs.push(pair)
                 }
               }
             } else if type(res) == array and res.len() == 2 {
-              if res.at(1) != none {
+              if is-valid-val(res.at(1)) {
                 flat-refs.push(res)
               }
             }
@@ -255,11 +259,11 @@
               } else {
                 val
               }
-              if val-extracted != none {
+              if is-valid-val(val-extracted) {
                 flat-refs.push((k, val-extracted))
               }
             } else {
-              if v != none {
+              if is-valid-val(v) {
                 flat-refs.push((k, v))
               }
             }

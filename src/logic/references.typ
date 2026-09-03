@@ -3,7 +3,9 @@
     let title = if label == auto {
       ctx.locale.strings.reference.tax-number
     } else { label }
-    let val = if value == auto { ctx.sender.tax-nr } else { value }
+    let val = if value == auto {
+      ctx.sender.at("tax-nr", default: none)
+    } else { value }
     (title, val)
   }
 }
@@ -13,7 +15,9 @@
     let title = if label == auto {
       ctx.locale.strings.reference.vat-id
     } else { label }
-    let val = if value == auto { ctx.sender.vat-id } else { value }
+    let val = if value == auto {
+      ctx.sender.at("vat-id", default: none)
+    } else { value }
     (title, val)
   }
 }
@@ -377,6 +381,8 @@
   invoice-date(),
   service-time(),
   due-date(),
+  tax-nr(),
+  vat-id(),
   recipient-vat-id(),
 )
 
@@ -387,6 +393,8 @@
   invoice-date(),
   service-time(),
   due-date(),
+  tax-nr(),
+  vat-id(),
   recipient-vat-id(),
 )
 
@@ -397,6 +405,9 @@
   invoice-date(),
   service-time(),
   due-date(),
+  tax-nr(),
+  vat-id(),
+  recipient-vat-id(),
 )
 
 #let preset-din-5008() = (

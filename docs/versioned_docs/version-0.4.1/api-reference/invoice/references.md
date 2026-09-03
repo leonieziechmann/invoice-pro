@@ -28,7 +28,7 @@ The standard reference configuration for business-to-business invoicing.
 
 ```typst
 references: references.preset-b2b()
-// Evaluates to: [invoice-nr, customer-nr, order-nr, invoice-date, service-time, due-date]
+// Evaluates to: [invoice-nr, customer-nr, order-nr, invoice-date, service-time, due-date, tax-nr, vat-id, recipient-vat-id]
 ```
 
 ### `references.preset-b2g`
@@ -37,7 +37,7 @@ Optimized for public administration and government procurement (B2G / XRechnung 
 
 ```typst
 references: references.preset-b2g()
-// Evaluates to: [invoice-nr, buyer-reference, order-nr, invoice-date, service-time, due-date]
+// Evaluates to: [invoice-nr, buyer-reference, order-nr, invoice-date, service-time, due-date, tax-nr, vat-id, recipient-vat-id]
 ```
 
 ### `references.preset-project`
@@ -46,7 +46,7 @@ Tailored for agencies, freelancers, and service contractors billing against spec
 
 ```typst
 references: references.preset-project()
-// Evaluates to: [invoice-nr, customer-nr, project, invoice-date, service-time, due-date]
+// Evaluates to: [invoice-nr, customer-nr, project, invoice-date, service-time, due-date, tax-nr, vat-id, recipient-vat-id]
 ```
 
 ### `references.preset-din-5008`
