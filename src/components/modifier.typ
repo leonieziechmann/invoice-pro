@@ -57,7 +57,11 @@
 
       derive("modifier-amount", amount, default: decimal("0"))
       derive("description", description)
-      derive("input-gross", input-gross, default: false)
+      derive(
+        "input-gross",
+        input-gross,
+        default: ctx.at("tax-mode", default: "exclusive") == "inclusive",
+      )
       derive("label", label, default: auto)
 
       nest("locale", {

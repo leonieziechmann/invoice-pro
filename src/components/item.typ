@@ -193,7 +193,11 @@
       derive("item-total", coercion.to-decimal(total), default: auto)
 
       ensure("tax-mode", "exclusive")
-      derive("input-gross", input-gross)
+      derive(
+        "input-gross",
+        input-gross,
+        default: ctx.at("tax-mode", default: "exclusive") == "inclusive",
+      )
       update("tax", t => if type(t) != ratio { t } else {
         let infer-tax = ctx
           .at("locale", default: (:))

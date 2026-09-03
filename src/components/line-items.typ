@@ -77,7 +77,18 @@
     scope: ctx => loom.mutator.batch(ctx, {
       import loom.mutator: *
 
-      derive("input-gross", input-gross, default: tax-mode == "inclusive")
+      let resolved-tax-mode = if tax-mode != auto {
+        tax-mode
+      } else {
+        ctx.at("tax-mode", default: "exclusive")
+      }
+      let resolved-input-gross = if input-gross != auto {
+        input-gross
+      } else {
+        resolved-tax-mode == "inclusive"
+      }
+
+      put("input-gross", resolved-input-gross)
 
       derive("tax", tax, default: m-tax.zero())
       derive("tax-mode", tax-mode, default: "exclusive")

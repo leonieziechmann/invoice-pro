@@ -117,7 +117,11 @@
       derive("date", date)
       put("bundle-date", ctx.at("date", default: date))
 
-      derive("input-gross", input-gross, default: false)
+      derive(
+        "input-gross",
+        input-gross,
+        default: ctx.at("tax-mode", default: "exclusive") == "inclusive",
+      )
       ensure("tax-mode", "exclusive")
       update("tax", t => if type(t) != ratio { t } else {
         let infer-tax = ctx
