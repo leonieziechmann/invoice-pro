@@ -52,6 +52,7 @@
     contract-number: "Nº de contrato",
     quote-number: "Nº de presupuesto",
     delivery-note-number: "Nº de albarán",
+    delivery-address: "Dirección de entrega",
     preceding-invoice-number: "Nº de factura rectificada",
     due-date: "Fecha de vencimiento",
     payment-reference: "Concepto de pago",

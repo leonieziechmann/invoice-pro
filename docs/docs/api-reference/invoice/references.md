@@ -84,15 +84,16 @@ All reference builders accept optional `label` and `value` parameters (e.g. `ref
 
 ### Orders, Projects & Procurement
 
-| Function                              | Default Source / Logic                              | Description                                                                  |
-| :------------------------------------ | :-------------------------------------------------- | :--------------------------------------------------------------------------- |
-| **`references.order-nr`**             | `ctx.order-nr`, `recipient.order-nr`, or `po-nr`    | Customer purchase order / PO number (BT-13).                                 |
-| **`references.order-date`**           | `ctx.order-date` or `recipient.order-date`          | Date the order was placed.                                                   |
-| **`references.project`**              | `ctx.project` or `ctx.project-nr`                   | Project name or tracking reference (BT-11).                                  |
-| **`references.contract-nr`**          | `ctx.contract-nr`                                   | Framework agreement or contract number (BT-12).                              |
-| **`references.quote-nr`**             | `ctx.quote-nr` or `ctx.offer-nr`                    | Preceding quotation or estimate reference number.                            |
-| **`references.delivery-note-nr`**     | `ctx.delivery-note-nr`                              | Despatch advice / delivery note number (BT-16).                              |
-| **`references.preceding-invoice-nr`** | `ctx.preceding-invoice-nr` or `original-invoice-nr` | Preceding invoice reference for credit notes or correction invoices (BT-25). |
+| Function                              | Default Source / Logic                                 | Description                                                                  |
+| :------------------------------------ | :----------------------------------------------------- | :--------------------------------------------------------------------------- |
+| **`references.order-nr`**             | `ctx.order-nr`, `recipient.order-nr`, or `po-nr`       | Customer purchase order / PO number (BT-13).                                 |
+| **`references.order-date`**           | `ctx.order-date` or `recipient.order-date`             | Date the order was placed.                                                   |
+| **`references.project`**              | `ctx.project` or `ctx.project-nr`                      | Project name or tracking reference (BT-11).                                  |
+| **`references.contract-nr`**          | `ctx.contract-nr`                                      | Framework agreement or contract number (BT-12).                              |
+| **`references.quote-nr`**             | `ctx.quote-nr` or `ctx.offer-nr`                       | Preceding quotation or estimate reference number.                            |
+| **`references.delivery-note-nr`**     | `ctx.delivery-note-nr`                                 | Despatch advice / delivery note number (BT-16).                              |
+| **`references.delivery-address`**     | `ctx.delivery-address` or `recipient.delivery-address` | Separate delivery / shipping destination address (BG-13 / BT-56-79).         |
+| **`references.preceding-invoice-nr`** | `ctx.preceding-invoice-nr` or `original-invoice-nr`    | Preceding invoice reference for credit notes or correction invoices (BT-25). |
 
 ### Sender, Contacts & Banking
 

@@ -52,6 +52,7 @@
     contract-number: "N° de contrat",
     quote-number: "N° de devis",
     delivery-note-number: "N° de bon de livraison",
+    delivery-address: "Adresse de livraison",
     preceding-invoice-number: "N° facture rectifiée",
     due-date: "Date d'échéance",
     payment-reference: "Référence de paiement",

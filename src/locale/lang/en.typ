@@ -48,6 +48,7 @@
     contract-number: "Contract No.",
     quote-number: "Quote No.",
     delivery-note-number: "Delivery Note No.",
+    delivery-address: "Delivery Address",
     preceding-invoice-number: "Preceding Invoice No.",
     due-date: "Due Date",
     payment-reference: "Payment Reference",

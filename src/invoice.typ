@@ -29,6 +29,10 @@
   /// A dictionary containing recipient details (e.g., name, address).
   /// -> dictionary
   recipient: (:),
+  /// Separate delivery or shipping address (e.g. if different from billing address).
+  /// Can also be specified as `recipient.delivery-address`.
+  /// -> none | dictionary
+  delivery-address: none,
 
   /// Your company's unique tax identifier / VAT ID (backwards compatibility).
   /// -> none | string | content (deprecated)
@@ -104,6 +108,12 @@
 
   types.require(sender, "invoice::sender", dictionary)
   types.require(recipient, "invoice::recipient", dictionary)
+  types.require(
+    delivery-address,
+    "invoice::delivery-address",
+    none,
+    dictionary,
+  )
 
   types.require(date, "invoice::date", datetime)
   types.require(subject, "invoice::subject", auto, str, content)
@@ -207,6 +217,29 @@
     sender-country-code: normalized-sender.country.code,
   )
 
+  let raw-delivery-address = if delivery-address != none {
+    delivery-address
+  } else if (
+    "delivery-address" in recipient and recipient.delivery-address != none
+  ) {
+    recipient.delivery-address
+  } else {
+    none
+  }
+  let normalized-delivery-address = if raw-delivery-address != none {
+    normalize-party(
+      raw-delivery-address,
+      default-region,
+      is-recipient: true,
+      sender-country-code: normalized-sender.country.code,
+    )
+  } else {
+    none
+  }
+  if normalized-delivery-address != none {
+    normalized-recipient.insert("delivery-address", normalized-delivery-address)
+  }
+
   if subject == auto { subject = eval-locale.strings.document.invoice }
 
   let document-subject = (subject, invoice-nr).join(" ")
@@ -261,6 +294,7 @@
 
     sender: normalized-sender,
     recipient: normalized-recipient,
+    delivery-address: normalized-delivery-address,
 
     invoice-date: date,
     subject: document-subject,

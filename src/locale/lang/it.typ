@@ -52,6 +52,7 @@
     contract-number: "N. contratto",
     quote-number: "N. preventivo",
     delivery-note-number: "N. documento di trasporto",
+    delivery-address: "Indirizzo di consegna",
     preceding-invoice-number: "N. fattura precedente",
     due-date: "Data di scadenza",
     payment-reference: "Causale di pagamento",

@@ -255,6 +255,36 @@
   }
 }
 
+#let delivery-address(label: auto, value: auto) = {
+  ctx => {
+    let title = if label == auto {
+      ctx.locale.strings.reference.delivery-address
+    } else { label }
+    let val = if value == auto {
+      let da = ctx.at(
+        "delivery-address",
+        default: ctx.recipient.at("delivery-address", default: none),
+      )
+      if da != none {
+        let parts = ()
+        if da.name-inline != none and da.name-inline != "" {
+          parts.push(da.name-inline)
+        }
+        if da.address-inline != none and da.address-inline != "" {
+          parts.push(da.address-inline)
+        }
+        if da.city-inline != none and da.city-inline != "" {
+          parts.push(da.city-inline)
+        }
+        if parts.len() > 0 { parts.join(", ") } else { none }
+      } else {
+        none
+      }
+    } else { value }
+    (title, val)
+  }
+}
+
 #let preceding-invoice-nr(label: auto, value: auto) = {
   ctx => {
     let title = if label == auto {

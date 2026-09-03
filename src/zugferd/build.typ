@@ -281,6 +281,74 @@
   res
 }
 
+// Emits the ship-to trade party details (BG-13 Deliver to / BT-56-79)
+#let build-ship-to-trade-party(
+  name,
+  address,
+  city,
+  postcode,
+  country,
+  state,
+  include-addresses,
+  id: none,
+  global-id: none,
+) = {
+  let res = (:)
+
+  if id != none and id != "" {
+    res.insert("ram:ID", to-string(id))
+  }
+  if global-id != none {
+    if type(global-id) == dictionary {
+      res.insert("ram:GlobalID", (
+        "@schemeID": global-id.scheme,
+        "": global-id.id,
+      ))
+    } else {
+      res.insert("ram:GlobalID", to-string(global-id))
+    }
+  }
+  if name != none and name != "" {
+    res.insert("ram:Name", name)
+  }
+
+  if (
+    include-addresses
+      and (
+        (address != none and address != ())
+          or (city != none and city != "")
+          or (country != none and country != "")
+          or (postcode != none and postcode != "")
+      )
+  ) {
+    let postal = (:)
+    if postcode != none and postcode != "" {
+      postal.insert("ram:PostcodeCode", postcode)
+    }
+    if type(address) == array {
+      if address.len() > 0 { postal.insert("ram:LineOne", address.at(0)) }
+      if address.len() > 1 { postal.insert("ram:LineTwo", address.at(1)) }
+      if address.len() > 2 {
+        postal.insert("ram:LineThree", address.slice(2).join(", "))
+      }
+    } else if address != none and address != "" {
+      postal.insert("ram:LineOne", address)
+    }
+    if city != none and city != "" {
+      postal.insert("ram:CityName", city)
+    }
+    if country != none and country != "" {
+      postal.insert("ram:CountryID", country)
+    }
+    if state != none and state != "" {
+      postal.insert("ram:CountrySubDivisionName", state)
+    }
+    res.insert("ram:PostalTradeAddress", postal)
+  }
+
+  res
+}
+
 // Emits a single ram:SpecifiedTradeAllowanceCharge (discount/surcharge) entry.
 //
 // `tax-category`/`tax-rate` are mandatory for document-level allowances/charges
@@ -848,6 +916,29 @@
   }
   transaction.insert("ram:ApplicableHeaderTradeAgreement", header-agreement)
   let header-delivery = (:)
+  let delivery-party = ctx.at(
+    "delivery-address",
+    default: ctx.recipient.at("delivery-address", default: none),
+  )
+  if profile != "minimum" and delivery-party != none {
+    header-delivery.insert(
+      "ram:ShipToTradeParty",
+      build-ship-to-trade-party(
+        delivery-party.name-inline,
+        delivery-party.address-lines,
+        delivery-party.city-name,
+        delivery-party.post-code,
+        delivery-party.country.code,
+        delivery-party.state,
+        include-addresses,
+        id: delivery-party.at(
+          "id",
+          default: delivery-party.at("location-id", default: none),
+        ),
+        global-id: delivery-party.at("global-id", default: none),
+      ),
+    )
+  }
   if profile != "minimum" and delivery-date != none {
     header-delivery.insert(
       "ram:ActualDeliverySupplyChainEvent",

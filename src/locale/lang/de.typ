@@ -48,6 +48,7 @@
     contract-number: "Vertragsnummer",
     quote-number: "Angebotsnummer",
     delivery-note-number: "Lieferscheinnummer",
+    delivery-address: "Lieferadresse",
     preceding-invoice-number: "Vorherige Rechnungsnr.",
     due-date: "Fälligkeitsdatum",
     payment-reference: "Verwendungszweck",
