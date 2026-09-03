@@ -41,8 +41,9 @@
   /// -> string | content
   subject: auto,
   /// Reference information for the document header (e.g., customer number).
-  /// -> none | dictionary | array | function
-  references: none,
+  /// If `auto`, defaults to displaying sender tax-nr, sender vat-id, and recipient vat-id in exclusive tax-mode (B2B), or none in inclusive tax-mode (B2C).
+  /// -> auto | none | dictionary | array | function
+  references: auto,
   /// The unique identifier or number of the invoice.
   /// -> none | string | content
   invoice-nr: none,
@@ -109,6 +110,7 @@
   types.require(
     references,
     "invoice::references",
+    auto,
     none,
     function,
     loom.matcher.dict(loom.matcher.choice(types.text-like, function)),
@@ -220,29 +222,31 @@
   }
 
   let document-references = ()
-  let sender-tax-nr = normalized-sender.tax-nr
-  if sender-tax-nr != none and sender-tax-nr != "" {
-    document-references.push((
-      eval-locale.strings.reference.tax-number,
-      sender-tax-nr,
-    ))
-  }
-  let sender-vat-id = normalized-sender.vat-id
-  if sender-vat-id != none and sender-vat-id != "" {
-    document-references.push((
-      eval-locale.strings.reference.vat-id,
-      sender-vat-id,
-    ))
-  }
-  let recipient-vat-id = normalized-recipient.vat-id
-  if recipient-vat-id != none and recipient-vat-id != "" {
-    document-references.push((
-      eval-locale.strings.reference.recipient-vat-id,
-      recipient-vat-id,
-    ))
-  }
-
-  if type(references) == function {
+  if references == auto {
+    if tax-mode != "inclusive" {
+      let sender-tax-nr = normalized-sender.tax-nr
+      if sender-tax-nr != none and sender-tax-nr != "" {
+        document-references.push((
+          eval-locale.strings.reference.tax-number,
+          sender-tax-nr,
+        ))
+      }
+      let sender-vat-id = normalized-sender.vat-id
+      if sender-vat-id != none and sender-vat-id != "" {
+        document-references.push((
+          eval-locale.strings.reference.vat-id,
+          sender-vat-id,
+        ))
+      }
+      let recipient-vat-id = normalized-recipient.vat-id
+      if recipient-vat-id != none and recipient-vat-id != "" {
+        document-references.push((
+          eval-locale.strings.reference.recipient-vat-id,
+          recipient-vat-id,
+        ))
+      }
+    }
+  } else if type(references) == function {
     document-references = references
   } else if type(references) == array {
     document-references = references
