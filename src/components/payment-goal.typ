@@ -47,7 +47,7 @@
       let data = (
         days: days,
         date: date,
-        total: ctx.global.total.gross,
+        total: ctx.global.total.at("due", default: ctx.global.total.gross),
       )
 
       (data, data)

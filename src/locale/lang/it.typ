@@ -74,6 +74,7 @@
     discount: "Sconto",
     surcharge: "Maggiorazione",
     subtotal: "Subtotale",
+    prepayment: "Acconto",
   ),
 
   /// Etichette per la sezione riepilogativa (piè di pagina della tabella)
@@ -83,6 +84,8 @@
     total: "Totale da pagare",
     including: "incl.",
     excluding: "escl.",
+    prepayment: "Acconto",
+    amount-due: "Totale dovuto",
   ),
 
   /// Frasi informative globali

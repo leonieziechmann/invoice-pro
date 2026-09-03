@@ -72,16 +72,44 @@
       (elegant-label(label), val)
     },
     render-discount: (ctx, discount, styles) => {
+      let label-text = if discount.at("label", default: none) != none {
+        if (
+          discount.name != none and discount.name != "" and discount.name != []
+        ) {
+          [#discount.label: #discount.name]
+        } else {
+          [#discount.label]
+        }
+      } else {
+        [#discount.name]
+      }
       (
-        text(weight: "bold")[#discount.name],
+        text(weight: "bold")[#label-text],
         [#if discount.is-percent [(− #discount.display) #h(0.5em)] − #discount.absolute],
       )
     },
     render-surcharge: (ctx, surcharge, styles) => {
+      let label-text = if surcharge.at("label", default: none) != none {
+        if (
+          surcharge.name != none
+            and surcharge.name != ""
+            and surcharge.name != []
+        ) {
+          [#surcharge.label: #surcharge.name]
+        } else {
+          [#surcharge.label]
+        }
+      } else {
+        [#surcharge.name]
+      }
       (
-        text(weight: "bold")[#surcharge.name],
+        text(weight: "bold")[#label-text],
         [#if surcharge.is-percent [(\+ #surcharge.display) #h(0.5em)] \+ #surcharge.absolute],
       )
+    },
+    render-amount-due: (ctx, value, styles) => {
+      let (label, val) = totals.default-render-amount-due(ctx, value, styles)
+      (elegant-label(label), val)
     },
     totals-cell-wrapper: (_, content, _) => table.cell(content),
     render-totals-body: (ctx, data, styles, elements) => {
@@ -136,18 +164,44 @@
         )
       }
 
-      summary-rows += (
-        table.hline(stroke: styles.stroke-thick),
-        null-row,
-        spacer(0.2em),
-        ..elements.grand-total,
-        spacer(0.2em),
-        table.hline(stroke: styles.stroke-thin),
-        null-row,
-        spacer(2pt),
-        table.hline(stroke: styles.stroke-thin),
-        null-row,
-      )
+      let has-prepayments = elements.at("prepayments", default: ()).len() > 0
+
+      if has-prepayments {
+        summary-rows += (
+          table.hline(stroke: styles.stroke-thick),
+          null-row,
+          spacer(0.2em),
+          ..elements.grand-total,
+          spacer(0.2em),
+          table.hline(stroke: styles.stroke-thin),
+          null-row,
+          ..elements.prepayments.flatten(),
+          spacer(0.2em),
+          table.hline(stroke: styles.stroke-thick),
+          null-row,
+          spacer(0.2em),
+          ..elements.amount-due,
+          spacer(0.2em),
+          table.hline(stroke: styles.stroke-thin),
+          null-row,
+          spacer(2pt),
+          table.hline(stroke: styles.stroke-thin),
+          null-row,
+        )
+      } else {
+        summary-rows += (
+          table.hline(stroke: styles.stroke-thick),
+          null-row,
+          spacer(0.2em),
+          ..elements.grand-total,
+          spacer(0.2em),
+          table.hline(stroke: styles.stroke-thin),
+          null-row,
+          spacer(2pt),
+          table.hline(stroke: styles.stroke-thin),
+          null-row,
+        )
+      }
 
       if not is-net {
         summary-rows += (

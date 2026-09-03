@@ -45,18 +45,34 @@
   styles,
   is-discount: true,
 ) = {
-  let strings = ctx.locale.strings.line-items
   let color = if is-discount { styles.color-discount } else {
     styles.color-surcharge
   }
-  let label-str = if is-discount { strings.discount } else { strings.surcharge }
   let sign = if is-discount { "−" } else { "+" }
+
+  let label-val = mod.at("label", default: auto)
+  let resolved-label = if label-val == auto {
+    let strings = ctx.locale.strings.line-items
+    if is-discount { strings.discount } else { strings.surcharge }
+  } else {
+    label-val
+  }
+
+  let label-text = if resolved-label != none {
+    if mod.name != none and mod.name != "" and mod.name != [] {
+      [↳ #resolved-label: #mod.name]
+    } else {
+      [↳ #resolved-label]
+    }
+  } else {
+    [↳ #mod.name]
+  }
 
   (
     label: text(
       size: styles.size-small,
       fill: color,
-    )[↳ #label-str: #mod.name],
+    )[#label-text],
     percent: if mod.is-percent {
       text(fill: color)[(#sign #mod.display)]
     } else { [] },

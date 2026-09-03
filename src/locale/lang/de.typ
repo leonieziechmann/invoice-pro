@@ -69,6 +69,7 @@
     discount: "Rabatt",
     surcharge: "Zuschlag",
     subtotal: "Zwischensumme",
+    prepayment: "Anzahlung",
   ),
 
   summary: (
@@ -77,6 +78,8 @@
     total: "Gesamt",
     including: "inkl.",
     excluding: "zzgl.",
+    prepayment: "Anzahlung",
+    amount-due: "Fälliger Betrag",
   ),
 
   global-info: (

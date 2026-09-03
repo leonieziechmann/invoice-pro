@@ -123,7 +123,7 @@
         text: ctx.text,
         show-reference: show-reference,
         payment-amount: if payment-amount == auto {
-          ctx.global.total.gross
+          ctx.global.total.at("due", default: ctx.global.total.gross)
         } else {
           payment-amount
         },
@@ -135,6 +135,7 @@
         bic: bic,
         reference: ctx.reference,
         text: ctx.text,
+        payment-amount: data.payment-amount,
       )
 
       (public, data)

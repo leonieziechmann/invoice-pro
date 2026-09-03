@@ -483,6 +483,7 @@
   allowance-total,
   charge-total,
   currency,
+  prepaid-total: decimal("0"),
 ) = {
   let summation = ("ram:LineTotalAmount": fmt-amount(line-total))
   if charge-total > decimal("0") {
@@ -497,7 +498,15 @@
     "": fmt-amount(total-tax),
   ))
   summation.insert("ram:GrandTotalAmount", fmt-amount(gross-total))
-  summation.insert("ram:DuePayableAmount", fmt-amount(gross-total))
+  if prepaid-total > decimal("0") {
+    summation.insert("ram:TotalPrepaidAmount", fmt-amount(prepaid-total))
+    summation.insert(
+      "ram:DuePayableAmount",
+      fmt-amount(gross-total - prepaid-total),
+    )
+  } else {
+    summation.insert("ram:DuePayableAmount", fmt-amount(gross-total))
+  }
   summation
 }
 
@@ -686,6 +695,8 @@
     .sum(default: decimal("0"))
   let charge-total = surcharges.map(s => s.absolute).sum(default: decimal("0"))
 
+  let prepaid-total = item-data.at("prepaid-total", default: decimal("0"))
+
   trade-settlement.insert(
     "ram:SpecifiedTradeSettlementHeaderMonetarySummation",
     build-monetary-summation(
@@ -696,6 +707,7 @@
       allowance-total,
       charge-total,
       currency,
+      prepaid-total: prepaid-total,
     ),
   )
 

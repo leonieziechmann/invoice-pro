@@ -7,11 +7,16 @@
 ///
 /// -> content
 #let modifier(
-  /// The name or label of the modifier (e.g., "Summer Sale Discount", "Shipping Fee").
+  /// The name or title of the modifier (e.g., "Summer Sale Discount", "Shipping Fee").
   /// -> str | content
   name,
-  /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
-  // -> bool | auto
+  /// The label prefix of the modifier (e.g. "Rabatt", "Zuschlag", "Nachlass").
+  /// If `auto`, it resolves to the default discount/surcharge label from the locale.
+  /// If `none`, no label prefix is displayed.
+  /// -> none | auto | str | content
+  label: auto,
+  /// Additional description about the modifier.
+  /// -> str | content | auto | none
   description: auto,
   /// The value of the modifier.
   ///   - If a `ratio` is provided (e.g., `-10%`), it acts as a relative modifier applied to the base total.
@@ -22,8 +27,12 @@
   /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
   /// -> bool | auto
   input-gross: auto,
+  /// Internal flag indicating whether this modifier is semantically a discount or surcharge.
+  /// -> bool | auto
+  is-discount: auto,
 ) = {
   types.require(name, "modifier::name", types.text-like)
+  types.require(label, "modifier::label", none, auto, types.text-like)
   types.require(
     description,
     "modifier::description",
@@ -49,6 +58,7 @@
       derive("modifier-amount", amount, default: decimal("0"))
       derive("description", description)
       derive("input-gross", input-gross, default: false)
+      derive("label", label, default: auto)
 
       nest("locale", {
         nest("normalize", {
@@ -75,8 +85,35 @@
         amount-type = "absolute"
       }
 
+      let discount-mode = if is-discount != auto {
+        is-discount
+      } else {
+        amount < 0
+      }
+
+      let current-label = ctx.at("label", default: auto)
+      let resolved-label = if current-label == auto {
+        let strings = ctx
+          .locale
+          .at("strings", default: (:))
+          .at(
+            "line-items",
+            default: (:),
+          )
+        if discount-mode {
+          strings.at("discount", default: "Discount")
+        } else {
+          strings.at("surcharge", default: "Surcharge")
+        }
+      } else if current-label == none {
+        none
+      } else {
+        current-label
+      }
+
       return (
         name: name,
+        label: resolved-label,
         description: ctx.description,
 
         type: amount-type,
@@ -89,19 +126,25 @@
 }
 
 #let discount(
-  /// The name or label of the modifier (e.g., "Summer Sale Discount", "Shipping Fee").
+  /// The name or title of the discount (e.g., "Summer Sale Discount", "Skonto").
   /// -> str | content
   name,
-  /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
-  // -> bool | auto
+  /// The label prefix of the discount (e.g. "Rabatt", "Nachlass").
+  /// If `auto`, it resolves to the default discount label from the locale.
+  /// If `none`, no label prefix is displayed.
+  /// -> none | auto | str | content
+  label: auto,
+  /// Additional description about the discount.
+  /// -> str | content | auto | none
   description: auto,
-  /// The value of the modifier.
+  /// The value of the discount. Must be positive.
   /// -> ratio | int | float | decimal | str
   amount: 0,
   /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
   /// -> bool | auto
   input-gross: auto,
 ) = {
+  types.require(label, "discount::label", none, auto, types.text-like)
   types.require(
     amount,
     "discount::amount",
@@ -124,26 +167,34 @@
 
   modifier(
     name,
+    label: label,
     description: description,
     amount: final-amount,
     input-gross: input-gross,
+    is-discount: true,
   )
 }
 
 #let surcharge(
-  /// The name or label of the modifier (e.g., "Summer Sale Discount", "Shipping Fee").
+  /// The name or title of the surcharge (e.g., "Shipping Fee", "Express Surcharge").
   /// -> str | content
   name,
-  /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
-  // -> bool | auto
+  /// The label prefix of the surcharge (e.g. "Zuschlag", "Gebühr").
+  /// If `auto`, it resolves to the default surcharge label from the locale.
+  /// If `none`, no label prefix is displayed.
+  /// -> none | auto | str | content
+  label: auto,
+  /// Additional description about the surcharge.
+  /// -> str | content | auto | none
   description: auto,
-  /// The value of the modifier.
+  /// The value of the surcharge. Must be positive.
   /// -> ratio | int | float | decimal | str
   amount: 0,
   /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
   /// -> bool | auto
   input-gross: auto,
 ) = {
+  types.require(label, "surcharge::label", none, auto, types.text-like)
   types.require(
     amount,
     "surcharge::amount",
@@ -166,8 +217,10 @@
 
   modifier(
     name,
+    label: label,
     description: description,
     amount: final-amount,
     input-gross: input-gross,
+    is-discount: false,
   )
 }

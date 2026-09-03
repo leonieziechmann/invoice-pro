@@ -29,6 +29,7 @@
 
     signals.map(s => (
       name: s.name,
+      label: s.at("label", default: auto),
       amount: if s.type == "relative" { float(s.amount) * 100% } else {
         s.amount
       },
@@ -158,7 +159,7 @@
     auto,
     content,
     loom.matcher.many(loom.matcher.choice(
-      types.modifier-type,
+      types.modifier-like,
       content,
     )),
   )

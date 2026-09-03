@@ -163,6 +163,9 @@
           } else { format.currency }
           (
             name: [#d.name],
+            label: if d.at("label", default: none) != none { [#d.label] } else {
+              none
+            },
             description: [#d.description],
             display: display-format(calc.abs(d.display)),
             absolute: (format.currency)(calc.abs(d.absolute)),
@@ -178,6 +181,9 @@
           } else { format.currency }
           (
             name: [#s.name],
+            label: if s.at("label", default: none) != none { [#s.label] } else {
+              none
+            },
             description: [#s.description],
             display: display-format(calc.abs(s.display)),
             absolute: (format.currency)(calc.abs(s.absolute)),
@@ -203,9 +209,53 @@
           )
         })
 
+      let prepayments = loom.query.collect-signals(children, kind: "prepayment")
+      let gross-total = tax-applicator.gross-total
+      let normalized-prepayments = prepayments.map(p => {
+        let amount = decimal("0")
+        if p.type == "relative" {
+          amount = (ctx.locale.normalize.money)(gross-total * p.amount)
+        } else {
+          amount = p.amount
+        }
+        (
+          name: p.name,
+          label: p.label,
+          date: p.date,
+          reference: p.reference,
+          description: p.description,
+          method: p.method,
+          amount: amount,
+          type: p.type,
+        )
+      })
+      let total-prepaid = normalized-prepayments
+        .map(p => p.amount)
+        .sum(default: decimal("0"))
+
+      let due-total = gross-total - total-prepaid
+
+      let formated-prepayments = normalized-prepayments.map(p => {
+        let amount-str = (format.currency)(p.amount)
+        (
+          name: if p.name != none { [#p.name] } else { none },
+          label: if p.label != none { [#p.label] } else { none },
+          date: if p.date != none { [#p.date] } else { none },
+          reference: if p.reference != none { [#p.reference] } else { none },
+          description: if p.description != none { [#p.description] } else {
+            none
+          },
+          method: if p.method != none { [#p.method] } else { none },
+          amount: [#amount-str],
+          value: p.amount,
+        )
+      })
+
       let formated-total = (
         net: (format.currency)(tax-applicator.net-total),
         gross: (format.currency)(tax-applicator.gross-total),
+        due: (format.currency)(due-total),
+        prepaid: (format.currency)(total-prepaid),
       )
 
       let unmodified-formated-total = (
@@ -218,6 +268,7 @@
           import loom.mutator: *
 
           update("name", x => [#x])
+          update("label", x => if x != none { [#x] } else { none })
           update("description", x => [#x])
 
           remove("type")
@@ -249,6 +300,7 @@
           import loom.mutator: *
 
           update("name", x => [#x])
+          update("label", x => if x != none { [#x] } else { none })
           update("description", x => [#x])
 
           remove("type")
@@ -286,6 +338,7 @@
         has-global-modifier: formated-discounts.len()
           + formated-surcharges.len()
           > 0,
+        has-prepayments: formated-prepayments.len() > 0,
       )
 
       let layout-information = (
@@ -333,6 +386,7 @@
         items: formated-items,
         discounts: formated-discounts,
         surcharges: formated-surcharges,
+        prepayments: formated-prepayments,
         taxes: formated-taxes,
         total: formated-total,
         unmodified-total: unmodified-formated-total,
@@ -345,6 +399,8 @@
         total: (
           net: tax-applicator.net-total,
           gross: tax-applicator.gross-total,
+          due: due-total,
+          prepaid: total-prepaid,
         ),
         formated-total: formated-total,
         // ZUGFeRD Data
@@ -354,6 +410,9 @@
           net-total: tax-applicator.net-total,
           gross-total: tax-applicator.gross-total,
           unmodified-net-total: tax-applicator.unmodified-net-total,
+          due-total: due-total,
+          prepaid-total: total-prepaid,
+          prepayments: normalized-prepayments,
           tax-mode: ctx.tax-mode,
           discounts: modifier-applicator.modifier.discounts,
           surcharges: modifier-applicator.modifier.surcharges,

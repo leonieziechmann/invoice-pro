@@ -6,6 +6,7 @@
 #import "components/line-items.typ": line-items
 #import "components/item.typ": item
 #import "components/modifier.typ": discount, modifier, surcharge
+#import "components/prepayment.typ": prepayment
 #import "components/bundle.typ": bundle
 
 #import "components/bank-details.typ": bank-details

@@ -76,11 +76,15 @@
         nest("total", {
           ensure("net", decimal(0))
           ensure("gross", decimal(0))
+          ensure("due", decimal(0))
+          ensure("prepaid", decimal(0))
         })
 
         nest("formated-total", {
           ensure("net", "0")
           ensure("gross", "0")
+          ensure("due", "0")
+          ensure("prepaid", "0")
         })
       })
     }),
@@ -122,6 +126,9 @@
           ensure("net-total", decimal("0"))
           ensure("gross-total", decimal("0"))
           ensure("unmodified-net-total", decimal("0"))
+          ensure("due-total", decimal("0"))
+          ensure("prepaid-total", decimal("0"))
+          ensure("prepayments", ())
           ensure("discounts", ())
           ensure("surcharges", ())
         },

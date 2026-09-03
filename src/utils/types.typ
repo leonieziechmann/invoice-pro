@@ -88,6 +88,19 @@
   amount: _matcher.choice(ratio-like, decimal-like),
 )
 
+#let modifier-type-with-label = (
+  name: _matcher.choice(text-like),
+  label: _matcher.choice(none, auto, text-like),
+  description: _matcher.choice(none, text-like),
+  amount: _matcher.choice(ratio-like, decimal-like),
+)
+
+#let modifier-like = _matcher.choice(modifier-type, modifier-type-with-label)
+
+#let prepayment-type = (
+  amount: _matcher.choice(ratio-like, decimal-like),
+)
+
 // --- Polymorphic & Address Fields Matchers ---
 #let polymorphic-text = _matcher.choice(
   none,

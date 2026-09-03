@@ -8,7 +8,7 @@ This section details the standalone components you can use in your invoice, such
 
 :::info
 **Looking for items and modifiers?**
-If you are looking for the core invoicing functions like `item`, `bundle`, `modifier`, or `discount`, please check the [Line Items API Reference](./line-items).
+If you are looking for the core invoicing functions like `item`, `bundle`, `modifier`, `discount`, or `prepayment`, please check the [Line Items API Reference](./line-items).
 :::
 
 ---
@@ -18,7 +18,7 @@ If you are looking for the core invoicing functions like `item`, `bundle`, `modi
 Defines and renders the bank account information for payments. It can optionally generate a payment QR code (like an EPC-QR code) so customers can pay quickly using their banking app.
 
 :::tip
-If you leave `payment-amount` set to `auto`, the component will automatically fetch the final gross total of the invoice and use it for the display and the QR code!
+If you leave `payment-amount` set to `auto`, the component will automatically fetch the final amount to be paid (the gross total, or the remaining amount due if prepayments are present) and use it for the display and the QR code!
 :::
 
 :::note
@@ -32,7 +32,7 @@ The `bic` parameter is optional. If not provided or set to `none`, the BIC row w
 | `iban`                | `none` \| `str`              | The International Bank Account Number (IBAN).                                                                                                   |
 | `bic`                 | `none` \| `str`              | The Bank Identifier Code (BIC/SWIFT). If omitted or `none`, the BIC field is hidden in the bank details block and omitted from the EPC-QR code. |
 | `reference`           | `auto` \| `none` \| `str`    | The payment reference to be used by the customer.                                                                                               |
-| `payment-amount`      | `auto` \| `none` \| `number` | The specific amount to be paid. If `auto`, it uses the document's total gross amount.                                                           |
+| `payment-amount`      | `auto` \| `none` \| `number` | The specific amount to be paid. If `auto`, it uses the remaining amount due (or full gross total if no prepayments are present).                |
 | `show-reference`      | `bool`                       | Whether to display the reference field in the output. Defaults to `true`.                                                                       |
 | `account-holder-text` | `auto`                       | Optional custom text to label the account holder field.                                                                                         |
 | `qr-code`             | `dictionary`                 | Configuration for a payment QR code (e.g., EPC-QR). Accepts keys like `display` (bool) and `size` (length, defaults to `5em`).                  |

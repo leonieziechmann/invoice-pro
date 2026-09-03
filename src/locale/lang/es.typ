@@ -74,6 +74,7 @@
     discount: "Descuento",
     surcharge: "Recargo",
     subtotal: "Subtotal",
+    prepayment: "Anticipo",
   ),
 
   /// Etiquetas para la sección de resumen (pie de la tabla)
@@ -83,6 +84,8 @@
     total: "Total a pagar",
     including: "incl.",
     excluding: "base",
+    prepayment: "Anticipo",
+    amount-due: "Total a pagar",
   ),
 
   /// Frases informativas globales
