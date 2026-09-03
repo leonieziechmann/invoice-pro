@@ -62,6 +62,7 @@
 
     return (
       name: modifier.name,
+      label: modifier.at("label", default: none),
       description: modifier.description,
 
       type: mod-type,

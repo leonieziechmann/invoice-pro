@@ -78,6 +78,7 @@
     discount: "Discount",
     surcharge: "Surcharge",
     subtotal: "Subtotal",
+    prepayment: "Prepayment",
   ),
 
   /// Labels for the summary section (footer of the table)
@@ -87,6 +88,8 @@
     total: "Total Due",
     including: "incl.",
     excluding: "excl.",
+    prepayment: "Prepayment",
+    amount-due: "Amount Due",
   ),
 
   /// Global informational sentences (usually displayed below the line items)

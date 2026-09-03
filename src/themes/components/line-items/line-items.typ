@@ -62,6 +62,8 @@
   render-discount: auto,
   render-surcharge: auto,
   render-tax: auto,
+  render-prepayment: auto,
+  render-amount-due: auto,
 ) = {
   // Calculate Column Metadata
   let meta = get-column-metadata(data, column-order)
@@ -147,6 +149,12 @@
         render-surcharge
       },
       render-tax: if render-tax == auto { none } else { render-tax },
+      render-prepayment: if render-prepayment == auto { none } else {
+        render-prepayment
+      },
+      render-amount-due: if render-amount-due == auto { none } else {
+        render-amount-due
+      },
     )
   }
 

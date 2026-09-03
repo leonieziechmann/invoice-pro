@@ -69,6 +69,7 @@
     discount: "Discount",
     surcharge: "Surcharge",
     subtotal: "Subtotal",
+    prepayment: "Prepayment",
   ),
 
   summary: (
@@ -77,6 +78,8 @@
     total: "Total Due",
     including: "incl.",
     excluding: "excl.",
+    prepayment: "Prepayment",
+    amount-due: "Amount Due",
   ),
 
   global-info: (

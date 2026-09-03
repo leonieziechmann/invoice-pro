@@ -53,4 +53,6 @@
 #let total = (
   gross: dynamic("total", "gross"),
   net: dynamic("total", "net"),
+  due: dynamic("total", "due"),
+  prepaid: dynamic("total", "prepaid"),
 )

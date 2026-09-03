@@ -38,11 +38,28 @@
 
 #let default-render-discount(ctx, discount, styles) = {
   let strings = ctx.locale.strings
+  let label-val = discount.at("label", default: auto)
+  let resolved-label = if label-val == auto {
+    strings.line-items.discount
+  } else {
+    label-val
+  }
+
+  let label-text = if resolved-label != none {
+    if discount.name != none and discount.name != "" and discount.name != [] {
+      [#resolved-label: #discount.name]
+    } else {
+      [#resolved-label:]
+    }
+  } else {
+    [#discount.name]
+  }
+
   (
     text(
       fill: styles.color-discount,
       size: styles.size-small,
-    )[#strings.line-items.discount: #discount.name],
+    )[#label-text],
     text(
       fill: styles.color-discount,
     )[#if discount.is-percent [(− #discount.display) #h(0.5em)] − #discount.absolute],
@@ -51,14 +68,96 @@
 
 #let default-render-surcharge(ctx, surcharge, styles) = {
   let strings = ctx.locale.strings
+  let label-val = surcharge.at("label", default: auto)
+  let resolved-label = if label-val == auto {
+    strings.line-items.surcharge
+  } else {
+    label-val
+  }
+
+  let label-text = if resolved-label != none {
+    if (
+      surcharge.name != none and surcharge.name != "" and surcharge.name != []
+    ) {
+      [#resolved-label: #surcharge.name]
+    } else {
+      [#resolved-label:]
+    }
+  } else {
+    [#surcharge.name]
+  }
+
   (
     text(
       fill: styles.color-surcharge,
       size: styles.size-small,
-    )[#strings.line-items.surcharge: #surcharge.name],
+    )[#label-text],
     text(
       fill: styles.color-surcharge,
     )[#if surcharge.is-percent [(\+ #surcharge.display) #h(0.5em)] \+ #surcharge.absolute],
+  )
+}
+
+#let default-render-prepayment(ctx, prepayment, styles) = {
+  let strings = ctx.locale.strings
+  let label-val = prepayment.at("label", default: auto)
+  let resolved-label = if label-val == auto {
+    strings.summary.at("prepayment", default: "Prepayment")
+  } else {
+    label-val
+  }
+
+  let title = if resolved-label != none {
+    if (
+      prepayment.name != none
+        and prepayment.name != ""
+        and prepayment.name != []
+    ) {
+      [#resolved-label: #prepayment.name]
+    } else {
+      [#resolved-label:]
+    }
+  } else if (
+    prepayment.name != none and prepayment.name != "" and prepayment.name != []
+  ) {
+    [#prepayment.name:]
+  } else {
+    []
+  }
+
+  let date-text = if (
+    prepayment.at("date", default: none) != none
+      and prepayment.date != ""
+      and prepayment.date != []
+  ) {
+    [ (#prepayment.date)]
+  } else {
+    []
+  }
+
+  (
+    text(
+      fill: styles.color-discount,
+      size: styles.size-small,
+    )[#title#date-text],
+    text(
+      fill: styles.color-discount,
+    )[− #prepayment.amount],
+  )
+}
+
+#let default-render-amount-due(ctx, value, styles) = {
+  let strings = ctx.locale.strings
+  let label = strings.summary.at("amount-due", default: "Amount Due")
+  (
+    text(
+      weight: styles.weight-bold,
+      size: styles.size-total,
+    )[#label:],
+    text(
+      weight: styles.weight-bold,
+      size: styles.size-total,
+    )[#value],
   )
 }
 
@@ -90,6 +189,7 @@
 #let default-render-totals-body(ctx, data, styles, elements) = {
   let is-net = data.tax-mode == "exclusive"
   let has-modifiers = data.discounts.len() > 0 or data.surcharges.len() > 0
+  let has-prepayments = data.at("prepayments", default: ()).len() > 0
 
   let null-row = grid.cell(colspan: 2, inset: 0pt, none)
   let grid-spacer(height) = grid.cell(colspan: 2, inset: 0pt, v(height))
@@ -107,6 +207,18 @@
       grid.hline(stroke: styles.stroke-thick),
       null-row,
       elements.taxes,
+      ..if has-prepayments {
+        (
+          grid.hline(stroke: styles.stroke-thin),
+          null-row,
+          ..elements.prepayments,
+          grid.hline(stroke: styles.stroke-thick),
+          null-row,
+          elements.amount-due,
+          grid.hline(stroke: styles.stroke-thick),
+          null-row,
+        )
+      },
     )
   } else {
     (
@@ -120,8 +232,23 @@
       grid.hline(stroke: styles.stroke-thick),
       null-row,
       elements.grand-total,
-      grid.hline(stroke: styles.stroke-thick),
-      null-row,
+      ..if has-prepayments {
+        (
+          grid.hline(stroke: styles.stroke-thin),
+          null-row,
+          ..elements.prepayments,
+          grid.hline(stroke: styles.stroke-thick),
+          null-row,
+          elements.amount-due,
+          grid.hline(stroke: styles.stroke-thick),
+          null-row,
+        )
+      } else {
+        (
+          grid.hline(stroke: styles.stroke-thick),
+          null-row,
+        )
+      },
     )
   }
 
@@ -152,6 +279,8 @@
   render-discount: auto,
   render-surcharge: auto,
   render-tax: auto,
+  render-prepayment: auto,
+  render-amount-due: auto,
   // Wrapper & Builder
   totals-cell-wrapper: auto,
   render-totals-body: auto,
@@ -217,6 +346,21 @@
   } else {
     render-tax
   }
+  let r-prepayment = if (
+    render-prepayment == auto or render-prepayment == none
+  ) {
+    default-render-prepayment
+  } else {
+    render-prepayment
+  }
+  let r-amount-due = if (
+    render-amount-due == auto or render-amount-due == none
+  ) {
+    default-render-amount-due
+  } else {
+    render-amount-due
+  }
+
   let w-cell = if totals-cell-wrapper == auto or totals-cell-wrapper == none {
     content => grid.cell(content)
   } else {
@@ -263,6 +407,17 @@
 
   // Grand Total
   elements.grand-total = wrap-pair(r-total-gross(ctx, data.total.gross, styles))
+
+  // Prepayments
+  elements.prepayments = ()
+  for p in data.at("prepayments", default: ()) {
+    elements.prepayments.push(wrap-pair(r-prepayment(ctx, p, styles)))
+  }
+
+  // Amount Due
+  if data.at("prepayments", default: ()).len() > 0 {
+    elements.amount-due = wrap-pair(r-amount-due(ctx, data.total.due, styles))
+  }
 
   b-render(ctx, data, styles, elements)
 }

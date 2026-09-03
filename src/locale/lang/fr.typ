@@ -74,6 +74,7 @@
     discount: "Remise",
     surcharge: "Supplément",
     subtotal: "Sous-total",
+    prepayment: "Acompte",
   ),
 
   /// Labels for the summary section (footer of the table)
@@ -83,6 +84,8 @@
     total: "Total à payer",
     including: "incl.",
     excluding: "hors",
+    prepayment: "Acompte",
+    amount-due: "Net à payer",
   ),
 
   /// Global informational sentences

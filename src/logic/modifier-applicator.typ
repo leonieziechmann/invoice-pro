@@ -105,6 +105,7 @@
 
   return (
     name: modifier.name,
+    label: modifier.at("label", default: none),
     description: modifier.description,
 
     type: modifier.type,
@@ -125,6 +126,7 @@
         modifiers.map(mod => {
           (
             name: mod.name,
+            label: mod.at("label", default: none),
             description: mod.description,
 
             type: mod.type,

@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Line Items API
 
-This section details the functions used to build the core of your invoice: the line items. You can use these components to list services, group them into bundles, and apply modifiers like discounts or surcharges.
+This section details the functions used to build the core of your invoice: the line items. You can use these components to list services, group them into bundles, apply modifiers like discounts or surcharges, and record advance prepayments.
 
 :::info
 Many parameters (like `input-gross` and `tax`) are **cascading**. This means if you set them on the parent `line-items` container or a `bundle`, all child elements will automatically inherit those settings unless they are manually overridden at the item level.
@@ -16,7 +16,7 @@ Many parameters (like `input-gross` and `tax`) are **cascading**. This means if 
 
 ## `line-items`
 
-The root container that manages the context, column visibility, and overall calculations for all items, bundles, and modifiers inside it.
+The root container that manages the context, column visibility, and overall calculations for all items, bundles, modifiers, and prepayments inside it.
 
 :::tip
 By default, the `show-column` parameter works automatically and tries to minimize the number of shown columns (e.g., hiding the tax column if all items share the exact same tax rate). You only need to provide a dictionary if you want to strictly override this behavior.
@@ -30,7 +30,7 @@ By default, the `show-column` parameter works automatically and tries to minimiz
 | `show-column`      | `dictionary` \| `auto`                   | Overrides the default automatic column visibility. Used to manually toggle columns like `pos`, `quantity`, `unit-price`, etc.                                                                                    |
 | `show-total`       | `bool` \| `auto`                         | Shows the total summary block of the line items. Defaults to `true`.                                                                                                                                             |
 | `show-information` | `bool` \| `auto`                         | Shows annotations after the total about the content of the line-items (e.g., tax exemptions). Defaults to `true`.                                                                                                |
-| `body`             | `content`                                | The main content block containing your `item`, `bundle`, or `modifier` calls.                                                                                                                                    |
+| `body`             | `content`                                | The main content block containing your `item`, `bundle`, `modifier`, or `prepayment` calls.                                                                                                                      |
 
 ### `show-column` Dictionary
 
@@ -159,7 +159,8 @@ Helper Functions `discount(..)` and `surcharge(..)` use the exact same parameter
 
 | Key           | Type                                   | Description                                                                                                                                                                |
 | :------------ | :------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`        | `str` \| `content`                     | The label for the adjustment (e.g., "Student Discount", "Express Shipping").                                                                                               |
+| `name`        | `str` \| `content`                     | The name/title of the adjustment (e.g., "Student Discount", "Express Shipping").                                                                                           |
+| `label`       | `str` \| `content` \| `auto` \| `none` | Custom label prefix (e.g. "Rabatt", "Nachlass", "Skonto"). If `auto`, resolves to locale default. If `none`, no prefix is displayed.                                       |
 | `amount`      | `ratio` \| `decimal-like` \| `auto`    | If a `ratio` (e.g., `-10%`), it acts as a relative percentage. If a `decimal-like` number (e.g., `15.00`), it acts as an absolute monetary amount.                         |
 | `input-gross` | `bool` \| `auto`                       | For absolute monetary amounts (e.g., `10.00` instead of `10%`), this defines if the entered value already includes tax. Follows standard cascading logic if set to `auto`. |
 | `description` | `str` \| `content` \| `auto` \| `none` | Extra context or conditions for the modifier.                                                                                                                              |
@@ -180,9 +181,59 @@ For absolute monetary amounts (e.g., `10.00` instead of `10%`), the `input-gross
   The total amount the customer has to pay (Grand Total) will be exactly 10.00 units less.
 - **Net Discount:** `discount(input-gross: false, amount: 10)`
   The subtotal before taxes will be exactly 10.00 units less. The final gross impact will depend on the tax rate.
+- **Custom or Omitted Label:**
+  ```typst
+  #discount("Skonto", label: none, amount: 2%) // Renders just "↳ Skonto (-2%)" without prefix
+  #discount("Treueaktion", label: "Sondernachlass", amount: 5%)
+  ```
 
 :::warning
 If your modifier's `input-gross` setting does **not** match the global `tax-mode` of the invoice (e.g., applying a gross discount on a net-based invoice), the system must perform forward or backward tax calculations.
 
 Because the system balances these adjustments across all relevant tax brackets to remain legally compliant, you may occasionally see a **1-cent difference** in the final total due to rounding.
 :::
+
+---
+
+## Partial Payments: `prepayment`
+
+A `prepayment` represents an advance payment, deposit, or installment already received from the customer.
+
+:::tip
+**Discounts vs. Prepayments:**
+While a `discount` reduces the taxable base (net subtotal before VAT), a `prepayment` is deducted **post-tax** from the gross invoice total to determine the remaining amount due (_Fälliger Betrag_ / ZUGFeRD `BT-113` & `BT-115`).
+:::
+
+When a prepayment is specified, downstream components like `#payment-goal()` and the EPC-QR code in `#bank-details()` automatically target the **remaining balance due** rather than the full gross amount.
+
+| Key           | Type                                                 | Description                                                                                                 |
+| :------------ | :--------------------------------------------------- | :---------------------------------------------------------------------------------------------------------- |
+| `amount`      | `ratio` \| `decimal-like`                            | The prepaid amount. Can be an absolute sum (e.g., `300` or `"300.00"`) or a percentage ratio (e.g., `30%`). |
+| `name`        | `str` \| `content` \| `auto` \| `none`               | Title or description of the prepayment (e.g., `"1. Abschlagszahlung"`).                                     |
+| `label`       | `str` \| `content` \| `auto` \| `none`               | Custom prefix label. Defaults to locale string (`"Anzahlung"` / `"Prepayment"`).                            |
+| `date`        | `datetime` \| `str` \| `content` \| `auto` \| `none` | Date the advance payment was received. Automatically formatted if a `datetime` is provided.                 |
+| `reference`   | `str` \| `content` \| `auto` \| `none`               | Preceding advance invoice number, bank reference, or transaction ID.                                        |
+| `description` | `str` \| `content` \| `auto` \| `none`               | Additional details or conditions.                                                                           |
+| `method`      | `str` \| `content` \| `auto` \| `none`               | Payment method used (e.g. `"Bank Transfer"`, `"PayPal"`).                                                   |
+
+### Examples
+
+```typst
+#line-items[
+  #item([Web Development Project], price: 2000.00, tax: tax.vat(19%))
+
+  // Minimal usage
+  #prepayment(500)
+
+  // With date, name, and reference
+  #prepayment(
+    250,
+    name: "2. Abschlagszahlung",
+    date: datetime(year: 2026, month: 8, day: 15),
+    reference: "RE-ADV-001",
+  )
+
+  // Percentage-based deposit (e.g. 10% of gross total)
+  #prepayment(10%, label: "10% Kaution")
+]
+```
