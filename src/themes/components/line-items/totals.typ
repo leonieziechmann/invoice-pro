@@ -192,6 +192,7 @@
   let is-net = data.tax-mode == "exclusive"
   let has-modifiers = data.discounts.len() > 0 or data.surcharges.len() > 0
   let has-prepayments = data.at("prepayments", default: ()).len() > 0
+  let has-taxes = elements.at("taxes", default: ()).len() > 0
 
   let null-row = grid.cell(colspan: 2, inset: 0pt, none)
   let grid-spacer(height) = grid.cell(colspan: 2, inset: 0pt, v(height))
@@ -201,14 +202,22 @@
   rows += if not is-net {
     (
       // --- Inclusive Mode ---
-      ..if has-modifiers { elements.subtotal },
-      elements.modifiers,
-      grid.hline(stroke: styles.stroke-thick),
-      null-row,
+      ..if has-modifiers {
+        (
+          elements.subtotal,
+          elements.modifiers,
+          grid.hline(stroke: styles.stroke-thick),
+          null-row,
+        )
+      },
       elements.grand-total,
-      grid.hline(stroke: styles.stroke-thick),
-      null-row,
-      elements.taxes,
+      ..if has-taxes {
+        (
+          grid.hline(stroke: styles.stroke-thick),
+          null-row,
+          elements.taxes,
+        )
+      },
       ..if has-prepayments {
         (
           grid.hline(stroke: styles.stroke-thin),
@@ -220,6 +229,11 @@
           grid.hline(stroke: styles.stroke-thick),
           null-row,
         )
+      } else if not has-taxes {
+        (
+          grid.hline(stroke: styles.stroke-thick),
+          null-row,
+        )
       },
     )
   } else {
@@ -228,9 +242,13 @@
       elements.subtotal,
       elements.modifiers,
       ..if has-modifiers { elements.net-total },
-      grid.hline(stroke: styles.stroke-thin),
-      null-row,
-      elements.taxes,
+      ..if has-taxes {
+        (
+          grid.hline(stroke: styles.stroke-thin),
+          null-row,
+          elements.taxes,
+        )
+      },
       grid.hline(stroke: styles.stroke-thick),
       null-row,
       elements.grand-total,
@@ -254,7 +272,9 @@
     )
   }
 
-  v(.5em)
+  if is-net or has-modifiers {
+    v(.5em)
+  }
 
   align(styles.totals-align)[
     #box(width: styles.totals-width)[
@@ -401,10 +421,23 @@
     elements.net-total = wrap-pair(r-total-net(ctx, data.total.net, styles))
   }
 
-  // Taxes
+  // Taxes (exclude 0% taxes from final tax listing)
   elements.taxes = ()
   for t in data.taxes {
-    elements.taxes.push(wrap-pair(r-tax(ctx, t, styles)))
+    let r = t.at("raw-rate", default: none)
+    let is-zero = (
+      r == 0%
+        or r == 0
+        or r == 0.0
+        or (r != none and type(r) == decimal and r == decimal("0"))
+        or t.rate == [0%]
+        or t.rate == [0,0%]
+        or t.rate == [0.0%]
+        or t.rate == [0 %]
+    )
+    if not is-zero {
+      elements.taxes.push(wrap-pair(r-tax(ctx, t, styles)))
+    }
   }
 
   // Grand Total

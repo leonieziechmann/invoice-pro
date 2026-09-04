@@ -275,6 +275,8 @@
           }
           (
             rate: [#formated-rate],
+            raw-rate: tax.rate,
+            raw-amount: tax.absolute,
             category: [#tax.category],
             amount: [#formated-value],
             grounds: grounds,

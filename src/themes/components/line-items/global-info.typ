@@ -89,7 +89,17 @@
       .find(t => (
         t.at("grounds", default: none) == legal-grounds or t.category == "E"
       ))
-    let marker = if sm-tax != none {
+    let sm-tax-is-zero = (
+      sm-tax != none
+        and (
+          sm-tax.at("raw-rate", default: none) == 0%
+            or sm-tax.at("raw-rate", default: none) == 0
+            or sm-tax.rate == [0%]
+            or sm-tax.rate == [0,0%]
+            or sm-tax.rate == [0.0%]
+        )
+    )
+    let marker = if sm-tax != none and not sm-tax-is-zero {
       sm-tax.at("marker", default: none)
     } else {
       none
@@ -121,7 +131,18 @@
     if grounds != none and grounds != "" and grounds != [] {
       if grounds not in rendered-grounds {
         rendered-grounds.push(grounds)
-        let marker = t.at("marker", default: none)
+        let t-is-zero = (
+          t.at("raw-rate", default: none) == 0%
+            or t.at("raw-rate", default: none) == 0
+            or t.rate == [0%]
+            or t.rate == [0,0%]
+            or t.rate == [0.0%]
+        )
+        let marker = if not t-is-zero {
+          t.at("marker", default: none)
+        } else {
+          none
+        }
         let marker-str = if marker != none and layout.show-total {
           super[#marker] + [ ]
         } else {

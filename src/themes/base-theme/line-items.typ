@@ -157,26 +157,35 @@
       let summary-rows = ()
       let null-row = table.cell(colspan: 2, inset: 0pt, [])
       let spacer(height) = table.cell(colspan: 2, inset: 0pt, v(height))
+      let has-taxes = elements.at("taxes", default: ()).len() > 0
 
       if is-net {
         if has-modifiers {
           summary-rows += elements.net-total
         }
-        summary-rows += (
-          spacer(0.1em),
-          table.hline(stroke: styles.stroke-thin),
-          null-row,
-          ..elements.taxes.flatten(),
-        )
+        if has-taxes {
+          summary-rows += (
+            spacer(0.1em),
+            table.hline(stroke: styles.stroke-thin),
+            null-row,
+            ..elements.taxes.flatten(),
+          )
+        }
       }
 
       let has-prepayments = elements.at("prepayments", default: ()).len() > 0
+      let has-prior-rows = summary-rows.len() > 0
 
-      if has-prepayments {
+      if has-prior-rows {
         summary-rows += (
           table.hline(stroke: styles.stroke-thick),
           null-row,
           spacer(0.2em),
+        )
+      }
+
+      if has-prepayments {
+        summary-rows += (
           ..elements.grand-total,
           spacer(0.2em),
           table.hline(stroke: styles.stroke-thin),
@@ -196,9 +205,6 @@
         )
       } else {
         summary-rows += (
-          table.hline(stroke: styles.stroke-thick),
-          null-row,
-          spacer(0.2em),
           ..elements.grand-total,
           spacer(0.2em),
           table.hline(stroke: styles.stroke-thin),
@@ -210,10 +216,12 @@
       }
 
       if not is-net {
-        summary-rows += (
-          spacer(0.5em),
-          ..elements.taxes.flatten(),
-        )
+        if has-taxes {
+          summary-rows += (
+            spacer(0.5em),
+            ..elements.taxes.flatten(),
+          )
+        }
       }
 
       v(-1em)
