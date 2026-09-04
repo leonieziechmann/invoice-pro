@@ -8,6 +8,7 @@
 #import "components/modifier.typ": discount, modifier, surcharge
 #import "components/prepayment.typ": prepayment
 #import "components/bundle.typ": bundle
+#import "components/group.typ": group
 
 #import "components/bank-details.typ": bank-details
 #import "components/payment-goal.typ": payment-goal

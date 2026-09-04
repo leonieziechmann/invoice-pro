@@ -359,9 +359,21 @@
   )
 
   // Recursive Item Builder
-  let build-item-rows(item, index, is-sub-item: false) = {
+  let build-item-rows(
+    item,
+    index,
+    is-odd: auto,
+    is-sub-item: false,
+  ) = {
     let rows = ()
-    let bg = if calc.odd(index) {
+    let resolved-odd = if is-odd != auto {
+      is-odd
+    } else if type(index) == int {
+      calc.odd(index)
+    } else {
+      true
+    }
+    let bg = if resolved-odd {
       styles.color-row-odd
     } else {
       styles.color-row-even
@@ -687,11 +699,219 @@
     rows
   }
 
+  let build-group-header-rows(group) = {
+    let rows = ()
+    let cell-inset = styles.cell-inset
+    let item-inset = styles.item-inset
+    let item-stroke = styles.item-stroke
+
+    let line-cell = table.cell.with(
+      colspan: 1,
+      align: auto,
+      fill: none,
+      inset: cell-inset,
+      stroke: none,
+    )
+
+    let left-spacer = line-cell(
+      inset: null-dir + (left: item-inset.left),
+      stroke: (left: item-stroke.left),
+      none,
+    )
+
+    let right-spacer = line-cell(
+      inset: null-dir + (right: item-inset.right),
+      stroke: (right: item-stroke.right),
+      none,
+    )
+
+    // Top spacer
+    rows.push(line-cell(
+      colspan: total-cols + 2,
+      inset: null-dir + (top: item-inset.top + 0.4em),
+      stroke: item-stroke + (bottom: none),
+      none,
+    ))
+
+    rows.push(left-spacer)
+
+    let remaining-cols = total-cols
+    if layout.show-pos {
+      let default-align = get-default-align("pos")
+      let idx = content-keys.position(k => k == "pos")
+      let cell-align = resolve-align(align-body, "pos", idx, default-align)
+      rows.push(line-cell(
+        text(weight: styles.weight-bold)[#group.pos],
+        align: cell-align,
+      ))
+      remaining-cols -= 1
+    }
+
+    let default-desc-align = get-default-align("description")
+    let desc-idx = content-keys.position(k => k == "description")
+    let desc-cell-align = resolve-align(
+      align-body,
+      "description",
+      desc-idx,
+      default-desc-align,
+    )
+
+    rows.push(line-cell(
+      colspan: remaining-cols,
+      align: desc-cell-align,
+      inset: cell-inset,
+      stack(
+        dir: ttb,
+        spacing: 0.35em,
+        text(
+          weight: styles.weight-bold,
+          size: 1.05em,
+          group.name,
+        ),
+        ..if group.has-description {
+          (
+            text(
+              size: styles.size-small,
+              fill: styles.color-desc,
+              group.description,
+            ),
+          )
+        } else { () },
+      ),
+    ))
+
+    rows.push(right-spacer)
+
+    // Bottom cap
+    rows.push(line-cell(
+      colspan: total-cols + 2,
+      inset: null-dir + (bottom: item-inset.bottom),
+      stroke: item-stroke + (top: none),
+      [],
+    ))
+
+    rows.push(empty-cell(colspan: total-cols + 2))
+
+    rows
+  }
+
+  let build-group-footer-rows(group) = {
+    let rows = ()
+    let cell-inset = styles.cell-inset
+    let item-inset = styles.item-inset
+    let item-stroke = styles.item-stroke
+
+    let line-cell = table.cell.with(
+      colspan: 1,
+      align: auto,
+      fill: none,
+      inset: cell-inset,
+      stroke: none,
+    )
+
+    let left-spacer = line-cell(
+      inset: null-dir + (left: item-inset.left),
+      stroke: (left: item-stroke.left),
+      none,
+    )
+
+    let right-spacer = line-cell(
+      inset: null-dir + (right: item-inset.right),
+      stroke: (right: item-stroke.right),
+      none,
+    )
+
+    // Top spacer
+    rows.push(line-cell(
+      colspan: total-cols + 2,
+      inset: null-dir + (top: item-inset.top),
+      stroke: item-stroke + (bottom: none),
+      none,
+    ))
+
+    rows.push(left-spacer)
+    let sub-col-tracker = 0
+
+    if layout.show-pos {
+      rows.push(line-cell(inset: 0pt, none))
+      sub-col-tracker += 1
+    }
+
+    let default-desc-align = get-default-align("description")
+    let desc-idx = content-keys.position(k => k == "description")
+    let desc-cell-align = resolve-align(
+      align-body,
+      "description",
+      desc-idx,
+      default-desc-align,
+    )
+
+    let default-total-align = get-default-align("total-price")
+    let total-idx = content-keys.position(k => k == "total-price")
+    let total-cell-align = resolve-align(
+      align-body,
+      "total-price",
+      total-idx,
+      default-total-align,
+    )
+
+    let span1 = indices.total - indices.desc
+    rows.push(line-cell(
+      text(
+        weight: styles.weight-bold,
+        size: styles.size-subtitle,
+      )[#li-str.subtotal #group.name],
+      colspan: span1,
+      align: desc-cell-align,
+      inset: cell-inset,
+    ))
+    sub-col-tracker += span1
+
+    rows.push(line-cell(
+      text(weight: styles.weight-bold)[#group.subtotal],
+      align: total-cell-align,
+      inset: cell-inset,
+    ))
+    sub-col-tracker += 1
+
+    let remaining = total-cols - sub-col-tracker
+    if remaining > 0 {
+      rows.push(line-cell(
+        none,
+        inset: 0pt,
+        colspan: remaining,
+      ))
+    }
+    rows.push(right-spacer)
+
+    // Bottom cap
+    rows.push(line-cell(
+      colspan: total-cols + 2,
+      inset: null-dir + (bottom: item-inset.bottom + 0.2em),
+      stroke: item-stroke + (top: none),
+      [],
+    ))
+
+    rows.push(empty-cell(colspan: total-cols + 2))
+
+    rows
+  }
+
+  let entries = data.at("entries", default: data.items)
   let item-rows = ()
   let display-index = 1
-  for item in data.items {
-    item-rows += build-item-rows(item, display-index)
-    display-index += 1
+  for entry in entries {
+    let entry-kind = entry.at("kind", default: "item")
+    if entry-kind == "group-header" {
+      item-rows += build-group-header-rows(entry)
+    } else if entry-kind == "group-footer" {
+      item-rows += build-group-footer-rows(entry)
+    } else {
+      let is-odd = calc.odd(display-index)
+      let pos-val = entry.at("pos", default: str(display-index))
+      item-rows += build-item-rows(entry, pos-val, is-odd: is-odd)
+      display-index += 1
+    }
   }
 
   table(

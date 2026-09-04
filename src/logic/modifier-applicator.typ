@@ -148,7 +148,7 @@
   let norm-money = normalize.money
   let norm-money-fine = normalize.money-fine
 
-  let items = loom.query.collect-signals(children, kind: "item", depth: 2)
+  let items = loom.query.collect-signals(children, kind: "item", depth: 10)
   let modifiers = loom.query.collect-signals(children, kind: "modifier")
 
   let tax-groups = group-by-tax(items)

@@ -14,16 +14,16 @@ The `invoice-pro` package relies on an underlying `loom` state engine. All struc
 
 The API reference is divided into specialized modules, reflecting the technical anatomy of an invoice document.
 
-| Module                                       | Description                                                                                                                                                                                                                |
-| :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **[Invoice](api-reference/invoice)**         | The root document configuration. Details global parameters (e.g., sender, recipient) and initializes the underlying layout engine.                                                                                         |
-| **[Line Items](api-reference/line-items)**   | The core billing mechanics. Explains how to construct services (`item`), group them (`bundle`), and apply adjustments (`modifier`). This section is critical for understanding automatic **Forward/Backward Calculation**. |
-| **[Components](api-reference/components)**   | Standalone visual entities. Includes technical specifications for rendering `bank-details`, establishing a `payment-goal`, adding a `signature`, and leveraging the `apply` scoping mechanism.                             |
-| **[Tax](api-reference/tax)**                 | Standardized tax resolution. Outlines available tax categories compliant with **UNTDID 5305** and **EU Directives**, detailing how to implement specialized margin schemes and legal exemptions.                           |
-| **[Country](api-reference/invoice/country)** | Standardized country address resolutions. Defines country properties, dynamic address/city parser and formatter functions, and ZUGFeRD compliance country codes.                                                           |
-| **[Unit](api-reference/line-items/unit)**    | Localized billing units. Details the standard builders and shorthands/aliases mapped to UN/ECE Recommendation 20 codes, resolved dynamically using the global locale context.                                              |
-| **[Locales](api-reference/locale)**          | Language and regional localization. Covers translation overrides, native currency formatting, and regional default overrides.                                                                                              |
-| **[Themes](api-reference/theme)**            | Visual layout configurations. Details how the theming engine receives and positions the final structured data on the page.                                                                                                 |
+| Module                                       | Description                                                                                                                                                                                                                         |
+| :------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[Invoice](api-reference/invoice)**         | The root document configuration. Details global parameters (e.g., sender, recipient) and initializes the underlying layout engine.                                                                                                  |
+| **[Line Items](api-reference/line-items)**   | The core billing mechanics. Explains how to construct services (`item`), group them (`bundle`, `group`), and apply adjustments (`modifier`). This section is critical for understanding automatic **Forward/Backward Calculation**. |
+| **[Components](api-reference/components)**   | Standalone visual entities. Includes technical specifications for rendering `bank-details`, establishing a `payment-goal`, adding a `signature`, and leveraging the `apply` scoping mechanism.                                      |
+| **[Tax](api-reference/tax)**                 | Standardized tax resolution. Outlines available tax categories compliant with **UNTDID 5305** and **EU Directives**, detailing how to implement specialized margin schemes and legal exemptions.                                    |
+| **[Country](api-reference/invoice/country)** | Standardized country address resolutions. Defines country properties, dynamic address/city parser and formatter functions, and ZUGFeRD compliance country codes.                                                                    |
+| **[Unit](api-reference/line-items/unit)**    | Localized billing units. Details the standard builders and shorthands/aliases mapped to UN/ECE Recommendation 20 codes, resolved dynamically using the global locale context.                                                       |
+| **[Locales](api-reference/locale)**          | Language and regional localization. Covers translation overrides, native currency formatting, and regional default overrides.                                                                                                       |
+| **[Themes](api-reference/theme)**            | Visual layout configurations. Details how the theming engine receives and positions the final structured data on the page.                                                                                                          |
 
 ## Core Architectural Concepts
 
@@ -31,7 +31,7 @@ Before engaging with specific module APIs, developers and contributors must unde
 
 ### 1. Cascading Parameters
 
-Properties such as `tax` or `input-gross` are strongly **Cascading**. If defined at a higher context—like the `line-items` wrapper or a `bundle`—all nested descendant elements automatically inherit these properties unless explicitly overridden at the item level.
+Properties such as `tax` or `input-gross` are strongly **Cascading**. If defined at a higher context—like the `line-items` wrapper, a `bundle`, or a `group`—all nested descendant elements automatically inherit these properties unless explicitly overridden at the item level.
 
 ### 2. Forward/Backward Calculation
 

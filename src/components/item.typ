@@ -247,7 +247,7 @@
       })
     }),
     measure: ctx => {
-      loom.guards.assert-direct-parent(ctx, "line-items", "bundle")
+      loom.guards.assert-direct-parent(ctx, "line-items", "bundle", "group")
       return calculate-item-data(ctx, name)
     },
   )

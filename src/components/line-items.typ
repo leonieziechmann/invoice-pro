@@ -1,6 +1,7 @@
 #import "../loom-wrapper.typ": loom, managed-motif
 #import "../logic/modifier-applicator.typ": modifier-applicator
 #import "../logic/tax-applicator.typ": tax-applicator
+#import "../logic/tree.typ": resolve-tree
 #import "../utils/coercion.typ"
 #import "../utils/types.typ"
 #import "../data/tax.typ" as m-tax
@@ -137,11 +138,16 @@
         "modifier-applicator",
       )
       let tax-applicator = loom.query.find-signal(children, "tax-applicator")
-      let items = modifier-applicator.items
+      let tree-result = resolve-tree(children)
+      let items = if tree-result.raw-items.len() > 0 {
+        tree-result.raw-items
+      } else {
+        modifier-applicator.items
+      }
 
       let format = ctx.locale.format
 
-      let formated-items = items.map(item => loom.mutator.batch(item, {
+      let format-item(item) = loom.mutator.batch(item, {
         import loom.mutator: *
 
         update("name", x => [#x])
@@ -205,7 +211,39 @@
 
         put("has-item-id", item.item-id != none)
         put("has-reference", item.reference != none)
-      }))
+      })
+
+      let formated-entries = tree-result.entries.map(entry => {
+        if entry.kind == "item" {
+          let f-item = format-item(entry.raw)
+          f-item.insert("kind", "item")
+          f-item.insert("pos", entry.pos)
+          f-item.insert("level", entry.level)
+          f-item
+        } else if entry.kind == "group-header" {
+          (
+            kind: "group-header",
+            pos: entry.pos,
+            level: entry.level,
+            name: [#entry.name],
+            description: if entry.description != none {
+              [#entry.description]
+            } else { none },
+            has-description: entry.description != none,
+          )
+        } else if entry.kind == "group-footer" {
+          (
+            kind: "group-footer",
+            pos: entry.pos,
+            level: entry.level,
+            name: [#entry.name],
+            subtotal: (format.currency)(entry.subtotal),
+            raw-subtotal: entry.subtotal,
+          )
+        }
+      })
+
+      let formated-items = formated-entries.filter(e => e.kind == "item")
 
       let unique-grounds = tax-applicator
         .taxes
@@ -419,6 +457,7 @@
 
       let view = (
         items: formated-items,
+        entries: formated-entries,
         discounts: formated-discounts,
         surcharges: formated-surcharges,
         prepayments: formated-prepayments,

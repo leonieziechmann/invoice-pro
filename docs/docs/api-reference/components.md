@@ -101,10 +101,10 @@ Renders a signature block for the sender. This is typically placed at the very b
 
 ## `apply`
 
-The `apply` function is a powerful scoping tool inherited from the underlying `loom` engine. It allows you to inject or override cascading parameters (like tax rates or gross/net settings) for a specific block of items without grouping them into a visible `bundle`.
+The `apply` function is a powerful scoping tool inherited from the underlying `loom` engine. It allows you to inject or override cascading parameters (like tax rates or gross/net settings) for a specific block of items without grouping them into a visible `bundle` or `group`.
 
 :::info
-While a `bundle` also passes parameters down to its children, it functionally aggregates those items into a single grouped line item on the invoice. `apply`, on the other hand, is invisible; it simply changes the context for the items inside it while letting them appear as normal, separate line items.
+While a `bundle` aggregates items into a single grouped line item and a `group` organizes items under a visible section header with hierarchical numbering, `apply` is completely invisible; it simply changes the context for the items inside it while letting them appear as normal, separate line items.
 :::
 
 | Key           | Type      | Description                                                                                                                                                                                   |

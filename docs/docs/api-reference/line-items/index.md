@@ -4,19 +4,19 @@ sidebar_position: 2
 
 # Line Items API
 
-This section details the functions used to build the core of your invoice: the line items. You can use these components to list services, group them into bundles, apply modifiers like discounts or surcharges, and record advance prepayments.
+This section details the functions used to build the core of your invoice: the line items. You can use these components to list services, group them into bundles, organize them into hierarchical groups, apply modifiers like discounts or surcharges, and record advance prepayments.
 
 :::info
-Many parameters (like `input-gross` and `tax`) are **cascading**. This means if you set them on the parent `line-items` container or a `bundle`, all child elements will automatically inherit those settings unless they are manually overridden at the item level.
+Many parameters (like `input-gross` and `tax`) are **cascading**. This means if you set them on the parent `line-items` container, a `bundle`, or a `group`, all child elements will automatically inherit those settings unless they are manually overridden at the item level.
 
-**Resolution Order:** Item Level → Bundle Level → Line-Items Level → Document/Locale Default.
+**Resolution Order:** Item Level → Bundle / Group Level → Line-Items Level → Document/Locale Default.
 :::
 
 ---
 
 ## `line-items`
 
-The root container that manages the context, column visibility, and overall calculations for all items, bundles, modifiers, and prepayments inside it.
+The root container that manages the context, column visibility, and overall calculations for all items, bundles, groups, modifiers, and prepayments inside it.
 
 :::tip
 By default, the `show-column` parameter works automatically and tries to minimize the number of shown columns (e.g., hiding the tax column if all items share the exact same tax rate). You only need to provide a dictionary if you want to strictly override this behavior.
@@ -30,7 +30,7 @@ By default, the `show-column` parameter works automatically and tries to minimiz
 | `show-column`      | `dictionary` \| `auto`                   | Overrides the default automatic column visibility. Used to manually toggle columns like `pos`, `quantity`, `unit-price`, etc.                                                                                    |
 | `show-total`       | `bool` \| `auto`                         | Shows the total summary block of the line items. Defaults to `true`.                                                                                                                                             |
 | `show-information` | `bool` \| `auto`                         | Shows annotations after the total about the content of the line-items (e.g., tax exemptions). Defaults to `true`.                                                                                                |
-| `body`             | `content`                                | The main content block containing your `item`, `bundle`, `modifier`, or `prepayment` calls.                                                                                                                      |
+| `body`             | `content`                                | The main content block containing your `item`, `bundle`, `group`, `modifier`, or `prepayment` calls.                                                                                                             |
 
 ### `show-column` Dictionary
 
@@ -146,6 +146,97 @@ If you place items with varying tax rates (e.g., mixing 19% and 7% items) or dif
 **Why this matters:**
 This automatic splitting ensures that your invoice remains legally compliant. Total amounts, sub-totals, and any modifiers applied to the bundle (such as a 10% bundle-wide discount) are proportionally distributed and calculated correctly across the different tax rates without any manual intervention required from you.
 :::
+
+---
+
+## `group`
+
+Organizes multiple line items, bundles, or nested groups into a cohesive, hierarchical section with an informative header, multi-level position numbers, and automatic subtotals.
+
+:::info
+**`group` vs. `bundle`:**
+
+- **`bundle`** compresses multiple child items into a **single consolidated line item** with an aggregated price and date range.
+- **`group`** is a **structural and visual container**: every child item inside the group remains its own distinct row, child items receive hierarchical position numbers (e.g., `1`, `2.1`, `2.2`), a visual header row displays the group name and optional description across the table columns, and an automatic subtotal is shown at the end of the group.
+  :::
+
+| Key             | Type                                                                 | Description                                                                                                                                |
+| --------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`          | `str` \| `content`                                                   | The primary title of the group displayed in bold in the header row.                                                                        |
+| `description`   | `str` \| `content` \| `auto` \| `none`                               | Optional detailed description appearing below the group title, spanning across the remaining table columns. Defaults to `none`.            |
+| `show-subtotal` | `bool` \| `auto`                                                     | Whether to display a group subtotal row (`Zwischensumme`) at the bottom of the group. Defaults to `auto` (`true`). Set to `false` to hide. |
+| `tax`           | `ratio` \| `dictionary` \| `auto`                                    | Cascades tax settings to all child items within the group unless overridden at the individual item level.                                  |
+| `input-gross`   | `bool` \| `auto`                                                     | Cascades net/gross price calculation setting down to all child items within the group.                                                     |
+| `unit`          | `str` \| `content` \| `dictionary` \| `function` \| `auto` \| `none` | Cascades a default billing unit down to all child items in the group.                                                                      |
+| `date`          | `datetime` \| `array` \| `auto` \| `none`                            | Cascades a default performance date or date range down to all child items in the group.                                                    |
+| `body`          | `content`                                                            | The child `item`, `bundle`, or nested `group` calls belonging to this group.                                                               |
+
+### Hierarchical Numbering & Nesting
+
+Groups can be nested to arbitrary depths. Child elements automatically receive hierarchical position identifiers based on their parent group's position:
+
+- Top-level items or groups receive sequential integer positions: `1`, `2`, `3`.
+- Items or nested groups directly inside group `2` receive `2.1`, `2.2`, `2.3`, etc.
+- Items inside nested group `2.3` receive `2.3.1`, `2.3.2`, `2.3.3`, etc.
+- Subsequent siblings outside the group return to the previous level (e.g., `3`).
+
+For electronic invoicing (ZUGFeRD / Factur-X / XRechnung), these hierarchical position strings are automatically used as the line item identifier (`ram:LineID` / BT-126).
+
+### Group Subtotals
+
+By default (`show-subtotal: auto` or `true`), a group renders a subtotal row (`Zwischensumme`) at the end of its items. The subtotal accurately sums all items and bundles inside that group and aligns the sum with the total price column.
+
+If you prefer not to display a subtotal for a specific group (for example, in short groups or purely organizational groupings), set `show-subtotal: false`:
+
+```typst
+#group([Project Management], show-subtotal: false)[
+  #item([Weekly Status Meetings], price: 300.00)
+  #item([Sprint Planning], price: 450.00)
+]
+```
+
+### Context Inheritance
+
+Like `line-items` and `bundle`, a `group` cascades context down to all its children. This makes it effortless to define shared attributes (such as tax rates, dates, or units) once at the group level:
+
+```typst
+#group(
+  [Phase 1: Concept & Design],
+  description: "Initial discovery phase and UI/UX wireframing.",
+  tax: tax.vat(19%),
+  unit: unit.hour,
+)[
+  // These items automatically inherit 19% VAT and unit: hour
+  #item([Stakeholder Workshops], quantity: 8, price: 120.00)
+  #item([Wireframing & Prototyping], quantity: 24, price: 95.00)
+]
+```
+
+### Advanced Nesting & Bundles within Groups
+
+Groups seamlessly accommodate individual items, nested groups, and bundles:
+
+```typst
+#line-items[
+  #item([Setup Fee], price: 250.00) // Position: 1
+
+  #group([Phase 1: Implementation], description: "Core system modules")[
+    #item([Database Migration], price: 800.00) // Position: 2.1
+
+    #bundle([Server Provisioning Package])[ // Position: 2.2
+      #item([Cloud VPS Instance], price: 150.00)
+      #item([SSL Setup], price: 50.00)
+    ]
+
+    #group([Module A: Auth & Permissions])[
+      #item([OAuth2 Integration], price: 600.00) // Position: 2.3.1
+      #item([Role-Based Access], price: 450.00)   // Position: 2.3.2
+    ]
+  ]
+
+  #item([Final Deployment & Handover], price: 500.00) // Position: 3
+]
+```
 
 ---
 

@@ -682,7 +682,7 @@
       .enumerate()
       .map(((i, item)) => {
         build-line-item(
-          i + 1,
+          item.at("pos", default: i + 1),
           item.name,
           item.at("item-id", default: none),
           item.price,

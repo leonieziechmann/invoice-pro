@@ -11,7 +11,7 @@ A professional, compliant, and automated invoice template for [Typst](https://ty
 - **Internationalization (i18n) (New in v0.3.0):** Built-in support for English and German out of the box, plus a highly flexible `locale` API to inject custom translations for any language.
 - **DIN 5008 Compliant:** Supports both Form A and Form B layouts natively via the flexible Theming API.
 - **ZUGFeRD e-invoicing (New in v0.4.0):** (Experimental) Embed EN 16931-compliant Factur-X/ZUGFeRD XML metadata into your generated PDF/A-3B invoices for automated digital processing.
-- **Block-based API:** Clean, scoped, and declarative data structure using `#line-items`, `#item`, and `#bundle`—inspired by CeTZ, keeping your document clutter-free.
+- **Block-based API:** Clean, scoped, and declarative data structure using `#line-items`, `#item`, `#group`, and `#bundle`—inspired by CeTZ, keeping your document clutter-free.
 - **Automatic Calculations:** Effortlessly handles line items, nested bundles, sub-totals, and calculates taxes automatically.
 - **EPC QR-Code (GiroCode):** Automatically generates a scannable banking QR code for quick and easy payments using banking apps.
 - **Advanced Modifiers:** Apply specific discounts, surcharges, and custom tax rates at the item, bundle, or global level.
@@ -98,8 +98,8 @@ Here is an example of how to create an invoice using the new v0.3.0 API:
 With the major refactoring introduced in version 0.2.0, the package structure is solidifying. Here is the current stability status of the various API components:
 
 - **Invoice Header (`invoice` arguments):** **Mostly Stable**. The core invoice configuration is established. Future updates to the header will be non-breaking and will primarily consist of adding new optional fields.
-- **Data Model (`#line-items`, `#bundle`, `#item`):** **Stable**. The new block-based data model is considered almost finished and safe to use.
-  - _Note:_ The `unit` argument in `#item` and `#bundle` supports dictionary inputs (e.g., `(display: "Std.", code: "HUR")`) to comply with the standardized unit formats and codes required for ZUGFeRD e-invoicing.
+- **Data Model (`#line-items`, `#group`, `#bundle`, `#item`):** **Stable**. The new block-based data model is considered almost finished and safe to use.
+  - _Note:_ The `unit` argument in `#item`, `#group`, and `#bundle` supports dictionary inputs (e.g., `(display: "Std.", code: "HUR")`) to comply with the standardized unit formats and codes required for ZUGFeRD e-invoicing.
 - **Theming (`theme`):** **Under Construction**. The theming engine is still evolving and will most likely experience breaking changes in the next updates as we refine customization capabilities.
 - **Localization (`locale`):** **Under Construction**. The localization and internationalization systems are actively being worked on and are subject to change.
 
