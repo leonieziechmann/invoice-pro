@@ -32,20 +32,20 @@
   /// Address-related designations
   address: (
     recipient: "Destinataire",
-    sender: "Expéditeur",
+    sender: "Expéditeur·rice",
   ),
 
   /// Designations for reference numbers and metadata
   reference: (
-    tax-number: "N° de TVA",
+    tax-number: "Numéro fiscal",
     invoice-number: "N° de facture",
     vat-id: "N° de TVA intra.",
     invoice-date: "Date de facturation",
     service-time: "Période de prestation",
-    customer-number: "N° client",
-    buyer-reference: "Référence acheteur",
-    recipient-vat-id: "N° TVA acheteur",
-    recipient-tax-number: "N° fiscal acheteur",
+    customer-number: "N° client·e",
+    buyer-reference: "Référence client·e",
+    recipient-vat-id: "N° TVA client·e",
+    recipient-tax-number: "N° fiscal client·e",
     order-number: "N° de commande",
     order-date: "Date de commande",
     project: "Projet",
@@ -64,14 +64,14 @@
   /// Column headers and labels for the line-items table
   line-items: (
     position: "Pos.",
-    description: "Description",
+    description: "Désignation",
     quantity: "Qté",
     unit-price: "Prix unitaire",
     price: "Prix",
     total: "Total",
     vat: "TVA",
-    net: "net",
-    gross: "brut",
+    net: "HT",
+    gross: "TTC",
     discount: "Remise",
     surcharge: "Supplément",
     subtotal: "Sous-total",
@@ -82,7 +82,7 @@
   summary: (
     sum: "Sous-total",
     vat-tax: "TVA",
-    total: "Total à payer",
+    total: "Total TTC",
     including: "incl.",
     excluding: "hors",
     prepayment: "Acompte",

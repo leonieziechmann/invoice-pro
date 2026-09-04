@@ -10,7 +10,7 @@
         (
           ("Steuernummer", "11/222/33333"),
           ("USt-IdNr.", "DE123456789"),
-          ("Empfänger USt-IdNr.", "DE987654321"),
+          ("Empfänger:in USt-IdNr.", "DE987654321"),
         ),
         message: "Exclusive tax-mode + references: auto should populate tax fallback",
       )

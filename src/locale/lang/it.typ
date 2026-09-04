@@ -31,15 +31,15 @@
 
   /// Denominazioni relative all'indirizzo
   address: (
-    recipient: "Destinatario",
+    recipient: "Destinatario/a",
     sender: "Mittente",
   ),
 
   /// Denominazioni per numeri di riferimento e metadati
   reference: (
-    tax-number: "P. IVA",
+    tax-number: "Codice Fiscale",
     invoice-number: "Numero fattura",
-    vat-id: "P. IVA",
+    vat-id: "Partita IVA",
     invoice-date: "Data fattura",
     service-time: "Periodo di prestazione",
     customer-number: "N. cliente",
@@ -82,7 +82,7 @@
   summary: (
     sum: "Subtotale",
     vat-tax: "IVA",
-    total: "Totale da pagare",
+    total: "Totale fattura",
     including: "incl.",
     excluding: "escl.",
     prepayment: "Acconto",
@@ -125,7 +125,7 @@
 
   /// Denominazioni per i dettagli bancari e di pagamento
   bank-details: (
-    account-holder: "Intestatario del conto",
+    account-holder: "Intestatario/a del conto",
     bank: "Banca",
     iban: "IBAN",
     bic: "BIC",

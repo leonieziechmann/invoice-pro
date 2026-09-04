@@ -51,10 +51,10 @@
 /// - contract-number (auto, str): e.g., "Contract No.", "Vertragsnummer"
 /// - quote-number (auto, str): e.g., "Quote No.", "Angebotsnummer"
 /// - delivery-note-number (auto, str): e.g., "Delivery Note No.", "Lieferschein-Nr."
-/// - preceding-invoice-number (auto, str): e.g., "Preceding Invoice No.", "Urspr. Rechnungsnummer"
+/// - preceding-invoice-number (auto, str): e.g., "Preceding Invoice No.", "Vorherige Rechnungsnummer"
 /// - due-date (auto, str): e.g., "Due Date", "Zahlbar bis"
 /// - payment-reference (auto, str): e.g., "Payment Reference", "Verwendungszweck"
-/// - contact-person (auto, str): e.g., "Contact Person", "Ansprechpartner"
+/// - contact-person (auto, str): e.g., "Contact Person", "Ansprechpartner:in"
 /// - contact-phone (auto, str): e.g., "Phone", "Telefon"
 /// - contact-email (auto, str): e.g., "Email", "E-Mail"
 /// -> dictionary
@@ -119,7 +119,7 @@
 /// - unit-price (auto, str): e.g., "Unit Price", "Einzelpreis"
 /// - price (auto, str): e.g., "Price", "Preis"
 /// - total (auto, str): e.g., "Total", "Gesamt"
-/// - vat (auto, str): e.g., "Tax", "MwSt."
+/// - vat (auto, str): e.g., "Tax", "USt."
 /// - net (auto, str): e.g., "net", "netto"
 /// - gross (auto, str): e.g., "gross", "brutto"
 /// - discount (auto, str): e.g., "Discount", "Rabatt"
@@ -162,8 +162,8 @@
 
 /// Customizes the summary and total labels at the bottom of the table.
 /// - sum (auto, str): e.g., "Subtotal", "Summe"
-/// - vat-tax (auto, str): e.g., "Tax", "Mehrwertsteuer"
-/// - total (auto, str): e.g., "Total Due", "Gesamtbetrag"
+/// - vat-tax (auto, str): e.g., "Tax", "Umsatzsteuer"
+/// - total (auto, str): e.g., "Total", "Gesamtbetrag"
 /// - including (auto, str): e.g., "incl.", "inkl."
 /// - excluding (auto, str): e.g., "excl.", "zzgl."
 /// -> dictionary

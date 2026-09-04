@@ -15,7 +15,7 @@
           message: "tax-nr should be omitted from preset-b2b() when not specified",
         )
         assert(
-          "Empfänger USt-IdNr." not in keys,
+          "Empfänger:in USt-IdNr." not in keys,
           message: "recipient-vat-id should be omitted from preset-b2b() when not specified",
         )
         body
@@ -74,7 +74,7 @@
         let keys = ctx.references.map(r => r.at(0))
         assert("Steuernummer" in keys)
         assert("USt-IdNr." in keys)
-        assert("Empfänger USt-IdNr." in keys)
+        assert("Empfänger:in USt-IdNr." in keys)
         body
       },
     ),

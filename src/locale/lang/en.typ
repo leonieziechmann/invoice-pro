@@ -76,7 +76,7 @@
   summary: (
     sum: "Subtotal",
     vat-tax: "Tax",
-    total: "Total Due",
+    total: "Total",
     including: "incl.",
     excluding: "excl.",
     prepayment: "Prepayment",
