@@ -128,6 +128,8 @@
     bank: "Banque",
     iban: "IBAN",
     bic: "BIC",
+    sort-code: "Code banque / guichet",
+    account-number: "Numéro de compte",
     reference: "Référence",
   ),
 

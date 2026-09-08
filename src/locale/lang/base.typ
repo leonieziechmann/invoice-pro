@@ -135,6 +135,8 @@
     bank: "Bank",
     iban: "IBAN",
     bic: "BIC",
+    sort-code: "Sort Code",
+    account-number: "Account Number",
     reference: "Reference",
   ),
 

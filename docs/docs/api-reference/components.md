@@ -31,6 +31,8 @@ The `bic` parameter is optional. If not provided or set to `none`, the BIC row w
 | `bank`                | `none` \| `str`              | The name of the banking institution.                                                                                                            |
 | `iban`                | `none` \| `str`              | The International Bank Account Number (IBAN).                                                                                                   |
 | `bic`                 | `none` \| `str`              | The Bank Identifier Code (BIC/SWIFT). If omitted or `none`, the BIC field is hidden in the bank details block and omitted from the EPC-QR code. |
+| `sort-code`           | `none` \| `str`              | The 6-digit Sort Code (commonly used in the UK, e.g., `"12-34-56"` or `"123456"`).                                                              |
+| `account-number`      | `none` \| `str`              | The Bank Account Number (commonly used in the UK alongside Sort Code, e.g., `"12345678"`).                                                      |
 | `reference`           | `auto` \| `none` \| `str`    | The payment reference to be used by the customer.                                                                                               |
 | `payment-amount`      | `auto` \| `none` \| `number` | The specific amount to be paid. If `auto`, it uses the remaining amount due (or full gross total if no prepayments are present).                |
 | `show-reference`      | `bool`                       | Whether to display the reference field in the output. Defaults to `true`.                                                                       |
