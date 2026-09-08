@@ -1071,3 +1071,124 @@
   // 6. Empty dictionary returns none
   assert.eq(de-res((:), 1), none)
 }
+
+// --- Test UK / England Locale, Formatting, Tax, and Bank Details ---
+#{
+  import "/src/lib.typ": country, locale
+  import "/src/locale/lang/base.typ": base-language
+  import "/src/locale/region/base.typ": base-region
+  import "/src/themes/base-theme/bank-details.typ": render-bank-details
+
+  let loc-gb = (locale.en-gb)(base-language, base-region)
+  let loc-uk = (locale.en-uk)(base-language, base-region)
+
+  // 1. Equivalence of en-gb and en-uk
+  assert.eq(loc-gb.meta.region, "gb")
+  assert.eq(loc-uk.meta.region, "gb")
+  assert.eq(loc-gb.currency.code, "GBP")
+  assert.eq(loc-gb.currency.symbol, "£")
+  assert.eq(loc-gb.currency.decimals, 2)
+  assert.eq(loc-gb.currency.decimals-fine, 4)
+
+  // 2. Currency and number formatting
+  let formatted-curr = (loc-gb.format.currency)(1234.56)
+  assert(
+    formatted-curr.contains("£"),
+    message: "Expected £ in formatted currency",
+  )
+  assert(
+    formatted-curr.contains("1,234.56"),
+    message: "Expected 1,234.56 in formatted currency",
+  )
+
+  // 3. Date formatting: DD/MM/YYYY
+  let sample-date = datetime(year: 2026, month: 9, day: 24)
+  assert.eq((loc-gb.format.date)(sample-date), "24/09/2026")
+  let date-range = (
+    datetime(year: 2026, month: 9, day: 1),
+    datetime(year: 2026, month: 9, day: 30),
+  )
+  assert.eq(
+    (loc-gb.format.date)(date-range),
+    "01/09/2026 " + sym.dash.em + " 30/09/2026",
+  )
+
+  // 4. Percent formatting
+  assert.eq((loc-gb.format.percent)(0.20), "20%")
+  assert.eq((loc-gb.format.percent)(0.05), "5%")
+
+  // 5. Tax inference
+  let tax-std = (loc-gb.normalize.infer-tax)(20%)
+  assert.eq(tax-std.rate, decimal("0.2"))
+  assert.eq(tax-std.category, "S")
+
+  let tax-red = (loc-gb.normalize.infer-tax)(5%)
+  assert.eq(tax-red.rate, decimal("0.05"))
+
+  let panic-0 = catch(() => (loc-gb.normalize.infer-tax)(0%))
+  assert(panic-0.contains("Ambiguous 0% tax rate in region 'gb'"))
+  assert(panic-0.contains("tax.zero()"))
+  assert(panic-0.contains("tax.exempt()"))
+  assert(panic-0.contains("tax.outside-scope()"))
+
+  assert.eq(
+    catch(() => (loc-gb.normalize.infer-tax)(19%)),
+    "panicked with: \"Invalid tax rate detected: 19%. Expected 20%, 5%, or a specific tax constructor.\"",
+  )
+
+  // 6. Default VAT and Small Enterprise Special Scheme
+  assert.eq(loc-gb.tax.default-vat.rate, decimal("0.2"))
+  assert.eq(loc-gb.tax.small-enterprise-special-scheme.category, "O")
+  assert(
+    loc-gb
+      .tax
+      .small-enterprise-special-scheme
+      .grounds
+      .contains("UK statutory threshold"),
+  )
+
+  // 7. Bank Details with Sort Code and Account Number (UK domestic transfer)
+  let uk-ctx = (locale: loc-gb)
+  let uk-view = (
+    sender: (
+      name: "Acme UK Ltd",
+      bank: "Barclays Bank",
+      iban: "",
+      bic: "",
+      sort-code: "123456",
+      account-number: "12345678",
+    ),
+    qr-code: (
+      size: 5em,
+      display: true,
+    ),
+    reference: "INV-UK-001",
+    show-reference: true,
+    payment-amount: 250.0,
+  )
+
+  let res-uk-bank = render-bank-details(uk-ctx, uk-view)
+  let str-uk-bank = repr(res-uk-bank)
+  assert(str-uk-bank.contains("Acme UK Ltd"))
+  assert(str-uk-bank.contains("Barclays Bank"))
+  assert(str-uk-bank.contains("[Sort Code]"))
+  assert(str-uk-bank.contains("12-34-56"))
+  assert(str-uk-bank.contains("[Account Number]"))
+  assert(str-uk-bank.contains("12345678"))
+  assert(
+    not str-uk-bank.contains("[IBAN]"),
+    message: "Empty IBAN should not be rendered",
+  )
+
+  // 8. Bank Details with Sort Code and IBAN
+  let uk-view-intl = uk-view
+  uk-view-intl.sender.iban = "GB29NWBK60161331926819"
+  uk-view-intl.sender.bic = "NWBKGB2L"
+  let res-uk-intl = render-bank-details(uk-ctx, uk-view-intl)
+  let str-uk-intl = repr(res-uk-intl)
+  assert(str-uk-intl.contains("12-34-56"))
+  assert(str-uk-intl.contains("[IBAN]"))
+  assert(str-uk-intl.contains("GB29 NWBK 6016 1331 9268 19"))
+  assert(str-uk-intl.contains("[BIC]"))
+  assert(str-uk-intl.contains("NWBKGB2L"))
+}

@@ -129,6 +129,8 @@
     bank: "Banco",
     iban: "IBAN",
     bic: "SWIFT/BIC",
+    sort-code: "Código de sucursal",
+    account-number: "Número de cuenta",
     reference: "Concepto",
   ),
 
