@@ -453,6 +453,7 @@ Every bug reported as a GitHub issue must be registered here. When a bug is fixe
 | [#28](https://github.com/leonieziechmann/invoice-pro/issues/28) | ZUGFeRD panic with outside-scope tax when sender has vat-id but no tax-nr               | `issues/issue-28/` | ✅     |
 | [#29](https://github.com/leonieziechmann/invoice-pro/issues/29) | Validate mandatory e-invoicing fields (BT-49, BT-10, BG-6) instead of omitting silently | `issues/issue-29/` | ✅     |
 | [#39](https://github.com/leonieziechmann/invoice-pro/issues/39) | Omit 0% VAT from totals and collapse tax section (e.g. tax-exempt-small-biz)            | `issues/issue-39/` | ✅     |
+| [#41](https://github.com/leonieziechmann/invoice-pro/issues/41) | Always show bold net total in exclusive mode; subtotal only when modifiers apply        | `issues/issue-41/` | ✅     |
 
 > _Add entries as bugs are reported._
 

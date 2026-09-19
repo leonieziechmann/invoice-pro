@@ -160,9 +160,7 @@
       let has-taxes = elements.at("taxes", default: ()).len() > 0
 
       if is-net {
-        if has-modifiers {
-          summary-rows += elements.net-total
-        }
+        summary-rows += elements.net-total
         if has-taxes {
           summary-rows += (
             spacer(0.1em),

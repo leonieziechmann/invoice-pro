@@ -239,9 +239,15 @@
   } else {
     (
       // --- Exclusive Mode ---
-      elements.subtotal,
-      elements.modifiers,
-      ..if has-modifiers { elements.net-total },
+      // The net total is always highlighted; the unmodified subtotal is only
+      // needed as a starting point when modifiers change it.
+      ..if has-modifiers {
+        (
+          elements.subtotal,
+          elements.modifiers,
+        )
+      },
+      elements.net-total,
       ..if has-taxes {
         (
           grid.hline(stroke: styles.stroke-thin),
