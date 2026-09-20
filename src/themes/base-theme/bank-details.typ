@@ -38,9 +38,38 @@
     )[
       #set par(leading: 0.4em)
       #set text(number-type: "lining")
-      #bd-str.account-holder: #view.sender.name \
-      #bd-str.bank: #view.sender.bank \
-      #bd-str.iban: *#ibanator.iban(view.sender.iban)* \
+      #if view.sender.name != "" [#bd-str.account-holder: #view.sender.name \ ]
+      #if view.sender.bank != "" [#bd-str.bank: #view.sender.bank \ ]
+      #if view.sender.at("sort-code", default: "") != "" {
+        let sc = view.sender.sort-code
+        let formatted-sc = if type(sc) == str {
+          let cleaned = sc.replace("-", "").replace(" ", "").trim()
+          if (
+            cleaned.len() == 6
+              and cleaned.clusters().all(c => c >= "0" and c <= "9")
+          ) {
+            let c = cleaned.clusters()
+            (
+              c.slice(0, 2).join()
+                + "-"
+                + c.slice(2, 4).join()
+                + "-"
+                + c.slice(4, 6).join()
+            )
+          } else {
+            sc
+          }
+        } else {
+          sc
+        }
+        [#bd-str.sort-code: *#formatted-sc* \ ]
+      }
+      #if (
+        view.sender.at("account-number", default: "") != ""
+      ) [#bd-str.account-number: *#view.sender.account-number* \ ]
+      #if (
+        view.sender.iban != ""
+      ) [#bd-str.iban: *#ibanator.iban(view.sender.iban)* \ ]
       #if view.sender.bic != "" [#bd-str.bic: #view.sender.bic \ ]
       #if (
         view.show-reference and remittance-text != none

@@ -120,6 +120,8 @@
     bank: "Kreditinstitut",
     iban: "IBAN",
     bic: "BIC",
+    sort-code: "Sort-Code",
+    account-number: "Kontonummer",
     reference: "Verwendungszweck",
   ),
 

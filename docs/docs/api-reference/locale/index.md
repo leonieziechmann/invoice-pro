@@ -19,13 +19,13 @@ Locales are accessed via the `locale` module and are structured as `locale.<lang
 
 ### Available Combinations
 
-| Language           | Regions                            | Example                                                                    |
-| :----------------- | :--------------------------------- | :------------------------------------------------------------------------- |
-| **`de`** (German)  | `at`, `ch`, `de`, `es`, `fr`, `it` | `locale.de-de` (German in Germany), `locale.de-ch` (German in Switzerland) |
-| **`en`** (English) | `at`, `ch`, `de`, `es`, `fr`, `it` | `locale.en-de` (English text, German formatting/taxes)                     |
-| **`fr`** (French)  | `at`, `ch`, `de`, `es`, `fr`, `it` | `locale.fr-ch` (French in Switzerland)                                     |
-| **`it`** (Italian) | `at`, `ch`, `de`, `es`, `fr`, `it` | `locale.it-it` (Italian in Italy)                                          |
-| **`es`** (Spanish) | `at`, `ch`, `de`, `es`, `fr`, `it` | `locale.es-es` (Spanish in Spain)                                          |
+| Language           | Regions                                        | Example                                                                    |
+| :----------------- | :--------------------------------------------- | :------------------------------------------------------------------------- |
+| **`de`** (German)  | `at`, `ch`, `de`, `es`, `fr`, `gb`, `it`, `uk` | `locale.de-de` (German in Germany), `locale.de-ch` (German in Switzerland) |
+| **`en`** (English) | `at`, `ch`, `de`, `es`, `fr`, `gb`, `it`, `uk` | `locale.en-gb` (UK formatting/taxes), `locale.en-de` (English in Germany)  |
+| **`fr`** (French)  | `at`, `ch`, `de`, `es`, `fr`, `gb`, `it`, `uk` | `locale.fr-ch` (French in Switzerland)                                     |
+| **`it`** (Italian) | `at`, `ch`, `de`, `es`, `fr`, `gb`, `it`, `uk` | `locale.it-it` (Italian in Italy)                                          |
+| **`es`** (Spanish) | `at`, `ch`, `de`, `es`, `fr`, `gb`, `it`, `uk` | `locale.es-es` (Spanish in Spain)                                          |
 
 **Example usage in your document root:**
 
@@ -80,7 +80,7 @@ These functions allow you to change the text labels printed on the invoice.
 | `locale.custom.line-items(..)`   | `position`, `description`, `quantity`, `unit-price`, `price`, `total`, `vat`, `net`, `gross`, `discount`, `surcharge`, `subtotal` | Column headers and specific terms inside the item table. |
 | `locale.custom.summary(..)`      | `sum`, `vat-tax`, `total`, `including`, `excluding`                                                                               | Labels for the final calculation block.                  |
 | `locale.custom.global-info(..)`  | `tax-statement`, `unit`, `quantity`, `date`                                                                                       | General statements below the table.                      |
-| `locale.custom.bank-details(..)` | `account-holder`, `bank`, `iban`, `bic`, `reference`                                                                              | Labels for the bank details block.                       |
+| `locale.custom.bank-details(..)` | `account-holder`, `bank`, `iban`, `bic`, `sort-code`, `account-number`, `reference`                                               | Labels for the bank details block.                       |
 | `locale.custom.payment(..)`      | `text`, `deadline-date`, `deadline-days`, `deadline-soon`                                                                         | Text and deadline phrasing for the payment goal.         |
 | `locale.custom.signature(..)`    | `closing`                                                                                                                         | The sign-off text (e.g., "Sincerely").                   |
 | `locale.custom.legal(..)`        | `vat-exemption`                                                                                                                   | The legal notice for small business exemptions.          |

@@ -129,6 +129,8 @@
     bank: "Banca",
     iban: "IBAN",
     bic: "BIC",
+    sort-code: "CAB / Sort Code",
+    account-number: "Numero di conto",
     reference: "Causale",
   ),
 

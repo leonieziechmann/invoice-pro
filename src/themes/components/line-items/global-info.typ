@@ -11,7 +11,20 @@
 
   let layout = data.layout-information
   let is-net = data.tax-mode == "exclusive"
-  let lang-eq-region = ctx.locale.meta.region == ctx.locale.strings.meta.lang
+  let lang-eq-region = (
+    ctx.locale.meta.region == ctx.locale.strings.meta.lang
+      or (
+        ctx.locale.meta.region in ("gb", "uk")
+          and ctx.locale.strings.meta.lang == "en"
+      )
+      or (
+        ctx.locale.meta.region == "at" and ctx.locale.strings.meta.lang == "de"
+      )
+      or (
+        ctx.locale.meta.region == "ch"
+          and ctx.locale.strings.meta.lang in ("de", "fr", "it")
+      )
+  )
   let sum-str = ctx.locale.strings.summary
   let leg-str = ctx.locale.strings.legal
   let info-str = ctx.locale.strings.global-info

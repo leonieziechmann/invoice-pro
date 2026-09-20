@@ -213,6 +213,8 @@
 /// - bank (auto, str): e.g., "Bank", "Kreditinstitut"
 /// - iban (auto, str): e.g., "IBAN"
 /// - bic (auto, str): e.g., "BIC"
+/// - sort-code (auto, str): e.g., "Sort Code"
+/// - account-number (auto, str): e.g., "Account Number"
 /// - reference (auto, str): e.g., "Reference", "Verwendungszweck"
 /// -> dictionary
 #let bank-details(
@@ -220,6 +222,8 @@
   bank: auto,
   iban: auto,
   bic: auto,
+  sort-code: auto,
+  account-number: auto,
   reference: auto,
 ) = (
   {
@@ -228,6 +232,8 @@
       bank: bank,
       iban: iban,
       bic: bic,
+      sort-code: sort-code,
+      account-number: account-number,
       reference: reference,
     ))
     return (strings: (bank-details: payload))

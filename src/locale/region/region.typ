@@ -4,3 +4,4 @@
 #import "es.typ": es
 #import "fr.typ": fr
 #import "it.typ": it
+#import "uk.typ": uk, uk as gb

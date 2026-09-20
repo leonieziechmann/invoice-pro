@@ -45,3 +45,17 @@
 #let fr-it = build-locale(lang.fr, region.it)
 #let it-it = build-locale(lang.it, region.it)
 #let es-it = build-locale(lang.es, region.it)
+
+// Region GB / UK Locale
+#let de-gb = build-locale(lang.de, region.uk)
+#let en-gb = build-locale(lang.en, region.uk)
+#let es-gb = build-locale(lang.es, region.uk)
+#let fr-gb = build-locale(lang.fr, region.uk)
+#let it-gb = build-locale(lang.it, region.uk)
+
+// Aliases for UK
+#let de-uk = de-gb
+#let en-uk = en-gb
+#let es-uk = es-gb
+#let fr-uk = fr-gb
+#let it-uk = it-gb

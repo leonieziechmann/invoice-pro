@@ -429,6 +429,8 @@
     return fallback
   }
   if type(region-opt) == str {
+    let r = lower(region-opt)
+    if r == "uk" { return "gb" }
     return region-opt
   }
   if type(region-opt) == dictionary {
@@ -437,9 +439,13 @@
         and type(region-opt.meta) == dictionary
         and "region" in region-opt.meta
     ) {
+      let r = lower(region-opt.meta.region)
+      if r == "uk" { return "gb" }
       return region-opt.meta.region
     }
     if "code" in region-opt and type(region-opt.code) == str {
+      let r = lower(region-opt.code)
+      if r == "uk" { return "gb" }
       return region-opt.code
     }
   }
@@ -451,6 +457,8 @@
       "es"
     } else if region-opt == region.fr { "fr" } else if region-opt == region.it {
       "it"
+    } else if region-opt == region.uk or region-opt == region.gb {
+      "gb"
     } else if region-opt == de { "de" } else if region-opt == at {
       "at"
     } else if region-opt == ch { "ch" } else if region-opt == fr {

@@ -22,6 +22,14 @@
   /// -> none | string
   bic: none,
 
+  /// The Sort Code (commonly used in the UK, e.g. "12-34-56").
+  /// -> none | string
+  sort-code: none,
+
+  /// The Bank Account Number (commonly used in the UK alongside Sort Code).
+  /// -> none | string
+  account-number: none,
+
   /// The structured payment reference to be used by the customer.
   /// -> auto | none | string
   reference: auto,
@@ -50,6 +58,8 @@
   types.require(bank, "bank-details::bank", none, str)
   types.require(iban, "bank-details::iban", none, str)
   types.require(bic, "bank-details::bic", none, str)
+  types.require(sort-code, "bank-details::sort-code", none, str)
+  types.require(account-number, "bank-details::account-number", none, str)
 
   types.require(reference, "bank-details::reference", none, auto, str)
   types.require(text, "bank-details::text", none, str)
@@ -72,6 +82,8 @@
   if iban == none { iban = "" }
   if bank == none { bank = "" }
   if bic == none { bic = "" }
+  if sort-code == none { sort-code = "" }
+  if account-number == none { account-number = "" }
   if payment-amount == none { payment-amount = 0 }
   if payment-amount != auto {
     payment-amount = coercion.to-decimal(payment-amount)
@@ -112,6 +124,8 @@
           bank: bank,
           iban: iban,
           bic: bic,
+          sort-code: sort-code,
+          account-number: account-number,
         ),
 
         qr-code: (
@@ -133,6 +147,8 @@
       let public = (
         iban: iban,
         bic: bic,
+        sort-code: sort-code,
+        account-number: account-number,
         reference: ctx.reference,
         text: ctx.text,
         payment-amount: data.payment-amount,
