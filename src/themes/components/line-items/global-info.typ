@@ -110,18 +110,16 @@
       []
     }
 
-    if lang-eq-region {
-      if legal-grounds != none {
-        global-infos.push([#marker-str#legal-grounds])
-        rendered-grounds.push(legal-grounds)
-      }
+    // Without regional grounds, fall back to the translated legal clause so
+    // the notice is never dropped (e.g. `tax.outside-scope()` overrides).
+    if legal-grounds == none {
+      global-infos.push([#marker-str#grounds])
+    } else if lang-eq-region {
+      global-infos.push([#marker-str#legal-grounds])
+      rendered-grounds.push(legal-grounds)
     } else {
-      if legal-grounds != none {
-        global-infos.push([#marker-str#grounds (#legal-grounds)])
-        rendered-grounds.push(legal-grounds)
-      } else {
-        global-infos.push([#marker-str#grounds])
-      }
+      global-infos.push([#marker-str#grounds (#legal-grounds)])
+      rendered-grounds.push(legal-grounds)
     }
   }
 
