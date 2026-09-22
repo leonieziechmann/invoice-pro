@@ -22,9 +22,9 @@ All string fields within the language schema dictate the static text printed on 
 
 Contains core metadata about the language configuration.
 
-| Key    | Type  | Description                                         |
-| :----- | :---- | :-------------------------------------------------- |
-| `lang` | `str` | The ISO 639-1 language code (e.g., `"en"`, `"de"`). |
+| Key    | Type  | Description                                                                                                                                      |
+| :----- | :---- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lang` | `str` | The ISO 639-1 language code (e.g., `"en"`, `"de"`). Sets the document language (`text.lang`), which drives hyphenation and the PDF language tag. |
 
 ### `document`
 

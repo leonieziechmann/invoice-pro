@@ -22,6 +22,7 @@
 #let base-language = (
   meta: (
     /// The ISO 639-1 language code of the file (e.g., "en", "de").
+    /// Sets the document language (`text.lang`); "base" resolves to "en".
     lang: "base",
     /// Plural resolution function for units and language strings.
     /// -> (any, int | float | decimal | str) => any

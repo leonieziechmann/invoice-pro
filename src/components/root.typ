@@ -59,7 +59,7 @@
       ensure("invoice-nr", "#invoice-nr")
 
       nest("locale", {
-        ensure("lang", "de")
+        ensure("lang", none)
         nest("meta", {
           ensure("region", "de")
         })
@@ -155,7 +155,9 @@
       let region-code = if type(region) == str and region.len() == 2 {
         region
       } else { none }
-      set text(lang: ctx.locale.lang, region: region-code)
+      // Without a language code, keep the surrounding `text.lang`.
+      let lang-args = if ctx.locale.lang != none { (lang: ctx.locale.lang) }
+      set text(region: region-code, ..lang-args)
 
       let eval-ctx = (
         ctx

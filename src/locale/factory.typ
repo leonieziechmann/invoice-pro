@@ -62,8 +62,14 @@
       ..user-region-patches,
     ).fold(base-region, base-pull-deep-merge)
 
-    // 4. Return Final Context
+    // 4. Document language: `base` is the English fallback schema,
+    // not an ISO 639-1 code.
+    let lang-code = final-lang.meta.lang
+    if lang-code == "base" { lang-code = "en" }
+
+    // 5. Return Final Context
     return (
+      lang: lang-code,
       strings: final-lang,
       format: final-region.format,
       normalize: final-region.normalize,
