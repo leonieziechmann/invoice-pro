@@ -67,7 +67,7 @@ You must provide either a `price` (unit price) **or** a `total` (fixed line tota
 | `date`          | `datetime` \| `array` \| `auto` \| `none`                            | When the service was provided. Use a single `datetime` or a range array `(datetime, datetime)`.                                                                                                                                                                                    |
 | `price`         | `number` \| `auto`                                                   | The price per unit.                                                                                                                                                                                                                                                                |
 | `total`         | `number` \| `auto`                                                   | The fixed total price for the line item.                                                                                                                                                                                                                                           |
-| `item-id`       | `str` \| `dictionary` \| `auto` \| `none`                            | If a `str`, it is treated as a standard item ID. Can also be a dictionary: `(seller: "id", buyer: "id", standard: "id")`. Not all keys are required.                                                                                                                               |
+| `item-id`       | `str` \| `dictionary` \| `auto` \| `none`                            | Article identifiers for the ZUGFeRD XML. A `str` is your own article number (seller's item ID). A dictionary `(seller: "id", buyer: "id", standard: "id")` accepts any subset of these keys. `standard` must be a GS1 GTIN. See [below](#the-item-id-parameter-and-zugferd).       |
 | `input-gross`   | `bool` \| `auto`                                                     | Overrides the parent `input-gross` setting specifically for this item.                                                                                                                                                                                                             |
 | `tax`           | `ratio` \| `dictionary` \| `auto`                                    | Overrides the parent `tax` setting specifically for this item.                                                                                                                                                                                                                     |
 | `modifier`      | `dictionary` \| `array` \| `content` \| `auto` \| `none`             | Specific modifiers (discounts or surcharges) applied directly to this item. Can be a single modifier (e.g., `discount(10)`), a tuple/array of modifiers (e.g., `(discount(10), surcharge(5%))`), or a content block containing modifiers (e.g., `[#discount(10) #surcharge(5%)]`). |
@@ -103,6 +103,27 @@ The package provides three ways to pass the `unit` parameter:
 
 For a full list of predefined units and aliases, see the [Unit API Reference](./unit.md) subpage.
 
+### The `item-id` Parameter and ZUGFeRD
+
+Each line item (or bundle) can carry article identifiers. They are written only into the ZUGFeRD / Factur-X XML and are not printed on the invoice.
+
+| `item-id` value          | XML element (`ram:SpecifiedTradeProduct`) | Business term                              | Profiles                              |
+| :----------------------- | :---------------------------------------- | :----------------------------------------- | :------------------------------------ |
+| `"ART-4711"` (plain str) | `ram:SellerAssignedID`                    | BT-155 Item Seller's identifier            | `"en16931"`, `"xrechnung"`            |
+| `(seller: "ART-4711")`   | `ram:SellerAssignedID`                    | BT-155 Item Seller's identifier            | `"en16931"`, `"xrechnung"`            |
+| `(buyer: "B-778")`       | `ram:BuyerAssignedID`                     | BT-156 Item Buyer's identifier             | `"en16931"`, `"xrechnung"`            |
+| `(standard: "…")`        | `ram:GlobalID` with `schemeID="0160"`     | BT-157 Item standard identifier (GS1 GTIN) | `"basic"`, `"en16931"`, `"xrechnung"` |
+
+The dictionary keys can be combined, e.g. `(seller: "PEN-01", buyer: "B-778", standard: "4006381333931")`.
+
+:::caution
+`standard` is always declared as a GS1 GTIN (scheme `0160`), and its value is not validated. Use it only for real GTIN-8/12/13/14 numbers (EAN/UPC barcodes). Use a plain string or `seller` for internal article numbers.
+:::
+
+:::note
+The `"basic"` profile has no seller or buyer item identifiers, so only `standard` is included there. The `"minimum"` and `"basic-wl"` profiles contain no line items at all.
+:::
+
 ### The `tax` Parameter
 
 While items generally inherit their tax settings from the parent `line-items` container or the document's locale, you can explicitly override the `tax` parameter on an individual `item` or `bundle`.
@@ -126,17 +147,18 @@ For a complete list of standardized tax functions, margin schemes, and how to cr
 
 Groups multiple items together as a virtual single item while automatically aggregating their totals and dates.
 
-| Key             | Type                                                                 | Description                                                                                                                     |
-| --------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `name`          | `str` \| `content`                                                   | The name of the bundle.                                                                                                         |
-| `description`   | `str` \| `content` \| `auto` \| `none`                               | If set to `auto`, it automatically generates a comma-separated list of all child item names.                                    |
-| `quantity`      | `number` \| `auto`                                                   | The quantity of the bundle itself.                                                                                              |
-| `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g).                                                                  |
-| `unit`          | `str` \| `content` \| `dictionary` \| `function` \| `auto` \| `none` | The unit of measurement for the bundle. Accepts the same dictionary form, function, or string as `item` for ZUGFeRD compliance. |
-| `date`          | `datetime` \| `array` \| `auto` \| `none`                            | If set to `auto`, calculates the date range based on the earliest and latest dates of the items inside the bundle.              |
-| `input-gross`   | `bool` \| `auto`                                                     | Overrides the parent `input-gross` setting specifically for children.                                                           |
-| `tax`           | `ratio` \| `dictionary` \| `auto`                                    | Overrides the parent `tax` setting specifically for children.                                                                   |
-| `body`          | `content`                                                            | The nested items, modifiers, or sub-bundles belonging to this group.                                                            |
+| Key             | Type                                                                 | Description                                                                                                                      |
+| --------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `name`          | `str` \| `content`                                                   | The name of the bundle.                                                                                                          |
+| `description`   | `str` \| `content` \| `auto` \| `none`                               | If set to `auto`, it automatically generates a comma-separated list of all child item names.                                     |
+| `quantity`      | `number` \| `auto`                                                   | The quantity of the bundle itself.                                                                                               |
+| `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g).                                                                   |
+| `unit`          | `str` \| `content` \| `dictionary` \| `function` \| `auto` \| `none` | The unit of measurement for the bundle. Accepts the same dictionary form, function, or string as `item` for ZUGFeRD compliance.  |
+| `item-id`       | `str` \| `dictionary` \| `auto` \| `none`                            | Article identifiers of the bundle for the ZUGFeRD XML. Same forms as on `item`. See [above](#the-item-id-parameter-and-zugferd). |
+| `date`          | `datetime` \| `array` \| `auto` \| `none`                            | If set to `auto`, calculates the date range based on the earliest and latest dates of the items inside the bundle.               |
+| `input-gross`   | `bool` \| `auto`                                                     | Overrides the parent `input-gross` setting specifically for children.                                                            |
+| `tax`           | `ratio` \| `dictionary` \| `auto`                                    | Overrides the parent `tax` setting specifically for children.                                                                    |
+| `body`          | `content`                                                            | The nested items, modifiers, or sub-bundles belonging to this group.                                                             |
 
 ### Mixed Tax Brackets
 

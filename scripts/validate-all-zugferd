@@ -25,6 +25,7 @@ echo "========================"
 for test in tests/integration/payment-reference/*/test.typ; do
   "$VALIDATE_ZUGFERD" "$test"
 done
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-item-ids/test.typ"
 "$VALIDATE_ZUGFERD" "template/invoice.typ"
 
 echo ""

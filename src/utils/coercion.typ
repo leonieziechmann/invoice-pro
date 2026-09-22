@@ -84,12 +84,14 @@
   }
 }
 
+// A plain string is the seller's own article number (BT-155), never a GTIN:
+// only `standard` is written with the GS1 scheme (0160) in the ZUGFeRD XML.
 #let to-item-id(value) = {
   let t = type(value)
-  if t == str { return (seller: none, buyer: none, standard: value) } else if (
+  if t == str { return (seller: value, buyer: none, standard: none) } else if (
     t == dictionary
   ) {
-    (
+    return (
       seller: value.at("seller", default: none),
       buyer: value.at("buyer", default: none),
       standard: value.at("standard", default: none),

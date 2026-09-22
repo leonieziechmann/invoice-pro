@@ -481,6 +481,82 @@
   assert.eq(summation-minimum.at("ram:DuePayableAmount"), "830.50")
 }
 
+// --- Test ZUGFeRD item identifiers (BT-155, BT-156, BT-157) ---
+#{
+  import "/src/utils/coercion.typ": to-item-id
+  import "/src/zugferd/build.typ": build-line-item
+
+  // 1. A plain string is the seller's article number, never a GTIN; dictionary
+  //    item-ids are kept instead of being dropped.
+  assert.eq(to-item-id("ART-4711"), (
+    seller: "ART-4711",
+    buyer: none,
+    standard: none,
+  ))
+  assert.eq(to-item-id((seller: "KB-001")), (
+    seller: "KB-001",
+    buyer: none,
+    standard: none,
+  ))
+  assert.eq(to-item-id((seller: "S", buyer: "B", standard: "4006381333931")), (
+    seller: "S",
+    buyer: "B",
+    standard: "4006381333931",
+  ))
+  assert.eq(to-item-id(none), none)
+  assert.eq(to-item-id(auto), auto)
+
+  let product(item-id, ..args) = build-line-item(
+    1,
+    "Widget",
+    to-item-id(item-id),
+    decimal("100.00"),
+    decimal("1"),
+    "C62",
+    "S",
+    19%,
+    decimal("100.00"),
+    (),
+    (),
+    ..args,
+  ).at("ram:SpecifiedTradeProduct")
+
+  // 2. IDs follow the TradeProduct XSD sequence and precede ram:Name.
+  let full = product((seller: "S", buyer: "B", standard: "4006381333931"))
+  assert.eq(
+    full.keys(),
+    (
+      "ram:GlobalID",
+      "ram:SellerAssignedID",
+      "ram:BuyerAssignedID",
+      "ram:Name",
+    ),
+  )
+  assert.eq(full.at("ram:GlobalID"), (
+    "@schemeID": "0160",
+    "": "4006381333931",
+  ))
+  assert.eq(full.at("ram:SellerAssignedID"), "S")
+  assert.eq(full.at("ram:BuyerAssignedID"), "B")
+
+  let plain = product("ART-4711")
+  assert.eq(plain.keys(), ("ram:SellerAssignedID", "ram:Name"))
+  assert.eq(plain.at("ram:SellerAssignedID"), "ART-4711")
+
+  assert.eq(product(none).keys(), ("ram:Name",))
+  assert.eq(product((seller: "", standard: none)).keys(), ("ram:Name",))
+
+  // 3. The BASIC profile's TradeProduct only allows GlobalID.
+  assert.eq(
+    product(
+      (seller: "S", buyer: "B", standard: "4006381333931"),
+      profile: "basic",
+    ).keys(),
+    ("ram:GlobalID", "ram:Name"),
+  )
+  assert.eq(product("ART-4711", profile: "basic").keys(), ("ram:Name",))
+}
+
 // --- Test backwards compatibility for 'street' ---
 #{
   import "/src/logic/country.typ": normalize-party

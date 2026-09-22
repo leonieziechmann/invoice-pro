@@ -411,19 +411,29 @@
   total,
   discounts,
   surcharges,
+  profile: "en16931",
 ) = {
   let unit-code = map-unit-code(unit)
 
+  // Inserted in XSD sequence order (GlobalID, SellerAssignedID,
+  // BuyerAssignedID), all before ram:Name. The BASIC profile's TradeProduct
+  // only allows GlobalID, so the seller/buyer IDs (BT-155/BT-156) are dropped.
   let item-ids = (:)
   if type(item-id) == dictionary {
-    if "standard" in item-id and item-id.standard != none {
+    let has(key) = item-id.at(key, default: none) not in (none, "")
+    if has("standard") {
       item-ids.insert("ram:GlobalID", (
         "@schemeID": "0160",
         "": item-id.standard,
       ))
     }
-    if "seller" in item-id and item-id.seller != none {
-      item-ids.insert("ram:SellerAssignedID", item-id.seller)
+    if profile != "basic" {
+      if has("seller") {
+        item-ids.insert("ram:SellerAssignedID", item-id.seller)
+      }
+      if has("buyer") {
+        item-ids.insert("ram:BuyerAssignedID", item-id.buyer)
+      }
     }
   }
 
@@ -465,10 +475,7 @@
     "ram:AssociatedDocumentLineDocument": (
       "ram:LineID": str(pos),
     ),
-    "ram:SpecifiedTradeProduct": (
-      "ram:Name": name,
-    )
-      + item-ids,
+    "ram:SpecifiedTradeProduct": item-ids + ("ram:Name": name),
     "ram:SpecifiedLineTradeAgreement": agreement-block,
     "ram:SpecifiedLineTradeDelivery": (
       "ram:BilledQuantity": (
@@ -717,6 +724,7 @@
           item.total,
           item.discounts,
           item.surcharge,
+          profile: profile,
         )
       })
   } else { () }

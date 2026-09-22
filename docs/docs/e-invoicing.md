@@ -169,6 +169,16 @@ The remittance information (`ram:PaymentReference`) always matches the payment r
 
 If `bank-details` explicitly sets `reference: none`, BT-83 is omitted as well.
 
+### 5. Item Identifiers
+
+Line items can carry article identifiers through the `item-id` parameter:
+
+- **Seller's Item Identifier (BT-155):** A plain string such as `item-id: "ART-4711"`, or `(seller: "ART-4711")`, is your own article number.
+- **Buyer's Item Identifier (BT-156):** `(buyer: "B-778")` is the buyer's article number.
+- **Standard Identifier (BT-157):** `(standard: "4006381333931")` is always declared as a GS1 GTIN (scheme `0160`). Use it only for real EAN/UPC barcode numbers.
+
+The `"basic"` profile only supports the standard identifier. See [The `item-id` Parameter](./api-reference/line-items/index.md#the-item-id-parameter-and-zugferd) for details.
+
 ---
 
 ## Hardcoded Details & Limitations
