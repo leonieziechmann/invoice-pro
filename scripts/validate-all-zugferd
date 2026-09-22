@@ -16,6 +16,7 @@ echo " Running all ZUGFeRD validations... "
 echo "========================"
 
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-basic/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-profile-basic/test.typ"
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-small-biz/test.typ"
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-outside-scope/test.typ"
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-en16931/test.typ"

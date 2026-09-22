@@ -2,11 +2,13 @@
 #import "../utils/coercion.typ": to-string
 #import "../logic/payment-reference.typ": resolve-payment-reference
 
+// Guideline ID (BT-24). BASIC is a CIUS of EN 16931 and therefore carries the
+// EN 16931 prefix; MINIMUM and BASIC WL are not EN 16931 compliant.
 #let profile-urn(profile) = {
   if profile == "minimum" { "urn:factur-x.eu:1p0:minimum" } else if (
     profile == "basic-wl"
   ) { "urn:factur-x.eu:1p0:basicwl" } else if profile == "basic" {
-    "urn:factur-x.eu:1p0:basic"
+    "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic"
   } else if profile == "xrechnung" {
     "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0"
   } else { "urn:cen.eu:en16931:2017" }
@@ -674,6 +676,10 @@
 
   let include-line-items = profile in ("basic", "en16931", "xrechnung")
   let include-addresses = profile != "minimum"
+  // The seller contact (BG-6) and the payment service provider BIC (BT-86)
+  // are not part of the MINIMUM, BASIC WL and BASIC schemas.
+  let include-seller-contact = profile in ("en16931", "xrechnung")
+  let include-bic = profile in ("en16931", "xrechnung")
 
   let total-tax = taxes.values().map(t => t.absolute).sum(default: decimal("0"))
 
@@ -710,7 +716,7 @@
   )
 
   let bank-iban = if bank != none { bank.iban } else { "" }
-  let bank-bic = if bank != none { bank.bic } else { "" }
+  let bank-bic = if bank != none and include-bic { bank.bic } else { "" }
   let payment-means = build-payment-means(bank-iban, bank-bic)
   if payment-means != none {
     trade-settlement.insert(
@@ -878,7 +884,7 @@
       ctx.sender.vat-id,
       include-addresses,
       electronic-address: seller-eas,
-      contact: seller-contact,
+      contact: if include-seller-contact { seller-contact } else { none },
       is-outside-scope: is-outside-scope,
     ),
   )
