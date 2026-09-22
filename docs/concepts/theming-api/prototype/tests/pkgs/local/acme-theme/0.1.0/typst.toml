@@ -1,0 +1,7 @@
+[package]
+name = "acme-theme"
+version = "0.1.0"
+entrypoint = "lib.typ"
+authors = ["ACME"]
+license = "MIT"
+description = "Third-party invoice-pro theme: pure data + plain functions, no invoice-pro import"

@@ -1,0 +1,350 @@
+### passing
+#let a = theme.classic                                           // the default
+#let b = theme.classic.with(layout: theme.layout.us-letter-digital) // another page master
+#let c = theme.corporate.with(acme-brand)                           // a brand is a patch array
+#let d = theme.classic.with(acme.patch, layout: acme.sidebar-a5) // a zero-import package
+#show: invoice.with(theme: d, locale: locale.de-de, ..party)
+
+### din
+#let din-5008-a = (
+  name: "din-5008-a",
+  paper: "a4",
+  margin: (top: 20mm, right: 20mm, bottom: auto, left: 25mm), // bottom: footer + descent + clearance
+  marks: (fold: (87mm, 192mm), punch: 148.5mm, left: 5mm, length: 2.5mm), // stroke: hairline + text
+  envelopes: E.folded(
+    (87mm, 192mm),
+    E.envelope.din-dl,
+    E.envelope.din-c6-5,
+    E.envelope.din-c5-a,
+    E.envelope.din-c4-a,
+  ),
+  areas: (
+    marks: (place: "background", parts: ("marks",)),
+    letterhead: (
+      left: 25mm,
+      top: 8mm,
+      width: 165mm,
+      height: 19mm,
+      stationery: true,
+      par: (leading: 0.5em),
+      parts: ("logo", "sender"),
+      arrange: (columns: (1fr, auto), align: (left + horizon, right + top)),
+    ),
+    address: (
+      left: 20mm,
+      top: 27mm,
+      width: 85mm,
+      height: 45mm,
+      inset: (left: 5mm, right: 5mm),
+      par: (leading: 0.5em),
+      parts: ("return-address", "recipient"),
+      gap: 0pt,
+      arrange: (rows: (17.7mm, 27.3mm), align: (left + bottom, left + top)),
+    ),
+    info: (
+      left: 125mm,
+      top: 32mm,
+      width: 75mm,
+      height: 40mm,
+      parts: ("sender-details",),
+    ),
+    references: (place: "before", parts: ("references",)),
+    title: (place: "before", parts: ("title",)),
+    continuation: (place: "header", pages: "rest", parts: ("continuation",)),
+    page-number: (place: "footer", parts: ("page-number",), align: right),
+    footer: (
+      place: "footer",
+      stationery: true,
+      text: (size: t => t.sizes.fine, fill: t => t.colors.text-muted),
+      par: (leading: 0.45em),
+      parts: ("company", "contact", "registration", "bank-account"),
+      arrange: (columns: (1fr, 1fr, 1fr, 1fr)),
+    ),
+  ),
+)
+#let din-5008-b = derive(din-5008-a, (
+  layout: (
+    name: "din-5008-b",
+    marks: (fold: (105mm, 210mm)),
+    envelopes: E.folded(
+      (105mm, 210mm),
+      E.envelope.din-dl,
+      E.envelope.din-c6-5,
+      E.envelope.din-c5-b,
+    ),
+    areas: (
+      letterhead: (height: 37mm),
+      address: (top: 45mm),
+      info: (top: 50mm),
+    ),
+  ),
+))
+
+### parts
+#show: invoice.with(locale: locale.de-de, ..party, theme: theme.classic.with({
+  import theme.custom: *
+  part("signature", (ctx, view) => [— #view.name]) // replace
+  wrap("bank-details", (ctx, view, inner) => block(
+    fill: ctx.theme.tokens.colors.tint,
+    inset: 8pt,
+    inner(ctx, view),
+  )) // wrap
+  part("totals", (ctx, view) => {
+    // eject: start from the default renderer, then edit
+    set text(fill: ctx.theme.tokens.colors.primary)
+    theme.parts.totals(ctx, view)
+  })
+}))
+#body()
+
+### receipt
+// Any format is data: an 80 mm thermal-roll receipt (continuous page)
+#let roll = (
+  name: "roll-80",
+  paper: (width: 80mm, height: auto),
+  marks: none,
+  margin: (x: 4mm, top: 6mm, bottom: 16mm),
+  areas: (
+    letterhead: (place: "before", parts: ("sender",), align: center),
+    title: (place: "before", parts: ("title",)),
+    address: (place: "before", parts: ("recipient",)),
+    footer: (place: "footer", parts: ("registration",), text: (size: 6pt)),
+  ),
+)
+#show: invoice.with(locale: locale.de-de, ..party, theme: theme.plain.with(
+  layout: roll,
+  theme.custom.sizes(body: 8pt, fine: 6pt),
+  theme.custom.title(show-place-date: true),
+))
+#body(n: 3)
+
+### validation
+// draft (the default): the invoice renders, the gaps are marked, a report page follows
+#show: invoice.with(
+  locale: locale.de-de,
+  ..party,
+  invoice-nr: none, // missing: ‹fehlt: Rechnungsnummer›
+  recipient: (name: "Muster AG"), // no address
+  zugferd: "basic", // withheld while data is missing
+  validation: "draft", // "strict" stops the build; none checks nothing
+)
+#body()
+
+### proof
+// print one sheet with --input proof=1 and hold it against the envelope
+#show: invoice.with(locale: locale.de-de, ..party, theme: theme.classic.with({
+  import theme.custom: *
+  envelopes(theme.layout.envelope.din-dl, (
+    name: "ours-c6-5",
+    size: (229mm, 114mm),
+    fold: (87mm, 192mm),
+    window: (left: 22mm, bottom: 16mm, width: 90mm, height: 45mm),
+  ))
+  proof(sys.inputs.at("proof", default: "") == "1")
+}))
+#body()
+
+### region
+// layout: auto (the default) follows the SENDER's country: AT -> din-5008-b
+#let vienna = (address: "Kärntner Ring 5", city: "1010 Wien", country: "AT")
+#show: invoice.with(
+  locale: locale.de-at,
+  ..party,
+  sender: party.sender + vienna,
+  theme: theme.classic, // pin one: theme.classic.with(layout: ..)
+)
+#body()
+
+### presets
+#let pick = sys.inputs.at("preset", default: "elegant") // any of the ten presets
+#let brand = theme.custom.brand(
+  color: rgb("#0f766e"),
+  logo: image("logo.svg", alt: "Atelier Nord"),
+)
+#show: invoice.with(
+  locale: locale.de-de,
+  ..party,
+  theme: dictionary(theme).at(pick).with(brand),
+)
+#body()
+
+### p1
+#show: invoice.with(
+  theme: theme.classic.with(
+    theme.custom.brand(
+      color: rgb("#0f766e"),
+      font: ("Inter", "Liberation Sans", "Libertinus Serif"),
+      logo: image("logo.svg", alt: "Studio Lina Berg"),
+    ),
+    theme.custom.marks(none),
+  ),
+  locale: locale.de-de,
+  tax-exempt-small-biz: true,
+  ..party,
+)
+#body()
+
+### p2
+#let mode = sys.inputs.at("output", default: "pdf") // print | pdf | einvoice
+#let acme = theme.custom.brand(
+  color: rgb("#003a70"),
+  accent: rgb("#e2001a"),
+  font: ("Source Sans 3", "Liberation Sans", "Libertinus Serif"),
+  logo: image("acme.svg", alt: "ACME Maschinenbau GmbH"),
+)
+#show: invoice.with(
+  theme: theme.classic.with(acme, layout: theme.layout.din-5008-b, {
+    import theme.custom: *
+    if mode == "print" { stationery("pre-printed") }
+    if mode == "pdf" {
+      stationery((first: image("lh-1.svg"), rest: image("lh-2.svg")))
+      area("continuation", none) // the rest-page art carries its own header
+    }
+    if mode != "print" { marks(none) }
+  }),
+  locale: locale.de-de,
+  ..party,
+  zugferd: if mode == "einvoice" { "basic" },
+)
+#body(n: int(sys.inputs.at("n", default: "4")))
+
+### p3
+#let sn = theme.layout.sn-010130-right // what layout: auto picks for a Swiss sender
+#let qr-bill = sys.inputs.at("qr-bill", default: "") == "1" // opt-in, 0.5.x preview
+#show: invoice.with(locale: locale.de-ch, ..party, theme: theme.classic.with(
+  layout: if qr-bill { theme.layout.reserve-qr-bill(sn) } else { sn },
+  {
+    import theme.custom: *
+    brand(color: rgb("#7a1f2b"), font: ("Source Serif 4", "Libertinus Serif"))
+    if sys.inputs.at("window", default: "right") == "left" {
+      area("address", left: 22mm) // setting left clears right
+      area("info", right: 18mm) // setting right clears left
+    }
+  },
+))
+#body(n: int(sys.inputs.at("n", default: "4")))
+
+### p4
+#let e = toml("nordlicht.toml")
+#show: invoice.with(
+  theme: theme.corporate.with(theme.custom.from-data(
+    e.theme,
+    assets: p => image(p, alt: e.sender.name),
+  )),
+  locale: locale.de-de,
+  ..party,
+  sender: party.sender + e.sender,
+)
+#body()
+
+### p5
+// theme.typ of the pipeline: built once, an immutable value imported everywhere
+#let company = theme.classic.with(
+  theme.custom.from-data(json("brand.json")),
+  theme.custom.checks(min-contrast: 4.5),
+)
+#let locales = (de-de: locale.de-de, en-de: locale.en-de) // explicit map, no reflection
+#let d = json("job.json")
+#show: invoice.with(
+  theme: company.with(layout: theme.layout.digital-for-region(d.region)),
+  locale: locales.at(d.locale),
+  ..party,
+)
+#body()
+
+### p6
+#show: invoice.with(locale: locale.de-de, ..party, theme: theme.corporate(
+  layout: theme.layout.din-5008-b,
+  {
+    import theme.custom: *
+    brand(
+      color: rgb("#111827"),
+      accent: rgb("#6366f1"),
+      font: ("Inter", "Libertinus Serif"),
+      heading-font: ("Fraunces", "Libertinus Serif"),
+      logo: image("logo.svg", alt: "Atelier Nord"),
+    )
+    area("letterhead", parts: ("sender", "logo")) // logo right: data, no renderer
+    totals(width: 100%, fill: none)
+    wrap("totals", (ctx, view, inner) => block(
+      stroke: (left: 3pt + ctx.theme.tokens.colors.accent),
+      inset: (left: 6pt),
+      inner(ctx, view),
+    ))
+    part("payment-terms", (ctx, view) => {
+      let amount = (ctx.locale.format.currency)(view.total)
+      let fill = ctx.theme.tokens.colors.accent.lighten(88%)
+      let due = [Fällig in #view.days Tagen: *#amount*]
+      block(fill: fill, inset: 1em, text(size: 1.2em, due))
+    })
+  },
+))
+#body()
+
+### p7
+#let logo = image("sw.svg", alt: "Stadtwerke Musterstadt")
+#show: invoice.with(locale: locale.de-de, ..party, theme: theme.classic.with(
+  theme.custom.brand(color: rgb("#00843d"), logo: logo),
+  theme.custom.checks(min-contrast: 4.5),
+  theme.custom.marks(none),
+))
+#body()
+
+### p8
+#import "corporate.typ": corporate // the same brand patch as in P2
+#show: invoice.with(locale: locale.en-de, ..party, theme: theme.classic.with(
+  corporate,
+  layout: theme.layout.us-letter-10,
+  theme.custom.area("footer", arrange: (columns: (1fr, 1fr, 1fr)), parts: (
+    [*Remit to:* #info.sender.name, PO Box 12, Austin TX],
+    [billing\@acme.com],
+    "registration",
+  )),
+))
+#body()
+
+### p9
+#import "@local/acme-theme:0.1.0" as acme
+#show: invoice.with(locale: locale.de-de, ..party, theme: theme.classic.with(
+  acme.patch,
+  layout: acme.sidebar-a5,
+))
+#body()
+// package CI (against the published invoice-pro):
+#let _ = theme.resolve(theme.classic.with(acme.patch, layout: acme.sidebar-a5))
+
+### p10
+#show: invoice.with(locale: locale.de-de, ..party)
+#line-items[
+  #group([Phase 1])[#item([Konzeption], price: 1800)]
+  #themed(theme.custom.row(fill: rgb("#fef3c7")))[
+    #group([Phase 2 (optional)])[
+      #item([Reinzeichnung], price: 650)
+      #item([Druck], price: 240)
+    ]
+  ]
+]
+#themed({
+  import theme.custom: *
+  colors(primary: rgb("#b91c1c")) // tint re-derives inside the scope
+  wrap("bank-details", (ctx, view, inner) => block(
+    fill: ctx.theme.tokens.colors.tint,
+    inset: 8pt,
+    inner(ctx, view),
+  ))
+})[#bank-details(bank: "Hamburger Sparkasse", iban: "DE75512108001245126199")]
+
+### layout
+// A company-specific window: geometry lives in a derived layout, not in patches
+#let our-window = theme.layout.derive(theme.layout.din-5008-a, {
+  import theme.custom: *
+  area("address", left: 24mm, top: 40mm)
+  area("info", top: 45mm)
+  page(margin: (bottom: 35mm))
+})
+#show: invoice.with(
+  locale: locale.de-de,
+  ..party,
+  theme: theme.classic.with(layout: our-window),
+)
+#body()
