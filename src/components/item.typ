@@ -177,10 +177,15 @@
         coercion.to-decimal(base-quantity),
         default: decimal("1"),
       )
-      derive(
+      // Without an own unit, use the unresolved unit a `group` or `apply`
+      // cascades, so it is resolved with this item's quantity.
+      let unit-input = if unit != auto { unit } else {
+        ctx.at("unit", default: auto)
+      }
+      put(
         "unit",
         unit-logic.resolve(
-          unit,
+          unit-input,
           ctx.locale,
           quantity: if quantity != auto { coercion.to-decimal(quantity) } else {
             ctx.at("quantity", default: decimal("1"))
@@ -192,7 +197,7 @@
       put(
         "unit-singular",
         unit-logic.resolve(
-          unit,
+          unit-input,
           ctx.locale,
           quantity: decimal("1"),
           default: m-unit.pc,

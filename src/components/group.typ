@@ -3,7 +3,6 @@
 #import "../utils/coercion.typ"
 #import "../data/tax.typ" as m-tax
 #import "../data/unit.typ"
-#import "../logic/unit.typ" as m-unit
 
 /// A container used to visually and structurally group multiple invoice items, bundles,
 /// and nested groups together. Unlike `bundle`, a `group` does not aggregate its children
@@ -106,16 +105,10 @@
         )
       }
 
+      // Cascade the unresolved unit: each item resolves it with its own
+      // quantity ("1 hour", "2 hours").
       if unit != auto and unit != none {
-        derive(
-          "unit",
-          m-unit.resolve(
-            unit,
-            ctx.locale,
-            quantity: decimal("1"),
-            default: m-unit.pc,
-          ),
-        )
+        put("unit", unit)
       }
     }),
     measure: (ctx, children) => {

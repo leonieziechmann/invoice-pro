@@ -54,8 +54,8 @@
 
     quantity: to-dec(ctx.bundle-quantity),
     base-quantity: to-dec(ctx.bundle-base-quantity),
-    unit: ctx.unit,
-    unit-singular: ctx.unit-singular,
+    unit: ctx.bundle-unit,
+    unit-singular: ctx.bundle-unit-singular,
 
     price: base-price,
     total: modified-total,

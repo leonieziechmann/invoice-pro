@@ -104,10 +104,16 @@
         coercion.to-decimal(base-quantity),
         default: decimal("1"),
       )
-      derive(
-        "unit",
+      // Without an own unit, use the unresolved unit a `group` or `apply`
+      // cascades. The resolved unit is kept under `bundle-unit`, so "unit"
+      // still carries that cascaded input to the bundled items.
+      let unit-input = if unit != auto { unit } else {
+        ctx.at("unit", default: auto)
+      }
+      put(
+        "bundle-unit",
         m-unit.resolve(
-          unit,
+          unit-input,
           ctx.locale,
           quantity: if quantity != auto { coercion.to-decimal(quantity) } else {
             ctx.at("bundle-quantity", default: decimal("1"))
@@ -117,9 +123,9 @@
       )
       // Quantity-independent form, used to detect and name a shared unit.
       put(
-        "unit-singular",
+        "bundle-unit-singular",
         m-unit.resolve(
-          unit,
+          unit-input,
           ctx.locale,
           quantity: decimal("1"),
           default: m-unit.pcs,
