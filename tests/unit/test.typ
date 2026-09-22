@@ -454,6 +454,31 @@
   assert.eq(summation-modified.at("ram:TaxBasisTotalAmount"), "950.00")
   assert.eq(summation-modified.at("ram:ChargeTotalAmount"), "50.00")
   assert.eq(summation-modified.at("ram:AllowanceTotalAmount"), "100.00")
+
+  // 6. build-monetary-summation without breakdown (MINIMUM profile): only
+  //    BT-109, BT-110, BT-112 and BT-115; the amount due still subtracts
+  //    prepayments although TotalPrepaidAmount (BT-113) is omitted.
+  let summation-minimum = build-monetary-summation(
+    decimal("1000.00"),
+    decimal("950.00"),
+    decimal("1130.50"),
+    decimal("180.50"),
+    decimal("100.00"),
+    decimal("50.00"),
+    "EUR",
+    prepaid-total: decimal("300.00"),
+    include-breakdown: false,
+  )
+  assert.eq(
+    summation-minimum.keys(),
+    (
+      "ram:TaxBasisTotalAmount",
+      "ram:TaxTotalAmount",
+      "ram:GrandTotalAmount",
+      "ram:DuePayableAmount",
+    ),
+  )
+  assert.eq(summation-minimum.at("ram:DuePayableAmount"), "830.50")
 }
 
 // --- Test backwards compatibility for 'street' ---
@@ -1044,6 +1069,21 @@
     ),
   ))
   assert.eq(res-valid, none)
+
+  // 7. MINIMUM needs neither electronic addresses, buyer reference nor seller
+  //    contact, but has no seller identifier (BT-29), so BR-CO-26 requires the
+  //    seller VAT identifier (BT-31).
+  let res-minimum = catch(() => test-e-invoice(zugferd: "minimum"))
+  assert.eq(res-minimum, none)
+
+  let res-minimum-no-vat = catch(() => test-e-invoice(
+    zugferd: "minimum",
+    sender-overrides: (vat-id: none, tax-nr: "123/456/78901"),
+  ))
+  assert.eq(
+    res-minimum-no-vat,
+    "panicked with: \"e-invoicing (profile 'minimum') requires a seller VAT identifier (BT-31). Set 'vat-id' on the sender, or use the 'basic-wl' profile or higher to identify the seller by 'tax-nr'.\"",
+  )
 }
 
 // --- Test resolve-plural robustness and language behavior ---

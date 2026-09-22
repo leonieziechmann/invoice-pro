@@ -382,6 +382,7 @@ The automated `validate-all-zugferd` suite covers:
 
 - `tests/integration/zugferd-basic/test.typ` — EN 16931 / XRechnung profile with standard VAT, a tax-exempt item and document-level modifiers.
 - `tests/integration/zugferd-profile-basic/test.typ` — Factur-X BASIC profile; the seller contact (BG-6) and BIC (BT-86) are set but must be omitted.
+- `tests/integration/zugferd-profile-minimum/test.typ` — Factur-X MINIMUM profile; header data and document totals only, with the seller address reduced to its country code (BT-40).
 - `tests/integration/zugferd-small-biz/test.typ` — Small business exemption (§19 UStG, tax category `O`).
 - `tests/integration/zugferd-outside-scope/test.typ` — Tax outside scope / non-taxable transactions.
 - `tests/integration/zugferd-en16931/test.typ` — Full EN 16931 / XRechnung profile.

@@ -88,6 +88,7 @@ Both the `sender` and `recipient` dictionaries must include:
 - **Tax Identifiers:**
   - The **sender** should include a `tax-nr` (national tax number) and/or `vat-id` (value-added tax identifier).
   - The **recipient** (buyer) should include a `vat-id` if applicable.
+  - The `"minimum"` profile identifies the seller only by its VAT identifier (BT-31), so the **sender** must have a `vat-id` there. Senders with only a `tax-nr` need `"basic-wl"` or higher.
 
 - **Seller Contact (BG-6):** Under German XRechnung rules, the seller must specify contact details. You can define this under the `contact` key of the `sender` dictionary (containing keys `name`, `phone`, `email`):
 

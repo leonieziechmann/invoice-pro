@@ -206,6 +206,10 @@
     postal.insert("ram:CityName", city)
     postal.insert("ram:CountryID", country)
     res.insert("ram:PostalTradeAddress", postal)
+  } else if country != none and country != "" {
+    // Without a street address (always the case for MINIMUM), the seller
+    // postal address still has to carry the country code (BR-08, BR-09).
+    res.insert("ram:PostalTradeAddress", ("ram:CountryID": country))
   }
 
   if electronic-address != none {
@@ -546,6 +550,9 @@
 // `line-total` (BT-131) is the sum of line net amounts *before* document-level
 // allowances/charges, while `net-total` (BT-109) is the total *after* them —
 // they only coincide when there are no global discounts/surcharges.
+//
+// With `include-breakdown: false` (MINIMUM profile) only BT-109, BT-110,
+// BT-112 and BT-115 are emitted; the amount due still accounts for prepayments.
 #let build-monetary-summation(
   line-total,
   net-total,
@@ -555,13 +562,17 @@
   charge-total,
   currency,
   prepaid-total: decimal("0"),
+  include-breakdown: true,
 ) = {
-  let summation = ("ram:LineTotalAmount": fmt-amount(line-total))
-  if charge-total > decimal("0") {
-    summation.insert("ram:ChargeTotalAmount", fmt-amount(charge-total))
-  }
-  if allowance-total > decimal("0") {
-    summation.insert("ram:AllowanceTotalAmount", fmt-amount(allowance-total))
+  let summation = (:)
+  if include-breakdown {
+    summation.insert("ram:LineTotalAmount", fmt-amount(line-total))
+    if charge-total > decimal("0") {
+      summation.insert("ram:ChargeTotalAmount", fmt-amount(charge-total))
+    }
+    if allowance-total > decimal("0") {
+      summation.insert("ram:AllowanceTotalAmount", fmt-amount(allowance-total))
+    }
   }
   summation.insert("ram:TaxBasisTotalAmount", fmt-amount(net-total))
   summation.insert("ram:TaxTotalAmount", (
@@ -570,7 +581,9 @@
   ))
   summation.insert("ram:GrandTotalAmount", fmt-amount(gross-total))
   if prepaid-total > decimal("0") {
-    summation.insert("ram:TotalPrepaidAmount", fmt-amount(prepaid-total))
+    if include-breakdown {
+      summation.insert("ram:TotalPrepaidAmount", fmt-amount(prepaid-total))
+    }
     summation.insert(
       "ram:DuePayableAmount",
       fmt-amount(gross-total - prepaid-total),
@@ -675,7 +688,12 @@
   let surcharges = item-data.at("surcharges", default: ())
 
   let include-line-items = profile in ("basic", "en16931", "xrechnung")
+  // MINIMUM has neither postal nor electronic addresses, except for the seller
+  // country code (see `build-seller-trade-party`).
   let include-addresses = profile != "minimum"
+  // MINIMUM only carries the currency and the document totals: no payment
+  // instructions, VAT breakdown or document-level allowances/charges.
+  let include-settlement-details = profile != "minimum"
   // The seller contact (BG-6) and the payment service provider BIC (BT-86)
   // are not part of the MINIMUM, BASIC WL and BASIC schemas.
   let include-seller-contact = profile in ("en16931", "xrechnung")
@@ -710,15 +728,18 @@
 
   let trade-settlement = (
     // BT-83: same value as printed in the bank details and the EPC-QR code.
-    // Omitted if the bank details explicitly carry no reference.
-    "ram:PaymentReference": resolve-payment-reference(ctx, bank: bank),
+    // Omitted if the bank details explicitly carry no reference, and for
+    // MINIMUM, which has no payment instructions.
+    "ram:PaymentReference": if include-settlement-details {
+      resolve-payment-reference(ctx, bank: bank)
+    } else { none },
     "ram:InvoiceCurrencyCode": currency,
   )
 
   let bank-iban = if bank != none { bank.iban } else { "" }
   let bank-bic = if bank != none and include-bic { bank.bic } else { "" }
   let payment-means = build-payment-means(bank-iban, bank-bic)
-  if payment-means != none {
+  if include-settlement-details and payment-means != none {
     trade-settlement.insert(
       "ram:SpecifiedTradeSettlementPaymentMeans",
       payment-means,
@@ -726,7 +747,7 @@
   }
 
   let applicable-taxes = build-applicable-trade-tax(taxes.values())
-  if applicable-taxes != () {
+  if include-settlement-details and applicable-taxes != () {
     trade-settlement.insert("ram:ApplicableTradeTax", applicable-taxes)
   }
 
@@ -754,7 +775,7 @@
     discounts,
     surcharges,
   )
-  if header-allowance-charges != () {
+  if include-settlement-details and header-allowance-charges != () {
     trade-settlement.insert(
       "ram:SpecifiedTradeAllowanceCharge",
       header-allowance-charges,
@@ -762,7 +783,7 @@
   }
 
   let payment-terms = build-payment-terms(payment-goal, ctx.invoice-date)
-  if payment-terms != none {
+  if include-settlement-details and payment-terms != none {
     trade-settlement.insert("ram:SpecifiedTradePaymentTerms", payment-terms)
   }
 
@@ -784,10 +805,16 @@
       charge-total,
       currency,
       prepaid-total: prepaid-total,
+      include-breakdown: include-settlement-details,
     ),
   )
 
-  let is-outside-scope = taxes.values().any(t => t.category == "O")
+  // BR-O-02 (no VAT identifiers for "not subject to VAT") depends on the VAT
+  // breakdown, which MINIMUM does not carry; there the seller VAT identifier
+  // is needed for BR-CO-26 instead.
+  let is-outside-scope = (
+    profile != "minimum" and taxes.values().any(t => t.category == "O")
+  )
 
   let seller-eas = get-electronic-address(
     ctx.sender,
@@ -868,6 +895,17 @@
     }
   }
 
+  // MINIMUM has no seller identifier (BT-29), so only the seller VAT
+  // identifier (BT-31) can satisfy BR-CO-26.
+  if profile == "minimum" {
+    let vat-id = ctx.sender.vat-id
+    if vat-id == none or vat-id == "" {
+      panic(
+        "e-invoicing (profile 'minimum') requires a seller VAT identifier (BT-31). Set 'vat-id' on the sender, or use the 'basic-wl' profile or higher to identify the seller by 'tax-nr'.",
+      )
+    }
+  }
+
   let header-agreement = (:)
   if buyer-ref != none {
     header-agreement.insert("ram:BuyerReference", buyer-ref)
@@ -883,7 +921,7 @@
       ctx.sender.tax-nr,
       ctx.sender.vat-id,
       include-addresses,
-      electronic-address: seller-eas,
+      electronic-address: if include-addresses { seller-eas } else { none },
       contact: if include-seller-contact { seller-contact } else { none },
       is-outside-scope: is-outside-scope,
     ),
@@ -896,9 +934,10 @@
       ctx.recipient.city-name,
       ctx.recipient.post-code,
       ctx.recipient.country.code,
-      ctx.recipient.vat-id,
+      // The buyer VAT identifier (BT-48) is not part of MINIMUM.
+      if profile != "minimum" { ctx.recipient.vat-id } else { none },
       include-addresses,
-      electronic-address: buyer-eas,
+      electronic-address: if include-addresses { buyer-eas } else { none },
       is-outside-scope: is-outside-scope,
     ),
   )
@@ -906,7 +945,7 @@
     "order-nr",
     default: ctx.at("po-nr", default: ctx.recipient.at("po-nr", default: none)),
   ))
-  if order-nr != none and profile != "minimum" {
+  if order-nr != none {
     header-agreement.insert("ram:BuyerOrderReferencedDocument", (
       "ram:IssuerAssignedID": to-string(order-nr),
     ))
