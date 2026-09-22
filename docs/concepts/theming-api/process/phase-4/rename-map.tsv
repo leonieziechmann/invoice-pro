@@ -1,0 +1,39 @@
+kind	old	new	confidence	note
+concept	region	area	medium	Page areas vs locale region: env.region (="de"), invoice(region), locale.region.*, Typst text(region:) all mean country; CSS grid "named areas" is the closest prior art; German "Bereich". Grep: `area` only in one comment (src/locale/custom.typ:260); no Typst built-in `area`.
+layout-key	regions	areas	medium	Follows concept region->area. Error paths become theme::layout::areas::<name>. Grep: `areas` 0 hits.
+helper	theme.custom.region(name, ..)	theme.custom.area(name, ..)	medium	Follows concept region->area. Shadows nothing inside `import theme.custom: *` (no built-in or invoice-pro export named area).
+view-field	view.region	view.area	medium	Frozen frame-view field (name, width, height); follows concept region->area.
+schema-internal	region-style-fields / standard-regions	area-style-fields / standard-areas	medium	Internal identifiers; docs terms "look-safe area fields", "standard area names".
+area-field	x	left	medium	Anchor pairs become left<->right and top<->bottom, which explains the exclusivity by itself; Typst uses left/top/right/bottom for margin, pad, inset. Named arg/dict key only, so no shadowing of the alignment values `left`/`top`. Grep `left:` hits are all inset/margin sides dicts (different field).
+area-field	y	top	medium	See x->left; matches layout key body-top.
+area-field	brand	stationery	medium-low	The flag means "belongs to the stationery: dropped when stationery is pre-printed or art", not "styled with the brand". Same word as the layout key (bool on an area vs mode on the layout); alternative: preprinted. Grep `stationery:` 4 hits, all layout-level.
+layout-value	stationery: "generated"	stationery: none	medium-high	"No stationery: the theme draws everything" is Typst's `none` = off idiom and the patch engine's documented meaning of none; from-data already coerces "none". Values become none | "pre-printed" | (first:, rest:).
+marks-key	marks.x	marks.left	low	Horizontal offset from the left paper edge; consistent with area anchors. Optional.
+export	theme.resolve-theme	theme.resolve	high	Removes the stutter theme.resolve-theme. `resolve` exists only in src/logic/unit.typ (not in the theme namespace, not exported).
+export	theme.layout.letter-digital	theme.layout.us-letter-digital	high	Typst's paper name is "us-letter"; matches us-letter-10 and the <paper>-<variant> pattern of a4-digital. Grep: 0 hits.
+export-future	build-theme (internal)	theme.preset(name:, layout:, ..look)	medium	Only if made public (roadmap 0.5.x item 12). Typst idiom: a noun constructor like counter()/state(). Grep `preset(`: 0 hits.
+token	fonts.figures	fonts.number-width	high	Passed verbatim to Typst text(number-width:) (src/theming/parts/body.typ:33,66); values "tabular"/"proportional" are Typst's. Grep: 4 hits, all the Typst parameter itself.
+token	sizes.base	sizes.body	medium	Pairs with fonts.body (the body text = fonts.body at sizes.body); role name like Material "body". Helper: sizes(body: 9pt).
+token	spacing.sm	spacing.small	high	No abbreviations anywhere else (sizes.small, sizes.large, strokes.thin); translation-friendly.
+token	spacing.md	spacing.medium	high	See spacing.sm.
+option	title.layout	title.arrange	medium-high	"layout" is the page master; the option is a two-value arrangement like area `arrange`.
+option-value	title.layout: "line"	title.arrange: "row"	medium-high	Same vocabulary as area arrange ("stack" | "row").
+option-value	title.layout: "stacked"	title.arrange: "stack"	medium-high	See above.
+option	title.fill	title.color	medium	title.fill is a TEXT colour while every other fill option/field (header-fill, emphasis-fill, row.fill, area fill) is a background. `color` is only a named parameter (brand(color:) does the same).
+option	line-items.decrease-color	line-items.discount-color	high	Uses the component names discount()/surcharge() and the locale keys line-items.discount/surcharge; still sign-neutral on credit notes (type-based, not sign-based). The old renderer already calls them color-discount/color-surcharge.
+option	line-items.increase-color	line-items.surcharge-color	high	See decrease-color.
+option	totals.emphasis-fill	totals.fill	medium-high	It fills the whole totals block (src/theming/parts/body.typ:78) = Typst block(fill:). "emphasis" suggests italics (Typst emph).
+option	bank-details.qr	bank-details.show-qr	medium	Every other boolean option is show-*/repeat-* (show-subject, show-place-date, repeat-header); qr-size stays.
+option	sender.show-extra	(remove)	low	Controls the part sender-extra, not `sender` (violates "a part reads its own group"); redundant with part("sender-details", none) or dropping it from the area's parts. If kept: sender-details.show.
+part	sender-extra	sender-details	medium	Renders the sender's label/value pairs (contact, contact person) in the DIN info block; "extra" names the input field, not the output. Grep: 0 hits.
+part	info-block	reference-list	medium	Renders view.references as a vertical label/value list; `references` renders them as a row (DIN Bezugszeichenzeile). Removes the confusion with the `info` area (which hosts sender-extra on DIN) and the info.* motif module. Grep: 0 hits.
+part	register	registration	medium-high	Noun, not verb; covers company register entry AND VAT registration/tax number (UK "VAT registration number"). Keeps sender.register (the input key) distinct from the part. Grep: only src/zugferd/build.typ internal tax-registrations variable.
+part	notices	notes	medium	EN 16931 BG-1 "Invoice note"; view v2 plans notes of several kinds, not only legal notices. Grep: only comments.
+component	payment-goal	payment-terms	high	Calque of "Zahlungsziel"; EN 16931 BT-20 "Payment terms"; matches the part name. Also components/payment-goal.typ and render-payment-goal.
+kind	proforma	proforma-invoice	medium	UNTDID 1001 code 325 "Proforma invoice"; parallel to prepayment-invoice, corrected-invoice.
+kind	reminder	payment-reminder	medium-low	"reminder" alone is ambiguous; German Zahlungserinnerung/Mahnung.
+requirements	where: "page-1"	where: "first-page"	low	Provisional table; spelled like the pages vocabulary.
+requirements	printed-ok	waived-by-stationery	low	Provisional table; says what it does and uses the stationery term.
+internal	surface-of	tint-of	low	Internal colour helper that computes the `tint` token; the token was renamed from surface.
+checks	(new)	checks.level	medium	New strictness setting for requirement/identity/contrast checks; maintainer's word "Stufen" = level.
+checks-value	(new) none / visual / panic	"off" / "warn" / "error"	medium	"none" cannot be a string enum (from-data coerces "none" to none, evidence E4); "panic" is implementation jargon; off/warn/error is ESLint vocabulary and translates to aus/warnen/Fehler. "warn" draws the finding into the page (Typst has no warning API).
