@@ -358,14 +358,64 @@
     description-colspan,
   )
 
+  // Frames the rows of one entry (item, group header or group footer) with
+  // the item inset and stroke: a cap row above and below, and on either side
+  // a spacer cell spanning all of the entry's rows. Unbreakable spacers keep
+  // those rows on one page, so a description or modifier is never carried
+  // over to the next page without its title.
+  let frame-rows(
+    body-rows,
+    fill: none,
+    extra-top: 0pt,
+    extra-bottom: 0pt,
+    breakable: false,
+  ) = {
+    let item-inset = styles.item-inset
+    let item-stroke = styles.item-stroke
+
+    let spacer(side) = table.cell(
+      rowspan: body-rows.len() + 2,
+      breakable: breakable,
+      fill: fill,
+      inset: null-dir + ((side): item-inset.at(side)),
+      stroke: (
+        (side): item-stroke.at(side),
+        top: item-stroke.top,
+        bottom: item-stroke.bottom,
+      ),
+      none,
+    )
+
+    (
+      spacer("left"),
+      table.cell(
+        colspan: total-cols,
+        fill: fill,
+        inset: null-dir + (top: item-inset.top + extra-top),
+        stroke: (top: item-stroke.top),
+        none,
+      ),
+      spacer("right"),
+      ..body-rows.flatten(),
+      table.cell(
+        colspan: total-cols,
+        fill: fill,
+        inset: null-dir + (bottom: item-inset.bottom + extra-bottom),
+        stroke: (bottom: item-stroke.bottom),
+        none,
+      ),
+      empty-cell(colspan: total-cols + 2),
+    )
+  }
+
   // Recursive Item Builder
   let build-item-rows(
     item,
     index,
     is-odd: auto,
     is-sub-item: false,
+    breakable: false,
   ) = {
-    let rows = ()
     let resolved-odd = if is-odd != auto {
       is-odd
     } else if type(index) == int {
@@ -379,10 +429,7 @@
       styles.color-row-even
     }
 
-    // 1. Resolve Strokes (Top, Bottom, Left, Right)
     let cell-inset = styles.cell-inset
-    let item-inset = styles.item-inset
-    let item-stroke = styles.item-stroke
 
     // Centralized cell generator for internal row elements
     let line-cell = table.cell.with(
@@ -405,35 +452,19 @@
       item.at("has-description", default: false) and layout.show-descriptions
     )
 
-    let left-spacer = line-cell(
-      inset: null-dir + (left: item-inset.left),
-      stroke: (left: item-stroke.left),
-      none,
-    )
-
-    let right-spacer = line-cell(
-      inset: null-dir + (right: item-inset.right),
-      stroke: (right: item-stroke.right),
-      none,
-    )
-
-    // --- TOP CAP: Padding & Border ---
-    rows.push(line-cell(
-      colspan: total-cols + 2,
-      inset: null-dir + (top: item-inset.top),
-      stroke: item-stroke + (bottom: none),
-      none,
-    ))
+    // Content cells of each row; the caps and side spacers are added by
+    // `frame-rows`.
+    let rows = ()
 
     // --- SECTION: MAIN ITEM ROW ---
-    rows.push(left-spacer)
+    let main-row = ()
 
     let col-tracker = 0
     if layout.show-pos {
       let default-align = get-default-align("pos")
       let idx = content-keys.position(k => k == "pos")
       let cell-align = resolve-align(align-body, "pos", idx, default-align)
-      rows.push(line-cell(
+      main-row.push(line-cell(
         [#index],
         align: cell-align,
       ))
@@ -448,7 +479,7 @@
       desc-idx,
       default-desc-align,
     )
-    rows.push(line-cell(
+    main-row.push(line-cell(
       do-render-title(ctx, item, layout, styles),
       inset: cell-inset,
       align: desc-cell-align,
@@ -484,19 +515,19 @@
       let default-align = get-default-align(key)
       let idx = content-keys.position(k => k == key)
       let cell-align = resolve-align(align-body, key, idx, default-align)
-      rows.push(line-cell(content, align: cell-align))
+      main-row.push(line-cell(content, align: cell-align))
       col-tracker += 1
     }
 
-    rows.push(right-spacer)
+    rows.push(main-row)
 
     // --- SECTION: DESCRIPTION ROW ---
     if has-description {
+      let desc-row = ()
       let d-col-tracker = 0
-      rows.push(left-spacer)
 
       if layout.show-pos {
-        rows.push(line-cell(inset: 0pt, none))
+        desc-row.push(line-cell(inset: 0pt, none))
         d-col-tracker += 1
       }
       d-col-tracker += abs-description-colspan
@@ -510,7 +541,7 @@
         default-desc-align,
       )
 
-      rows.push(line-cell(
+      desc-row.push(line-cell(
         do-render-desc(ctx, item, layout, styles),
         colspan: abs-description-colspan,
         inset: cell-inset + (top: 0pt),
@@ -519,21 +550,19 @@
 
       let remaining = total-cols - desc-idx - abs-description-colspan
       if remaining > 0 {
-        rows.push(line-cell(
+        desc-row.push(line-cell(
           none,
           colspan: remaining,
         ))
       }
 
-      rows.push(right-spacer)
+      rows.push(desc-row)
     }
 
     // --- SECTION: MODIFIER ROWS ---
     let build-modifier-row(mod, is-discount) = {
       let m-row = ()
       let m-col-tracker = 0
-
-      m-row.push(left-spacer)
 
       if layout.show-pos {
         m-row.push(line-cell(none, inset: 0pt))
@@ -610,30 +639,28 @@
         m-row.push(line-cell(colspan: remaining, inset: 0pt))
       }
 
-      m-row.push(right-spacer)
-
       return m-row
     }
 
     if has-mods {
       if item.at("has-discounts", default: false) {
         for discount in item.discounts {
-          rows += build-modifier-row(discount, true)
+          rows.push(build-modifier-row(discount, true))
         }
       }
 
       if item.at("has-surcharge", default: false) {
         for surcharge in item.surcharge {
-          rows += build-modifier-row(surcharge, false)
+          rows.push(build-modifier-row(surcharge, false))
         }
       }
 
       // --- SECTION: SUBTOTAL ROW ---
-      rows.push(left-spacer)
+      let sub-row = ()
       let sub-col-tracker = 0
 
       if layout.show-pos {
-        rows.push(line-cell(inset: 0pt, none))
+        sub-row.push(line-cell(inset: 0pt, none))
         sub-col-tracker += 1
       }
 
@@ -657,7 +684,7 @@
 
       // Label (aligned with description)
       let span1 = indices.total - indices.desc
-      rows.push(line-cell(
+      sub-row.push(line-cell(
         text(
           weight: styles.weight-bold,
           size: styles.size-subtitle,
@@ -668,7 +695,7 @@
       sub-col-tracker += span1
 
       // Total Value
-      rows.push(line-cell(
+      sub-row.push(line-cell(
         text(weight: styles.weight-bold)[#item.total],
         align: total-cell-align,
       ))
@@ -677,33 +704,21 @@
       // Fill remaining
       let remaining = total-cols - sub-col-tracker
       if remaining > 0 {
-        rows.push(line-cell(
+        sub-row.push(line-cell(
           none,
           inset: 0pt,
           colspan: remaining,
         ))
       }
-      rows.push(right-spacer)
+      rows.push(sub-row)
     }
 
-    // --- BOTTOM CAP: Padding & Border ---
-    rows.push(line-cell(
-      colspan: total-cols + 2,
-      inset: null-dir + (bottom: item-inset.bottom),
-      stroke: item-stroke + (top: none),
-      [],
-    ))
-
-    rows.push(empty-cell(colspan: total-cols + 2))
-
-    rows
+    frame-rows(rows, fill: bg, breakable: breakable)
   }
 
-  let build-group-header-rows(group) = {
-    let rows = ()
+  let build-group-header-rows(group, breakable: false) = {
+    let row = ()
     let cell-inset = styles.cell-inset
-    let item-inset = styles.item-inset
-    let item-stroke = styles.item-stroke
 
     let line-cell = table.cell.with(
       colspan: 1,
@@ -713,34 +728,12 @@
       stroke: none,
     )
 
-    let left-spacer = line-cell(
-      inset: null-dir + (left: item-inset.left),
-      stroke: (left: item-stroke.left),
-      none,
-    )
-
-    let right-spacer = line-cell(
-      inset: null-dir + (right: item-inset.right),
-      stroke: (right: item-stroke.right),
-      none,
-    )
-
-    // Top spacer
-    rows.push(line-cell(
-      colspan: total-cols + 2,
-      inset: null-dir + (top: item-inset.top + 0.4em),
-      stroke: item-stroke + (bottom: none),
-      none,
-    ))
-
-    rows.push(left-spacer)
-
     let remaining-cols = total-cols
     if layout.show-pos {
       let default-align = get-default-align("pos")
       let idx = content-keys.position(k => k == "pos")
       let cell-align = resolve-align(align-body, "pos", idx, default-align)
-      rows.push(line-cell(
+      row.push(line-cell(
         text(weight: styles.weight-bold)[#group.pos],
         align: cell-align,
       ))
@@ -756,7 +749,7 @@
       default-desc-align,
     )
 
-    rows.push(line-cell(
+    row.push(line-cell(
       colspan: remaining-cols,
       align: desc-cell-align,
       inset: cell-inset,
@@ -780,26 +773,12 @@
       ),
     ))
 
-    rows.push(right-spacer)
-
-    // Bottom cap
-    rows.push(line-cell(
-      colspan: total-cols + 2,
-      inset: null-dir + (bottom: item-inset.bottom),
-      stroke: item-stroke + (top: none),
-      [],
-    ))
-
-    rows.push(empty-cell(colspan: total-cols + 2))
-
-    rows
+    frame-rows((row,), extra-top: 0.4em, breakable: breakable)
   }
 
-  let build-group-footer-rows(group) = {
-    let rows = ()
+  let build-group-footer-rows(group, breakable: false) = {
+    let row = ()
     let cell-inset = styles.cell-inset
-    let item-inset = styles.item-inset
-    let item-stroke = styles.item-stroke
 
     let line-cell = table.cell.with(
       colspan: 1,
@@ -809,31 +788,10 @@
       stroke: none,
     )
 
-    let left-spacer = line-cell(
-      inset: null-dir + (left: item-inset.left),
-      stroke: (left: item-stroke.left),
-      none,
-    )
-
-    let right-spacer = line-cell(
-      inset: null-dir + (right: item-inset.right),
-      stroke: (right: item-stroke.right),
-      none,
-    )
-
-    // Top spacer
-    rows.push(line-cell(
-      colspan: total-cols + 2,
-      inset: null-dir + (top: item-inset.top),
-      stroke: item-stroke + (bottom: none),
-      none,
-    ))
-
-    rows.push(left-spacer)
     let sub-col-tracker = 0
 
     if layout.show-pos {
-      rows.push(line-cell(inset: 0pt, none))
+      row.push(line-cell(inset: 0pt, none))
       sub-col-tracker += 1
     }
 
@@ -856,7 +814,7 @@
     )
 
     let span1 = indices.total - indices.desc
-    rows.push(line-cell(
+    row.push(line-cell(
       text(
         weight: styles.weight-bold,
         size: styles.size-subtitle,
@@ -867,7 +825,7 @@
     ))
     sub-col-tracker += span1
 
-    rows.push(line-cell(
+    row.push(line-cell(
       text(weight: styles.weight-bold)[#group.subtotal],
       align: total-cell-align,
       inset: cell-inset,
@@ -876,52 +834,83 @@
 
     let remaining = total-cols - sub-col-tracker
     if remaining > 0 {
-      rows.push(line-cell(
+      row.push(line-cell(
         none,
         inset: 0pt,
         colspan: remaining,
       ))
     }
-    rows.push(right-spacer)
 
-    // Bottom cap
-    rows.push(line-cell(
-      colspan: total-cols + 2,
-      inset: null-dir + (bottom: item-inset.bottom + 0.2em),
-      stroke: item-stroke + (top: none),
-      [],
-    ))
-
-    rows.push(empty-cell(colspan: total-cols + 2))
-
-    rows
+    frame-rows((row,), extra-bottom: 0.2em, breakable: breakable)
   }
 
+  let table-columns = (auto,) + cols + (auto,)
   let entries = data.at("entries", default: data.items)
-  let item-rows = ()
-  let display-index = 1
-  for entry in entries {
-    let entry-kind = entry.at("kind", default: "item")
-    if entry-kind == "group-header" {
-      item-rows += build-group-header-rows(entry)
-    } else if entry-kind == "group-footer" {
-      item-rows += build-group-footer-rows(entry)
-    } else {
-      let is-odd = calc.odd(display-index)
-      let pos-val = entry.at("pos", default: str(display-index))
-      item-rows += build-item-rows(entry, pos-val, is-odd: is-odd)
-      display-index += 1
-    }
-  }
 
-  table(
-    columns: (auto,) + cols + (auto,),
-    stroke: none,
-    align: auto,
-    table-header,
-    ..item-rows,
-    empty-cell(colspan: total-cols + 2),
-    ..table-footer,
-    table.hline(stroke: styles.stroke-table-bottom)
-  )
+  // `layout` is shadowed by the layout information above.
+  std.layout(size => {
+    // An entry kept on one page but taller than a page (next to the
+    // repeated header and footer) would overflow it, so such an entry
+    // falls back to rows that may break across pages.
+    let keep-together(build-rows) = {
+      let rows = build-rows(false)
+      let height(..header-footer) = {
+        measure(
+          width: size.width,
+          table(
+            columns: table-columns,
+            stroke: none,
+            ..header-footer,
+            ..rows,
+          ),
+        ).height
+      }
+      // Measuring the header as well makes Typst lay out the whole document
+      // once more, so that is only done for entries that are not obviously
+      // small.
+      let fits = (
+        height() <= size.height / 2
+          or height(table-header, ..table-footer) <= size.height
+      )
+      if fits { rows } else { build-rows(true) }
+    }
+
+    let item-rows = ()
+    let display-index = 1
+    for entry in entries {
+      let entry-kind = entry.at("kind", default: "item")
+      if entry-kind == "group-header" {
+        item-rows += keep-together(breakable => build-group-header-rows(
+          entry,
+          breakable: breakable,
+        ))
+      } else if entry-kind == "group-footer" {
+        item-rows += keep-together(breakable => build-group-footer-rows(
+          entry,
+          breakable: breakable,
+        ))
+      } else {
+        let is-odd = calc.odd(display-index)
+        let pos-val = entry.at("pos", default: str(display-index))
+        item-rows += keep-together(breakable => build-item-rows(
+          entry,
+          pos-val,
+          is-odd: is-odd,
+          breakable: breakable,
+        ))
+        display-index += 1
+      }
+    }
+
+    table(
+      columns: table-columns,
+      stroke: none,
+      align: auto,
+      table-header,
+      ..item-rows,
+      empty-cell(colspan: total-cols + 2),
+      ..table-footer,
+      table.hline(stroke: styles.stroke-table-bottom)
+    )
+  })
 }
