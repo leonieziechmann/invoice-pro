@@ -1,0 +1,6 @@
+out/
+baseline-042/src/
+parity/
+
+# The PDF-image guard test needs this fixture (the repository ignores *.pdf)
+!tests/fake.pdf
