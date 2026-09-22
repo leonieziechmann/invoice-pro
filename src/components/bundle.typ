@@ -109,7 +109,19 @@
         m-unit.resolve(
           unit,
           ctx.locale,
-          quantity: ctx.at("bundle-quantity", default: decimal("1")),
+          quantity: if quantity != auto { coercion.to-decimal(quantity) } else {
+            ctx.at("bundle-quantity", default: decimal("1"))
+          },
+          default: m-unit.pcs,
+        ),
+      )
+      // Quantity-independent form, used to detect and name a shared unit.
+      put(
+        "unit-singular",
+        m-unit.resolve(
+          unit,
+          ctx.locale,
+          quantity: decimal("1"),
           default: m-unit.pcs,
         ),
       )

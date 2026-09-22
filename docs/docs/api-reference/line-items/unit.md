@@ -25,7 +25,7 @@ You can either pass the evaluated unit dictionary directly or pass the function 
 )
 
 #line-items[
-  // Passing the builder function (resolved dynamically to "Stunde" with ZUGFeRD code "HUR")
+  // Passing the builder function (resolved dynamically to "Stunden" for quantity 8, with ZUGFeRD code "HUR")
   #item([IT Consulting], price: 120.00, quantity: 8, unit: unit.hour)
 
   // Or using shorthand aliases (resolved dynamically to "Meter" with ZUGFeRD code "MTR")

@@ -147,6 +147,10 @@
 
       let format = ctx.locale.format
 
+      let format-unit(x) = if type(x) == dictionary and "display" in x {
+        [#(x.display)]
+      } else { [#x] }
+
       let format-item(item) = loom.mutator.batch(item, {
         import loom.mutator: *
 
@@ -160,9 +164,8 @@
         update("quantity", format.number)
         update("base-quantity", format.number)
 
-        update("unit", x => if type(x) == dictionary and "display" in x {
-          [#(x.display)]
-        } else { [#x] })
+        update("unit", format-unit)
+        update("unit-singular", format-unit)
 
         update("price", format.currency-fine)
         update("total", format.currency)
@@ -408,7 +411,8 @@
         has-dates: item-dates.len() != 0,
         multiple-dates: item-dates.len() > 1,
         multiple-quantities: items.map(i => i.quantity).dedup().len() > 1,
-        multiple-units: items.map(i => i.unit).dedup().len() > 1,
+        // Compare the singular form so "1 day" and "2 days" count as one unit.
+        multiple-units: items.map(i => i.unit-singular).dedup().len() > 1,
         multiple-tax-rates: items.map(i => i.tax).dedup().len() > 1,
         has-global-modifier: formated-discounts.len()
           + formated-surcharges.len()

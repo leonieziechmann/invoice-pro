@@ -95,6 +95,7 @@
     quantity: quantity,
     base-quantity: base-quantity,
     unit: unit,
+    unit-singular: ctx.unit-singular,
 
     price: base-price,
     total: modified-total,

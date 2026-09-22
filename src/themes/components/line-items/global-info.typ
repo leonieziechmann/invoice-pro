@@ -47,7 +47,11 @@
   if (
     not layout.show-units and not layout.multiple-units and data.items.len() > 0
   ) {
-    let raw-unit = data.items.first(default: (unit: none)).unit
+    // The note names the unit, so use its singular form (not "2 days").
+    let raw-unit = data
+      .items
+      .first(default: (unit-singular: none))
+      .unit-singular
     let unit = if type(raw-unit) == dictionary {
       raw-unit.at("display", default: raw-unit.at("name", default: none))
     } else {

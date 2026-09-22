@@ -182,7 +182,19 @@
         unit-logic.resolve(
           unit,
           ctx.locale,
-          quantity: ctx.at("quantity", default: decimal("1")),
+          quantity: if quantity != auto { coercion.to-decimal(quantity) } else {
+            ctx.at("quantity", default: decimal("1"))
+          },
+          default: m-unit.pc,
+        ),
+      )
+      // Quantity-independent form, used to detect and name a shared unit.
+      put(
+        "unit-singular",
+        unit-logic.resolve(
+          unit,
+          ctx.locale,
+          quantity: decimal("1"),
           default: m-unit.pc,
         ),
       )
