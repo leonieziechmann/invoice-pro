@@ -1,0 +1,41 @@
+theme::tokens::colors has unknown key `primry`. Did you mean `primary`? Allowed keys: primary, on-primary, primary-text, accent, accent-text, text, text-muted, border, tint, background
+theme `classic`: unexpected named argument(s) `form`. A theme takes patches (e.g. `.with(theme.custom.colors(primary: teal))`) and `layout:` (e.g. `layout: theme.layout.din-5008-b`). `form` is a 0.4 `themes.DIN-5008` parameter; see the migration table in the theme docs.
+theme::layout::areas has no area `adress` in layout `din-5008-a`. Did you mean `address`? Existing areas: marks, letterhead, address, info, references, title, continuation, page-number, footer. To ADD an area, give it a `place`.
+theme::layout (din-5008-a) must host `recipient` in exactly one first-page (tagged) or flow area (found 0). It carries legally required output: recipient name and address (§ 14 UStG; EN 16931 BG-7). Restyle it by replacing its renderer, but keep it placed.
+theme::layout (a4-sidebar) must host `title` in at least one first-page (tagged) or flow area (found 0). It carries legally required output: document identity: invoice number and date (§ 14 UStG; EN 16931 BT-1, BT-2). Restyle it by replacing its renderer, but keep it placed.
+theme::parts::notes carries legally required output and cannot be `none`; wrap it or replace its renderer instead
+theme::parts::notes returned no content, but it must render legally required output
+theme::options::logo::image needs alt text, e.g. image("logo.svg", alt: "ACME GmbH") (checked always: a document cannot see --pdf-standard, and PDF/UA-1 requires it)
+theme::layout::areas::stamp overlaps the address window area `address`; move it or shrink it (envelope windows must stay clear)
+theme::tokens: derivations form a cycle (colors::text-muted, colors::tint); every chain of `t => ..` must end in a literal value
+invoice-pro found 2 problems (validation: "strict"; preview them with validation: "draft" or --input invoice-pro-validation=draft): 1. theme: colors::text-muted on colors::background has contrast 2.65:1, below checks.min-contrast 4.5:1 2. theme: colors::text-muted on colors::tint has contrast 2.15:1, below checks.min-contrast 4.5:1
+theme::parts::signatur is not a built-in part. Did you mean `signature`? Custom parts need a package prefix, e.g. `acme/rail` (un-prefixed names are reserved for built-ins).
+theme: unknown patch group `colours`. Allowed groups: tokens, options, parts, layout, checks
+variable `theme::tokens::colors::primary`("#ff0000") must be of color (or a derivation `t => ..`)
+theme::layout::paper `a44` has no known size; use (width:, height:). Did you mean `a4`? Known: ISO a0-a10, b0-b10, c0-c10, us-letter, us-legal, us-executive, us-tabloid
+variable `invoice::theme` must be of function (a lazy theme such as `theme.classic`), found dictionary. For a brand file write `theme.classic.with(theme.custom.from-data(toml("brand.toml")))`.
+theme::layout::stationery::first embeds a PDF image; PDF/A and PDF/UA exports cannot embed PDF images (Typst limitation). Convert the letterhead to SVG
+theme::layout::areas::title::pages applies only to fixed, header, footer, background and foreground areas; flow areas appear once
+theme::custom::from-data: `options::logo::image` is the path "x.svg"; packages cannot open files by path. Pass `assets: p => image(p, alt: ..)` from your document.
+themed: layout patches are document-level (the page master cannot change mid-document); pass them to `invoice(theme: ..)`
+themed: unexpected named argument(s) `tokens`; pass patches, e.g. themed(theme.custom.colors(primary: red))[..]
+theme `classic`: patch #2 must be a theme.custom result or a patch dictionary, found integer (42)
+themed: `parts::title` belongs to the page frame, which is drawn once per document; pass it to `invoice(theme: ..)`
+theme::parts::totals returned no content, but it must render legally required output
+theme: the invoice number (2026-0142) does not appear in the first-page content; the area hosting `title` must render view.document.number (§ 14 UStG; EN 16931 BT-1)
+theme::layout (plain) must host `sender` or `company` or `return-address` in at least one area drawn on page 1 (found 0). It carries legally required output: supplier name and address (§ 14 UStG; EN 16931 BG-4). Restyle it by replacing its renderer, but keep it placed.
+theme::layout::areas::address is a fixed area on following pages (pages: "all") and would overprint the body there; use pages: "first" or move it into the margins
+theme::layout::areas::footer is 42.2mm tall, but the bottom margin leaves 17.4mm between footer-descent and the 5mm footer-clearance; use the computed margin (theme.custom.page(margin: (bottom: reset()))), raise margin.bottom or shorten the footer
+theme::tokens::sizes::fine (5pt) must be an absolute length of at least 6pt (DIN 5008 minimum for the return address and legal footer)
+theme::options::title::color: a wrap marker is only valid for a part (theme.custom.wrap(name, ..)), not here
+theme::env::kind `banana-note` is not a document kind. Known kinds: invoice, credit-note, corrected-invoice, prepayment-invoice, proforma-invoice, quote, order-confirmation, delivery-note, payment-reminder, receipt, letter
+theme::layout (sn-010130-right) hosts `qr-bill`, which needs A4 portrait paper (SIX QR-bill: 210 x 105 mm slip)
+invoice-pro found 2 problems (validation: "strict"; preview them with validation: "draft" or --input invoice-pro-validation=draft): 1. theme::tokens::colors::primary is a CMYK colour; Typst cannot embed a CMYK output profile, so PDF/A-3 (ZUGFeRD) rejects it. Use rgb() or oklch(). 2. theme::tokens::colors::accent is a CMYK colour; Typst cannot embed a CMYK output profile, so PDF/A-3 (ZUGFeRD) rejects it. Use rgb() or oklch().
+variable `theme::options::items-table::zebra`(("red", 12)) must be of array of none | color | function
+variable `theme::options::page-number::format`("Seite") must be of auto | function
+theme::layout::areas::address needs exactly one of `left` or `right` (place: "fixed")
+theme::layout::envelopes::c6 does not take the folded sheet: packet 210 x 105 mm, envelope 162 x 114 mm; check the paper, `marks.fold` or the envelope's `fold`
+theme::layout::proof names envelope `dl`, which the layout does not list. Listed: din-dl, din-c6-5, din-c5-a, din-c4-a
+theme::layout::envelopes::0::window needs exactly one of `left` or `right`
+theme `classic`: the layout resolver `env => ..` must return a layout dictionary (such as `theme.layout.din-5008-b`), found "din-5008-a"
+theme::layout::stationery must be none (the theme draws everything), "pre-printed" or (first: content, rest: content), found "generated"
