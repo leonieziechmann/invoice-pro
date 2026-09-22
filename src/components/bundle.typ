@@ -115,7 +115,11 @@
       )
 
       derive("date", date)
-      put("bundle-date", ctx.at("date", default: date))
+      put("bundle-date", if date == auto {
+        ctx.at("date", default: auto)
+      } else {
+        date
+      })
 
       derive(
         "input-gross",

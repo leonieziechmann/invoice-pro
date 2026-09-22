@@ -48,7 +48,7 @@
     value.map(v => if type(v) == datetime { v } else {
       panic("Invalid date in range")
     })
-  } else if value == auto { auto } else if value == auto { none } else {
+  } else if value == auto { auto } else if value == none { none } else {
     panic("Expected date-like, got " + str(t))
   }
 }

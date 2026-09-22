@@ -557,6 +557,19 @@
   )
 }
 
+// --- Test date coercion ---
+#{
+  import "/src/utils/coercion.typ": to-date
+
+  let d1 = datetime(year: 2026, month: 7, day: 1)
+  let d2 = datetime(year: 2026, month: 7, day: 5)
+
+  assert.eq(to-date(d1), d1)
+  assert.eq(to-date((d1, d2)), (d1, d2))
+  assert.eq(to-date(auto), auto)
+  assert.eq(to-date(none), none)
+}
+
 // --- Test ZUGFeRD delivery date determination ---
 #{
   import "/src/zugferd/build.typ": determine-delivery-dates
