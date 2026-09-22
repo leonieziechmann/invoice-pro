@@ -385,6 +385,7 @@ The automated `validate-all-zugferd` suite covers:
 - `tests/integration/zugferd-outside-scope/test.typ` — Tax outside scope / non-taxable transactions.
 - `tests/integration/zugferd-en16931/test.typ` — Full EN 16931 / XRechnung profile.
 - `tests/integration/zugferd-reverse-charge/test.typ` — Reverse charge mechanism (tax category `AE`).
+- `tests/integration/payment-reference/*/test.typ` — Payment reference resolution (`bank-details` argument > `payment-reference` > `invoice-nr`). Each test also asserts that the printed bank details, EPC-QR payload, reference sign and `info.payment-reference` match BT-83 of the attached `factur-x.xml`.
 - `template/invoice.typ` — Default release invoice template.
 
 #### When to Run ZUGFeRD Validation

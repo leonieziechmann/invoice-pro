@@ -25,17 +25,24 @@ If you leave `payment-amount` set to `auto`, the component will automatically fe
 The `bic` parameter is optional. If not provided or set to `none`, the BIC row will not be displayed in the bank details block, and the EPC-QR code will be generated without a BIC.
 :::
 
-| Key                   | Type                         | Description                                                                                                                                     |
-| --------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                | `auto` \| `none` \| `str`    | The name of the account holder. If set to `auto`, it automatically defaults to the sender's name.                                               |
-| `bank`                | `none` \| `str`              | The name of the banking institution.                                                                                                            |
-| `iban`                | `none` \| `str`              | The International Bank Account Number (IBAN).                                                                                                   |
-| `bic`                 | `none` \| `str`              | The Bank Identifier Code (BIC/SWIFT). If omitted or `none`, the BIC field is hidden in the bank details block and omitted from the EPC-QR code. |
-| `reference`           | `auto` \| `none` \| `str`    | The payment reference to be used by the customer.                                                                                               |
-| `payment-amount`      | `auto` \| `none` \| `number` | The specific amount to be paid. If `auto`, it uses the remaining amount due (or full gross total if no prepayments are present).                |
-| `show-reference`      | `bool`                       | Whether to display the reference field in the output. Defaults to `true`.                                                                       |
-| `account-holder-text` | `auto`                       | Optional custom text to label the account holder field.                                                                                         |
-| `qr-code`             | `dictionary`                 | Configuration for a payment QR code (e.g., EPC-QR). Accepts keys like `display` (bool) and `size` (length, defaults to `5em`).                  |
+:::info Payment reference
+The payment reference is resolved in one order: the `reference` or `text` argument of `bank-details`, then the invoice's `payment-reference`, then the `invoice-nr`. The same value is printed, encoded in the EPC-QR code and written to the ZUGFeRD XML (BT-83), and it is also what `references.payment-reference` and `#info.payment-reference` show.
+
+In the EPC-QR code, `reference` and the `invoice-nr` fill the structured reference field (max. 35 characters), while `text` and the invoice's `payment-reference` fill the unstructured remittance text field (max. 140 characters).
+:::
+
+| Key                   | Type                         | Description                                                                                                                                                                       |
+| --------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                | `auto` \| `none` \| `str`    | The name of the account holder. If set to `auto`, it automatically defaults to the sender's name.                                                                                 |
+| `bank`                | `none` \| `str`              | The name of the banking institution.                                                                                                                                              |
+| `iban`                | `none` \| `str`              | The International Bank Account Number (IBAN).                                                                                                                                     |
+| `bic`                 | `none` \| `str`              | The Bank Identifier Code (BIC/SWIFT). If omitted or `none`, the BIC field is hidden in the bank details block and omitted from the EPC-QR code.                                   |
+| `reference`           | `auto` \| `none` \| `str`    | The structured payment reference to be used by the customer. If `auto`, it falls back to the invoice's `payment-reference`, then to the `invoice-nr`. `none` omits the reference. |
+| `text`                | `none` \| `str`              | Unstructured payment reference text, as an alternative to `reference` (mutually exclusive).                                                                                       |
+| `payment-amount`      | `auto` \| `none` \| `number` | The specific amount to be paid. If `auto`, it uses the remaining amount due (or full gross total if no prepayments are present).                                                  |
+| `show-reference`      | `bool`                       | Whether to display the reference field in the output. Defaults to `true`.                                                                                                         |
+| `account-holder-text` | `auto`                       | Optional custom text to label the account holder field.                                                                                                                           |
+| `qr-code`             | `dictionary`                 | Configuration for a payment QR code (e.g., EPC-QR). Accepts keys like `display` (bool) and `size` (length, defaults to `5em`).                                                    |
 
 ---
 
@@ -158,24 +165,24 @@ Invoiced to #info.recipient.name in #info.recipient.city.
 
 ### Pre-bound Properties
 
-| Field / Property                       | Description                         |
-| :------------------------------------- | :---------------------------------- |
-| `#info.invoice-nr`                     | Invoice number (`ctx.invoice-nr`)   |
-| `#info.invoice-date` (or `#info.date`) | Formatted invoice issue date        |
-| `#info.due-date`                       | Calculated payment deadline date    |
-| `#info.customer-nr`                    | Customer / Client ID                |
-| `#info.order-nr`                       | Purchase Order number               |
-| `#info.order-date`                     | Purchase Order date                 |
-| `#info.project`                        | Project name or code                |
-| `#info.contract-nr`                    | Contract reference                  |
-| `#info.quote-nr`                       | Quotation number                    |
-| `#info.delivery-note-nr`               | Delivery note number                |
-| `#info.preceding-invoice-nr`           | Preceding / original invoice number |
-| `#info.payment-reference`              | Payment reference string            |
-| `#info.buyer-reference`                | Buyer reference / Leitweg-ID        |
-| `#info.subject`                        | Document subject line               |
-| `#info.iban`                           | Payment IBAN                        |
-| `#info.bic`                            | Bank Identifier Code (BIC)          |
+| Field / Property                       | Description                                                                         |
+| :------------------------------------- | :---------------------------------------------------------------------------------- |
+| `#info.invoice-nr`                     | Invoice number (`ctx.invoice-nr`)                                                   |
+| `#info.invoice-date` (or `#info.date`) | Formatted invoice issue date                                                        |
+| `#info.due-date`                       | Calculated payment deadline date                                                    |
+| `#info.customer-nr`                    | Customer / Client ID                                                                |
+| `#info.order-nr`                       | Purchase Order number                                                               |
+| `#info.order-date`                     | Purchase Order date                                                                 |
+| `#info.project`                        | Project name or code                                                                |
+| `#info.contract-nr`                    | Contract reference                                                                  |
+| `#info.quote-nr`                       | Quotation number                                                                    |
+| `#info.delivery-note-nr`               | Delivery note number                                                                |
+| `#info.preceding-invoice-nr`           | Preceding / original invoice number                                                 |
+| `#info.payment-reference`              | Payment reference (Verwendungszweck), resolved like [`bank-details`](#bank-details) |
+| `#info.buyer-reference`                | Buyer reference / Leitweg-ID                                                        |
+| `#info.subject`                        | Document subject line                                                               |
+| `#info.iban`                           | Payment IBAN                                                                        |
+| `#info.bic`                            | Bank Identifier Code (BIC)                                                          |
 
 ### Nested Dictionaries
 

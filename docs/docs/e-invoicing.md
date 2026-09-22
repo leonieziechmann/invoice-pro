@@ -158,6 +158,16 @@ Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the 
 
 Avoid using raw percentages (e.g., `19%`) directly on items if you need strict validation, as using the `tax` module functions guarantees the category codes are assigned correctly.
 
+### 4. Payment Reference (BT-83)
+
+The remittance information (`ram:PaymentReference`) always matches the payment reference printed in the [`bank-details`](./api-reference/components.md#bank-details) block and encoded in its EPC-QR code. It is resolved in this order:
+
+1. the `reference` or `text` argument of `bank-details`,
+2. the `payment-reference` parameter of `invoice`,
+3. the `invoice-nr`.
+
+If `bank-details` explicitly sets `reference: none`, BT-83 is omitted as well.
+
 ---
 
 ## Hardcoded Details & Limitations

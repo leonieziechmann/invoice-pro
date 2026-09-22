@@ -1,5 +1,6 @@
 #import "../loom-wrapper.typ": content-motif
 #import "../utils/types.typ"
+#import "../logic/payment-reference.typ": bank-signal, resolve-payment-reference
 
 #let _to-content(val) = {
   if val == none {
@@ -139,13 +140,7 @@
             default: ctx.at("original-invoice-nr", default: none),
           )
         } else if key == "payment-reference" {
-          val = ctx.at(
-            "payment-reference",
-            default: ctx.at(
-              "reference",
-              default: ctx.at("invoice-nr", default: none),
-            ),
-          )
+          val = resolve-payment-reference(ctx, bank: bank-signal(ctx))
         } else if key == "buyer-reference" or key == "leitweg-id" {
           val = ctx.at(
             "buyer-reference",

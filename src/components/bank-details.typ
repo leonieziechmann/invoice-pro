@@ -1,8 +1,14 @@
 #import "../loom-wrapper.typ": loom, managed-motif
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
+#import "../logic/payment-reference.typ": resolve-remittance
 
 /// Defines and renders the bank account information for payments.
+///
+/// The payment reference is resolved in this order: the `reference` or `text`
+/// argument, the invoice's `payment-reference`, the `invoice-nr`. The resolved
+/// value is printed, encoded in the EPC-QR code and written to the ZUGFeRD XML
+/// (BT-83).
 ///
 /// -> content
 #let bank-details(
@@ -23,10 +29,13 @@
   bic: none,
 
   /// The structured payment reference to be used by the customer.
+  /// If `auto`, falls back to the invoice's `payment-reference` (as
+  /// unstructured text) and then to the `invoice-nr`. `none` omits it.
   /// -> auto | none | string
   reference: auto,
 
   /// The unstructured payment reference text to be used by the customer.
+  /// Takes precedence over the invoice's `payment-reference` and `invoice-nr`.
   /// -> none | string
   text: none,
 
@@ -84,14 +93,13 @@
 
       derive("sender", "name", name, default: "")
 
-      if text != none {
-        put("text", text)
-        put("reference", none)
-      } else {
-        put("text", none)
-        put("reference", ctx.invoice-nr)
-        derive("reference", reference)
-      }
+      let remittance = resolve-remittance(
+        ctx,
+        reference: reference,
+        text: text,
+      )
+      put("reference", remittance.reference)
+      put("text", remittance.text)
 
       nest("theme", {
         ensure("bank-details", (..) => panic(

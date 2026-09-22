@@ -20,6 +20,9 @@ echo "========================"
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-outside-scope/test.typ"
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-en16931/test.typ"
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-reverse-charge/test.typ"
+for test in tests/integration/payment-reference/*/test.typ; do
+  "$VALIDATE_ZUGFERD" "$test"
+done
 "$VALIDATE_ZUGFERD" "template/invoice.typ"
 
 echo ""

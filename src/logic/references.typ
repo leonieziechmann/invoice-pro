@@ -1,3 +1,5 @@
+#import "payment-reference.typ": bank-signal, resolve-payment-reference
+
 #let tax-nr(label: auto, value: auto) = {
   ctx => {
     let title = if label == auto {
@@ -339,10 +341,7 @@
       ctx.locale.strings.reference.payment-reference
     } else { label }
     let val = if value == auto {
-      ctx.at("payment-reference", default: ctx.at(
-        "reference",
-        default: ctx.invoice-nr,
-      ))
+      resolve-payment-reference(ctx, bank: bank-signal(ctx))
     } else { value }
     (title, val)
   }

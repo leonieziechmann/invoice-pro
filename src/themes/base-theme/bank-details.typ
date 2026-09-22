@@ -1,5 +1,6 @@
 #import "@preview/ibanator:0.1.0"
 #import "@preview/sepay:0.1.1": epc-qr-code
+#import "../../utils/coercion.typ": to-string
 
 #let render-bank-details(ctx, view) = {
   let strings = ctx.locale.strings
@@ -23,8 +24,8 @@
         height: view.qr-code.size,
       )
         + if remittance-text != none {
-          (text: remittance-text)
-        } else if reference != none { (reference: reference) },
+          (text: to-string(remittance-text))
+        } else if reference != none { (reference: to-string(reference)) },
     )
   }
 

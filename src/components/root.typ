@@ -164,6 +164,7 @@
           + (
             items: view.item-data.items,
             payment-goal: view.payment-goal,
+            bank: view.bank,
           )
       )
 

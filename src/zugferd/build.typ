@@ -1,5 +1,6 @@
 #import "xml.typ": dict-to-xml, fmt-amount, fmt-date, fmt-rate, xml-escape
 #import "../utils/coercion.typ": to-string
+#import "../logic/payment-reference.typ": resolve-payment-reference
 
 #let profile-urn(profile) = {
   if profile == "minimum" { "urn:factur-x.eu:1p0:minimum" } else if (
@@ -675,7 +676,6 @@
   let include-addresses = profile != "minimum"
 
   let total-tax = taxes.values().map(t => t.absolute).sum(default: decimal("0"))
-  let invoice-nr-str = if ctx.invoice-nr != none { ctx.invoice-nr } else { "" }
 
   let line-items = if include-line-items {
     items
@@ -703,7 +703,9 @@
   )
 
   let trade-settlement = (
-    "ram:PaymentReference": invoice-nr-str,
+    // BT-83: same value as printed in the bank details and the EPC-QR code.
+    // Omitted if the bank details explicitly carry no reference.
+    "ram:PaymentReference": resolve-payment-reference(ctx, bank: bank),
     "ram:InvoiceCurrencyCode": currency,
   )
 

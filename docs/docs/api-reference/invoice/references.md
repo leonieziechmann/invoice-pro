@@ -97,14 +97,14 @@ All reference builders accept optional `label` and `value` parameters (e.g. `ref
 
 ### Sender, Contacts & Banking
 
-| Function                           | Default Source / Logic                                   | Description                                                  |
-| :--------------------------------- | :------------------------------------------------------- | :----------------------------------------------------------- |
-| **`references.tax-nr`**            | `sender.tax-nr`                                          | Sender's tax identifier.                                     |
-| **`references.vat-id`**            | `sender.vat-id`                                          | Sender's VAT ID.                                             |
-| **`references.payment-reference`** | `ctx.payment-reference` or `ctx.invoice-nr`              | Structured bank transfer purpose (Verwendungszweck).         |
-| **`references.contact-person`**    | `sender.contact.name`, `sender.contact-name`, or `clerk` | Name of the clerk or account manager who issued the invoice. |
-| **`references.contact-phone`**     | `sender.contact.phone` or `sender.phone`                 | Direct telephone number of the contact person.               |
-| **`references.contact-email`**     | `sender.contact.email` or `sender.email`                 | Email address of the contact person.                         |
+| Function                           | Default Source / Logic                                                            | Description                                                                                |
+| :--------------------------------- | :-------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------- |
+| **`references.tax-nr`**            | `sender.tax-nr`                                                                   | Sender's tax identifier.                                                                   |
+| **`references.vat-id`**            | `sender.vat-id`                                                                   | Sender's VAT ID.                                                                           |
+| **`references.payment-reference`** | `bank-details` `reference` / `text`, `ctx.payment-reference`, or `ctx.invoice-nr` | Bank transfer purpose (Verwendungszweck), identical to the bank details and ZUGFeRD BT-83. |
+| **`references.contact-person`**    | `sender.contact.name`, `sender.contact-name`, or `clerk`                          | Name of the clerk or account manager who issued the invoice.                               |
+| **`references.contact-phone`**     | `sender.contact.phone` or `sender.phone`                                          | Direct telephone number of the contact person.                                             |
+| **`references.contact-email`**     | `sender.contact.email` or `sender.email`                                          | Email address of the contact person.                                                       |
 
 ---
 
