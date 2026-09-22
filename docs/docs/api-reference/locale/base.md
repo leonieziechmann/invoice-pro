@@ -138,12 +138,13 @@ Labels for the payment configuration block.
 
 Text blocks and phrasing for payment terms.
 
-| Key             | Type                            | Description                                                                            |
-| :-------------- | :------------------------------ | :------------------------------------------------------------------------------------- |
-| `text`          | `(content, content) => content` | Generates the final payment instruction sentence. Parameters map to `(sum, deadline)`. |
-| `deadline-date` | `(content) => content`          | Text generator for a fixed target date (e.g., `[no later than #date]`).                |
-| `deadline-days` | `(int) => str`                  | Text generator for a relative target date (e.g., `[within #str(days) days]`).          |
-| `deadline-soon` | `str`                           | Text for immediate/prompt payment.                                                     |
+| Key             | Type                            | Description                                                                                                                                                  |
+| :-------------- | :------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text`          | `(content, content) => content` | Generates the final payment instruction sentence. Parameters map to `(sum, deadline)`.                                                                       |
+| `text-due`      | `(content, content) => content` | Replaces `text` when prepayments reduce the payable amount, so `sum` is the remaining amount due (e.g., `"the amount due"` instead of `"the total amount"`). |
+| `deadline-date` | `(content) => content`          | Text generator for a fixed target date (e.g., `[no later than #date]`).                                                                                      |
+| `deadline-days` | `(int) => str`                  | Text generator for a relative target date (e.g., `[within #str(days) days]`).                                                                                |
+| `deadline-soon` | `str`                           | Text for immediate/prompt payment.                                                                                                                           |
 
 ### `signature`
 

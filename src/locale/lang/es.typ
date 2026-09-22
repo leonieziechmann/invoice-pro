@@ -140,6 +140,12 @@
       deadline,
     ) => [Por favor, transfiera el importe total de *#sum* #deadline a la cuenta indicada a continuación.],
 
+    /// Frase de pago cuando los anticipos reducen el importe a pagar.
+    text-due: (
+      sum,
+      deadline,
+    ) => [Por favor, transfiera el importe pendiente de *#sum* #deadline a la cuenta indicada a continuación.],
+
     /// Texto para una fecha de vencimiento fija.
     deadline-date: date => ("antes del", date).join(" "),
 

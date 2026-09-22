@@ -40,6 +40,7 @@
       nest("global", {
         nest("total", {
           ensure("gross", 0)
+          ensure("prepaid", 0)
         })
       })
     }),
@@ -48,6 +49,9 @@
         days: days,
         date: date,
         total: ctx.global.total.at("due", default: ctx.global.total.gross),
+        // Prepayments reduce the payable amount, so `total` is the remaining
+        // amount due rather than the gross total.
+        has-prepayments: ctx.global.total.prepaid > 0,
       )
 
       (data, data)

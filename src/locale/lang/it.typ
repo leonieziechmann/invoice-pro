@@ -140,6 +140,12 @@
       deadline,
     ) => [Si prega di versare l'importo totale di *#sum* #deadline sul conto indicato di seguito.],
 
+    /// Frase di pagamento quando gli acconti riducono l'importo da versare.
+    text-due: (
+      sum,
+      deadline,
+    ) => [Si prega di versare l'importo dovuto di *#sum* #deadline sul conto indicato di seguito.],
+
     /// Testo per una data di scadenza fissa.
     deadline-date: date => ("entro il", date).join(" "),
 

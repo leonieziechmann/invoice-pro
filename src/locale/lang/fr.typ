@@ -137,6 +137,10 @@
       sum,
       deadline,
     ) => [Veuillez transférer le montant total de *#sum* #deadline sur le compte indiqué ci-dessous.],
+    text-due: (
+      sum,
+      deadline,
+    ) => [Veuillez transférer le montant restant dû de *#sum* #deadline sur le compte indiqué ci-dessous.],
 
     deadline-date: date => ("au plus tard le", date).join(" "),
     deadline-days: days => (

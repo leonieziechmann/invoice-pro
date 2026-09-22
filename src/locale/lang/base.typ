@@ -148,6 +148,14 @@
       deadline,
     ) => [Please transfer the total amount of *#sum* #deadline to the account listed below.],
 
+    /// Generates the payment instruction sentence when prepayments reduce the
+    /// payable amount. `sum` is then the remaining amount due.
+    /// -> (content|str, content|str) => content
+    text-due: (
+      sum,
+      deadline,
+    ) => [Please transfer the amount due of *#sum* #deadline to the account listed below.],
+
     /// Text for a fixed target date.
     /// -> (content|str) => str
     deadline-date: date => ("no later than", date).join(" "),

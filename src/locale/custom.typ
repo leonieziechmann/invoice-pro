@@ -236,12 +236,14 @@
 
 /// Customizes the payment instructions and deadline texts.
 /// - text (auto, fn): Function generating the main sentence: (sum, currency, deadline) => content
+/// - text-due (auto, fn): Main sentence when prepayments reduce the payable amount: (sum, deadline) => content
 /// - deadline-date (auto, fn): Function formatting a fixed date: (date) => str
 /// - deadline-days (auto, fn): Function formatting relative days: (days) => str
 /// - deadline-soon (auto, str): Text for immediate payment: e.g., "upon receipt"
 /// -> dictionary
 #let payment(
   text: auto,
+  text-due: auto,
   deadline-date: auto,
   deadline-days: auto,
   deadline-soon: auto,
@@ -249,6 +251,7 @@
   {
     let payload = _clean-auto((
       text: text,
+      text-due: text-due,
       deadline-date: deadline-date,
       deadline-days: deadline-days,
       deadline-soon: deadline-soon,

@@ -128,6 +128,10 @@
       sum,
       deadline,
     ) => [Bitte überweisen Sie den Gesamtbetrag in Höhe von *#sum* #deadline auf das unten angegebene Konto.],
+    text-due: (
+      sum,
+      deadline,
+    ) => [Bitte überweisen Sie den fälligen Betrag in Höhe von *#sum* #deadline auf das unten angegebene Konto.],
     deadline-date: date => ("bis zum", date).join(" "),
     deadline-days: days => (
       "innerhalb von",

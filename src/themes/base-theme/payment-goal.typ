@@ -17,7 +17,14 @@
     pay-str.deadline-soon
   }
 
-  (pay-str.text)(
+  // With prepayments, `view.total` is the remaining amount due, not the total.
+  let sentence = if view.has-prepayments {
+    pay-str.text-due
+  } else {
+    pay-str.text
+  }
+
+  sentence(
     (format.currency)(view.total),
     deadline,
   )

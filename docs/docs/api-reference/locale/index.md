@@ -81,9 +81,28 @@ These functions allow you to change the text labels printed on the invoice.
 | `locale.custom.summary(..)`      | `sum`, `vat-tax`, `total`, `including`, `excluding`                                                                               | Labels for the final calculation block.                  |
 | `locale.custom.global-info(..)`  | `tax-statement`, `unit`, `quantity`, `date`                                                                                       | General statements below the table.                      |
 | `locale.custom.bank-details(..)` | `account-holder`, `bank`, `iban`, `bic`, `reference`                                                                              | Labels for the bank details block.                       |
-| `locale.custom.payment(..)`      | `text`, `deadline-date`, `deadline-days`, `deadline-soon`                                                                         | Text and deadline phrasing for the payment goal.         |
+| `locale.custom.payment(..)`      | `text`, `text-due`, `deadline-date`, `deadline-days`, `deadline-soon`                                                             | Text and deadline phrasing for the payment goal.         |
 | `locale.custom.signature(..)`    | `closing`                                                                                                                         | The sign-off text (e.g., "Sincerely").                   |
 | `locale.custom.legal(..)`        | `vat-exemption`                                                                                                                   | The legal notice for small business exemptions.          |
+
+:::note
+When the invoice contains a `#prepayment(..)`, the payment goal states the remaining amount due and uses `text-due` instead of `text`. If you override `text`, override `text-due` as well so both sentences stay consistent:
+
+```typst
+#show: invoice.with(
+  locale: locale.en-de.with({
+    import locale.custom: *
+
+    payment(
+      text: (sum, deadline) => [Please pay *#sum* #deadline.],
+      text-due: (sum, deadline) => [Please pay the remaining *#sum* #deadline.],
+    )
+  }),
+  // ...
+)
+```
+
+:::
 
 ### Region Overrides (Formatting & Logic)
 
