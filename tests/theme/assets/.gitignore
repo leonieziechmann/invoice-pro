@@ -1,0 +1,3 @@
+# The PDF-image guard fixture of tests/theme/errors (case 17): not a real PDF.
+# The repository ignores *.pdf.
+!fake.pdf
