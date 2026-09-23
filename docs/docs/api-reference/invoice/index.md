@@ -86,7 +86,7 @@ recipient: (
 ```
 
 :::tip
-To configure country-specific formatting for the address block (like UK postcodes or US state formats) and specify the ZUGFeRD-compliant country code, use the predefined country configurations from the `country` module. See the [Country API](./country.md) subpage for detailed specifications.
+To configure country-specific formatting for the address block (like UK postcodes or US state formats) and specify the ZUGFeRD-compliant country code, set `country` on the party: a predefined country of the `country` module (e.g. `country.fr`), an ISO code (e.g. `"FR"`) or `country.custom(..)`. Without `country`, the party is in the country of the locale region. See the [Country API](./country.md) subpage for detailed specifications.
 :::
 
 ### `locale`
