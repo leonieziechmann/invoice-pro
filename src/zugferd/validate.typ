@@ -479,6 +479,188 @@
   out
 }
 
+// The VAT categories that require the buyer VAT identifier (BT-48), with the
+// rules for an invoice line, a document level allowance and charge.
+#let _buyer-vat-id-rules = (
+  K: (
+    line: "BR-IC-02",
+    allowance: "BR-IC-03",
+    charge: "BR-IC-04",
+    term: "An intra-community supply (K)",
+  ),
+  AE: (
+    line: "BR-AE-02",
+    allowance: "BR-AE-03",
+    charge: "BR-AE-04",
+    term: "Reverse charge (AE)",
+  ),
+)
+
+// The buyer VAT identifier (BT-48) of an intra-community supply (K) or a
+// reverse charge (AE). The official rules check invoice lines (BR-IC-02,
+// BR-AE-02) and document level allowances and charges (-03, -04). BASIC WL
+// writes no lines, yet the VAT Directive (Art. 226 No. 4) still requires the
+// buyer VAT ID for K and for a cross-border reverse charge; invoice-pro checks
+// that as IP-VAT-226. A domestic reverse charge (e.g. § 13b UStG) can do
+// without it.
+#let _check-buyer-vat-id(model) = {
+  let profile = model.profile
+  let buyer = model.buyer
+  if not profile.settlement or buyer.vat-id != none { return () }
+  let categories = ()
+  for tax in model.taxes {
+    let category = tax.category
+    if (
+      category != none
+        and category in _buyer-vat-id-rules
+        and category not in categories
+    ) {
+      categories.push(category)
+    }
+  }
+
+  let out = ()
+  for category in categories {
+    let rules = _buyer-vat-id-rules.at(category)
+    let on-line = false
+    if profile.lines {
+      for line in model.lines {
+        if line.category == category {
+          on-line = true
+          break
+        }
+      }
+    }
+    let on-allowance = false
+    let on-charge = false
+    for entry in model.allowance-charges {
+      if entry.category == category {
+        if entry.charge { on-charge = true } else { on-allowance = true }
+      }
+    }
+
+    let (rule, message) = if (
+      on-line or (profile.lines and not on-allowance and not on-charge)
+    ) {
+      (rules.line, rules.term + " requires the buyer VAT identifier (BT-48).")
+    } else if on-allowance or on-charge {
+      let (rule, kind) = if on-allowance {
+        (rules.allowance, "allowance (BG-20)")
+      } else { (rules.charge, "charge (BG-21)") }
+      (
+        rule,
+        "A document level "
+          + kind
+          + " of the VAT category "
+          + category
+          + " requires the buyer VAT identifier (BT-48).",
+      )
+    } else if (
+      category == "K" or model.seller.address.country != buyer.address.country
+    ) {
+      let subject = if category == "K" { rules.term } else {
+        "A cross-border reverse charge (AE)"
+      }
+      (
+        "IP-VAT-226",
+        subject
+          + " must state the buyer VAT identifier (BT-48) by law (Art. 226 No. 4 of the VAT Directive 2006/112/EC).",
+      )
+    } else { (none, none) }
+    if rule == none { continue }
+    out.push(error(
+      rule,
+      "recipient.vat-id",
+      message,
+      hint: if rule == "IP-VAT-226" {
+        "Set `vat-id` on the recipient. The BASIC WL profile has no invoice lines, so its validators do not check this."
+      } else { "Set `vat-id` on the recipient." },
+    ))
+  }
+  out
+}
+
+// VAT identifier prefixes of the EU member states (Greece: "EL") and of
+// Northern Ireland ("XI"), the buyers of an intra-community supply.
+#let _eu-vat-prefixes = (
+  AT: true,
+  BE: true,
+  BG: true,
+  CY: true,
+  CZ: true,
+  DE: true,
+  DK: true,
+  EE: true,
+  EL: true,
+  ES: true,
+  FI: true,
+  FR: true,
+  GR: true,
+  HR: true,
+  HU: true,
+  IE: true,
+  IT: true,
+  LT: true,
+  LU: true,
+  LV: true,
+  MT: true,
+  NL: true,
+  PL: true,
+  PT: true,
+  RO: true,
+  SE: true,
+  SI: true,
+  SK: true,
+  XI: true,
+)
+
+// Whether an intra-community supply (K) goes to another member state: the
+// deliver-to country (BR-IC-12) and the buyer VAT identifier. Picking up the
+// goods is legal, so both are warnings.
+#let _check-intra-community(model) = {
+  if not model.profile.settlement { return () }
+  let intra-community = false
+  for tax in model.taxes {
+    if tax.category == "K" {
+      intra-community = true
+      break
+    }
+  }
+  if not intra-community { return () }
+
+  let out = ()
+  let seller = model.seller
+  let home = vat-id-country(seller.at("stated-vat-id", default: seller.vat-id))
+  if home == none { home = seller.address.country }
+  if (
+    model.ship-to != none
+      and home != none
+      and model.ship-to.address.country == home
+  ) {
+    out.push(warning(
+      "BR-IC-12",
+      "delivery-address.country",
+      "The intra-community supply (K) states the seller's own country "
+        + _quoted(home)
+        + " as the deliver-to country (BT-80), but the goods must be dispatched to another member state.",
+      hint: "Set `country` on the delivery address or the recipient to the member state the goods are delivered to.",
+    ))
+  }
+  let buyer-vat-id = model.buyer.vat-id
+  let prefix = vat-id-prefix(buyer-vat-id)
+  if prefix != none and prefix not in _eu-vat-prefixes {
+    out.push(warning(
+      "IP-VAT-138",
+      "recipient.vat-id",
+      "The buyer VAT identifier "
+        + _quoted(buyer-vat-id)
+        + " was not issued by an EU member state, so the supply is not an intra-community supply (K).",
+      hint: "Use `tax.export()` for supplies to countries outside the EU. Goods for Northern Ireland are intra-community supplies to an \"XI\" VAT identifier.",
+    ))
+  }
+  out
+}
+
 #let check-parties(model) = {
   let profile = model.profile
   let seller = model.seller
@@ -717,6 +899,8 @@
     }
   }
 
+  out += _check-buyer-vat-id(model)
+  out += _check-intra-community(model)
   out
 }
 
@@ -891,22 +1075,7 @@
       ))
     }
   }
-  if "K" in categories and buyer.vat-id == none {
-    out.push(error(
-      "BR-IC-02",
-      "recipient.vat-id",
-      "An intra-community supply (K) requires the buyer VAT identifier (BT-48).",
-      hint: "Set `vat-id` on the recipient.",
-    ))
-  }
-  if "AE" in categories and buyer.vat-id == none {
-    out.push(error(
-      "BR-AE-02",
-      "recipient.vat-id",
-      "Reverse charge (AE) requires the buyer VAT identifier (BT-48).",
-      hint: "Set `vat-id` on the recipient.",
-    ))
-  }
+  // The buyer VAT identifier (BT-48) of K and AE: see `_check-buyer-vat-id`.
   if "K" in categories and model.ship-to == none {
     out.push(error(
       "BR-IC-12",

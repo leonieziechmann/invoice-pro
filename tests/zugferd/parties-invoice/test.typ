@@ -154,6 +154,8 @@
   item-tax: tax.intra-community(),
   result => {
     assert.eq(rules(result), ("IP-ADDR-01", "IP-COUNTRY-01"))
+    // Delivered to the seller's own country
+    assert.eq(rules(result, level: "warning"), ("BR-IC-12",))
   },
 )
 
@@ -164,4 +166,33 @@
     assert.eq(rules(result), ("IP-KEY-02",))
     assert.eq(rules(result, level: "warning"), ("IP-KEY-01",))
   },
+)
+
+// 7. BASIC WL: the buyer VAT ID of an intra-community supply and a
+//    cross-border reverse charge is required by law, not the one of a domestic
+//    reverse charge (§ 13b UStG)
+#e-invoice(
+  zugferd: "basic-wl",
+  recipient: buyer + (vat-id: none),
+  item-tax: tax.intra-community(),
+  result => assert.eq(rules(result), ("IP-VAT-226",)),
+)
+#e-invoice(
+  zugferd: "basic-wl",
+  recipient: buyer + (vat-id: none),
+  item-tax: tax.reverse-charge(),
+  result => assert.eq(rules(result), ("IP-VAT-226",)),
+)
+#e-invoice(
+  zugferd: "basic-wl",
+  recipient: (
+    name: "Bau GmbH",
+    address: "Weg 5",
+    city: "10115 Berlin",
+    country: country.de,
+  ),
+  item-tax: tax.reverse-charge(
+    grounds: "Steuerschuldnerschaft des Leistungsempfängers (§ 13b UStG)",
+  ),
+  result => assert.eq(result.diagnostics, ()),
 )

@@ -369,6 +369,63 @@
   assert(find(m, "BR-CL-14").hint.contains("\"GR\""))
   m.buyer.address.country = none
   assert(find(m, "BR-11").hint.contains("`country: \"DE\"`"))
+
+  // --- The buyer VAT ID of K and AE ---
+  let with-category(model, category, lines: false, allowance: false) = {
+    let model = model
+    model.taxes = (
+      model.taxes.first() + (category: category, rate: decimal("0")),
+    )
+    if lines { model.lines.at(0).category = category }
+    if allowance {
+      model.allowance-charges = (
+        (
+          charge: false,
+          amount: decimal("10"),
+          reason: "Discount",
+          key: model.taxes.first().key,
+          category: category,
+          rate: decimal("0"),
+        ),
+      )
+    }
+    model.buyer.vat-id = none
+    model
+  }
+  // Lines and document level allowances: the official rules
+  assert("BR-IC-02" in rules(with-category(base, "K", lines: true)))
+  assert("BR-AE-02" in rules(with-category(base, "AE", lines: true)))
+  assert("BR-IC-03" in rules(with-category(base, "K", allowance: true)))
+  let m = with-category(base, "AE", allowance: true)
+  m.profile = resolve-profile("basic-wl", "DE")
+  assert.eq(rules(m), ("BR-AE-03",))
+
+  // BASIC WL without lines: required by law for K and a cross-border AE
+  // (IP-VAT-226), not for a domestic reverse charge (§ 13b UStG)
+  let m = with-category(base, "K")
+  m.profile = resolve-profile("basic-wl", "DE")
+  assert("IP-VAT-226" in rules(m))
+  let m = with-category(base, "AE")
+  m.profile = resolve-profile("basic-wl", "DE")
+  assert.eq(rules(m), ())
+  m.buyer.address.country = "FR"
+  assert.eq(rules(m), ("IP-VAT-226",))
+  assert(find(m, "IP-VAT-226").message.contains("Art. 226 No. 4"))
+
+  // An intra-community supply to the seller's own country or to a buyer
+  // outside the EU is a warning
+  let m = with-category(base, "K", lines: true)
+  m.buyer.vat-id = "GB123456789"
+  m.ship-to = (
+    name: none,
+    id: none,
+    global-id: none,
+    address: m.buyer.address,
+  )
+  assert.eq(rules(m, level: "warning"), ("BR-IC-12", "IP-VAT-138"))
+  m.buyer.vat-id = "XI123456789"
+  m.ship-to.address.country = "GB"
+  assert.eq(rules(m, level: "warning"), ())
 }
 
 #show: invoice.with(
