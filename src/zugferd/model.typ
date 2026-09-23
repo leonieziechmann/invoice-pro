@@ -4,7 +4,7 @@
 // identifiers, net amounts and totals. The validator checks this model and the
 // builder serializes it, so both always agree on what ends up in the XML.
 
-#import "xml.typ": plain-text
+#import "../utils/text.typ": plain-text
 #import "codelists.typ"
 #import "profile.typ": resolve-profile
 #import "../utils/coercion.typ": to-decimal, to-ratio
