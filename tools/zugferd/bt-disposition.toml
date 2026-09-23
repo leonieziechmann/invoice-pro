@@ -1,0 +1,253 @@
+# What invoice-pro does with every business term of EN 16931-1 (the semantic
+# model of the European e-invoice), checked by tools/zugferd/bt_disposition.py.
+#
+# Every business term (BT-1 to BT-165; BT-4 is not defined) and every business
+# group (BG-1 to BG-32) has one entry with its EN 16931 `name` and its
+# `disposition`:
+#
+#   "input"        an input of invoice-pro states it; `input` names the input
+#                  (a parameter of `invoice`, a key of a party dictionary, a
+#                  component or one of its arguments)
+#   "derived"      invoice-pro derives it; `source` says from what
+#   "unsupported"  invoice-pro does not state it; `reason` says why
+#
+# and optionally a `note`. The scheme identifiers of identifiers (BT-29-1,
+# BT-30-1, BT-34-1, ...) share the disposition of their business term.
+#
+# The check fails when a business term has no entry, so every term needs a
+# decision: a value that has no input of its own cannot end up in the wrong
+# business term unnoticed (issue #42). A new input updates the entry of its
+# business term in the same change. Which profile states which term is
+# decided by the Factur-X schemas (src/zugferd/profile.typ); an input a
+# profile cannot state is reported as a warning (IP-PROFILE-01).
+
+[terms]
+# ---------------------------------------------------------------- Invoice (BG-0)
+"BT-1" = { name = "Invoice number", disposition = "input", input = "invoice-nr" }
+"BT-2" = { name = "Invoice issue date", disposition = "input", input = "date" }
+"BT-3" = { name = "Invoice type code", disposition = "derived", source = "always 380 (commercial invoice)", note = "credited lines and negative totals are written as an invoice; there is no input for other document types yet" }
+"BT-5" = { name = "Invoice currency code", disposition = "derived", source = "the currency code of the locale (`locale`, region currency)" }
+"BT-6" = { name = "VAT accounting currency code", disposition = "unsupported", reason = "the VAT is stated in the invoice currency; a separate VAT accounting currency is not supported" }
+"BT-7" = { name = "Value added tax point date", disposition = "unsupported", reason = "the tax point is stated by the actual delivery date (BT-72) or the invoicing period (BG-14)" }
+"BT-8" = { name = "Value added tax point date code", disposition = "unsupported", reason = "the tax point is stated by the actual delivery date (BT-72) or the invoicing period (BG-14)" }
+"BT-9" = { name = "Payment due date", disposition = "input", input = "due-date (a date), payment-goal(date:) or payment-goal(days:)" }
+"BT-10" = { name = "Buyer reference", disposition = "input", input = "recipient.buyer-reference or recipient.leitweg-id (text or id.leitweg(..))" }
+"BT-11" = { name = "Project reference", disposition = "unsupported", reason = "`project` is printed, but not written into the e-invoice yet" }
+"BT-12" = { name = "Contract reference", disposition = "input", input = "contract-nr (or recipient.contract-nr)" }
+"BT-13" = { name = "Purchase order reference", disposition = "input", input = "order-nr (or recipient.order-nr, po-nr)" }
+"BT-14" = { name = "Sales order reference", disposition = "unsupported", reason = "no input for the seller's own order number" }
+"BT-15" = { name = "Receiving advice reference", disposition = "unsupported", reason = "no input; receiving advices are documents of the buyer" }
+"BT-16" = { name = "Despatch advice reference", disposition = "input", input = "delivery-note-nr (or recipient.delivery-note-nr)" }
+"BT-17" = { name = "Tender or lot reference", disposition = "unsupported", reason = "no input for public procurement references" }
+"BT-18" = { name = "Invoiced object identifier", disposition = "unsupported", reason = "no input for invoiced objects (e.g. subscriptions, meters)" }
+"BT-19" = { name = "Buyer accounting reference", disposition = "unsupported", reason = "no input for the buyer's booking account" }
+"BT-20" = { name = "Payment terms", disposition = "input", input = "payment-goal (its text) or due-date (a text)" }
+# ---------------------------------------------------------------- BG-1 Invoice note
+"BG-1" = { name = "INVOICE NOTE", disposition = "unsupported", reason = "no input for notes of the e-invoice yet" }
+"BT-21" = { name = "Invoice note subject code", disposition = "unsupported", reason = "no input for notes of the e-invoice yet" }
+"BT-22" = { name = "Invoice note", disposition = "unsupported", reason = "no input for notes of the e-invoice yet" }
+# ---------------------------------------------------------------- BG-2 Process control
+"BG-2" = { name = "PROCESS CONTROL", disposition = "derived", source = "the profile (`zugferd`)" }
+"BT-23" = { name = "Business process type", disposition = "derived", source = "the Peppol billing process for the EN 16931 and XRechnung profiles" }
+"BT-24" = { name = "Specification identifier", disposition = "derived", source = "the guideline of the profile (`zugferd`)" }
+# ---------------------------------------------------------------- BG-3 Preceding invoice reference
+"BG-3" = { name = "PRECEDING INVOICE REFERENCE", disposition = "input", input = "preceding-invoice-nr" }
+"BT-25" = { name = "Preceding Invoice reference", disposition = "input", input = "preceding-invoice-nr" }
+"BT-26" = { name = "Preceding Invoice issue date", disposition = "unsupported", reason = "no input for the date of the preceding invoice yet" }
+# ---------------------------------------------------------------- BG-4 Seller
+"BG-4" = { name = "SELLER", disposition = "input", input = "sender" }
+"BT-27" = { name = "Seller name", disposition = "input", input = "sender.name" }
+"BT-28" = { name = "Seller trading name", disposition = "input", input = "sender.trading-name" }
+"BT-29" = { name = "Seller identifier", disposition = "input", input = "sender.id, sender.global-id (text or an identifier of the `id` module)", note = "without an identifier, legal registration or VAT identifier, the tax number (sender.tax-nr) identifies the seller (BR-CO-26)" }
+"BT-30" = { name = "Seller legal registration identifier", disposition = "input", input = "sender.legal-id (text or an identifier of the `id` module)" }
+"BT-31" = { name = "Seller VAT identifier", disposition = "input", input = "sender.vat-id", note = "left out when the invoice is not subject to VAT (BR-O-02)" }
+"BT-32" = { name = "Seller tax registration identifier", disposition = "input", input = "sender.tax-nr" }
+"BT-33" = { name = "Seller additional legal information", disposition = "input", input = "sender.legal-info" }
+"BT-34" = { name = "Seller electronic address", disposition = "input", input = "sender.electronic-address", note = "without one, derived from sender.vat-id or the email address" }
+# ---------------------------------------------------------------- BG-5 Seller postal address
+"BG-5" = { name = "SELLER POSTAL ADDRESS", disposition = "input", input = "sender.address, sender.city, sender.country" }
+"BT-35" = { name = "Seller address line 1", disposition = "input", input = "sender.address (first line)" }
+"BT-36" = { name = "Seller address line 2", disposition = "input", input = "sender.address (second line)" }
+"BT-162" = { name = "Seller address line 3", disposition = "input", input = "sender.address (further lines)" }
+"BT-37" = { name = "Seller city", disposition = "input", input = "sender.city (the city name)" }
+"BT-38" = { name = "Seller post code", disposition = "input", input = "sender.city (the post code)" }
+"BT-39" = { name = "Seller country subdivision", disposition = "input", input = "sender.city (the state of a city dictionary or of a US city line)" }
+"BT-40" = { name = "Seller country code", disposition = "input", input = "sender.country", note = "without one, the country of the locale region" }
+# ---------------------------------------------------------------- BG-6 Seller contact
+"BG-6" = { name = "SELLER CONTACT", disposition = "input", input = "sender.contact" }
+"BT-41" = { name = "Seller contact point", disposition = "input", input = "sender.contact.name (or sender.contact-name)" }
+"BT-42" = { name = "Seller contact telephone number", disposition = "input", input = "sender.contact.phone (or sender.phone)" }
+"BT-43" = { name = "Seller contact email address", disposition = "input", input = "sender.contact.email (or sender.email)" }
+# ---------------------------------------------------------------- BG-7 Buyer
+"BG-7" = { name = "BUYER", disposition = "input", input = "recipient" }
+"BT-44" = { name = "Buyer name", disposition = "input", input = "recipient.name" }
+"BT-45" = { name = "Buyer trading name", disposition = "input", input = "recipient.trading-name" }
+"BT-46" = { name = "Buyer identifier", disposition = "input", input = "recipient.id or recipient.global-id (text or an identifier of the `id` module)" }
+"BT-47" = { name = "Buyer legal registration identifier", disposition = "input", input = "recipient.legal-id (text or an identifier of the `id` module)" }
+"BT-48" = { name = "Buyer VAT identifier", disposition = "input", input = "recipient.vat-id", note = "left out when the invoice is not subject to VAT (BR-O-02)" }
+"BT-49" = { name = "Buyer electronic address", disposition = "input", input = "recipient.electronic-address (e.g. id.leitweg(..))", note = "without one, derived from recipient.vat-id or the email address" }
+# ---------------------------------------------------------------- BG-8 Buyer postal address
+"BG-8" = { name = "BUYER POSTAL ADDRESS", disposition = "input", input = "recipient.address, recipient.city, recipient.country" }
+"BT-50" = { name = "Buyer address line 1", disposition = "input", input = "recipient.address (first line)" }
+"BT-51" = { name = "Buyer address line 2", disposition = "input", input = "recipient.address (second line)" }
+"BT-163" = { name = "Buyer address line 3", disposition = "input", input = "recipient.address (further lines)" }
+"BT-52" = { name = "Buyer city", disposition = "input", input = "recipient.city (the city name)" }
+"BT-53" = { name = "Buyer post code", disposition = "input", input = "recipient.city (the post code)" }
+"BT-54" = { name = "Buyer country subdivision", disposition = "input", input = "recipient.city (the state of a city dictionary or of a US city line)" }
+"BT-55" = { name = "Buyer country code", disposition = "input", input = "recipient.country", note = "without one, the country of the locale region" }
+# ---------------------------------------------------------------- BG-9 Buyer contact
+"BG-9" = { name = "BUYER CONTACT", disposition = "input", input = "recipient.contact (or recipient.contact-name, recipient.phone)", note = "an email address alone is no contact point: it can be the electronic address (BT-49)" }
+"BT-56" = { name = "Buyer contact point", disposition = "input", input = "recipient.contact.name (or recipient.contact-name)" }
+"BT-57" = { name = "Buyer contact telephone number", disposition = "input", input = "recipient.contact.phone (or recipient.phone)" }
+"BT-58" = { name = "Buyer contact email address", disposition = "input", input = "recipient.contact.email (or recipient.email)" }
+# ---------------------------------------------------------------- BG-10 Payee
+"BG-10" = { name = "PAYEE", disposition = "input", input = "payee" }
+"BT-59" = { name = "Payee name", disposition = "input", input = "payee.name" }
+"BT-60" = { name = "Payee identifier", disposition = "input", input = "payee.id or payee.global-id (text or an identifier of the `id` module)" }
+"BT-61" = { name = "Payee legal registration identifier", disposition = "input", input = "payee.legal-id (text or an identifier of the `id` module)" }
+# ---------------------------------------------------------------- BG-11 Seller tax representative party
+"BG-11" = { name = "SELLER TAX REPRESENTATIVE PARTY", disposition = "input", input = "sender.tax-representative" }
+"BT-62" = { name = "Seller tax representative name", disposition = "input", input = "sender.tax-representative.name" }
+"BT-63" = { name = "Seller tax representative VAT identifier", disposition = "input", input = "sender.tax-representative.vat-id" }
+# ---------------------------------------------------------------- BG-12 Seller tax representative postal address
+"BG-12" = { name = "SELLER TAX REPRESENTATIVE POSTAL ADDRESS", disposition = "input", input = "sender.tax-representative.address, .city, .country" }
+"BT-64" = { name = "Tax representative address line 1", disposition = "input", input = "sender.tax-representative.address (first line)" }
+"BT-65" = { name = "Tax representative address line 2", disposition = "input", input = "sender.tax-representative.address (second line)" }
+"BT-164" = { name = "Tax representative address line 3", disposition = "input", input = "sender.tax-representative.address (further lines)" }
+"BT-66" = { name = "Tax representative city", disposition = "input", input = "sender.tax-representative.city (the city name)" }
+"BT-67" = { name = "Tax representative post code", disposition = "input", input = "sender.tax-representative.city (the post code)" }
+"BT-68" = { name = "Tax representative country subdivision", disposition = "input", input = "sender.tax-representative.city (the state of a city dictionary or of a US city line)" }
+"BT-69" = { name = "Tax representative country code", disposition = "input", input = "sender.tax-representative.country", note = "without one, the country of the locale region" }
+# ---------------------------------------------------------------- BG-13 Delivery information
+"BG-13" = { name = "DELIVERY INFORMATION", disposition = "input", input = "delivery-address (or recipient.delivery-address)", note = "an intra-community supply without delivery address states the buyer's address (BR-IC-12)" }
+"BT-70" = { name = "Deliver to party name", disposition = "input", input = "delivery-address.name" }
+"BT-71" = { name = "Deliver to location identifier", disposition = "input", input = "delivery-address.id, .location-id or .global-id" }
+"BT-72" = { name = "Actual delivery date", disposition = "derived", source = "the date of the items (`date` of `item`) when they share one, otherwise the invoice date" }
+# ---------------------------------------------------------------- BG-14 Invoicing period
+"BG-14" = { name = "DELIVERY OR INVOICE PERIOD", disposition = "derived", source = "the dates of the items (`date` of `item`) when they span a period" }
+"BT-73" = { name = "Invoicing period start date", disposition = "derived", source = "the earliest date of the items" }
+"BT-74" = { name = "Invoicing period end date", disposition = "derived", source = "the latest date of the items" }
+# ---------------------------------------------------------------- BG-15 Deliver to address
+"BG-15" = { name = "DELIVER TO ADDRESS", disposition = "input", input = "delivery-address.address, .city, .country" }
+"BT-75" = { name = "Deliver to address line 1", disposition = "input", input = "delivery-address.address (first line)" }
+"BT-76" = { name = "Deliver to address line 2", disposition = "input", input = "delivery-address.address (second line)" }
+"BT-165" = { name = "Deliver to address line 3", disposition = "input", input = "delivery-address.address (further lines)" }
+"BT-77" = { name = "Deliver to city", disposition = "input", input = "delivery-address.city (the city name)" }
+"BT-78" = { name = "Deliver to post code", disposition = "input", input = "delivery-address.city (the post code)" }
+"BT-79" = { name = "Deliver to country subdivision", disposition = "input", input = "delivery-address.city (the state of a city dictionary or of a US city line)" }
+"BT-80" = { name = "Deliver to country code", disposition = "input", input = "delivery-address.country", note = "without one, the country of the recipient" }
+# ---------------------------------------------------------------- BG-16 Payment instructions
+"BG-16" = { name = "PAYMENT INSTRUCTIONS", disposition = "input", input = "bank-details" }
+"BT-81" = { name = "Payment means type code", disposition = "derived", source = "bank-details with an IBAN: 58 (SEPA credit transfer) for EUR invoices, 30 (credit transfer) otherwise" }
+"BT-82" = { name = "Payment means text", disposition = "unsupported", reason = "the payment means code (BT-81) says it; no input for a text" }
+"BT-83" = { name = "Remittance information", disposition = "input", input = "bank-details(reference:, text:), payment-reference or invoice-nr" }
+# ---------------------------------------------------------------- BG-17 Credit transfer
+"BG-17" = { name = "CREDIT TRANSFER", disposition = "input", input = "bank-details" }
+"BT-84" = { name = "Payment account identifier", disposition = "input", input = "bank-details(iban:)" }
+"BT-85" = { name = "Payment account name", disposition = "unsupported", reason = "the account holder of `bank-details` (`name`) is printed, but not written into the e-invoice yet" }
+"BT-86" = { name = "Payment service provider identifier", disposition = "input", input = "bank-details(bic:)" }
+# ---------------------------------------------------------------- BG-18 Payment card information
+"BG-18" = { name = "PAYMENT CARD INFORMATION", disposition = "unsupported", reason = "no input for card payments yet" }
+"BT-87" = { name = "Payment card primary account number", disposition = "unsupported", reason = "no input for card payments yet" }
+"BT-88" = { name = "Payment card holder name", disposition = "unsupported", reason = "no input for card payments yet" }
+# ---------------------------------------------------------------- BG-19 Direct debit
+"BG-19" = { name = "DIRECT DEBIT", disposition = "unsupported", reason = "no input for direct debits yet" }
+"BT-89" = { name = "Mandate reference identifier", disposition = "unsupported", reason = "no input for direct debits yet" }
+"BT-90" = { name = "Bank assigned creditor identifier", disposition = "unsupported", reason = "no input for direct debits yet" }
+"BT-91" = { name = "Debited account identifier", disposition = "unsupported", reason = "no input for direct debits yet" }
+# ---------------------------------------------------------------- BG-20 Document level allowances
+"BG-20" = { name = "DOCUMENT LEVEL ALLOWANCES", disposition = "input", input = "discount (a document level modifier)", note = "one allowance per VAT category the discount applies to (BR-53)" }
+"BT-92" = { name = "Document level allowance amount", disposition = "derived", source = "the amount of a document level discount in each VAT category" }
+"BT-93" = { name = "Document level allowance base amount", disposition = "unsupported", reason = "a percentage discount is stated by its amount (BT-92); its base is not stated yet" }
+"BT-94" = { name = "Document level allowance percentage", disposition = "unsupported", reason = "a percentage discount is stated by its amount (BT-92); its percentage is not stated yet" }
+"BT-95" = { name = "Document level allowance VAT category code", disposition = "derived", source = "the VAT category the discount applies to (or its `tax`)" }
+"BT-96" = { name = "Document level allowance VAT rate", disposition = "derived", source = "the VAT rate the discount applies to (or its `tax`)" }
+"BT-97" = { name = "Document level allowance reason", disposition = "input", input = "the name of the discount (\"Discount\" without one)" }
+"BT-98" = { name = "Document level allowance reason code", disposition = "unsupported", reason = "no input for UNTDID 5189 reason codes" }
+# ---------------------------------------------------------------- BG-21 Document level charges
+"BG-21" = { name = "DOCUMENT LEVEL CHARGES", disposition = "input", input = "surcharge (a document level modifier)", note = "one charge per VAT category the surcharge applies to (BR-53)" }
+"BT-99" = { name = "Document level charge amount", disposition = "derived", source = "the amount of a document level surcharge in each VAT category" }
+"BT-100" = { name = "Document level charge base amount", disposition = "unsupported", reason = "a percentage surcharge is stated by its amount (BT-99); its base is not stated yet" }
+"BT-101" = { name = "Document level charge percentage", disposition = "unsupported", reason = "a percentage surcharge is stated by its amount (BT-99); its percentage is not stated yet" }
+"BT-102" = { name = "Document level charge VAT category code", disposition = "derived", source = "the VAT category the surcharge applies to (or its `tax`)" }
+"BT-103" = { name = "Document level charge VAT rate", disposition = "derived", source = "the VAT rate the surcharge applies to (or its `tax`)" }
+"BT-104" = { name = "Document level charge reason", disposition = "input", input = "the name of the surcharge (\"Surcharge\" without one)" }
+"BT-105" = { name = "Document level charge reason code", disposition = "unsupported", reason = "no input for UNTDID 7161 reason codes" }
+# ---------------------------------------------------------------- BG-22 Document totals
+"BG-22" = { name = "DOCUMENT TOTALS", disposition = "derived", source = "the totals of the line items, as printed" }
+"BT-106" = { name = "Sum of Invoice line net amount", disposition = "derived", source = "the net amounts of the lines" }
+"BT-107" = { name = "Sum of allowances on document level", disposition = "derived", source = "the document level allowances (BG-20)" }
+"BT-108" = { name = "Sum of charges on document level", disposition = "derived", source = "the document level charges (BG-21)" }
+"BT-109" = { name = "Invoice total amount without VAT", disposition = "derived", source = "the printed net total" }
+"BT-110" = { name = "Invoice total VAT amount", disposition = "derived", source = "the VAT amounts of the VAT breakdown (BG-23)" }
+"BT-111" = { name = "Invoice total VAT amount in accounting currency", disposition = "unsupported", reason = "no VAT accounting currency (BT-6)" }
+"BT-112" = { name = "Invoice total amount with VAT", disposition = "derived", source = "the printed gross total" }
+"BT-113" = { name = "Paid amount", disposition = "input", input = "prepayment" }
+"BT-114" = { name = "Rounding amount", disposition = "unsupported", reason = "amounts are not rounded to a payable amount" }
+"BT-115" = { name = "Amount due for payment", disposition = "derived", source = "the gross total less the prepayments" }
+# ---------------------------------------------------------------- BG-23 VAT breakdown
+"BG-23" = { name = "VAT BREAKDOWN", disposition = "derived", source = "the VAT groups of the line items (one per category and rate)" }
+"BT-116" = { name = "VAT category taxable amount", disposition = "derived", source = "the net amounts of the VAT group" }
+"BT-117" = { name = "VAT category tax amount", disposition = "derived", source = "the VAT of the VAT group, as printed" }
+"BT-118" = { name = "VAT category code", disposition = "input", input = "tax (constructors of the `tax` module) of the invoice, the items or the modifiers" }
+"BT-119" = { name = "VAT category rate", disposition = "input", input = "tax (constructors of the `tax` module)" }
+"BT-120" = { name = "VAT exemption reason text", disposition = "input", input = "the grounds of the tax (e.g. tax.exempt(grounds:))", note = "without grounds, the note of the invoice language for AE, K, G and O, as printed" }
+"BT-121" = { name = "VAT exemption reason code", disposition = "unsupported", reason = "no input for VATEX codes yet; the reason is stated as text (BT-120)" }
+# ---------------------------------------------------------------- BG-24 Additional supporting documents
+"BG-24" = { name = "ADDITIONAL SUPPORTING DOCUMENTS", disposition = "unsupported", reason = "no input for supporting documents or attachments" }
+"BT-122" = { name = "Supporting document reference", disposition = "unsupported", reason = "no input for supporting documents or attachments" }
+"BT-123" = { name = "Supporting document description", disposition = "unsupported", reason = "no input for supporting documents or attachments" }
+"BT-124" = { name = "External document location", disposition = "unsupported", reason = "no input for supporting documents or attachments" }
+"BT-125" = { name = "Attached document", disposition = "unsupported", reason = "no input for supporting documents or attachments" }
+# ---------------------------------------------------------------- BG-25 Invoice line
+"BG-25" = { name = "INVOICE LINE", disposition = "input", input = "item and bundle (in line-items)", note = "a bundle with several VAT groups is stated as one line per group" }
+"BT-126" = { name = "Invoice line identifier", disposition = "derived", source = "the printed position of the item (`pos`), otherwise its number" }
+"BT-127" = { name = "Invoice line note", disposition = "unsupported", reason = "no input for notes of the lines yet" }
+"BT-128" = { name = "Invoice line object identifier", disposition = "unsupported", reason = "no input for invoiced objects of the lines" }
+"BT-129" = { name = "Invoiced quantity", disposition = "input", input = "item(quantity:)" }
+"BT-130" = { name = "Invoiced quantity unit of measure code", disposition = "input", input = "item(unit:) (the `unit` module, a code or a known unit text)" }
+"BT-131" = { name = "Invoice line net amount", disposition = "derived", source = "the net total of the item, as printed" }
+"BT-132" = { name = "Referenced purchase order line reference", disposition = "unsupported", reason = "no input for order line references" }
+"BT-133" = { name = "Invoice line Buyer accounting reference", disposition = "unsupported", reason = "no input for the buyer's booking accounts" }
+# ---------------------------------------------------------------- BG-26 Invoice line period
+"BG-26" = { name = "INVOICE LINE PERIOD", disposition = "unsupported", reason = "the dates of the items are stated for the invoice (BT-72, BG-14), not per line yet" }
+"BT-134" = { name = "Invoice line period start date", disposition = "unsupported", reason = "the dates of the items are stated for the invoice (BT-72, BG-14), not per line yet" }
+"BT-135" = { name = "Invoice line period end date", disposition = "unsupported", reason = "the dates of the items are stated for the invoice (BT-72, BG-14), not per line yet" }
+# ---------------------------------------------------------------- BG-27 Invoice line allowances
+"BG-27" = { name = "INVOICE LINE ALLOWANCES", disposition = "input", input = "item(modifier: discount(..))" }
+"BT-136" = { name = "Invoice line allowance amount", disposition = "derived", source = "the amount of the item discount" }
+"BT-137" = { name = "Invoice line allowance base amount", disposition = "unsupported", reason = "a percentage discount is stated by its amount (BT-136); its base is not stated yet" }
+"BT-138" = { name = "Invoice line allowance percentage", disposition = "unsupported", reason = "a percentage discount is stated by its amount (BT-136); its percentage is not stated yet" }
+"BT-139" = { name = "Invoice line allowance reason", disposition = "input", input = "the name of the item discount (\"Discount\" without one)" }
+"BT-140" = { name = "Invoice line allowance reason code", disposition = "unsupported", reason = "no input for UNTDID 5189 reason codes" }
+# ---------------------------------------------------------------- BG-28 Invoice line charges
+"BG-28" = { name = "INVOICE LINE CHARGES", disposition = "input", input = "item(modifier: surcharge(..))" }
+"BT-141" = { name = "Invoice line charge amount", disposition = "derived", source = "the amount of the item surcharge" }
+"BT-142" = { name = "Invoice line charge base amount", disposition = "unsupported", reason = "a percentage surcharge is stated by its amount (BT-141); its base is not stated yet" }
+"BT-143" = { name = "Invoice line charge percentage", disposition = "unsupported", reason = "a percentage surcharge is stated by its amount (BT-141); its percentage is not stated yet" }
+"BT-144" = { name = "Invoice line charge reason", disposition = "input", input = "the name of the item surcharge (\"Surcharge\" without one)" }
+"BT-145" = { name = "Invoice line charge reason code", disposition = "unsupported", reason = "no input for UNTDID 7161 reason codes" }
+# ---------------------------------------------------------------- BG-29 Price details
+"BG-29" = { name = "PRICE DETAILS", disposition = "input", input = "item(price:, base-quantity:)" }
+"BT-146" = { name = "Item net price", disposition = "input", input = "item(price:)", note = "with gross prices (tax-mode: \"inclusive\"), the net price rounded like every unit price" }
+"BT-147" = { name = "Item price discount", disposition = "unsupported", reason = "prices are stated as net prices (BT-146); discounts of an item are line allowances (BG-27)" }
+"BT-148" = { name = "Item gross price", disposition = "unsupported", reason = "prices are stated as net prices (BT-146); discounts of an item are line allowances (BG-27)" }
+"BT-149" = { name = "Item price base quantity", disposition = "input", input = "item(base-quantity:)" }
+"BT-150" = { name = "Item price base quantity unit of measure code", disposition = "derived", source = "the unit of the item (BT-130)" }
+# ---------------------------------------------------------------- BG-30 Line VAT information
+"BG-30" = { name = "LINE VAT INFORMATION", disposition = "input", input = "item(tax:) (or the tax of the invoice)" }
+"BT-151" = { name = "Invoiced item VAT category code", disposition = "input", input = "item(tax:) (constructors of the `tax` module)" }
+"BT-152" = { name = "Invoiced item VAT rate", disposition = "input", input = "item(tax:) (constructors of the `tax` module)" }
+# ---------------------------------------------------------------- BG-31 Item information
+"BG-31" = { name = "ITEM INFORMATION", disposition = "input", input = "item" }
+"BT-153" = { name = "Item name", disposition = "input", input = "the name of the item (its first argument)" }
+"BT-154" = { name = "Item description", disposition = "input", input = "item(description:)" }
+"BT-155" = { name = "Item Seller's identifier", disposition = "input", input = "item(item-id:) (text or `seller`)" }
+"BT-156" = { name = "Item Buyer's identifier", disposition = "input", input = "item(item-id: (buyer: ..))" }
+"BT-157" = { name = "Item standard identifier", disposition = "input", input = "item(item-id: (standard: ..)) (a GTIN, scheme 0160)" }
+"BT-158" = { name = "Item classification identifier", disposition = "unsupported", reason = "no input for item classifications" }
+"BT-159" = { name = "Item country of origin", disposition = "unsupported", reason = "no input for the origin of items yet" }
+# ---------------------------------------------------------------- BG-32 Item attributes
+"BG-32" = { name = "ITEM ATTRIBUTES", disposition = "unsupported", reason = "no input for item attributes" }
+"BT-160" = { name = "Item attribute name", disposition = "unsupported", reason = "no input for item attributes" }
+"BT-161" = { name = "Item attribute value", disposition = "unsupported", reason = "no input for item attributes" }

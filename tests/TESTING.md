@@ -458,6 +458,7 @@ The Mustang validation above checks two dozen hand-written documents. The CI add
 | Check                  | What it shows                                                                                  | Command                             | CI job                                     |
 | :--------------------- | :--------------------------------------------------------------------------------------------- | :---------------------------------- | :----------------------------------------- |
 | Conformance corpus     | invoice-pro's verdict equals the official one, and the XML says what the input and the PDF say | `nix run .#zugferd-corpus`          | `corpus` in `zugferd-validation.yaml`      |
+| Business terms         | every business term of EN 16931 has an input, a derivation or a reason why it is not supported | (part of `zugferd-corpus`)          | `corpus`                                   |
 | Golden XML             | the XML of every e-invoice test document is unchanged, or changed on purpose                   | `nix run .#zugferd-golden`          | `golden` in `zugferd-validation.yaml`      |
 | Reproducibility        | two compilations of a document give bit-identical PDFs (same Typst and package version)        | (part of `zugferd-golden`)          | `golden`                                   |
 | Performance gate       | the e-invoice path stays within its budget                                                     | `nix run .#perf-gate`               | `performance` in `zugferd-validation.yaml` |
@@ -552,6 +553,26 @@ When the corpus fails:
    - a bug in invoice-pro: fix it, and keep the minimal case as a regression case with the correct expectation;
    - a bug of the generator, an oracle or a constraint in `allowed()`: fix the tool (they stay small on purpose, so that they can be reviewed);
    - a known finding that is being worked on: add the signature to `known-issues.toml` with the finding id. Never add an entry to make a new class of failure disappear.
+
+#### Business Term Dispositions
+
+`tools/zugferd/bt-disposition.toml` states for every business term of EN 16931 (BT-1 to BT-165, BT-4 is not defined, and the business groups BG-1 to BG-32) what invoice-pro does with it, one line per term:
+
+```toml
+"BT-30" = { name = "Seller legal registration identifier", disposition = "input", input = "sender.legal-id (text or an identifier of the `id` module)" }
+"BT-72" = { name = "Actual delivery date", disposition = "derived", source = "the date of the items (`date` of `item`) when they share one, otherwise the invoice date" }
+"BT-17" = { name = "Tender or lot reference", disposition = "unsupported", reason = "no input for public procurement references" }
+```
+
+- `input`: an input of invoice-pro states the term, `input` names it (a parameter of `invoice`, a key of a party, a component or an argument of it);
+- `derived`: invoice-pro derives the term, `source` says from what;
+- `unsupported`: invoice-pro does not state the term, `reason` says why.
+
+`tools/zugferd/bt_disposition.py` (unit-tested by `test_bt_disposition.py`) fails when a term has no entry, an entry is no term of EN 16931, or a disposition lacks its `input`, `source` or `reason`; `scripts/zugferd-corpus` runs it before the corpus. So every business term has a decision, and a value without an input of its own cannot end up in another business term unnoticed, as the seller's tax number did in the seller identifier (issue #42). A change that adds an input, or starts to write a term, updates the line of the term in the same commit:
+
+```bash
+python3 tools/zugferd/bt_disposition.py   # ✔ 196 business terms of EN 16931 have a disposition (...)
+```
 
 #### Golden XML and Reproducibility
 

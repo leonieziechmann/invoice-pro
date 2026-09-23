@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# E-invoice conformance corpus: generates the corpus of invoices
-# (tools/zugferd/corpus/gen.py), then compiles every case once and compares
-# invoice-pro's own verdict and the XML with the official validators (XSD
-# and Mustang) and the semantic oracles (tools/zugferd/run.py).
+# E-invoice conformance corpus: checks that every business term of EN 16931
+# has a disposition (tools/zugferd/bt_disposition.py), generates the corpus of
+# invoices (tools/zugferd/corpus/gen.py), then compiles every case once and
+# compares invoice-pro's own verdict and the XML with the official validators
+# (XSD and Mustang) and the semantic oracles (tools/zugferd/run.py).
 # See tests/TESTING.md, "E-invoice conformance and performance (CI)".
 #
 # Usage: zugferd-corpus [--population pr|nightly|legal] [run.py options ...]
@@ -42,5 +43,8 @@ done
 # The tools check themselves first: classification, report parsing, oracles,
 # generator constraints (a few seconds, no Typst or Java).
 "$PYTHON" -m unittest discover --quiet -s tools/zugferd -p 'test_*.py'
+# Every business term of EN 16931 has a disposition: an input, a derivation
+# or a reason why it is not supported (tools/zugferd/bt-disposition.toml).
+"$PYTHON" tools/zugferd/bt_disposition.py
 "$PYTHON" tools/zugferd/corpus/gen.py --population "$population"
 exec "$PYTHON" tools/zugferd/run.py ${run_args[@]+"${run_args[@]}"}
