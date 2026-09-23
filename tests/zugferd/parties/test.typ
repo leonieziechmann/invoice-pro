@@ -173,7 +173,16 @@
   assert.eq(keys("buyer", name: "A", customer-nr: "K-1", project: "P"), ())
 
   // Misspellings and other names of keys the e-invoice reads
-  for key in ("vatId", "vat_id", "VAT-ID", "ustid", "USt-IdNr", "vat.id") {
+  for key in (
+    "vatId",
+    "vat_id",
+    "VAT-ID",
+    "ustid",
+    "USt-IdNr",
+    "vat.id",
+    "numeroTva",
+    "partita_iva",
+  ) {
     assert.eq(
       keys("seller", ..((key): "DE123456789")),
       ((key, "vat-id", true),),
