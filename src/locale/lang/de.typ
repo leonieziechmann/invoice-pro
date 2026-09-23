@@ -177,11 +177,11 @@
     text-card: (
       sum,
       deadline,
-    ) => [Der Gesamtbetrag in Höhe von *#sum* wird #deadline Ihrer Karte belastet.],
+    ) => [Der Gesamtbetrag in Höhe von *#sum* wird Ihrer Karte #deadline belastet.],
     text-card-due: (
       sum,
       deadline,
-    ) => [Der fällige Betrag in Höhe von *#sum* wird #deadline Ihrer Karte belastet.],
+    ) => [Der fällige Betrag in Höhe von *#sum* wird Ihrer Karte #deadline belastet.],
     cash-discount: (
       percent,
       deadline,

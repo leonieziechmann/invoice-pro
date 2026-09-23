@@ -144,7 +144,7 @@
   // A card payment
   expect(
     "card/goal",
-    "Der Gesamtbetrag in Höhe von 119,00 € wird sofort nach Erhalt Ihrer Karte belastet.",
+    "Der Gesamtbetrag in Höhe von 119,00 € wird Ihrer Karte sofort nach Erhalt belastet.",
   )
   expect(
     "card/card",
