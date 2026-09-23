@@ -251,6 +251,8 @@ Unit codes are checked against the UN/ECE Recommendation 20 code list. Unit pric
 
 A `base-quantity` (e.g. a price per 100 pieces) is written as the price base quantity (BT-149); it must be greater than 0.
 
+Quantities and base quantities are rounded to 4 decimals, the precision the built-in number formats print, before anything is calculated with them. A quantity of `1/3` is therefore printed and written as 0.3333, and with a price of 1000.00 the line total is 333.30, as a reader of the invoice would calculate it. If you print numbers with a custom `format.number`, keep at least 4 decimals so the printed quantity is the one the total is based on.
+
 ### 3. Tax Category Codes
 
 Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the standard functions from the `tax` module:
