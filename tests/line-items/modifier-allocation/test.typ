@@ -210,3 +210,45 @@
     #surcharge([Shipping], amount: 30)
   ]
 ]
+
+// --- 13. A percentage pinned to a category without items adds nothing ---
+// Bug: it added an empty VAT category (a "7%: 0.00" VAT line, and a 0.00
+// line in a bundle) for a discount that is 0.
+#check((li, model) => {
+  assert.eq(bases(li), ("0.19-S": d("100")))
+  assert.eq(li.item-data.discounts, ())
+  assert.eq(model.taxes.map(t => t.key), ("0.19-S",))
+})[
+  #line-items(tax: tax.vat(19%))[
+    #item([Software], price: 100)
+    #discount([Book discount], amount: 10%, tax: tax.vat(7%))
+  ]
+]
+#check((li, model) => {
+  assert.eq(li.item-data.items.map(i => i.name), ([Package],))
+  assert.eq(li.item-data.items.first().total, d("100"))
+})[
+  #line-items(tax: tax.vat(19%))[
+    #bundle([Package])[
+      #item([Software], price: 100)
+      #discount([Book discount], amount: 10%, tax: tax.vat(7%))
+    ]
+  ]
+]
+
+// --- 14. A small business charges no VAT, not even on a pinned modifier ---
+// Bug: `tax: tax.vat(19%)` on a surcharge added 19% VAT to the invoice of a
+// small business (`tax-exempt-small-biz`), whose items are all without VAT.
+#check(
+  tax-exempt-small-biz: true,
+  (li, model) => {
+    assert.eq(bases(li), ("0-O": d("104.9")))
+    assert.eq(li.total.gross, d("104.9"))
+    assert.eq(xml-entries(model), (("0-O", d("4.9")),))
+  },
+)[
+  #line-items[
+    #item([Service], price: 100)
+    #surcharge([Shipping], amount: 4.90, tax: tax.vat(19%))
+  ]
+]

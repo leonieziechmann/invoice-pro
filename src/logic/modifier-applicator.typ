@@ -189,10 +189,18 @@
   let modifiers = loom.query.collect-signals(children, kind: "modifier")
 
   let tax-groups = group-by-tax(items)
-  // A modifier pinned to a VAT category no item has adds that category.
+  // An absolute amount pinned to a VAT category no item has adds that
+  // category. A percentage of a category without items is 0: it adds none
+  // (no empty VAT line, no empty bundle line).
   for mod in modifiers {
     let pinned = mod.at("tax", default: none)
-    if pinned != none { tax-groups = with-tax-group(tax-groups, pinned) }
+    if pinned == none { continue }
+    if (
+      m-tax.to-tax-key(pinned) in tax-groups.groups
+        or (mod.type == "absolute" and mod.amount != 0)
+    ) {
+      tax-groups = with-tax-group(tax-groups, pinned)
+    }
   }
 
   let tax-rates = tax-groups

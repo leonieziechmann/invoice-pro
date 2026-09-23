@@ -36,7 +36,8 @@
   /// absolute amount is split over the VAT categories in proportion to their
   /// totals. On a document or bundle with several VAT categories and a total
   /// of 0 the split is undefined: then the modifier must be pinned with `tax`.
-  /// On an item, a modifier always has the item's tax.
+  /// On an item, a modifier always has the item's tax. With
+  /// `tax-exempt-small-biz`, it is replaced by the small business scheme.
   /// -> ratio | dictionary | auto
   tax: auto,
 ) = {
@@ -66,7 +67,12 @@
       import loom.mutator: *
 
       // Not cascaded: the `tax` of the context is the default of the items.
-      put("modifier-tax", if tax == auto { none } else {
+      // A small business charges no VAT: like the `tax` of its items, a
+      // pinned category is replaced by the small business scheme.
+      let small-biz = ctx.at("tax-exempt-small-biz", default: false)
+      put("modifier-tax", if tax == auto { none } else if small-biz {
+        ctx.locale.tax.small-enterprise-special-scheme
+      } else {
         m-tax.resolve(ctx, tax, "modifier")
       })
       derive("modifier-amount", amount, default: decimal("0"))

@@ -345,6 +345,8 @@ Use `tax` to pin a modifier to one VAT category instead, e.g. shipping that is t
 ]
 ```
 
+A pinned percentage applies to the items of its category only (with none, it is 0). On the invoice of a small business (`tax-exempt-small-biz: true`), which charges no VAT, `tax` is replaced by the small business scheme, just like the `tax` of the items.
+
 If the split is undefined (the VAT categories add up to 0, or there are no items at all), the invoice does not compile and asks for `tax`: an amount is never dropped silently.
 
 ---
