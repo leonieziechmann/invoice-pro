@@ -319,7 +319,7 @@ A `prepayment` represents an advance payment, deposit, or installment already re
 While a `discount` reduces the taxable base (net subtotal before VAT), a `prepayment` is deducted **post-tax** from the gross invoice total to determine the remaining amount due (_Fälliger Betrag_ / ZUGFeRD `BT-113` & `BT-115`).
 :::
 
-When a prepayment is specified, downstream components like `#payment-goal()` and the EPC-QR code in `#bank-details()` automatically target the **remaining balance due** rather than the full gross amount.
+When a prepayment is specified, downstream components like `#payment-terms()` and the EPC-QR code in `#bank-details()` automatically target the **remaining balance due** rather than the full gross amount.
 
 | Key           | Type                                                 | Description                                                                                                 |
 | :------------ | :--------------------------------------------------- | :---------------------------------------------------------------------------------------------------------- |

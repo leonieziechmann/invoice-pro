@@ -43,6 +43,7 @@ Here is a minimal, copy-paste example to get you started:
     name: "Acme Corporation",
     address: "123 Business Rd",
     city: "Metropolis, NY 10001",
+    vat-id: "DE123456789", // Your VAT ID or tax number (tax-nr) is required
   ),
   recipient: (
     name: "John Doe",
@@ -52,11 +53,11 @@ Here is a minimal, copy-paste example to get you started:
 
   // Document metadata
   invoice-nr: "INV-2026-001", // Unique document identifier
-  date: datetime.today(),     // Sets the invoice date to compilation time
+  date: datetime.today(), // Sets the invoice date to compilation time
 
   // Financial configuration
-  tax-mode: "exclusive",      // Base prices do not include tax
-  tax: tax.vat(19%),          // Applies a 19% default tax rate
+  tax-mode: "exclusive", // Base prices do not include tax
+  tax: tax.vat(19%), // Applies a 19% default tax rate
 )
 
 // 2. Define the invoice body
@@ -79,6 +80,8 @@ Here is a minimal, copy-paste example to get you started:
 ]
 ```
 
+If a legally required field is missing (say, the invoice number), the invoice still renders, but as a draft: the gap is marked in place, and a report page at the end lists every problem with its legal basis. Compile with `validation: "strict"` (or `--input invoice-pro-validation=strict`) to stop instead. See [Validation](./api-reference/invoice/validation.md).
+
 :::tip
 If your business falls under a small enterprise exemption scheme (e.g., _Kleinunternehmerregelung_ in Germany), simply set `tax-exempt-small-biz: true` and `tax: auto` in the root `#show` rule. The module will automatically suppress tax rendering and output the correct legal **Grounds** based on your configured `locale`.
 :::
@@ -94,3 +97,16 @@ If your business falls under a small enterprise exemption scheme (e.g., _Kleinun
 :::warning
 Do not bypass the root `invoice` wrapper when using `invoice-pro` components. Because these components are built on top of the `loom` state engine, attempting to declare an `item` outside of the `invoice` context will result in a missing dependency state. The components will simply not render or execute at all.
 :::
+
+## Choosing a Look
+
+The default theme, `theme.classic`, picks its page layout from the sender's country (DIN 5008 for a German sender). To change the look, pass another preset and your brand:
+
+```typst
+#show: invoice.with(
+  theme: theme.elegant.with(theme.custom.brand(color: rgb("#1c2a48"))),
+  // sender: .., recipient: .., invoice-nr: ..
+)
+```
+
+The [Theming API](./api-reference/theme/index.md) shows all ten presets and every way to customize them.

@@ -10,7 +10,7 @@ sidebar_position: 3
 ZUGFeRD/Factur-X support in `invoice-pro` is currently **experimental**. Please note the following known limitations:
 
 - **XMP Profile Metadata:** The document's XMP profile does not yet correctly announce the attached `factur-x.xml` file. This can cause some strict validation tools to fail or hang up.
-- **No Self-Validation:** The template code does not validate your final document structure for full regulatory compliance. You **must** verify the generated PDF and XML payload using an external validator (e.g., the [ZUGFeRD Community Validator](https://www.zugferd-community.net/) or other official portals) before using them in production.
+- **Limited Self-Validation:** The template checks that the data each profile requires is present (see [Validation and the XML Attachment](#validation-and-the-xml-attachment)), but it does not validate the final XML against the schemas and business rules. You **must** verify the generated PDF and XML payload using an external validator (e.g., the [ZUGFeRD Community Validator](https://www.zugferd-community.net/) or other official portals) before using them in production.
 - **Reporting Issues:** If you encounter edge cases, schema validation failures, or formatting issues, please report them by opening an issue on our GitHub repository.
   :::
 
@@ -181,6 +181,23 @@ The `"basic"` profile only supports the standard identifier. See [The `item-id` 
 
 ---
 
+## Validation and the XML Attachment
+
+Before the XML is attached, invoice-pro checks the invoice data (§ 14 UStG, EN 16931) and the data the selected profile requires. What happens with a problem depends on the [validation level](./api-reference/invoice/validation.md):
+
+| Level               | XML attachment                                                                                                                                                                         |
+| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"draft"` (default) | Attached only when no required data is missing. Otherwise the XML is withheld, the badge reads "no e-invoice", and the report page lists what is missing.                              |
+| `"strict"`          | Every problem stops the compilation, so an attached XML is always complete. Use it for sending: `typst compile --pdf-standard=a-3b --input invoice-pro-validation=strict invoice.typ`. |
+| `none`              | No checks. The XML is attached as built, even when required data is missing. Never send such a document.                                                                               |
+
+The profile checks:
+
+| Profile                                                 | Required beyond the invoice data                                                                                      |
+| :------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------------------- |
+| `"en16931"`, `"xrechnung"`                              | An electronic address for the buyer (BT-49) and the seller (BT-34): `electronic-address`, a `vat-id` or an `email`.   |
+| `"xrechnung"` (also `"en16931"` between German parties) | A buyer reference (BT-10: `buyer-reference` or `leitweg-id`) and a seller contact with name, phone and e-mail (BG-6). |
+
 ## Hardcoded Details & Limitations
 
 - **Business Process URN (BT-23):** Whenever using the `"en16931"` or `"xrechnung"` profiles, the Business Process context URN is hardcoded to `urn:fdc:peppol.eu:2017:poacc:billing:01:1.0` (standard billing transaction).
@@ -196,7 +213,6 @@ Here is a full example of a ZUGFeRD-compliant invoice configuration:
 #import "@preview/invoice-pro:0.4.2": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
   // Enable the comfort EN 16931 e-invoicing profile
   zugferd: "en16931",
 

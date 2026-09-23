@@ -17,12 +17,22 @@ When releasing a new version, the version string must be updated in multiple loc
 - [ ] **`docs/docs/` (current docs)** — Update all `@preview/invoice-pro:X.Y.Z` imports across:
   - `intro.md`
   - `getting-started.md`
+  - `e-invoicing.md`
+  - `b2b.md`
+  - `b2c.md`
   - `contributing.md`
   - `api-reference/index.md`
-  - `api-reference/invoice.md`
+  - `api-reference/invoice/index.md`
+  - `api-reference/invoice/validation.md`
+  - `api-reference/invoice/country.md`
+  - `api-reference/invoice/references.md`
+  - `api-reference/line-items/unit.md`
   - `api-reference/components.md`
   - `api-reference/tax.md`
-  - `api-reference/theme.md`
+  - `api-reference/theme/index.md`
+  - `api-reference/theme/layouts.md`
+  - `api-reference/theme/parts.md`
+  - `api-reference/locale/index.md`
   - `api-reference/locale/custom.md`
   - `api-reference/locale/base.md`
 - [ ] **`docs/DOCUMENTATION.md`** — Update all version numbers in the Code Block Registry tables
@@ -55,5 +65,5 @@ nix run .#check-version -- 0.3.0
 | `src/loom-wrapper.typ`  | `#let loom-key = <invoice-pro:X.Y.Z>`  | `<invoice-pro:0.4.2>` |
 | `README.md`             | `#import "@preview/invoice-pro:X.Y.Z"` | 3 import statements   |
 | `template/invoice.typ`  | `#import "@preview/invoice-pro:X.Y.Z"` | 1 import statement    |
-| `docs/docs/**/*.md`     | `#import "@preview/invoice-pro:X.Y.Z"` | ~15 import statements |
+| `docs/docs/**/*.md`     | `#import "@preview/invoice-pro:X.Y.Z"` | ~30 import statements |
 | `docs/DOCUMENTATION.md` | Version column in registry tables      | All `0.X.Y` entries   |

@@ -1,0 +1,16 @@
+[theme.tokens.colors]
+primary = "#0b3d91"
+accent = "#ffb000"
+
+[theme.tokens.fonts]
+body = ["Libertinus Serif"]
+
+[theme.options.logo]
+image = "logo.svg"
+height = "9mm"
+
+[theme.options.items-table]
+zebra = ["none", "none"]
+
+[theme.layout]
+margin = { bottom = "35mm" }

@@ -35,7 +35,7 @@ When issuing a B2B invoice, specific data points must be provided to ensure the 
 | **Supplier Address**     | Defines the official registered office or place of business.                                                    | Business registration.                                       | `sender.address` or `sender.street`, `sender.city`, `sender.country`             |
 | **Supplier Tax ID**      | Used by local tax offices for tax assessment. Required if no VAT ID is available.                               | Issued by your local tax authority on registration.          | `sender.tax-nr`                                                                  |
 | **Supplier VAT ID**      | Identifies the seller as a registered taxable entity in the EU VAT system. Mandatory for cross-border EU trade. | Applied for and issued by your central tax authority.        | `sender.vat-id`                                                                  |
-| **Company Registration** | Legal transparency requirement for corporations (e.g., GmbH, AG) showing register details.                      | Commercial register extract (e.g., _Handelsregisternummer_). | Pass via `sender.extra: ("Handelsregister": "...")`                              |
+| **Company Registration** | Legal transparency requirement for corporations (e.g., GmbH, AG) showing register details.                      | Commercial register extract (e.g., _Handelsregisternummer_). | `sender.register` and `sender.management` (printed in the legal footer)          |
 | **Full Buyer Name**      | Identifies the recipient who is legally authorized to deduct the input VAT.                                     | Client contract, purchase order, or registry search.         | `recipient.name`                                                                 |
 | **Buyer Address**        | Defines the billing address of the customer. Must match their official records.                                 | Provided by the customer.                                    | `recipient.address` or `recipient.street`, `recipient.city`, `recipient.country` |
 | **Buyer VAT ID**         | Mandatory for zero-rated intra-community supplies and reverse-charge transactions.                              | Provided by the customer (verify via VIES).                  | `recipient.vat-id`                                                               |
@@ -77,10 +77,8 @@ For invoicing a business client within the same country (e.g., Germany) where st
       phone: "+49 89 123456",
       email: "billing@techsolutions.de",
     ),
-    extra: (
-      "Geschäftsführer": "Max Mustermann",
-      "Handelsregister": "Amtsgericht München, HRB 987654",
-    ),
+    register: [Amtsgericht München, HRB 987654],
+    management: [Geschäftsführer: Max Mustermann],
   ),
 
   recipient: (
@@ -103,16 +101,26 @@ For invoicing a business client within the same country (e.g., Germany) where st
 
 #line-items[
   #item([IT-Architektur Beratung], quantity: 15, unit: unit.hour, price: 120.00)
-  #item([Backend Softwareentwicklung], quantity: 40, unit: unit.hour, price: 95.00)
-  #item([Server-Setup & Deployment], quantity: 1, unit: unit.piece, price: 450.00)
+  #item(
+    [Backend Softwareentwicklung],
+    quantity: 40,
+    unit: unit.hour,
+    price: 95.00,
+  )
+  #item(
+    [Server-Setup & Deployment],
+    quantity: 1,
+    unit: unit.piece,
+    price: 450.00,
+  )
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
-  bank: "Münchner Sparkasse",
-  iban: "DE89700202001234567890",
-  bic: "SADEDE88XXX",
+  bank: "Stadtsparkasse München",
+  iban: "DE47701500001234567890",
+  bic: "SSKMDEMMXXX",
 )
 ```
 
@@ -160,11 +168,11 @@ For invoicing a business client in another EU country where the recipient is res
   #item([User Research Sessions], quantity: 8, unit: unit.hour, price: 100.00)
 ]
 
-#payment-goal(days: 30)
+#payment-terms(days: 30)
 
 #bank-details(
   bank: "Commerzbank Berlin",
-  iban: "DE12370400440532135700",
-  bic: "COBA22XXX",
+  iban: "DE38100400000532135700",
+  bic: "COBADEBBXXX",
 )
 ```

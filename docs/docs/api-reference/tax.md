@@ -34,10 +34,13 @@ All tax functions accept an optional `grounds` parameter (a string). This is use
 ```typst
 #import "@preview/invoice-pro:0.4.2": item, tax
 
-item(
-  name: "Consulting (B2B EU)",
+// inside #line-items[..]
+#item(
+  [Consulting (B2B EU)],
   price: 1500.00,
-  tax: tax.reverse-charge(grounds: "Tax liability of the recipient according to...")
+  tax: tax.reverse-charge(
+    grounds: "Tax liability of the recipient according to...",
+  ),
 )
 ```
 
@@ -104,6 +107,6 @@ Only use this if you know exactly which UNTDID 5305 tax category code your accou
   rate: 0%,
   category: "E",
   label: "custom-exemption",
-  grounds: "Exempt based on local regulation paragraph 42."
+  grounds: "Exempt based on local regulation paragraph 42.",
 )
 ```

@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Components API
 
-This section details the standalone components you can use in your invoice, such as payment instructions, bank details, and signature blocks.
+This section details the standalone components you can use in your invoice, such as payment instructions, bank details, and signature blocks. Each component computes its data and hands it to a [part](./theme/parts.md) of the theme, which renders it; to restyle a component, wrap or replace its part.
 
 :::info
 **Looking for items and modifiers?**
@@ -31,24 +31,24 @@ The payment reference is resolved in one order: the `reference` or `text` argume
 In the EPC-QR code, `reference` and the `invoice-nr` fill the structured reference field (max. 35 characters), while `text` and the invoice's `payment-reference` fill the unstructured remittance text field (max. 140 characters).
 :::
 
-| Key                   | Type                         | Description                                                                                                                                                                       |
-| --------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                | `auto` \| `none` \| `str`    | The name of the account holder. If set to `auto`, it automatically defaults to the sender's name.                                                                                 |
-| `bank`                | `none` \| `str`              | The name of the banking institution.                                                                                                                                              |
-| `iban`                | `none` \| `str`              | The International Bank Account Number (IBAN).                                                                                                                                     |
-| `bic`                 | `none` \| `str`              | The Bank Identifier Code (BIC/SWIFT). If omitted or `none`, the BIC field is hidden in the bank details block and omitted from the EPC-QR code.                                   |
-| `reference`           | `auto` \| `none` \| `str`    | The structured payment reference to be used by the customer. If `auto`, it falls back to the invoice's `payment-reference`, then to the `invoice-nr`. `none` omits the reference. |
-| `text`                | `none` \| `str`              | Unstructured payment reference text, as an alternative to `reference` (mutually exclusive).                                                                                       |
-| `payment-amount`      | `auto` \| `none` \| `number` | The specific amount to be paid. If `auto`, it uses the remaining amount due (or full gross total if no prepayments are present).                                                  |
-| `show-reference`      | `bool`                       | Whether to display the reference field in the output. Defaults to `true`.                                                                                                         |
-| `account-holder-text` | `auto`                       | Optional custom text to label the account holder field.                                                                                                                           |
-| `qr-code`             | `dictionary`                 | Configuration for a payment QR code (e.g., EPC-QR). Accepts keys like `display` (bool) and `size` (length, defaults to `5em`).                                                    |
+| Key                   | Type                         | Description                                                                                                                                                                                  |
+| --------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                | `auto` \| `none` \| `str`    | The name of the account holder. If set to `auto`, it automatically defaults to the sender's name.                                                                                            |
+| `bank`                | `none` \| `str`              | The name of the banking institution.                                                                                                                                                         |
+| `iban`                | `none` \| `str`              | The International Bank Account Number (IBAN).                                                                                                                                                |
+| `bic`                 | `none` \| `str`              | The Bank Identifier Code (BIC/SWIFT). If omitted or `none`, the BIC field is hidden in the bank details block and omitted from the EPC-QR code.                                              |
+| `reference`           | `auto` \| `none` \| `str`    | The structured payment reference to be used by the customer. If `auto`, it falls back to the invoice's `payment-reference`, then to the `invoice-nr`. `none` omits the reference.            |
+| `text`                | `none` \| `str`              | Unstructured payment reference text, as an alternative to `reference` (mutually exclusive).                                                                                                  |
+| `payment-amount`      | `auto` \| `none` \| `number` | The specific amount to be paid. If `auto`, it uses the remaining amount due (or full gross total if no prepayments are present).                                                             |
+| `show-reference`      | `bool`                       | Whether to display the reference field in the output. Defaults to `true`.                                                                                                                    |
+| `account-holder-text` | `auto`                       | Optional custom text to label the account holder field.                                                                                                                                      |
+| `qr-code`             | `dictionary`                 | Configuration for the payment QR code (EPC-QR). `display: false` hides it. `size` (a length, at least 20mm) overrides the size the theme sets with `theme.custom.bank-details(qr-size: ..)`. |
 
 ---
 
-## `payment-goal`
+## `payment-terms`
 
-Displays the payment deadline and terms for the invoice. You can specify a strict deadline date or a relative number of days.
+Displays the payment deadline and terms for the invoice. You can specify a strict deadline date or a relative number of days. Before v0.5.0 this component was called `payment-goal`.
 
 :::note
 You can provide either `days` or a specific `date`. If you provide `days`, the system calculates the deadline relative to the main [invoice date](./invoice).
@@ -61,37 +61,39 @@ You can provide either `days` or a specific `date`. If you provide `days`, the s
 
 ### Examples
 
-The visual output of the component changes based on the parameters provided. Below are the standard English translations for the output strings:
+The visual output of the component changes based on the parameters provided. Below are the outputs of `locale.en-de`:
 
 #### 1. Default (Prompt Payment)
 
 If no parameters are provided, the system requests prompt payment.
 
 ```typst
-#payment-goal()
+#payment-terms()
 ```
 
-> Please transfer the total amount of **123.45€** promptly without deduction to the account mentioned below.
+> Please transfer the total amount of **123,45 €** upon receipt to the account listed below.
 
 #### 2. Relative Deadline
 
 Using the `days` parameter to specify a timeframe.
 
 ```typst
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 ```
 
-> Please transfer the total amount of **123.45€** within 14 days without deduction to the account mentioned below.
+> Please transfer the total amount of **123,45 €** within 14 days to the account listed below.
 
 #### 3. Fixed Deadline
 
 Using the `date` parameter to specify an absolute deadline.
 
 ```typst
-#payment-goal(date: datetime(day: 1, month: 1, year: 2026))
+#payment-terms(date: datetime(day: 1, month: 1, year: 2026))
 ```
 
-> Please transfer the total amount of **123.45€** by 01.01.2026 at the latest without deduction to the account mentioned below.
+> Please transfer the total amount of **123,45 €** no later than 01.01.2026 to the account listed below.
+
+After a [prepayment](./line-items/index.md), the sentence names the amount due instead of the total (locale string `payment.text-due`).
 
 ---
 
@@ -124,7 +126,7 @@ While a `bundle` aggregates items into a single grouped line item and a `group` 
 If you have multiple items that share a specific tax rate (e.g., books with a reduced 7% tax rate), you can wrap them in an `apply` block instead of setting the `tax` parameter on every single item.
 
 ```typst
-#import "@preview/invoice-pro:0.4.2": item, apply, tax
+#import "@preview/invoice-pro:0.4.2": apply, item, tax
 
 // ...
 #apply(tax: tax.vat(7%))[
@@ -142,7 +144,7 @@ If you have multiple items that share a specific tax rate (e.g., books with a re
 ```
 
 :::warning
-**Advanced Usage for Power Users:** Because `apply` interfaces directly with the internal state representation, power users can also use it to override deeper internal functions—such as temporarily changing the [`locale`](./locale), [`theme`](./theme), or formatting logic for a specific scope. However, this requires knowledge of the internal data structure and should be used with caution!
+**Advanced Usage for Power Users:** Because `apply` interfaces directly with the internal state representation, power users can also use it to override deeper internal values—such as the [`locale`](./locale) or formatting logic for a specific scope. However, this requires knowledge of the internal data structure and should be used with caution! To re-theme part of the body, use [`themed`](./theme/parts.md#scoped-overrides-themed) instead.
 :::
 
 ---

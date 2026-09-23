@@ -31,6 +31,8 @@ Every custom dictionary you provide is deep-merged against `base-language` and `
 Review the internal `base-language` and `base-region` structures to understand the minimum viable overrides required. Only override fields that deviate from the standard fallback.
 :::
 
+v0.5.0 added the groups `sections` and `validation` and several keys (such as `document.page` and `payment.text-due`); see the [Base Schema](./base.md). A custom language without them shows the English base texts until you translate them.
+
 ---
 
 ## Example: Building a "Europe East" Package
@@ -77,31 +79,35 @@ Here, we define how currencies are formatted, how values are **Normalized**, and
 
 ```typst
 // region/pl.typ
-#import "@preview/invoice-pro:0.4.2": locale, data
+#import "@preview/invoice-pro:0.4.2": locale, tax
 
 // The region builder function
-#let region-pl = (lang) => (
+#let region-pl = lang => (
   meta: (
     region: "pl",
   ),
   format: (
     // Format currency to append 'zł' and use comma decimals
-    currency: (val) => {
+    currency: val => {
       let rounded = calc.round(val, digits: 2)
       str(rounded).replace(".", ",") + " zł"
     },
-    // Customize date formatting
-    date: (val) => if type(val) == datetime {
+    // Customize date formatting: a date, a range, or none (no date)
+    date: val => if type(val) == datetime {
       val.display("[day].[month].[year]")
-    } else {
+    } else if type(val) == array {
       // Handle date ranges safely
-      val.first().display("[day].[month].[year]") + " - " + val.last().display("[day].[month].[year]")
-    }
+      (
+        val.first().display("[day].[month].[year]")
+          + " - "
+          + val.last().display("[day].[month].[year]")
+      )
+    },
   ),
   tax: (
     // Set standard Polish VAT
-    default-vat: data.tax.vat(23%),
-  )
+    default-vat: tax.vat(23%),
+  ),
 )
 ```
 
@@ -147,9 +153,9 @@ Users of your published package can now simply import your locale and pass it di
 
 When defining the `lang` parameter for the factory, refer to the language override keys. When defining the `region` parameter, your function must return a dictionary conforming to the following structure:
 
-| Key         | Type         | Description                                                                                                          |
-| :---------- | :----------- | :------------------------------------------------------------------------------------------------------------------- |
-| `meta`      | `dictionary` | Contains the `region` string identifier (e.g., `"pl"`, `"cz"`).                                                      |
-| `format`    | `dictionary` | Functions controlling the conversion of integers/floats/dates to strings (e.g., `currency`, `date`, `percent`).      |
-| `normalize` | `dictionary` | Functions determining rounding logic for `money`, `money-fine`, and `infer-tax` parameters.                          |
-| `tax`       | `dictionary` | Contains default `data.tax` objects to be applied globally (e.g., `default-vat`, `small-enterprise-special-scheme`). |
+| Key         | Type         | Description                                                                                                                                 |
+| :---------- | :----------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| `meta`      | `dictionary` | Contains the `region` string identifier (e.g., `"pl"`, `"cz"`).                                                                             |
+| `format`    | `dictionary` | Functions controlling the conversion of integers/floats/dates to strings (e.g., `currency`, `date`, `percent`).                             |
+| `normalize` | `dictionary` | Functions determining rounding logic for `money`, `money-fine`, and `infer-tax` parameters.                                                 |
+| `tax`       | `dictionary` | Contains default tax objects (built with the `tax` module) to be applied globally (e.g., `default-vat`, `small-enterprise-special-scheme`). |

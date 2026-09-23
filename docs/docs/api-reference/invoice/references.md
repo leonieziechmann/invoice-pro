@@ -70,7 +70,7 @@ All reference builders accept optional `label` and `value` parameters (e.g. `ref
 | :---------------------------- | :------------------------------------------------------ | :----------------------------------------------------------------------------------------------------- |
 | **`references.invoice-nr`**   | `ctx.invoice-nr`                                        | Invoice identifier / number.                                                                           |
 | **`references.invoice-date`** | `ctx.invoice-date` (`date`)                             | Invoice issue date, formatted according to locale.                                                     |
-| **`references.due-date`**     | `ctx.due-date` or derived from `#payment-goal()`        | Payment deadline date.                                                                                 |
+| **`references.due-date`**     | `ctx.due-date` or derived from `#payment-terms()`       | Payment deadline date.                                                                                 |
 | **`references.service-time`** | Computed min & max dates across all `item.date` entries | Period or date of service delivery. Falls back to invoice date if items don't define individual dates. |
 
 ### Customer & Recipient

@@ -22,17 +22,20 @@ All string fields within the language schema dictate the static text printed on 
 
 Contains core metadata about the language configuration.
 
-| Key    | Type  | Description                                                                                                                                      |
-| :----- | :---- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lang` | `str` | The ISO 639-1 language code (e.g., `"en"`, `"de"`). Sets the document language (`text.lang`), which drives hyphenation and the PDF language tag. |
+| Key              | Type                   | Description                                                                                                                                      |
+| :--------------- | :--------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lang`           | `str`                  | The ISO 639-1 language code (e.g., `"en"`, `"de"`). Sets the document language (`text.lang`), which drives hyphenation and the PDF language tag. |
+| `resolve-plural` | `(any, number) => any` | Picks the singular or plural form of a unit for a quantity.                                                                                      |
 
 ### `document`
 
 Designations for primary document types.
 
-| Key       | Type  | Description                                               |
-| :-------- | :---- | :-------------------------------------------------------- |
-| `invoice` | `str` | The title used for standard invoices (e.g., `"Invoice"`). |
+| Key            | Type                    | Description                                                                   |
+| :------------- | :---------------------- | :---------------------------------------------------------------------------- |
+| `invoice`      | `str`                   | The title used for standard invoices (e.g., `"Invoice"`).                     |
+| `page`         | `(int, int) => content` | The page label of the `page-number` part (e.g., `[Page #current of #total]`). |
+| `continued-on` | `(int) => content`      | A note on a page whose content continues (e.g., `[Continued on page #page]`). |
 
 ### `address`
 
@@ -43,17 +46,29 @@ Labels indicating the address blocks.
 | `recipient` | `str` | Label above the recipient address (e.g., `"Bill To"`). |
 | `sender`    | `str` | Label above the sender details (e.g., `"From"`).       |
 
+### `sections`
+
+Section headings a theme may print (provisional). Themes never hard-code their own labels, so every preset follows these strings.
+
+| Key            | Type  | Description                                                 |
+| :------------- | :---- | :---------------------------------------------------------- |
+| `details`      | `str` | Heading of the invoice details (e.g., `"Invoice details"`). |
+| `payment`      | `str` | Heading of the payment block (e.g., `"Payment"`).           |
+| `bank-details` | `str` | Heading of the bank details (e.g., `"Bank details"`).       |
+| `how-to-pay`   | `str` | Heading of a payment card (e.g., `"How to pay"`).           |
+
 ### `reference`
 
 Designations for header metadata.
 
-| Key              | Type  | Description                                                    |
-| :--------------- | :---- | :------------------------------------------------------------- |
-| `tax-number`     | `str` | Label for the sender's tax identification (e.g., `"Tax ID"`).  |
-| `invoice-number` | `str` | Label for the document identifier (e.g., `"Invoice Number"`).  |
-| `vat-id`         | `str` | Label for the Value Added Tax identifier (e.g., `"VAT ID"`).   |
-| `invoice-date`   | `str` | Label for the date of the invoice (e.g., `"Invoice Date"`).    |
-| `service-time`   | `str` | Label for the period of service (e.g., `"Period of Service"`). |
+| Key                                                                                                                                                                                                                                                                                                                       | Type  | Description                                                    |
+| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :---- | :------------------------------------------------------------- |
+| `tax-number`                                                                                                                                                                                                                                                                                                              | `str` | Label for the sender's tax identification (e.g., `"Tax ID"`).  |
+| `invoice-number`                                                                                                                                                                                                                                                                                                          | `str` | Label for the document identifier (e.g., `"Invoice Number"`).  |
+| `vat-id`                                                                                                                                                                                                                                                                                                                  | `str` | Label for the Value Added Tax identifier (e.g., `"VAT ID"`).   |
+| `invoice-date`                                                                                                                                                                                                                                                                                                            | `str` | Label for the date of the invoice (e.g., `"Invoice Date"`).    |
+| `service-time`                                                                                                                                                                                                                                                                                                            | `str` | Label for the period of service (e.g., `"Period of Service"`). |
+| `customer-number`, `buyer-reference`, `recipient-vat-id`, `recipient-tax-number`, `order-number`, `order-date`, `project`, `contract-number`, `quote-number`, `delivery-note-number`, `delivery-address`, `preceding-invoice-number`, `due-date`, `payment-reference`, `contact-person`, `contact-phone`, `contact-email` | `str` | Labels of the [reference](../invoice/references.md) builders.  |
 
 ### `line-items`
 
@@ -62,6 +77,8 @@ Column headers and structural labels for the line-items table.
 | Key           | Type  | Description                                           |
 | :------------ | :---- | :---------------------------------------------------- |
 | `position`    | `str` | Column header for the item position index.            |
+| `item-id`     | `str` | Column header for the seller's item number.           |
+| `unit`        | `str` | Column header for the unit.                           |
 | `description` | `str` | Column header for the item name or description.       |
 | `quantity`    | `str` | Column header for the item amount.                    |
 | `unit-price`  | `str` | Column header for the cost per unit.                  |
@@ -73,18 +90,21 @@ Column headers and structural labels for the line-items table.
 | `discount`    | `str` | Label for applied discounts.                          |
 | `surcharge`   | `str` | Label for applied surcharges.                         |
 | `subtotal`    | `str` | Label indicating a running subtotal within the table. |
+| `prepayment`  | `str` | Label for a prepayment line.                          |
 
 ### `summary`
 
 Labels for the calculation footer at the end of the table.
 
-| Key         | Type  | Description                           |
-| :---------- | :---- | :------------------------------------ |
-| `sum`       | `str` | Label for the total sum before taxes. |
-| `vat-tax`   | `str` | Label for the calculated tax amount.  |
-| `total`     | `str` | Label for the final amount due.       |
-| `including` | `str` | Short label for "inclusive of".       |
-| `excluding` | `str` | Short label for "exclusive of".       |
+| Key          | Type  | Description                                 |
+| :----------- | :---- | :------------------------------------------ |
+| `sum`        | `str` | Label for the total sum before taxes.       |
+| `vat-tax`    | `str` | Label for the calculated tax amount.        |
+| `total`      | `str` | Label for the final amount due.             |
+| `including`  | `str` | Short label for "inclusive of".             |
+| `excluding`  | `str` | Short label for "exclusive of".             |
+| `prepayment` | `str` | Label for a prepayment in the totals.       |
+| `amount-due` | `str` | Label for the amount due after prepayments. |
 
 ### `global-info`
 
@@ -150,9 +170,10 @@ Text blocks and phrasing for payment terms.
 
 Greetings and the sign-off area.
 
-| Key       | Type  | Description                               |
-| :-------- | :---- | :---------------------------------------- |
-| `closing` | `str` | The sign-off text (e.g., `"Sincerely,"`). |
+| Key       | Type  | Description                                                                  |
+| :-------- | :---- | :--------------------------------------------------------------------------- |
+| `closing` | `str` | The sign-off text (e.g., `"Sincerely,"`).                                    |
+| `thanks`  | `str` | A closing thanks some themes print (e.g., `"Thank you for your business."`). |
 
 ### `legal`
 
@@ -173,6 +194,29 @@ Warning messages utilized for incorrect template usage.
 | `city-missing`    | `str` | Error when the city/postal code is omitted.             |
 | `ambiguous-tax`   | `str` | Error thrown during ambiguous 0% tax resolution.        |
 | `invalid-tax`     | `str` | Error thrown when an unrecognized tax rate is provided. |
+
+### `validation`
+
+The feedback of [`validation: "draft"`](../invoice/validation.md): inline markers, the page badge, the watermark and the report page. The messages of `validation: "strict"` stay in English.
+
+| Key                                     | Type                   | Description                                                                                                                           |
+| :-------------------------------------- | :--------------------- | :------------------------------------------------------------------------------------------------------------------------------------ |
+| `marker`                                | `(content) => content` | The inline marker in place of a missing field (e.g., `[‹missing: #field›]`).                                                          |
+| `missing`                               | `(content) => content` | The problem text of a missing field in the report.                                                                                    |
+| `part-empty`                            | `(str) => content`     | The marker in place of a required part that rendered nothing.                                                                         |
+| `badge`                                 | `(int) => str`         | The page badge (e.g., `"DRAFT · 2 problems"`).                                                                                        |
+| `watermark`                             | `str`                  | The watermark word.                                                                                                                   |
+| `e-invoice-short`                       | `str`                  | Added to the badge when the e-invoice XML was withheld.                                                                               |
+| `report-title`                          | `str`                  | Heading of the report page.                                                                                                           |
+| `report-intro`                          | `(int) => content`     | First paragraph of the report.                                                                                                        |
+| `report-strict`                         | `content`              | The closing note on `validation: "strict"`.                                                                                           |
+| `e-invoice-withheld`                    | `(str) => content`     | The notice when the XML was withheld; the parameter is the profile.                                                                   |
+| `number`, `problem`, `reference`, `fix` | `str`                  | Column headers and the label of the fix.                                                                                              |
+| `fix-or`                                | `str`                  | Joins two alternative fixes (e.g., `"or"`).                                                                                           |
+| `classes`                               | `dictionary`           | Labels of the issue classes `data`, `e-invoice`, `theme` and `lint`.                                                                  |
+| `fields`                                | `dictionary`           | Labels of the checked fields, keyed by field id (e.g., `invoice-number`, `recipient-address`).                                        |
+| `issues`                                | `dictionary`           | Report texts of the theme and lint issues, each a function of the issue's arguments. A missing key falls back to the English message. |
+| `roles`                                 | `dictionary`           | What each required role carries (`title`, `recipient`, `supplier`, `tax-id`).                                                         |
 
 ---
 
@@ -248,16 +292,19 @@ When building your own tools or customizing a layout, you can leverage the casca
   payment: (
     // Update the prompt payment phrasing
     deadline-soon: "due immediately upon receipt",
-  )
+  ),
 )
 
 #show: invoice.with(
   locale: locale.build-locale(
     custom-lang,
-    locale.region.en
-  )
+    locale.region.de, // German formatting and taxes
+  ),
+  // ...
 )
 ```
+
+`build-locale` takes a language dictionary and a region builder from `locale.region` (`at`, `ch`, `de`, `es`, `fr`, `it`). Keys missing from `custom-lang` fall back to the English base schema.
 
 :::note
 The `normalize.infer-tax` function is a vital bridge. Whenever a user types a raw percentage (e.g., `19%`) in their line items, this function converts it into a standardized tax object containing the correct **Grounds** and legal text specific to that region.

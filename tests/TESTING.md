@@ -12,6 +12,7 @@ tests/
 ├── test-locale.typ        # Shared utility: stable locale for tests
 │
 ├── docs/                  # Tests that mirror documentation examples
+│   ├── prelude.typ        # Shared `party` and `body()` for elided code blocks
 │   ├── getting-started-minimal/
 │   │   ├── .gitignore
 │   │   ├── test.typ
@@ -124,10 +125,11 @@ Visual regression tests catch rendering changes but not logical errors in calcul
 #import "/tests/test-locale.typ": test-locale
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: test-locale,
   sender: (name: "Test Sender", address: "Street 1", city: "City"),
   recipient: (name: "Test Recipient", address: "Street 2", city: "City"),
+  validation: none, // data test: the party data is incomplete on purpose
 )
 
 #data-test(test: (ctx, data) => {
@@ -160,7 +162,8 @@ Key details:
 
 - **`loom.query.find-signal(data, "line-items")`** extracts the signal published by the `#line-items` component, which contains the full totals breakdown.
 - **`decimal("100")`** — use `decimal()` for exact numeric comparisons (avoids floating-point mismatches).
-- **`themes.blank`** — use the blank theme when you only care about data, not visual output.
+- **`theme.plain`** — use the plain preset when you only care about data, not visual output: no furniture, everything in the flow.
+- **`validation: none`** — a data test whose party data is incomplete on purpose would otherwise render as a draft with a report page (see [Validation Levels in Tests](#validation-levels-in-tests)).
 - Tax constructors — use `tax.vat(rate)` for standard or reduced rates, and `tax.zero()` for zero-rated items. Each produces a different tax category.
 - **Assertion messages** — always include both the expected and actual value in the message for fast debugging. Use the pattern: `"Field: expected <value>, got " + repr(actual)`. The `repr()` function ensures the actual value is displayed in a readable format.
 - **Valid IBAN/BIC** — when using `bank-details` in tests or docs, always use values that pass validation checks. Use IBAN `DE75512108001245126199` and a valid 9 or 11 character BIC (e.g., `SOLADEST600`). Fake values like `DE12 3456 7890...` or `EXAMPLEBICX` will fail IBAN/BIC validation.
@@ -186,8 +189,8 @@ tests/<category>/<test-name>/
 
 1. Create the directory and add the `.gitignore`.
 2. Write `test.typ` — a self-contained Typst document that renders the scenario you want to test.
-3. **Important:** You must manually create the `ref/` directory and an empty `1.png` file inside it (e.g. `ref/1.png`). If this file doesn't exist, tytanic will treat it as a compile-only test rather than a visual regression test.
-4. Run `tt update <test-path>` to generate the actual reference snapshot over the empty file.
+3. **Important:** You must manually create the `ref/` directory with a placeholder `1.png` inside it (e.g. `ref/1.png`). If this file doesn't exist, tytanic will treat it as a compile-only test rather than a visual regression test. The placeholder must be a valid PNG (any 1×1 image): tytanic 0.3.3 fails on an empty file.
+4. Run `tt update <test-path>` to generate the actual reference snapshot over the placeholder.
 5. Commit `test.typ`, `.gitignore`, and the `ref/` directory.
 
 ```typ
@@ -195,8 +198,13 @@ tests/<category>/<test-name>/
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
-  sender: (name: "Test Corp", address: "1 Test St", city: "12345 Testville"),
+  // theme.classic (the default) picks DIN 5008 form A for a German sender
+  sender: (
+    name: "Test Corp",
+    address: "1 Test St",
+    city: "12345 Testville",
+    vat-id: "DE123456789",
+  ),
   recipient: (name: "Client", address: "2 Client Ave", city: "54321 Clientown"),
   invoice-nr: "TEST-001",
 )
@@ -225,7 +233,7 @@ tests/line-items/<test-name>/
 
 1. Create the directory and add the `.gitignore`.
 2. Write `test.typ` using `data-test` and `test-locale` (see example above).
-3. **Important:** For unit-like data tests, you should use `themes.blank` as the theme. Note that `themes.blank` is a value, not a function, so use it directly: `invoice.with(theme: themes.blank)`. This ensures that the minimal possible amount of code is executed to narrow the test scope.
+3. **Important:** For unit-like data tests, you should use `theme.plain` as the theme. Like every theme, `theme.plain` is a lazy value: pass it uncalled, `invoice.with(theme: theme.plain)`. It draws no furniture, which narrows the test scope.
 4. Run `tt run` — the test passes if all `assert.eq()` calls succeed.
 
 > **Note:** Data tests may still produce visual output (and thus `out/`), but the assertions are what determine pass/fail.
@@ -247,9 +255,13 @@ tests/docs/<doc-page>-<example-name>/
 **Steps:**
 
 1. Identify each non-trivial code block in the documentation page.
-2. Create a test directory under `tests/docs/` with a descriptive kebab-case name derived from the doc page and example (e.g., `getting-started-minimal`).
-3. Copy the code block into `test.typ`, adjusting imports to use `/src/lib.typ` instead of the package import `@preview/invoice-pro:...`.
-4. Add the `.gitignore`, create `ref/1.png`, run `tt update`, and commit.
+2. Create a test directory under `tests/docs/` with a descriptive kebab-case name derived from the doc page and example (e.g., `getting-started-minimal`, `api-theme-layouts-roll`).
+3. Copy the code block into `test.typ` verbatim, adjusting imports to use `/src/lib.typ` instead of the package import `@preview/invoice-pro:...`. Start the file with a comment that names the source page and section.
+4. If the block elides the invoice header (`// sender: .., recipient: .., invoice-nr: ..` or `// ...`), import `/tests/docs/prelude.typ` and put `..party` in its place. If the block has no line items, follow it with `#body()` from the same file. If the block reads `sys.inputs` (tytanic cannot pass `--input`), change the default in the test and say so in a comment.
+5. Add fixtures (a `logo.svg`, a `brand.toml`, ..) next to `test.typ`.
+6. Add the `.gitignore`, create a placeholder `ref/1.png`, run `tt update`, check the reference image, and commit.
+
+Typst blocks in the docs that start with `#` or `//` are typstyle-formatted, so the verbatim copy is typstyle-clean as well.
 
 **Resolving discrepancies between docs and tests:**
 
@@ -278,7 +290,7 @@ tests/issues/issue-<number>/
 1. Create a directory named `issue-<number>` under `tests/issues/` (using the GitHub issue number).
 2. Write `test.typ` that reproduces the bug scenario described in the issue.
 3. Add the `.gitignore`.
-4. Use `data-test` with `test-locale` and `themes.blank` if the bug involves calculations. Use a visual regression test (with `ref/1.png`) if the bug is visual.
+4. Use `data-test` with `test-locale` and `theme.plain` if the bug involves calculations. Use a visual regression test (with `ref/1.png`) if the bug is visual.
 5. Add a comment at the top of `test.typ` linking to the issue and briefly describing the bug.
 6. Register the test in the Issue Test Registry below.
 
@@ -295,10 +307,11 @@ tests/issues/issue-<number>/
 #import "/tests/test-locale.typ": test-locale
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: test-locale,
   sender: (name: "Test Sender"),
   recipient: (name: "Test Recipient"),
+  validation: none, // the party data is incomplete on purpose
 )
 
 #data-test(test: (ctx, data) => {
@@ -309,6 +322,79 @@ tests/issues/issue-<number>/
 ```
 
 ---
+
+## Theme Hooks
+
+0.4 tests used `themes.blank.with(document: ..)` or `.with(line-items: ..)` as hooks into the rendering. In 0.5 the theme is data and every part is replaceable, so a test hooks into exactly the data it checks:
+
+| To check                                                     | Use                                                         |
+| :----------------------------------------------------------- | :---------------------------------------------------------- |
+| a theme value (tokens, options, layout, issues)              | `theme.resolve(..)` and `assert.eq`                         |
+| the data of a frame part (references, parties, totals, page) | a `theme.custom.part(..)` stub that asserts on its `view`   |
+| the totals rows (order, kinds, 0 % suppression)              | a `theme.custom.wrap("totals", ..)` over `view.totals.rows` |
+
+```typ
+#import "/src/lib.typ": *
+
+// a theme value
+#let t = theme.resolve(theme.classic.with(theme.custom.brand(
+  color: rgb("#0f766e"),
+)))
+#assert.eq(t.tokens.colors.primary, rgb("#0f766e"))
+
+#show: invoice.with(
+  theme: theme.plain.with({
+    import theme.custom: *
+    area("references", parts: ("references",)) // plain places no references
+    part("references", (ctx, view) => {
+      assert.eq(
+        view.references,
+        (("Steuernummer", "11/222/33333"),),
+        message: "references: got " + repr(view.references),
+      )
+      theme.parts.references(ctx, view)
+    })
+    wrap("totals", (ctx, view, inner) => {
+      let kinds = view.totals.rows.map(r => r.kind)
+      assert.eq(
+        kinds,
+        ("net-total", "tax", "total"),
+        message: "rows: got " + repr(kinds),
+      )
+      inner(ctx, view)
+    })
+  }),
+  locale: locale.de-de,
+  sender: (
+    name: "Sender",
+    address: "Str. 1",
+    city: "City",
+    tax-nr: "11/222/33333",
+  ),
+  recipient: (name: "Recipient", address: "Str. 2", city: "City"),
+  invoice-nr: "1",
+)
+
+#line-items[#item([Test Item], price: 100, tax: tax.vat(19%))]
+```
+
+A part stub only runs when an area hosts the part: `theme.plain` places `sender`, `title`, `recipient` and `registration`; use `theme.custom.area(..)` to host others, or `theme.classic`.
+
+## Validation Levels in Tests
+
+`invoice(validation: ..)` defaults to `"draft"`: missing data renders as a marker and a report page instead of stopping the build.
+
+| Test                                                                                                        | Level                                                                                                             |
+| :---------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------- |
+| Asserts a panic (with `catch`) of a check that follows the level: missing data, e-invoice data, theme roles | `validation: "strict"`; under `"draft"` the problem becomes a marker and nothing panics                           |
+| A data test whose party data is incomplete on purpose                                                       | `validation: none`, so no report page is rendered; misuse still panics                                            |
+| A visual test                                                                                               | Complete data (sender tax ID, both addresses, invoice number), so the reference shows the invoice and not a draft |
+
+Under `strict`, one problem panics with its message verbatim; several problems panic with a header line and a numbered list. `catch` returns the message with a `panicked with: ` prefix, and tytanic's Typst 0.14 prints it quoted and escaped. `--input invoice-pro-validation=..` overrides the parameter; tytanic cannot pass it, so set the level in the test.
+
+## Fonts
+
+Tytanic uses only the fonts embedded in Typst (Libertinus Serif, New Computer Modern, DejaVu Sans Mono). Every font chain of the themes ends in an embedded family, so tests need no font override. The warning `unknown font family: liberation sans` is expected.
 
 ## Running Tests
 
@@ -428,22 +514,67 @@ nix run .#check-pr
 
 Every non-trivial code block in `docs/docs/` must be registered here. When adding a new code section to the documentation, add it to this list and create a corresponding test under `tests/docs/` if possible. If no test is created yet, mark the entry as **⚠️ not implemented**.
 
-| Source file                      | Code ID            | Description                                                  | Test directory                  | Status             |
-| :------------------------------- | :----------------- | :----------------------------------------------------------- | :------------------------------ | :----------------- |
-| `intro.md`                       | `quick-glance`     | Full invoice with items, discount, and bank details          | `docs/intro-minimal/`           | ✅                 |
-| `getting-started.md`             | `first-invoice`    | Minimal invoice with items and tax configuration             | `docs/getting-started-minimal/` | ✅                 |
-| `api-reference/index.md`         | `blueprint`        | Architectural blueprint with items, payment, bank, signature | `docs/api-index-blueprint/`     | ✅                 |
-| `api-reference/invoice.md`       | `minimal-config`   | Minimal valid configuration example                          | `docs/api-invoice-minimal/`     | ✅                 |
-| `api-reference/components.md`    | `apply-bulk-tax`   | Apply block wrapping items with shared tax rate              | `docs/api-components-apply/`    | ✅                 |
-| `api-reference/theme.md`         | `din5008-example`  | DIN-5008 theme with custom parameters                        | `docs/api-theme-din5008/`       | ✅                 |
-| `api-reference/theme.md`         | `blank-example`    | Blank theme with native Typst page setup                     | `docs/api-theme-blank/`         | ✅                 |
-| `api-reference/locale/index.md`  | `locale-customize` | Locale customization with `locale.custom` overrides          | —                               | ⚠️ not implemented |
-| `api-reference/locale/index.md`  | `currency-format`  | Custom currency formatting override                          | —                               | ⚠️ not implemented |
-| `api-reference/locale/custom.md` | `pl-language`      | Polish language dictionary definition                        | —                               | ⚠️ not implemented |
-| `api-reference/locale/custom.md` | `pl-region`        | Polish region builder function                               | —                               | ⚠️ not implemented |
-| `api-reference/locale/custom.md` | `pl-factory`       | Building locale with `build-locale` factory                  | —                               | ⚠️ not implemented |
-| `api-reference/locale/custom.md` | `pl-usage`         | Using the custom locale in a document                        | —                               | ⚠️ not implemented |
-| `api-reference/locale/base.md`   | `schema-override`  | Schema inspection and partial override example               | —                               | ⚠️ not implemented |
+| Source file                            | Code ID                                              | Description                                                        | Test directory                         | Status             |
+| :------------------------------------- | :--------------------------------------------------- | :----------------------------------------------------------------- | :------------------------------------- | :----------------- |
+| `intro.md`                             | `quick-glance`                                       | Full invoice with items, discount, and bank details                | `docs/intro-minimal/`                  | ✅                 |
+| `getting-started.md`                   | `first-invoice`                                      | Minimal invoice with items and tax configuration                   | `docs/getting-started-minimal/`        | ✅                 |
+| `getting-started.md`                   | `choose-look`                                        | Another preset with a brand color                                  | `docs/getting-started-look/`           | ✅                 |
+| `e-invoicing.md`                       | `complete-example`                                   | Full EN 16931 / XRechnung invoice                                  | `docs/e-invoicing-complete/`           | ✅                 |
+| `b2b.md`                               | `national`                                           | National B2B invoice                                               | `docs/b2b-national/`                   | ✅                 |
+| `b2b.md`                               | `reverse-charge`                                     | Cross-border B2B invoice with reverse charge                       | `docs/b2b-reverse-charge/`             | ✅                 |
+| `b2c.md`                               | `national`                                           | National B2C invoice with gross prices                             | `docs/b2c-national/`                   | ✅                 |
+| `b2c.md`                               | `small-biz`                                          | B2C invoice under the small business scheme                        | `docs/b2c-small-biz/`                  | ✅                 |
+| `api-reference/index.md`               | `blueprint`                                          | Architectural blueprint with items, payment terms, bank, signature | `docs/api-index-blueprint/`            | ✅                 |
+| `api-reference/invoice/index.md`       | `sender-recipient`                                   | Sender/recipient dictionaries                                      | `docs/api-invoice-parties/`            | ✅                 |
+| `api-reference/invoice/index.md`       | `theme`                                              | Theme parameter with a brand and an explicit layout                | `docs/api-invoice-theme/`              | ✅                 |
+| `api-reference/invoice/index.md`       | `zugferd-example`                                    | Show rule with the en16931 profile                                 | `docs/api-invoice-zugferd/`            | ✅                 |
+| `api-reference/invoice/index.md`       | `minimal-config`                                     | Minimal valid configuration example                                | `docs/api-invoice-minimal/`            | ✅                 |
+| `api-reference/invoice/validation.md`  | `draft`                                              | Draft with missing data and ZUGFeRD                                | `docs/api-invoice-validation-draft/`   | ✅                 |
+| `api-reference/invoice/validation.md`  | `strict-output`                                      | Message of the draft example under strict                          | `docs/api-invoice-validation-strict/`  | ✅                 |
+| `api-reference/invoice/validation.md`  | `locale-patch`                                       | Custom inline marker through a locale patch                        | `docs/api-invoice-validation-locale/`  | ✅                 |
+| `api-reference/invoice/country.md`     | `country-usage`                                      | Country configurations for both parties                            | —                                      | ⚠️ not implemented |
+| `api-reference/invoice/references.md`  | `usage-preset`                                       | Show rule with a references preset                                 | —                                      | ⚠️ not implemented |
+| `api-reference/invoice/references.md`  | `usage-builders`                                     | Show rule with builder functions                                   | —                                      | ⚠️ not implemented |
+| `api-reference/invoice/references.md`  | `usage-dict`                                         | Show rule with a dictionary of builders                            | —                                      | ⚠️ not implemented |
+| `api-reference/line-items/index.md`    | `nested-numbering`                                   | Hierarchical position numbering                                    | —                                      | ⚠️ not implemented |
+| `api-reference/line-items/index.md`    | `prepayment`                                         | Prepayments                                                        | —                                      | ⚠️ not implemented |
+| `api-reference/line-items/unit.md`     | `unit-usage`                                         | Units from the unit module in a document                           | —                                      | ⚠️ not implemented |
+| `api-reference/components.md`          | `apply-bulk-tax`                                     | Apply block wrapping items with shared tax rate                    | `docs/api-components-apply/`           | ✅                 |
+| `api-reference/components.md`          | `info-usage`                                         | info motifs in body text                                           | `docs/api-components-info/`            | ✅                 |
+| `api-reference/components.md`          | `info-dynamic`                                       | info.dynamic path queries                                          | `docs/api-components-info/`            | ✅                 |
+| `api-reference/theme/index.md`         | `quick-start`                                        | classic with a brand, a logo and no marks                          | `docs/api-theme-quick-start/`          | ✅                 |
+| `api-reference/theme/index.md`         | `passing`                                            | The forms of passing a theme                                       | `docs/api-theme-passing/`              | ✅                 |
+| `api-reference/theme/index.md`         | `pick-preset`                                        | Picking a preset by name                                           | `docs/api-theme-pick-preset/`          | ✅                 |
+| `api-reference/theme/customization.md` | `helpers`                                            | Several theme.custom helpers in one block                          | `docs/api-theme-custom-helpers/`       | ✅                 |
+| `api-reference/theme/customization.md` | `brand`                                              | brand() with accent, fonts and logo                                | `docs/api-theme-custom-brand/`         | ✅                 |
+| `api-reference/theme/customization.md` | `tokens`                                             | Token patches with derivations                                     | `docs/api-theme-custom-tokens/`        | ✅                 |
+| `api-reference/theme/customization.md` | `options`                                            | Option patches                                                     | `docs/api-theme-custom-options/`       | ✅                 |
+| `api-reference/theme/customization.md` | `checks`                                             | Contrast checks                                                    | `docs/api-theme-custom-checks/`        | ✅                 |
+| `api-reference/theme/customization.md` | `brand-toml`, `from-data`                            | Brand file in TOML and from-data                                   | `docs/api-theme-custom-from-data/`     | ✅                 |
+| `api-reference/theme/layouts.md`       | `region`                                             | layout: auto for an Austrian sender                                | `docs/api-theme-layouts-region/`       | ✅                 |
+| `api-reference/theme/layouts.md`       | `for-region`                                         | A region function from a job file                                  | `docs/api-theme-layouts-for-region/`   | ✅                 |
+| `api-reference/theme/layouts.md`       | `areas`                                              | Area patches                                                       | `docs/api-theme-layouts-areas/`        | ✅                 |
+| `api-reference/theme/layouts.md`       | `derive`                                             | A company layout with derive                                       | `docs/api-theme-layouts-derive/`       | ✅                 |
+| `api-reference/theme/layouts.md`       | `stationery`                                         | The three stationery modes                                         | `docs/api-theme-layouts-stationery/`   | ✅                 |
+| `api-reference/theme/layouts.md`       | `proof`                                              | Envelopes and the print proof                                      | `docs/api-theme-layouts-proof/`        | ✅                 |
+| `api-reference/theme/layouts.md`       | `roll`                                               | An 80 mm thermal-roll receipt                                      | `docs/api-theme-layouts-roll/`         | ✅                 |
+| `api-reference/theme/layouts.md`       | `din-listing`                                        | DIN 5008 form A and B as data                                      | `docs/api-theme-layouts-din-listing/`  | ✅                 |
+| `api-reference/theme/layouts.md`       | `qr-bill`                                            | Swiss layout with the QR-bill zone (preview)                       | `docs/api-theme-layouts-qr-bill/`      | ✅                 |
+| `api-reference/theme/parts.md`         | `contract`                                           | Replace, wrap and eject parts                                      | `docs/api-theme-parts-contract/`       | ✅                 |
+| `api-reference/theme/parts.md`         | `payment-terms`                                      | A payment-terms part built from its view                           | `docs/api-theme-parts-payment-terms/`  | ✅                 |
+| `api-reference/theme/parts.md`         | `footer-content`                                     | Content cells with info motifs in the footer                       | `docs/api-theme-parts-footer-content/` | ✅                 |
+| `api-reference/theme/parts.md`         | `custom-area`                                        | A prefixed custom part in a new area                               | `docs/api-theme-parts-custom-area/`    | ✅                 |
+| `api-reference/theme/parts.md`         | `themed`                                             | themed scopes                                                      | `docs/api-theme-parts-themed/`         | ✅                 |
+| `api-reference/theme/parts.md`         | `package-lib`, `package-usage`, `package-ci`         | A zero-import theme package, its use and its CI                    | `docs/api-theme-parts-package/`        | ✅                 |
+| `api-reference/theme/parts.md`         | `resolve`                                            | theme.resolve assertions                                           | `docs/api-theme-parts-resolve/`        | ✅                 |
+| `api-reference/theme/migration.md`     | `after`                                              | A 0.4 document migrated to 0.5                                     | `docs/api-theme-migration/`            | ✅                 |
+| `api-reference/locale/index.md`        | `locale-customize`                                   | Locale customization with locale.custom overrides                  | `docs/api-locale-customize/`           | ✅                 |
+| `api-reference/locale/index.md`        | `currency-format`                                    | Custom currency formatting override                                | `docs/api-locale-currency/`            | ✅                 |
+| `api-reference/locale/index.md`        | `validation-texts`                                   | Custom validation marker                                           | `docs/api-invoice-validation-locale/`  | ✅                 |
+| `api-reference/locale/custom.md`       | `pl-language`, `pl-region`, `pl-factory`, `pl-usage` | Polish locale package in four files                                | `docs/api-locale-custom-pl/`           | ✅                 |
+| `api-reference/locale/base.md`         | `schema-override`                                    | Schema inspection and partial override example                     | `docs/api-locale-base-override/`       | ✅                 |
+| `README.md`                            | `basic-usage`                                        | Full invoice                                                       | `docs/readme-getting-started/`         | ✅                 |
+| `README.md`                            | `theming`                                            | A preset with a brand and a logo                                   | `docs/readme-theming/`                 | ✅                 |
 
 ---
 

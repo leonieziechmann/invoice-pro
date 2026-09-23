@@ -29,7 +29,7 @@ Other EU member states are also predefined (e.g., `bg`, `cy`, `cz`, `dk`, `ee`, 
 **Example Usage:**
 
 ```typst
-#import "@preview/invoice-pro:0.4.2": invoice, country
+#import "@preview/invoice-pro:0.4.2": country, invoice
 
 #show: invoice.with(
   sender: (
