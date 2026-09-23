@@ -349,7 +349,7 @@ A Factur-X / ZUGFeRD PDF announces its XML in the XMP metadata of the PDF, with 
 `invoice-pro` will write the metadata as soon as Typst supports custom XMP metadata.
 
 :::info Optional post-processing, outside the package
-You do not need any of this to create an invoice, and `invoice-pro` does not run external tools. If a recipient requires a PDF that passes the Factur-X PDF check, you can add the metadata afterwards with the [Mustang](https://www.mustangproject.org/) command line tool (Java). The steps below were tested with Mustang CLI 2.14.0; the development shell of this repository provides it as `mustang-cli`, otherwise run the downloaded `Mustang-CLI-2.14.0.jar` with `java -jar`.
+You do not need any of this to create an invoice, and `invoice-pro` does not run external tools. If a recipient requires a PDF that passes the Factur-X PDF check, you can add the metadata afterwards with the [Mustang](https://www.mustangproject.org/) command line tool, which needs Java: download `Mustang-CLI-2.14.0.jar` from the [Mustang releases](https://github.com/ZUGFeRD/mustangproject/releases) and run it with `java -jar`. The steps below were tested with Mustang CLI 2.14.0.
 :::
 
 ```bash
@@ -357,16 +357,17 @@ You do not need any of this to create an invoice, and `invoice-pro` does not run
 typst compile --pdf-standard=a-3b invoice.typ invoice.pdf
 
 # 2. Extract the XML that invoice-pro embedded.
-mustang-cli --action extract --source invoice.pdf --out invoice.xml
+java -jar Mustang-CLI-2.14.0.jar --action extract \
+  --source invoice.pdf --out invoice.xml
 
 # 3. Embed it again together with the Factur-X XMP metadata. The profile
 #    letter must match the profile of the invoice (see the table below).
-mustang-cli --action combine --source invoice.pdf --source-xml invoice.xml \
-  --out invoice-facturx.pdf --format fx --version 1 --profile E \
-  --no-additional-attachments
+java -jar Mustang-CLI-2.14.0.jar --action combine \
+  --source invoice.pdf --source-xml invoice.xml --out invoice-facturx.pdf \
+  --format fx --version 1 --profile E --no-additional-attachments
 
 # 4. Check the result: PDF, XML and the summary must be "valid".
-mustang-cli --action validate --source invoice-facturx.pdf
+java -jar Mustang-CLI-2.14.0.jar --action validate --source invoice-facturx.pdf
 ```
 
 | `zugferd` profile of the invoice | `--profile` |
@@ -377,7 +378,7 @@ mustang-cli --action validate --source invoice-facturx.pdf
 | `"en16931"`                      | `E`         |
 | `"xrechnung"`                    | `X`         |
 
-With `zugferd: auto`, use the profile the invoice was written in: `X` if the guideline ID of the XML (BT-24) ends in `xrechnung_3.0`, otherwise `E`. `--format fx --version 1` writes the metadata of Factur-X 1.0, which is the same format as ZUGFeRD 2.x. For `X`, Mustang embeds the XML a second time under the name `xrechnung.xml`, next to the `factur-x.xml` of `invoice-pro`; both files are identical. XRechnung is primarily exchanged as the XML file itself: if a recipient asks for an XRechnung, you can send `invoice.xml` from step 2.
+With `zugferd: auto`, use the profile the invoice was written in: `X` if the guideline ID of the XML (BT-24) ends in `xrechnung_3.0`, otherwise `E`. `--format fx --version 1` writes the metadata of Factur-X 1.0, which ZUGFeRD 2.1 and later use as well. For `X`, Mustang embeds the XML a second time under the name `xrechnung.xml`, next to the `factur-x.xml` of `invoice-pro`; both files are identical. XRechnung is primarily exchanged as the XML file itself: if a recipient asks for an XRechnung, you can send `invoice.xml` from step 2.
 
 ---
 
