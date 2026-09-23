@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Golden e-invoice XML and reproducibility: compiles every e-invoice test
+# document of scripts/validate-all-zugferd twice, requires bit-identical PDFs
+# and compares the attached XML with tests/zugferd/golden/
+# (tools/zugferd/golden.py). See tests/TESTING.md.
+#
+# Usage: zugferd-golden [--update] [documents ...]
+#
+# Needs Python 3.11+ with lxml and pypdf ($PYTHON, default python3) and Typst
+# ($TYPST_BIN, default typst); no Java. The Nix app `nix run .#zugferd-golden`
+# provides both.
+set -euo pipefail
+
+if [ ! -f "typst.toml" ]; then
+  echo "Error: zugferd-golden must be run from the root of the invoice-pro repository." >&2
+  exit 1
+fi
+
+PYTHON="${PYTHON:-python3}"
+exec "$PYTHON" tools/zugferd/golden.py "$@"
