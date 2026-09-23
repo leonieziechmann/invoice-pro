@@ -387,6 +387,14 @@
     (ca.format-inline)(none, none, "Toronto ON M5V 2T6"),
     "Toronto ON M5V 2T6",
   )
+  // The post code may carry the country code as marker, as for the
+  // predefined countries
+  let norway = country.custom(code: "NO", post-code: "9999")
+  assert.eq((norway.parse-city)("NO-0154 Oslo"), (
+    name: "Oslo",
+    post-code: "0154",
+  ))
+  assert.eq((norway.parse-city)("0154 Oslo").post-code, "0154")
   let jp = country.custom(code: "JP", post-code: ("999-9999", "9999999"))
   assert.eq((jp.parse-city)("100-0001 Tokyo"), (
     name: "Tokyo",

@@ -142,7 +142,7 @@ Set `show-always: true` to print the country line even for domestic addresses.
 )
 ```
 
-The code must consist of two letters; the e-invoice additionally checks it against the ISO 3166-1 code list of EN 16931.
+The post code may carry the country code as marker (e.g. `NO-0154 Oslo`), which is left out of the post code. The code must consist of two letters; the e-invoice additionally checks it against the ISO 3166-1 code list of EN 16931.
 
 ---
 

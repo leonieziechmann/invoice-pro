@@ -390,14 +390,17 @@
         + ".",
     )
   }
+  // Like the predefined countries, the post code may carry the country code
+  // as marker ("NO-0154 Oslo").
   let parse-city-raw = if post-code == auto {
     if post-code-position == "before" { parse-city-euro } else {
-      post-code-parser("\\d{4,5}", position: "after")
+      post-code-parser("\\d{4,5}", position: "after", prefixes: (code,))
     }
   } else {
     post-code-parser(
       masks.map(_mask-pattern).join("|"),
       position: post-code-position,
+      prefixes: (code,),
       ignore-case: true,
     )
   }
