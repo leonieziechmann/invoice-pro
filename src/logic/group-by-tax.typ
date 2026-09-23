@@ -13,6 +13,35 @@
   ..if implicit { (implicit: true) },
 )
 
+/// Makes sure `tax-groups` has a group for the VAT category of `pinned-tax`
+/// (the `tax` a modifier is pinned to) and adds its exemption grounds. A
+/// group without items has a total of 0.
+///
+/// -> dictionary
+#let with-tax-group(tax-groups, pinned-tax) = {
+  let key = tax.to-tax-key(pinned-tax)
+  let group = tax-groups.groups.at(key, default: (
+    total: decimal("0"),
+    tax: pinned-tax,
+    grounds-list: (),
+    missing-grounds: 0,
+    items: (),
+  ))
+  let grounds-list = tax.merge-grounds(
+    group.grounds-list,
+    tax.grounds-of(pinned-tax),
+  )
+  group.grounds-list = grounds-list
+  group.tax = group-tax(
+    group.tax,
+    grounds-list,
+    tax.is-implicit(group.tax) or tax.is-implicit(pinned-tax),
+  )
+  tax-groups.groups.insert(key, group)
+  tax-groups.keys = tax-groups.groups.keys()
+  tax-groups
+}
+
 /// Groups items by VAT group (rate and category) and sums their totals.
 ///
 /// Every group keeps the distinct exemption grounds of all its items, not

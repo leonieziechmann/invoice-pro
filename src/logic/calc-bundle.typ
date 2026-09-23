@@ -1,6 +1,5 @@
 #import "../loom-wrapper.typ": loom
 #import "../utils/coercion.typ"
-#import "../logic/group-by-tax.typ": group-by-tax
 #import "../data/tax.typ"
 
 #let create-virtual-tax-item(
@@ -105,7 +104,9 @@
   if mod-applicator == none { return children }
 
   let bundlable-signals = mod-applicator.items
-  if bundlable-signals.len() == 0 { return children }
+  // The VAT groups of the items, plus those the modifiers are pinned to.
+  let tax-groups = mod-applicator.tax-groups
+  if tax-groups.groups.len() == 0 { return children }
 
   // 2. Tax Mode & Modifier Values
   let discounts = mod-applicator.tax-split.discounts
@@ -134,7 +135,6 @@
   }
 
   // 4. Emit Item Signal for each Tax Bracket
-  let tax-groups = group-by-tax(bundlable-signals)
   let has-multiple-brackets = mod-applicator.tax-rates.len() > 1
 
   let generated-items = tax-groups

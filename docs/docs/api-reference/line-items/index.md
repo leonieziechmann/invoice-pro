@@ -279,6 +279,7 @@ Helper Functions `discount(..)` and `surcharge(..)` use the exact same parameter
 | `amount`      | `ratio` \| `decimal-like` \| `auto`    | If a `ratio` (e.g., `-10%`), it acts as a relative percentage. If a `decimal-like` number (e.g., `15.00`), it acts as an absolute monetary amount.                         |
 | `input-gross` | `bool` \| `auto`                       | For absolute monetary amounts (e.g., `10.00` instead of `10%`), this defines if the entered value already includes tax. Follows standard cascading logic if set to `auto`. |
 | `description` | `str` \| `content` \| `auto` \| `none` | Extra context or conditions for the modifier.                                                                                                                              |
+| `tax`         | `ratio` \| `dictionary` \| `auto`      | Pins the modifier to one VAT category (e.g., `tax.vat(19%)` for shipping). If `auto`, it is spread over the VAT categories (see below). Not allowed to differ on an item.  |
 
 ### `input-gross`
 
@@ -307,6 +308,24 @@ If your modifier's `input-gross` setting does **not** match the global `tax-mode
 
 Because the system balances these adjustments across all relevant tax brackets to remain legally compliant, you may occasionally see a **1-cent difference** in the final total due to rounding.
 :::
+
+### VAT Categories of Document and Bundle Modifiers
+
+Every discount or surcharge belongs to a VAT category, just like an item. A modifier of an item always has the item's category. A modifier of the whole invoice or of a bundle is spread over the categories of its items:
+
+- A **percentage** applies to the total of every VAT category.
+- An **absolute amount** goes to the only VAT category, if there is one, even if its items add up to 0 or less (e.g., shipping for a free sample, a handling fee on a credit note). With several categories, it is split in proportion to their totals. Only the categories whose total has the sign of the whole invoice take part: a voucher on an invoice with sales at 19% and a return at 7% reduces the 19% sales only and never turns into a charge.
+
+Use `tax` to pin a modifier to one VAT category instead, e.g. shipping that is taxed at the standard rate although all goods are at a reduced rate. The category does not need any item:
+
+```typst
+#line-items[
+  #item([Book], price: 25.00, tax: tax.vat(7%))
+  #surcharge([Shipping], amount: 4.90, tax: tax.vat(19%))
+]
+```
+
+If the split is undefined (the VAT categories add up to 0, or there are no items at all), the invoice does not compile and asks for `tax`: an amount is never dropped silently.
 
 ---
 

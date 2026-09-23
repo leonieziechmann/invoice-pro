@@ -50,6 +50,28 @@
   }
 
   let normalized-modifiers = raw-modifiers.map(modifier => {
+    // A modifier of an item always has the item's VAT category.
+    let pinned = modifier.at("tax", default: none)
+    if (
+      pinned not in (none, auto)
+        and m-tax.to-tax-key(pinned) != m-tax.to-tax-key(ctx.tax)
+    ) {
+      let text(value) = {
+        let result = coercion.to-string(value)
+        if type(result) == str { result } else { repr(value) }
+      }
+      panic(
+        "The modifier `"
+          + text(modifier.name)
+          + "` of the item `"
+          + text(name)
+          + "` is pinned to the VAT category "
+          + m-tax.describe(pinned)
+          + ", but the item has "
+          + m-tax.describe(ctx.tax)
+          + ". A modifier of an item always has the VAT category of the item: remove its `tax:`.",
+      )
+    }
     let is-relative = type(modifier.amount) == ratio
 
     let mod-type = if is-relative { "relative" } else { "absolute" }

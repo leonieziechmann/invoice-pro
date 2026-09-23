@@ -34,6 +34,7 @@
         s.amount
       },
       description: s.description,
+      tax: s.at("tax", default: none),
     ))
   } else if modifier-type == dictionary {
     modifier
