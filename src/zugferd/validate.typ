@@ -811,11 +811,123 @@
 
 // --- Consistency ----------------------------------------------------------
 
+// Whether an amount has more than the 2 decimals the XML states (BR-DEC-*).
+#let _cents-exceeded(amount) = calc.round(amount, digits: 2) != amount
+
+// The first amount the XML cannot state because it has more than 2 decimals,
+// in the order of the XML, and how many there are: (count: .., rule: ..,
+// term: .., place: .., value: ..). Only the amounts the profile writes count.
+#let _excess-decimals(model) = {
+  let found = (count: 0)
+  let note(found, rule, term, place, value) = {
+    if found.count == 0 {
+      found += (rule: rule, term: term, place: place, value: value)
+    }
+    found.count += 1
+    found
+  }
+  let profile = model.profile
+  if profile.lines {
+    for line in model.lines {
+      if _cents-exceeded(line.net) {
+        found = note(
+          found,
+          "BR-DEC-23",
+          "line net amount (BT-131)",
+          _line-field(line),
+          line.net,
+        )
+      }
+      for entry in line.allowances {
+        if _cents-exceeded(entry.amount) {
+          found = note(
+            found,
+            "BR-DEC-24",
+            "line allowance (BT-136)",
+            _line-field(line),
+            entry.amount,
+          )
+        }
+      }
+      for entry in line.charges {
+        if _cents-exceeded(entry.amount) {
+          found = note(
+            found,
+            "BR-DEC-27",
+            "line charge (BT-141)",
+            _line-field(line),
+            entry.amount,
+          )
+        }
+      }
+    }
+  }
+  let totals = model.totals
+  let amounts = ()
+  if profile.settlement {
+    for entry in model.allowance-charges {
+      amounts.push(if entry.charge {
+        ("BR-DEC-05", "document level charge (BT-99)", entry.amount)
+      } else {
+        ("BR-DEC-01", "document level allowance (BT-92)", entry.amount)
+      })
+    }
+    for tax in model.taxes {
+      amounts.push(("BR-DEC-19", "VAT taxable amount (BT-116)", tax.basis))
+      amounts.push(("BR-DEC-20", "VAT amount (BT-117)", tax.amount))
+    }
+    amounts += (
+      ("BR-DEC-09", "sum of the line net amounts (BT-106)", totals.line),
+      ("BR-DEC-10", "sum of the allowances (BT-107)", totals.allowance),
+      ("BR-DEC-11", "sum of the charges (BT-108)", totals.charge),
+      ("BR-DEC-16", "prepaid amount (BT-113)", totals.prepaid),
+    )
+  }
+  amounts += (
+    ("BR-DEC-12", "total without VAT (BT-109)", totals.net),
+    ("BR-DEC-13", "total VAT amount (BT-110)", totals.tax),
+    ("BR-DEC-14", "total with VAT (BT-112)", totals.gross),
+    ("BR-DEC-18", "amount due (BT-115)", totals.due),
+  )
+  for (rule, term, value) in amounts {
+    if _cents-exceeded(value) {
+      found = note(found, rule, term, none, value)
+    }
+  }
+  found
+}
+
 // The XML must state what the invoice prints and add up in itself. A failure
 // here is a bug in invoice-pro, not in the invoice data.
 #let check-consistency(model) = {
   let out = ()
   let bug-hint = "This is a bug in invoice-pro. Please report it at https://github.com/leonieziechmann/invoice-pro/issues."
+
+  // BR-DEC-*: the XML states amounts with 2 decimals. Rounded there, amounts
+  // with more (from a locale that rounds money more finely) would no longer
+  // add up (BR-CO-10, BR-S-08, ...), so they cannot be written at all.
+  let excess = _excess-decimals(model)
+  if excess.count > 0 {
+    out.push(error(
+      excess.rule,
+      "locale",
+      "An e-invoice states amounts with 2 decimals, but "
+        + if excess.count == 1 { "the " } else {
+          str(excess.count) + " amounts have more, e.g. the "
+        }
+        + excess.term
+        + if excess.place != none { " of " + excess.place }
+        + " is "
+        + str(excess.value)
+        + ".",
+      hint: "Round money to 2 decimals in the locale, e.g. `locale.custom.normalize(money: x => calc.round(x, digits: 2))`.",
+    ))
+    // The sums below would only repeat that the rounded amounts do not add
+    // up. Without excess decimals, the amounts of the model are exactly the
+    // amounts the XML states, so they are compared as they are.
+    return out
+  }
+
   let totals = model.totals
   let printed = model.printed-totals
   if totals.net != printed.net or totals.gross != printed.gross {
