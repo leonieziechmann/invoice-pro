@@ -440,6 +440,10 @@
   let m = base
   m.buyer.address.country = "SS"
   assert(find(m, "BR-CL-14").hint.contains("South Sudan"))
+  // ... but the Factur-X code list of MINIMUM and BASIC WL has South Sudan
+  let basic-wl = m
+  basic-wl.profile = resolve-profile("basic-wl", "SS")
+  assert("BR-CL-14" not in rules(basic-wl))
   m.buyer.address.country = "EL"
   assert(find(m, "BR-CL-14").hint.contains("\"GR\""))
   m.buyer.address.country = none

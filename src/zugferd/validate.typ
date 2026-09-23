@@ -118,11 +118,14 @@
 // Hints for country codes that are missing from the code list of EN 16931.
 #let _country-hints = (
   EL: "Use \"GR\" (`country.gr`) for Greece; \"EL\" is only the prefix of Greek VAT identifiers.",
-  SS: "South Sudan (SS) is missing from the code list the EN 16931 validators apply, so an e-invoice cannot state it.",
+  SS: "South Sudan (SS) is missing from the code list the EN 16931 validators apply, so only the \"minimum\" and \"basic-wl\" profiles can state it.",
   UK: "Use \"GB\" (`country.uk`) for the United Kingdom.",
 )
 
-#let _check-country(code, rule, field, term) = {
+// `en16931`: whether the profile is checked with the rules of EN 16931. Its
+// code list lacks South Sudan ("SS"), which the Factur-X profiles MINIMUM and
+// BASIC WL accept.
+#let _check-country(code, rule, field, term, en16931) = {
   if code == none {
     return (
       error(
@@ -135,7 +138,7 @@
       ),
     )
   }
-  if code not in codelists.countries {
+  if code not in codelists.countries and (code != "SS" or en16931) {
     return (
       error(
         "BR-CL-14",
@@ -722,6 +725,7 @@
     "BR-09",
     "sender.country",
     "seller country code (BT-40)",
+    profile.en16931,
   )
   out += _check-country-of-vat-id(seller, "sender", "seller", "BT-40")
   if profile.addresses {
@@ -730,6 +734,7 @@
       "BR-11",
       "recipient.country",
       "buyer country code (BT-55)",
+      profile.en16931,
     )
     out += _check-country-of-vat-id(buyer, "recipient", "buyer", "BT-55")
     if ship-to != none {
@@ -738,6 +743,7 @@
         "BR-57",
         "delivery-address.country",
         "deliver-to country code (BT-80)",
+        profile.en16931,
       )
     }
     out += _check-post-code(seller, "sender", "seller", "BT-37", "BT-38")
