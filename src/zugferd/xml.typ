@@ -2,15 +2,13 @@
 #import "../utils/text.typ": plain-text
 
 // Characters XML 1.0 does not allow in a document, not even escaped.
-#let _invalid-chars = regex(
-  "[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x{FFFE}\\x{FFFF}]",
-)
+#let _invalid-class = "\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x{FFFE}\\x{FFFF}"
+#let _invalid-chars = regex("[" + _invalid-class + "]")
 
 // Characters `xml-escape` has to change: the markup characters and the
-// characters of `_invalid-chars`. Most values contain none of them.
-#let _needs-escape = regex(
-  "[&<>\"'\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x{FFFE}\\x{FFFF}]",
-)
+// characters of `_invalid-chars`, built from the same class so that the two
+// cannot drift apart. Most values contain none of them.
+#let _needs-escape = regex("[&<>\"'" + _invalid-class + "]")
 
 // Escape a value for safe embedding in XML text/attribute content.
 #let xml-escape(s) = {

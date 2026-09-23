@@ -67,6 +67,17 @@
   assert.eq(xml-escape("a>b"), "a&gt;b")
   assert.eq(xml-escape("\u{1}<\u{FFFE}x\u{FFFF}"), "&lt;x")
   assert.eq(xml-escape("tab\tand\nline"), "tab\tand\nline")
+  // Every character XML cannot carry is removed, also without markup next to
+  // it; tab, line feed and carriage return are kept
+  for code in range(0x20) + (0xFFFE, 0xFFFF) {
+    let value = "a" + str.from-unicode(code) + "b"
+    let kept = code in (0x09, 0x0A, 0x0D)
+    assert.eq(
+      xml-escape(value),
+      if kept { value } else { "ab" },
+      message: "U+" + str(code, base: 16),
+    )
+  }
 }
 
 // --- 3. Numbers: "." separator, ASCII minus, rounding half away from zero ---
