@@ -330,7 +330,16 @@
             "zugferd-report",
             default: render-zugferd-report,
           )
-          body = render-report(ctx, result) + body
+          // A theme hides the report with `zugferd-report: none`; whatever
+          // the hook returns is shown as content.
+          if render-report != none {
+            assert(
+              type(render-report) == function,
+              message: "theme::zugferd-report must be `none` or a function `(ctx, result) => content`, got "
+                + repr(render-report),
+            )
+            body = [#render-report(ctx, result)] + body
+          }
         }
       }
 

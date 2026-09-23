@@ -5,6 +5,7 @@
 #import "../../zugferd/report.typ": render-zugferd-report
 
 #import "../../loom-wrapper.typ": eval-content
+#import "../../utils/types.typ"
 
 #let base-theme(
   /// Document Root Styling.
@@ -31,9 +32,11 @@
   /// -> (ctx, dictionary) => content
   signature: render-signature,
   /// Layout of the e-invoice problems listed with `zugferd-errors: "report"`.
-  /// -> (ctx, dictionary) => content
+  /// `none` hides the list.
+  /// -> none | (ctx, dictionary) => content
   zugferd-report: render-zugferd-report,
 ) = {
+  types.require(zugferd-report, "theme::zugferd-report", none, function)
   (
     document: (ctx, body) => {
       if header != none and header != [] {
