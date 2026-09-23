@@ -38,6 +38,7 @@ tests/
 │
 └── zugferd/               # Unit tests of the e-invoice (ZUGFeRD) pipeline
     ├── xml/               # Plain text, number formatting, XML serialization
+    ├── codelists/         # Construction of the code lists
     ├── model/             # E-invoice data model built from an invoice
     ├── validate/          # Business rule checks (diagnostics)
     ├── parties/           # Parties: electronic addresses, identifiers, keys

@@ -1,6 +1,7 @@
 // Reporting the e-invoice diagnostics: the message of the compiler error, the
 // `zugferd-errors: "report"` mode, which hands them to the theme instead of
-// failing, and the `"ignore"` mode, which embeds the XML anyway.
+// failing and attaches the XML of an invoice with errors as a draft, and the
+// `"ignore"` mode, which attaches the XML anyway.
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/profile.typ": resolve-profile, switch-profile
@@ -112,11 +113,45 @@
   #line-items[#item([Consulting], price: 100)]
 ]
 
+// --- 4. "report" without errors: a warning only (the IBAN) ---
+#invoice(
+  ..incomplete,
+  theme: themes.blank.with(zugferd-report: (ctx, result) => [#metadata(
+    result.diagnostics.map(d => (d.level, d.rule)),
+  )<warned-rules>]),
+  zugferd-errors: "report",
+  invoice-nr: "RE-2026-001",
+)[
+  #line-items[#item([Consulting], price: 100)]
+  #payment-goal(days: 14)
+  #bank-details(iban: "DE00370400440532013000")
+]
+
 #context {
   assert.eq(
     query(<reported-rules>).map(it => it.value),
     (("BR-02", "BR-CO-25"),),
   )
-  let attachments = query(pdf.attach).filter(it => it.path == "/factur-x.xml")
-  assert.eq(attachments.len(), 2)
+  assert.eq(
+    query(<warned-rules>).map(it => it.value),
+    ((("warning", "BR-DE-19"),),),
+  )
+
+  // With errors, "report" attaches the XML only as a draft, under another
+  // name than the e-invoice and as data. "ignore" and an invoice without
+  // errors attach it as the e-invoice.
+  let (draft, ignored, valid) = query(pdf.attach)
+  assert.eq(
+    (draft.path, draft.relationship, draft.mime-type),
+    ("/invoice-draft.xml", "data", "text/xml"),
+  )
+  assert(draft.description.starts-with("Draft"), message: draft.description)
+  for attachment in (ignored, valid) {
+    assert.eq(
+      (attachment.path, attachment.relationship, attachment.description),
+      ("/factur-x.xml", "alternative", "ZUGFeRD / Factur-X invoice data"),
+    )
+  }
+  // The draft is the same XML that "ignore" attaches
+  assert.eq(draft.data, ignored.data)
 }

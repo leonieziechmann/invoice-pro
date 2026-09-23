@@ -2,10 +2,16 @@
 #import "bank-details.typ": render-bank-details
 #import "payment-goal.typ": render-payment-goal
 #import "signature.typ": render-signature
-#import "../../zugferd/report.typ": render-zugferd-report
 
 #import "../../loom-wrapper.typ": eval-content
 #import "../../utils/types.typ"
+
+// The default e-invoice report. Its module is loaded only when a report is
+// shown, so that invoices without an e-invoice load no e-invoice code.
+#let _render-zugferd-report(ctx, result) = {
+  import "../../zugferd/report.typ": render-zugferd-report
+  render-zugferd-report(ctx, result)
+}
 
 #let base-theme(
   /// Document Root Styling.
@@ -35,7 +41,7 @@
   /// `none` shows no list; errors then stop the compilation as with
   /// `zugferd-errors: "panic"`.
   /// -> none | (ctx, dictionary) => content
-  zugferd-report: render-zugferd-report,
+  zugferd-report: _render-zugferd-report,
 ) = {
   types.require(zugferd-report, "theme::zugferd-report", none, function)
   (

@@ -1,0 +1,3 @@
+# Generated benchmark invoices (gen_bench.py) and other local output
+/out/
+__pycache__/
