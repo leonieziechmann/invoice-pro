@@ -40,7 +40,8 @@ tests/
     ├── xml/               # Plain text, number formatting, XML serialization
     ├── model/             # E-invoice data model built from an invoice
     ├── validate/          # Business rule checks (diagnostics)
-    └── report/            # Error message, "report" and "ignore" modes
+    ├── report/            # Error message, "report" and "ignore" modes
+    └── country-codes/     # Country code list, EAS scheme of VAT IDs
 ```
 
 ### Naming Conventions
