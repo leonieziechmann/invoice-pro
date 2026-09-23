@@ -317,16 +317,22 @@
           assert(false, message: format-report(result))
         }
 
+        // With errors, "report" attaches the XML as a draft: under a name that
+        // no receiving software takes for the e-invoice (which is
+        // "factur-x.xml") and only as supplementary data. "ignore" skips the
+        // check on purpose and attaches the XML like a valid one.
+        let draft = errors.len() > 0 and ctx.zugferd-errors == "report"
+        // MINIMUM and BASIC WL do not replace the visual invoice either, so
+        // their XML is attached as data rather than as an alternative of it.
+        let as-data = draft or result.profile.id in ("minimum", "basic-wl")
         pdf.attach(
-          "/factur-x.xml",
+          if draft { "/invoice-draft.xml" } else { "/factur-x.xml" },
           result.xml,
-          // MINIMUM and BASIC WL do not replace the visual invoice, so their
-          // XML is attached as data rather than as an alternative of it.
-          relationship: if result.profile.id in ("minimum", "basic-wl") {
-            "data"
-          } else { "alternative" },
+          relationship: if as-data { "data" } else { "alternative" },
           mime-type: "text/xml",
-          description: "ZUGFeRD / Factur-X invoice data",
+          description: if draft {
+            "Draft of the ZUGFeRD / Factur-X invoice data with errors, not a valid e-invoice"
+          } else { "ZUGFeRD / Factur-X invoice data" },
         )
 
         if ctx.zugferd-errors == "report" and result.diagnostics.len() > 0 {

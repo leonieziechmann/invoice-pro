@@ -101,7 +101,9 @@
   zugferd: none,
   /// What to do when the e-invoice data violates the rules of the profile.
   /// `"panic"` stops the compilation with a list of all problems, `"report"`
-  /// lists them in the document instead, and `"ignore"` embeds the XML anyway.
+  /// lists them in the document instead and attaches the XML of an invoice
+  /// with errors only as a draft (`invoice-draft.xml`), and `"ignore"`
+  /// attaches the XML as usual anyway.
   /// -> "panic" | "report" | "ignore"
   zugferd-errors: "panic",
 
