@@ -115,3 +115,39 @@
     references.preceding-invoice-date(),
   ),
 )[]
+
+// The default references print the preceding invoice the e-invoice states,
+// e.g. the invoice a credit note refers to
+#let default-references(check, ..args) = invoice(
+  theme: () => (
+    themes.blank()
+      + (
+        document: (ctx, body) => {
+          check(ctx.references)
+          []
+        },
+      )
+  ),
+  locale: locale.de-de,
+  sender: seller,
+  recipient: buyer-de,
+  ..args,
+)[]
+#default-references(
+  document-type: "credit-note",
+  preceding-invoice-nr: "R-2026-11",
+  preceding-invoice-date: preceding-date,
+  refs => assert.eq(refs, (
+    ("Steuernummer", "123/456/78901"),
+    ("USt-IdNr.", "DE123456789"),
+    ("Empfänger:in USt-IdNr.", "DE987654321"),
+    ("Vorherige Rechnungsnummer", "R-2026-11"),
+    ("Datum der vorherigen Rechnung", "30.08.2026"),
+  )),
+)
+#default-references(
+  tax-mode: "inclusive",
+  preceding-invoice-nr: "R-2026-11",
+  refs => assert.eq(refs, (("Vorherige Rechnungsnummer", "R-2026-11"),)),
+)
+#default-references(tax-mode: "inclusive", refs => assert.eq(refs, ()))

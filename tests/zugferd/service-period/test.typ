@@ -171,6 +171,36 @@
   #bank
 ]
 
+// The default references print the service period of the invoice, which
+// the e-invoice states, after the tax numbers (B2B) or on their own (B2C)
+#printed-test(references: auto, service-period: june, refs => {
+  assert.eq(refs, (
+    ("Steuernummer", "123/456/78901"),
+    ("USt-IdNr.", "DE123456789"),
+    ("Empfänger:in USt-IdNr.", "FR99123456789"),
+    ("Leistungszeitraum", "01.06.2026 – 30.06.2026"),
+  ))
+  []
+})[#mixed]
+#printed-test(
+  references: auto,
+  tax-mode: "inclusive",
+  service-period: day(6, 12),
+  refs => {
+    assert.eq(refs, (("Leistungszeitraum", "12.06.2026"),))
+    []
+  },
+)[#mixed]
+// ... but not the service period of the items, which the items print
+#printed-test(references: auto, refs => {
+  assert.eq(refs.map(ref => ref.first()), (
+    "Steuernummer",
+    "USt-IdNr.",
+    "Empfänger:in USt-IdNr.",
+  ))
+  []
+})[#mixed]
+
 // --- 4. A service period printed as a text of its own (IP-PERIOD-01) ---
 // The references are evaluated while the invoice is drawn, so these tests
 // read the diagnostics of the e-invoice from the report of the theme.

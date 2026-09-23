@@ -347,7 +347,7 @@ The `"basic"` profile only supports the standard identifier. See [The `item-id` 
 
 `order-nr` (BT-13), `contract-nr` (BT-12), `delivery-note-nr` (BT-16) and `preceding-invoice-nr` (BT-25, e.g. for corrections) are written to the XML where the profile supports them. `project` is written as the project reference (BT-11), which public buyers often require, in the `"en16931"` and `"xrechnung"` profiles; the other profiles have none, which is reported as a warning (`IP-PROFILE-01`).
 
-`preceding-invoice-date` (a `datetime`) is the date of the preceding invoice (BT-26), written next to its number from the `"basic-wl"` profile on; `references.preceding-invoice-date()` prints it. A date without `preceding-invoice-nr` cannot be written and stops the e-invoice (`BR-55`). A corrected invoice (`document-type: "corrected"`) replaces the preceding invoice, so it must name it: `BR-DE-26` in XRechnung (which KoSIT only warns about, but Mustang rejects), `IP-DOC-02` in the other profiles, as the VAT Directive (Art. 219) requires a document that amends an invoice to refer to it.
+`preceding-invoice-date` (a `datetime`) is the date of the preceding invoice (BT-26), written next to its number from the `"basic-wl"` profile on; `references.preceding-invoice-date()` prints it. The default `references` print the number and the date of the preceding invoice if you give them. A date without `preceding-invoice-nr` cannot be written and stops the e-invoice (`BR-55`). A corrected invoice (`document-type: "corrected"`) replaces the preceding invoice, so it must name it: `BR-DE-26` in XRechnung (which KoSIT only warns about, but Mustang rejects), `IP-DOC-02` in the other profiles, as the VAT Directive (Art. 219) requires a document that amends an invoice to refer to it.
 
 ### 9. Document Type (BT-3)
 
@@ -368,7 +368,7 @@ Any other code of UNTDID 1001 for invoices and credit notes can be given as text
 - A credit note with a negative total would ask the buyer to pay, so it stops the e-invoice (`IP-DOC-03`). An invoice with a negative total is valid, but a credit note is the document for it (`IP-DOC-04`, a warning).
 - As long as an amount is due, the credit note says when or how the buyer gets it (`BR-CO-25`): [`payment-goal`](./api-reference/components.md#payment-goal) prints that the amount is transferred within the given days (and states that date, BT-9), a textual `due-date` (e.g. `due-date: "Der Betrag wird mit Ihrer nächsten Rechnung verrechnet."`) states the terms (BT-20).
 - [`bank-details`](./api-reference/components.md#bank-details) on a credit note are the account the amount is paid to, usually the buyer's: the account holder defaults to the recipient's name, and no EPC-QR code is printed. XRechnung requires payment instructions (BG-16) on credit notes as well (`BR-DE-1`).
-- A document that amends an invoice must refer to it (Art. 219 VAT Directive): set `preceding-invoice-nr` to the invoice the credit note refers to.
+- A document that amends an invoice must refer to it (Art. 219 VAT Directive): set `preceding-invoice-nr` (and `preceding-invoice-date`) to the invoice the credit note refers to. The default `references` print them.
 - In German, a credit note is titled "Rechnungskorrektur": the German VAT law reserves "Gutschrift" for self-billed invoices (§ 14 Abs. 2 Satz 2 UStG). A commercial credit note titled "Gutschrift" is permitted as well; set `subject: "Gutschrift"` together with `document-type: "credit-note"` if you prefer it.
 
 ```typst
@@ -431,7 +431,7 @@ The date or period of the supply is mandatory invoice content in many countries 
 2. else from the earliest to the latest `date` of the items (of `item`, `bundle` and `group`, a date or a period). Items without a date do not count when others have one;
 3. else the invoice date, if no item has a date.
 
-A single date is written as the actual delivery date (BT-72), a period as the invoicing period (BG-14, BT-73 and BT-74), both from the `"basic-wl"` profile on.
+A single date is written as the actual delivery date (BT-72), a period as the invoicing period (BG-14, BT-73 and BT-74), both from the `"basic-wl"` profile on. The default `references` print a `service-period` you set; with references of your own, add `references.service-time()`:
 
 ```typst
 #show: invoice.with(

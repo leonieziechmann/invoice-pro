@@ -10,6 +10,9 @@
 #import "logic/country.typ": normalize-party, resolve-party-country
 #import "logic/document-type.typ": document-title, resolve-document-type
 #import "logic/notes.typ": normalize-notes
+#import "logic/service-period.typ": (
+  format-service-period, resolve-service-period,
+)
 #import "data/currency.typ": with-currency
 
 /// The main entry point for creating an invoice document.
@@ -51,9 +54,10 @@
   /// -> datetime
   date: datetime.today(),
   /// The date or period `(start, end)` of the supply, printed by
-  /// `references.service-time()` and written to the e-invoice (BT-72 or
-  /// BG-14). If `none`, the earliest to the latest date of the items, or the
-  /// invoice date if no item has a date.
+  /// `references.service-time()` (which the default `references` include if
+  /// it is given) and written to the e-invoice (BT-72 or BG-14). If `none`,
+  /// the earliest to the latest date of the items, or the invoice date if no
+  /// item has a date.
   /// -> none | datetime | array
   service-period: none,
   /// The subject line of the invoice. If `auto`, the title of the
@@ -70,7 +74,8 @@
   /// -> auto | str | int
   document-type: auto,
   /// Reference information for the document header (e.g., customer number).
-  /// If `auto`, defaults to displaying sender tax-nr, sender vat-id, and recipient vat-id in exclusive tax-mode (B2B), or none in inclusive tax-mode (B2C).
+  /// If `auto`, defaults to displaying sender tax-nr, sender vat-id, and recipient vat-id in exclusive tax-mode (B2B), or none in inclusive tax-mode (B2C),
+  /// followed by the `service-period`, the `preceding-invoice-nr` and the `preceding-invoice-date` if they are given.
   /// -> auto | none | dictionary | array | function
   references: auto,
   /// The unique identifier or number of the invoice.
@@ -386,6 +391,34 @@
         if value != none and value != "" {
           document-references.push((label, value))
         }
+      }
+    }
+    // The service period and the preceding invoice (e.g. of a credit note or
+    // a corrected invoice) are printed if they are given, as the e-invoice
+    // states them (BT-72 or BG-14, BG-3): the service period is part of the
+    // invoice (e.g. § 14 Abs. 4 Satz 1 Nr. 6 UStG), and a document that
+    // amends an invoice refers to it (Art. 219 of the VAT Directive).
+    let labels = eval-locale.strings.reference
+    if service-period != none {
+      document-references.push((
+        labels.service-time,
+        format-service-period(
+          resolve-service-period((), date, service-period: service-period),
+          eval-locale.format.date,
+        ),
+      ))
+    }
+    for (label, value) in (
+      (labels.preceding-invoice-number, preceding-invoice-nr),
+      (
+        labels.preceding-invoice-date,
+        if preceding-invoice-date != none {
+          (eval-locale.format.date)(preceding-invoice-date)
+        },
+      ),
+    ) {
+      if value not in (none, "", []) {
+        document-references.push((label, value))
       }
     }
   } else if type(references) == function {
