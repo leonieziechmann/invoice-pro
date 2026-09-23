@@ -34,7 +34,8 @@
       <ram:SpecifiedLineTradeSettlement>
         <ram:ApplicableTradeTax>
           <ram:TypeCode>VAT</ram:TypeCode>
-          <ram:CategoryCode>O</ram:CategoryCode>
+          <ram:CategoryCode>E</ram:CategoryCode>
+          <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
         </ram:ApplicableTradeTax>
         <ram:SpecifiedTradeAllowanceCharge>
           <ram:ChargeIndicator>
@@ -66,7 +67,8 @@
       <ram:SpecifiedLineTradeSettlement>
         <ram:ApplicableTradeTax>
           <ram:TypeCode>VAT</ram:TypeCode>
-          <ram:CategoryCode>O</ram:CategoryCode>
+          <ram:CategoryCode>E</ram:CategoryCode>
+          <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
         </ram:ApplicableTradeTax>
         <ram:SpecifiedTradeSettlementLineMonetarySummation>
           <ram:LineTotalAmount>250.00</ram:LineTotalAmount>
@@ -76,7 +78,6 @@
     <ram:ApplicableHeaderTradeAgreement>
       <ram:BuyerReference>DE123456789-12345-12</ram:BuyerReference>
       <ram:SellerTradeParty>
-        <ram:ID>123/456/78901</ram:ID>
         <ram:Name>Kleinunternehmer e.K.</ram:Name>
         <ram:DefinedTradeContact>
           <ram:PersonName>Max Mustermann</ram:PersonName>
@@ -96,6 +97,9 @@
         <ram:URIUniversalCommunication>
           <ram:URIID schemeID="9930">DE123456789</ram:URIID>
         </ram:URIUniversalCommunication>
+        <ram:SpecifiedTaxRegistration>
+          <ram:ID schemeID="VA">DE123456789</ram:ID>
+        </ram:SpecifiedTaxRegistration>
         <ram:SpecifiedTaxRegistration>
           <ram:ID schemeID="FC">123/456/78901</ram:ID>
         </ram:SpecifiedTaxRegistration>
@@ -135,9 +139,9 @@
       <ram:ApplicableTradeTax>
         <ram:CalculatedAmount>0.00</ram:CalculatedAmount>
         <ram:TypeCode>VAT</ram:TypeCode>
-        <ram:ExemptionReason>Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.</ram:ExemptionReason>
+        <ram:ExemptionReason>Umsatzsteuerfrei aufgrund der Kleinunternehmerregelung gemäß § 19 Abs. 1 UStG.</ram:ExemptionReason>
         <ram:BasisAmount>768.00</ram:BasisAmount>
-        <ram:CategoryCode>O</ram:CategoryCode>
+        <ram:CategoryCode>E</ram:CategoryCode>
         <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>
       <ram:SpecifiedTradeAllowanceCharge>
@@ -148,7 +152,8 @@
         <ram:Reason>Aktionsrabatt</ram:Reason>
         <ram:CategoryTradeTax>
           <ram:TypeCode>VAT</ram:TypeCode>
-          <ram:CategoryCode>O</ram:CategoryCode>
+          <ram:CategoryCode>E</ram:CategoryCode>
+          <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
         </ram:CategoryTradeTax>
       </ram:SpecifiedTradeAllowanceCharge>
       <ram:SpecifiedTradeAllowanceCharge>
@@ -159,7 +164,8 @@
         <ram:Reason>Anfahrt</ram:Reason>
         <ram:CategoryTradeTax>
           <ram:TypeCode>VAT</ram:TypeCode>
-          <ram:CategoryCode>O</ram:CategoryCode>
+          <ram:CategoryCode>E</ram:CategoryCode>
+          <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
         </ram:CategoryTradeTax>
       </ram:SpecifiedTradeAllowanceCharge>
       <ram:SpecifiedTradePaymentTerms>

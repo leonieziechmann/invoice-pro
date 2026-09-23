@@ -1,18 +1,15 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <rsm:ExchangedDocumentContext>
-    <ram:BusinessProcessSpecifiedDocumentContextParameter>
-      <ram:ID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</ram:ID>
-    </ram:BusinessProcessSpecifiedDocumentContextParameter>
     <ram:GuidelineSpecifiedDocumentContextParameter>
-      <ram:ID>urn:cen.eu:en16931:2017</ram:ID>
+      <ram:ID>urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic</ram:ID>
     </ram:GuidelineSpecifiedDocumentContextParameter>
   </rsm:ExchangedDocumentContext>
   <rsm:ExchangedDocument>
-    <ram:ID>ZUG-KLEIN-2026-001</ram:ID>
+    <ram:ID>KU-2026-020</ram:ID>
     <ram:TypeCode>380</ram:TypeCode>
     <ram:IssueDateTime>
-      <udt:DateTimeString format="102">20260706</udt:DateTimeString>
+      <udt:DateTimeString format="102">20260901</udt:DateTimeString>
     </ram:IssueDateTime>
   </rsm:ExchangedDocument>
   <rsm:SupplyChainTradeTransaction>
@@ -21,15 +18,15 @@
         <ram:LineID>1</ram:LineID>
       </ram:AssociatedDocumentLineDocument>
       <ram:SpecifiedTradeProduct>
-        <ram:Name>Dienstleistung</ram:Name>
+        <ram:Name>Diseño web</ram:Name>
       </ram:SpecifiedTradeProduct>
       <ram:SpecifiedLineTradeAgreement>
         <ram:NetPriceProductTradePrice>
-          <ram:ChargeAmount>150.00</ram:ChargeAmount>
+          <ram:ChargeAmount>60.00</ram:ChargeAmount>
         </ram:NetPriceProductTradePrice>
       </ram:SpecifiedLineTradeAgreement>
       <ram:SpecifiedLineTradeDelivery>
-        <ram:BilledQuantity unitCode="HUR">4.00</ram:BilledQuantity>
+        <ram:BilledQuantity unitCode="HUR">10.00</ram:BilledQuantity>
       </ram:SpecifiedLineTradeDelivery>
       <ram:SpecifiedLineTradeSettlement>
         <ram:ApplicableTradeTax>
@@ -47,7 +44,7 @@
         <ram:LineID>2</ram:LineID>
       </ram:AssociatedDocumentLineDocument>
       <ram:SpecifiedTradeProduct>
-        <ram:Name>Produkt</ram:Name>
+        <ram:Name>Mantenimiento</ram:Name>
       </ram:SpecifiedTradeProduct>
       <ram:SpecifiedLineTradeAgreement>
         <ram:NetPriceProductTradePrice>
@@ -55,7 +52,7 @@
         </ram:NetPriceProductTradePrice>
       </ram:SpecifiedLineTradeAgreement>
       <ram:SpecifiedLineTradeDelivery>
-        <ram:BilledQuantity unitCode="H87">10.00</ram:BilledQuantity>
+        <ram:BilledQuantity unitCode="MON">3.00</ram:BilledQuantity>
       </ram:SpecifiedLineTradeDelivery>
       <ram:SpecifiedLineTradeSettlement>
         <ram:ApplicableTradeTax>
@@ -64,88 +61,80 @@
           <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
         </ram:ApplicableTradeTax>
         <ram:SpecifiedTradeSettlementLineMonetarySummation>
-          <ram:LineTotalAmount>250.00</ram:LineTotalAmount>
+          <ram:LineTotalAmount>75.00</ram:LineTotalAmount>
         </ram:SpecifiedTradeSettlementLineMonetarySummation>
       </ram:SpecifiedLineTradeSettlement>
     </ram:IncludedSupplyChainTradeLineItem>
     <ram:ApplicableHeaderTradeAgreement>
-      <ram:BuyerReference>DE123456789-12345-12</ram:BuyerReference>
       <ram:SellerTradeParty>
-        <ram:ID>123/456/78901</ram:ID>
-        <ram:Name>Kleinunternehmer e.K.</ram:Name>
-        <ram:DefinedTradeContact>
-          <ram:PersonName>Max Mustermann</ram:PersonName>
-          <ram:TelephoneUniversalCommunication>
-            <ram:CompleteNumber>+49 123 456789</ram:CompleteNumber>
-          </ram:TelephoneUniversalCommunication>
-          <ram:EmailURIUniversalCommunication>
-            <ram:URIID>max@mustermann.de</ram:URIID>
-          </ram:EmailURIUniversalCommunication>
-        </ram:DefinedTradeContact>
+        <ram:Name>Ana García Diseño</ram:Name>
         <ram:PostalTradeAddress>
-          <ram:PostcodeCode>12345</ram:PostcodeCode>
-          <ram:LineOne>Musterstraße 1</ram:LineOne>
-          <ram:CityName>Musterstadt</ram:CityName>
-          <ram:CountryID>DE</ram:CountryID>
+          <ram:PostcodeCode>28013</ram:PostcodeCode>
+          <ram:LineOne>Calle Mayor 1</ram:LineOne>
+          <ram:CityName>Madrid</ram:CityName>
+          <ram:CountryID>ES</ram:CountryID>
         </ram:PostalTradeAddress>
         <ram:URIUniversalCommunication>
-          <ram:URIID schemeID="EM">max@mustermann.de</ram:URIID>
+          <ram:URIID schemeID="9920">ES12345678Z</ram:URIID>
         </ram:URIUniversalCommunication>
         <ram:SpecifiedTaxRegistration>
-          <ram:ID schemeID="FC">123/456/78901</ram:ID>
+          <ram:ID schemeID="VA">ES12345678Z</ram:ID>
+        </ram:SpecifiedTaxRegistration>
+        <ram:SpecifiedTaxRegistration>
+          <ram:ID schemeID="FC">12345678Z</ram:ID>
         </ram:SpecifiedTaxRegistration>
       </ram:SellerTradeParty>
       <ram:BuyerTradeParty>
-        <ram:Name>Kunde AG</ram:Name>
+        <ram:Name>Cliente SL</ram:Name>
         <ram:PostalTradeAddress>
-          <ram:PostcodeCode>54321</ram:PostcodeCode>
-          <ram:LineOne>Kundenweg 5</ram:LineOne>
-          <ram:CityName>Kundenstadt</ram:CityName>
-          <ram:CountryID>DE</ram:CountryID>
+          <ram:PostcodeCode>41004</ram:PostcodeCode>
+          <ram:LineOne>Calle Sierpes 5</ram:LineOne>
+          <ram:CityName>Sevilla</ram:CityName>
+          <ram:CountryID>ES</ram:CountryID>
         </ram:PostalTradeAddress>
         <ram:URIUniversalCommunication>
-          <ram:URIID schemeID="EM">accounting@kunde.de</ram:URIID>
+          <ram:URIID schemeID="9920">ESB12345674</ram:URIID>
         </ram:URIUniversalCommunication>
+        <ram:SpecifiedTaxRegistration>
+          <ram:ID schemeID="VA">ESB12345674</ram:ID>
+        </ram:SpecifiedTaxRegistration>
       </ram:BuyerTradeParty>
     </ram:ApplicableHeaderTradeAgreement>
     <ram:ApplicableHeaderTradeDelivery>
       <ram:ActualDeliverySupplyChainEvent>
         <ram:OccurrenceDateTime>
-          <udt:DateTimeString format="102">20260706</udt:DateTimeString>
+          <udt:DateTimeString format="102">20260901</udt:DateTimeString>
         </ram:OccurrenceDateTime>
       </ram:ActualDeliverySupplyChainEvent>
     </ram:ApplicableHeaderTradeDelivery>
     <ram:ApplicableHeaderTradeSettlement>
-      <ram:PaymentReference>ZUG-KLEIN-2026-001</ram:PaymentReference>
+      <ram:PaymentReference>KU-2026-020</ram:PaymentReference>
       <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
       <ram:SpecifiedTradeSettlementPaymentMeans>
         <ram:TypeCode>58</ram:TypeCode>
         <ram:PayeePartyCreditorFinancialAccount>
-          <ram:IBANID>DE75512108001245126199</ram:IBANID>
+          <ram:IBANID>ES9121000418450200051332</ram:IBANID>
         </ram:PayeePartyCreditorFinancialAccount>
-        <ram:PayeeSpecifiedCreditorFinancialInstitution>
-          <ram:BICID>SOLADEST600</ram:BICID>
-        </ram:PayeeSpecifiedCreditorFinancialInstitution>
       </ram:SpecifiedTradeSettlementPaymentMeans>
       <ram:ApplicableTradeTax>
         <ram:CalculatedAmount>0.00</ram:CalculatedAmount>
         <ram:TypeCode>VAT</ram:TypeCode>
-        <ram:ExemptionReason>Umsatzsteuerfrei aufgrund der Kleinunternehmerregelung gemäß § 19 Abs. 1 UStG.</ram:ExemptionReason>
-        <ram:BasisAmount>850.00</ram:BasisAmount>
+        <ram:ExemptionReason>Exento de IVA según el régimen especial de franquicia para pequeñas empresas.</ram:ExemptionReason>
+        <ram:BasisAmount>675.00</ram:BasisAmount>
         <ram:CategoryCode>E</ram:CategoryCode>
         <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>
       <ram:SpecifiedTradePaymentTerms>
         <ram:DueDateDateTime>
-          <udt:DateTimeString format="102">20260720</udt:DateTimeString>
+          <udt:DateTimeString format="102">20261001</udt:DateTimeString>
         </ram:DueDateDateTime>
       </ram:SpecifiedTradePaymentTerms>
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-        <ram:LineTotalAmount>850.00</ram:LineTotalAmount>
-        <ram:TaxBasisTotalAmount>850.00</ram:TaxBasisTotalAmount>
+        <ram:LineTotalAmount>675.00</ram:LineTotalAmount>
+        <ram:TaxBasisTotalAmount>675.00</ram:TaxBasisTotalAmount>
         <ram:TaxTotalAmount currencyID="EUR">0.00</ram:TaxTotalAmount>
-        <ram:GrandTotalAmount>850.00</ram:GrandTotalAmount>
-        <ram:DuePayableAmount>850.00</ram:DuePayableAmount>
+        <ram:GrandTotalAmount>675.00</ram:GrandTotalAmount>
+        <ram:DuePayableAmount>675.00</ram:DuePayableAmount>
       </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
     </ram:ApplicableHeaderTradeSettlement>
   </rsm:SupplyChainTradeTransaction>
