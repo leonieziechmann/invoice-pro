@@ -268,9 +268,17 @@ def main(argv=None):
             for document in originals:
                 base_variant = _variant(args.base, document, mode)
                 head_variant = _variant(args.head, document, mode)
+                # Both have the same name; remove whichever was written.
+                written = base_variant or head_variant
+                if written is not None:
+                    variants.append(written)
                 if base_variant is not None and base_variant == head_variant:
-                    variants.append(base_variant)
                     documents.append(base_variant)
+                elif written is not None:
+                    print(
+                        f"note: {document} has a {mode} variant in one checkout only",
+                        file=sys.stderr,
+                    )
 
         with tempfile.TemporaryDirectory(prefix="invoice-pro-cmp-") as out_dir:
             with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
