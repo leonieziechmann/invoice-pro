@@ -358,7 +358,10 @@
     vat-id: "NL123456789B01",
   )
   assert.eq(rules(m), ("IP-ADDR-01",))
-  assert.eq(find(m, "IP-ADDR-01").field, "recipient.city")
+  let addr = find(m, "IP-ADDR-01")
+  assert.eq(addr.field, "recipient.city")
+  assert(addr.message.contains("no post code in the format of \"NL\""))
+  assert(addr.hint.contains("country.custom(code: .., post-code:"))
   m.buyer.address.city = "Praha 1"
   assert.eq(rules(m), ())
   let m = base

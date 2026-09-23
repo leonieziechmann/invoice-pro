@@ -222,16 +222,16 @@
         + term
         + " city "
         + _quoted(address.city)
-        + " contains a number that is not a post code of "
+        + " contains a number, but no post code in the format of "
         + _quoted(address.country)
         + ": the post code ("
         + code-bt
         + ") would be missing, and the number would be written into the city name ("
         + city-bt
         + ").",
-      hint: "Write the city line in the post code format of the country, check `country` on the "
+      hint: "Write the post code as the country expects it (e.g. \"1012 AB Amsterdam\"; `country.custom(code: .., post-code: \"999-9999\")` sets the format of other countries), check `country` on the "
         + field
-        + ", or pass the parts, e.g. `city: (name: \"Berlin\", post-code: \"10115\")`.",
+        + ", or pass the parts, e.g. `city: (name: \"Amsterdam\", post-code: \"1012 AB\")`.",
     ),
   )
 }
