@@ -91,6 +91,36 @@
           exec ${pkgs.bash}/bin/bash ${./scripts/check-docs-examples} "$@"
         '';
 
+        # Python of the conformance and performance tools (tools/zugferd, tools/perf).
+        toolsPython = pkgs.python3.withPackages (ps: [
+          ps.lxml
+          ps.pypdf
+        ]);
+
+        zugferd-corpus = pkgs.writeScriptBin "zugferd-corpus" ''
+          #!/usr/bin/env bash
+          export TYPST_BIN="${typstEnv}/bin/typst"
+          export PYTHON="${toolsPython}/bin/python3"
+          export JAVA_BIN="${pkgs.jdk_headless}/bin/java"
+          export JAVAC_BIN="${pkgs.jdk_headless}/bin/javac"
+          export MUSTANG_JAR="${mustang-cli}/share/java/mustang-cli.jar"
+          exec ${pkgs.bash}/bin/bash ${./scripts/zugferd-corpus} "$@"
+        '';
+
+        zugferd-golden = pkgs.writeScriptBin "zugferd-golden" ''
+          #!/usr/bin/env bash
+          export TYPST_BIN="${typstEnv}/bin/typst"
+          export PYTHON="${toolsPython}/bin/python3"
+          exec ${pkgs.bash}/bin/bash ${./scripts/zugferd-golden} "$@"
+        '';
+
+        perf-gate = pkgs.writeScriptBin "perf-gate" ''
+          #!/usr/bin/env bash
+          export TYPST_BIN="${typstEnv}/bin/typst"
+          export PYTHON="${toolsPython}/bin/python3"
+          exec ${pkgs.bash}/bin/bash ${./scripts/perf-gate} "$@"
+        '';
+
       in
       {
         apps.default = {
@@ -120,11 +150,29 @@
           program = "${check-docs-examples}/bin/check-docs-examples";
         };
 
+        apps.zugferd-corpus = {
+          type = "app";
+          program = "${zugferd-corpus}/bin/zugferd-corpus";
+        };
+
+        apps.zugferd-golden = {
+          type = "app";
+          program = "${zugferd-golden}/bin/zugferd-golden";
+        };
+
+        apps.perf-gate = {
+          type = "app";
+          program = "${perf-gate}/bin/perf-gate";
+        };
+
         packages.default = invoice-proPackage;
 
         packages.validate-zugferd = validate-zugferd;
         packages.validate-all-zugferd = validate-all-zugferd;
         packages.check-docs-examples = check-docs-examples;
+        packages.zugferd-corpus = zugferd-corpus;
+        packages.zugferd-golden = zugferd-golden;
+        packages.perf-gate = perf-gate;
         packages.poppler-utils = pkgs.poppler-utils;
 
         packages.documentation = pkgs.buildNpmPackage {
@@ -188,6 +236,9 @@
             self.packages.${system}.validate-zugferd
             self.packages.${system}.validate-all-zugferd
             self.packages.${system}.check-docs-examples
+            self.packages.${system}.zugferd-corpus
+            self.packages.${system}.zugferd-golden
+            self.packages.${system}.perf-gate
           ] ++ self.checks.${system}.pre-commit-check.enabledPackages;
 
           shellHook = ''

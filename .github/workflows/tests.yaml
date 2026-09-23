@@ -9,6 +9,8 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'template/**'
+      - 'docs/docs/**'
+      - 'scripts/check-docs-examples'
   pull_request:
     branches: [ main ]
     paths:
@@ -18,6 +20,8 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'template/**'
+      - 'docs/docs/**'
+      - 'scripts/check-docs-examples'
 
 jobs:
   tests:
@@ -39,6 +43,10 @@ jobs:
 
       - name: Run test suite
         run: nix develop --accept-flake-config --command tt run
+
+      - name: Compile the documentation examples
+        if: always()
+        run: nix develop --accept-flake-config --command check-docs-examples
 
       - name: Archive artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
