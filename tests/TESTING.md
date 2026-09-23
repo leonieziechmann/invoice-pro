@@ -528,6 +528,8 @@ A regression case is a small invoice in `tools/zugferd/corpus/regression/` that 
 
 The case describes the correct behavior, also while it still fails; the failure is then a known issue until the fix lands.
 
+The case must keep the harness of `..setup`: another theme is wrapped (`theme: harness(themes.DIN-5008())`), and `zugferd-errors` stays `"report"`. Without the harness no diagnostics are attached, which would read as "invoice-pro reported nothing", so the runner refuses such a case.
+
 #### Known Issues and Triage
 
 A failing case has a signature such as `FALSE_NEGATIVE missing=BR-AG-05 ours=- official=BR-AG-05` (class, rules invoice-pro did not report, invoice-pro's errors, the official rules, the failed oracles). `tools/zugferd/known-issues.toml` lists the signatures of known bugs, each with the audit finding or issue that is being fixed; `cases` (glob patterns of case ids) and `features` (values of the generator's dimensions, e.g. `features = { delivery = "dates-mixed" }`) narrow an entry to the cases it covers, so that the same signature elsewhere is still a new failure. A listed signature does not fail the run; a new one does. When a fix makes a listed signature disappear, the run fails with `XPASS` until the entry is removed, so the list can only shrink. `--strict` ignores the list.
