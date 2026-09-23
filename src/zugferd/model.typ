@@ -262,7 +262,7 @@
 /// abbreviations. Only whole texts match, never a part of one.
 ///
 /// It is built when called, so an invoice without e-invoice does not build
-/// it: `build-model` builds it once for all lines.
+/// it: `build-model` builds it once for all lines (see `unit-resolver`).
 ///
 /// -> dictionary
 #let unit-aliases() = {
@@ -348,8 +348,10 @@
   KT: ("kit", "Karton"),
 )
 
-/// The UN/ECE Recommendation 20 code of a unit (BT-130, BT-150):
-/// `(code: .., issue: ..)`.
+/// A function that returns the UN/ECE Recommendation 20 code of a unit
+/// (BT-130, BT-150) as `(code: .., issue: ..)`. It builds the table of
+/// `unit-aliases` once for all units it resolves, and keeps it to itself: a
+/// function argument is hashed on every call.
 ///
 /// A unit of the `unit` module or a dictionary carries its code. A text that
 /// is exactly a code (e.g. "H87") is taken as it is, but a code that is also a
@@ -361,50 +363,55 @@
 /// invoice-pro does not guess what it means. Without a unit, the quantity
 /// is a number of "one" (C62).
 ///
-/// - aliases (auto, dictionary): The table of `unit-aliases`, built when
-///   `auto`; pass it when resolving many units.
-/// -> dictionary
-#let resolve-unit(unit, aliases: auto) = {
-  if type(unit) == dictionary {
-    let code = compact(unit.at("code", default: none))
+/// -> function
+#let unit-resolver() = {
+  let aliases = unit-aliases()
+  unit => {
+    if type(unit) == dictionary {
+      let code = compact(unit.at("code", default: none))
+      if code != none { return (code: code, issue: none) }
+      unit = unit.at("display", default: none)
+    }
+    let text = plain-text(unit)
+    if text == "" { return (code: "C62", issue: none) }
+    // A unit written exactly as a code; case-sensitive, so that "min" is not
+    // looked up as the code "MIN" but as an abbreviation (which gives the
+    // same).
+    if text in codelists.units {
+      let ambiguous = _ambiguous-unit-codes.at(text, default: none)
+      return (
+        code: text,
+        issue: if ambiguous != none {
+          (
+            kind: "ambiguous",
+            text: text,
+            meaning: ambiguous.first(),
+            abbreviation: ambiguous.last(),
+          )
+        },
+      )
+    }
+    let key = lower(text).trim(".", at: end)
+    let code = aliases.at(key, default: none)
+    // A plural with "s" ("heures", "kgs"), but not "ms" for "m".
+    if code == none and key.ends-with("s") and key.clusters().len() > 2 {
+      code = aliases.at(key.slice(0, -1), default: none)
+    }
     if code != none { return (code: code, issue: none) }
-    unit = unit.at("display", default: none)
+    (code: "C62", issue: (kind: "unknown", text: text))
   }
-  let text = plain-text(unit)
-  if text == "" { return (code: "C62", issue: none) }
-  // A unit written exactly as a code; case-sensitive, so that "min" is not
-  // looked up as the code "MIN" but as an abbreviation (which gives the same).
-  if text in codelists.units {
-    let ambiguous = _ambiguous-unit-codes.at(text, default: none)
-    return (
-      code: text,
-      issue: if ambiguous != none {
-        (
-          kind: "ambiguous",
-          text: text,
-          meaning: ambiguous.first(),
-          abbreviation: ambiguous.last(),
-        )
-      },
-    )
-  }
-  if aliases == auto { aliases = unit-aliases() }
-  let key = lower(text).trim(".", at: end)
-  let code = aliases.at(key, default: none)
-  // A plural with "s" ("heures", "kgs"), but not "ms" for "m".
-  if code == none and key.ends-with("s") and key.clusters().len() > 2 {
-    code = aliases.at(key.slice(0, -1), default: none)
-  }
-  if code != none { return (code: code, issue: none) }
-  (code: "C62", issue: (kind: "unknown", text: text))
 }
 
-/// The UN/ECE Recommendation 20 code of a unit, see `resolve-unit`.
+/// The UN/ECE Recommendation 20 code of a unit as `(code: .., issue: ..)`,
+/// see `unit-resolver`.
+///
+/// -> dictionary
+#let resolve-unit(unit) = unit-resolver()(unit)
+
+/// The UN/ECE Recommendation 20 code of a unit, see `unit-resolver`.
 ///
 /// -> str
-#let map-unit-code(unit, aliases: auto) = (
-  resolve-unit(unit, aliases: aliases).code
-)
+#let map-unit-code(unit) = resolve-unit(unit).code
 
 // Determine delivery date or period from items
 #let determine-delivery-dates(ctx, items) = {
@@ -468,14 +475,14 @@
 
 // An invoice line (BG-25) with net amounts.
 // With gross prices, `round-price` rounds the net price as the invoice
-// rounds unit prices (the `money-fine` rounding of the locale). `unit-aliases`
-// is the table of the function `unit-aliases`, built when `auto`.
+// rounds unit prices (the `money-fine` rounding of the locale). `unit` is the
+// unit of the item as `unit-resolver` resolves it, resolved here when `auto`.
 #let line-model(
   item,
   index,
   inclusive: false,
   round-price: price => calc.round(price, digits: 4),
-  unit-aliases: auto,
+  unit: auto,
 ) = {
   let tax = item.at("tax", default: (:))
   if type(tax) != dictionary { tax = (:) }
@@ -512,10 +519,7 @@
   if type(item-id) == str { item-id = (seller: item-id) }
   if type(item-id) != dictionary { item-id = (:) }
 
-  let unit = resolve-unit(
-    item.at("unit", default: none),
-    aliases: unit-aliases,
-  )
+  if unit == auto { unit = resolve-unit(item.at("unit", default: none)) }
 
   (
     index: index,
@@ -529,7 +533,7 @@
     base-quantity: base-quantity,
     unit-code: unit.code,
     // A unit text without a known code, or a code that most likely means
-    // something else (see `resolve-unit`).
+    // something else (see `unit-resolver`).
     unit-issue: unit.issue,
     price: price,
     net: _net(to-decimal(item.at("total", default: 0)), rate, inclusive),
@@ -656,16 +660,17 @@
     (name: none, id: none, global-id: none, address: buyer.address)
   } else { none }
 
-  let aliases = unit-aliases()
-  let lines = items
-    .enumerate()
-    .map(((i, item)) => line-model(
+  let resolve = unit-resolver()
+  let lines = ()
+  for (i, item) in items.enumerate() {
+    lines.push(line-model(
       item,
       i,
       inclusive: inclusive,
       round-price: round-price,
-      unit-aliases: aliases,
+      unit: resolve(item.at("unit", default: none)),
     ))
+  }
   let allowance-charges = document-allowance-charges(
     item-data.at("discounts", default: ()),
     item-data.at("surcharges", default: ()),
