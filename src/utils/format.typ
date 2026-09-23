@@ -73,12 +73,25 @@
     ),
 
     currency-fine: x => {
-      // Determines whether the fine value has actual decimals beyond standard precision
+      // A unit price is printed as it was calculated, i.e. as rounded by
+      // `normalize.money-fine`: with the standard decimals if it has no more,
+      // otherwise with `decimals-fine` decimals, or more if it carries more
+      // (up to 6, like the e-invoice). So the printed price is the one the
+      // line total and the XML (BT-146) are based on.
       let standard-rounded = calc.round(x, digits: currency-meta.decimals)
-      let fine-rounded = calc.round(x, digits: currency-meta.decimals-fine)
+      let fine-rounded = calc.round(
+        x,
+        digits: calc.max(currency-meta.decimals-fine, 6),
+      )
       let accuracy = if (standard-rounded == fine-rounded) {
         currency-meta.decimals
-      } else { 4 }
+      } else {
+        let fraction = str(calc.abs(fine-rounded)).split(".").at(1, default: "")
+        calc.max(
+          currency-meta.decimals-fine,
+          fraction.trim("0", at: end, repeat: true).len(),
+        )
+      }
 
       currency(
         x,

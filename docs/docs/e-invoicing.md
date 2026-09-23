@@ -230,7 +230,18 @@ ZUGFeRD requires line-item units to comply with the **UN/ECE Recommendation 20**
   ```
 - **Automatic Mapping:** As a fallback, a string that is exactly a unit code (e.g. `"H87"`) is used as is, and common unit strings (such as `"h"`, `"hrs"`, `"Std."` for hours, or `"days"`, `"Tag"` for days) are mapped to their official codes. Any other string becomes `C62` ("one").
 
-Unit codes are checked against the UN/ECE Recommendation 20 code list. Unit prices are rounded to the fine precision of the locale (`normalize.money-fine`, 4 decimals by default) before the line totals are calculated, and the printed invoice and the XML use this rounded price. A `base-quantity` (e.g. a price per 100 pieces) is written as the price base quantity (BT-149); it must be greater than 0.
+Unit codes are checked against the UN/ECE Recommendation 20 code list. Unit prices are rounded to the fine precision of the locale (`normalize.money-fine`, 4 decimals by default) before the line totals are calculated, and the printed invoice and the XML use this rounded price. For prices with more decimals (e.g. energy tariffs), round them more finely, up to 6 decimals:
+
+```typst
+#show: invoice.with(
+  locale: locale.de-de.with(
+    locale.custom.normalize(money-fine: x => calc.round(x, digits: 6)),
+  ),
+  // ...
+)
+```
+
+A `base-quantity` (e.g. a price per 100 pieces) is written as the price base quantity (BT-149); it must be greater than 0.
 
 ### 3. Tax Category Codes
 
