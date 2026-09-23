@@ -20,6 +20,13 @@ Facts (all optional; an absent fact is not checked):
   seller_ids               [[scheme, id], ..] in BT-29           O-BT29
   buyer_vat                BT-48                                 O-BT48
   buyer_ids                [[scheme, id], ..] in BT-46           O-BT46
+  seller_legal_id, buyer_legal_id  [scheme, id] of BT-30, BT-47 ("" without scheme)  O-BT30, O-BT47
+  seller_trading_name, buyer_trading_name  BT-28, BT-45          O-BT28, O-BT45
+  seller_legal_info        BT-33                                 O-BT33
+  buyer_reference          BT-10                                 O-BT10
+  buyer_contact            {name, phone, email} of BG-9          O-BG9
+  tax_representative       {name, vat, country} of BG-11         O-BG11
+  payee                    {name, ids, legal_id} of BG-10        O-BG10
   seller_post_code/_city   BT-38, BT-37                          O-BT38, O-BT37
   buyer_post_code/_city_name  BT-53, BT-52                       O-BT53, O-BT52
   seller_country, buyer_country, ship_to_country  BT-40/55/80    O-BT40/55/80
@@ -104,6 +111,65 @@ def _party_ids(doc, party):
     got = [["", e.text or ""] for e in doc.xpath(party + "/ram:ID", namespaces=NS)]
     got += [[e.get("schemeID") or "", e.text or ""] for e in doc.xpath(party + "/ram:GlobalID", namespaces=NS)]
     return got
+
+
+def _legal_id(doc, party):
+    """[scheme, id] of the legal registration identifier of a party (BT-30,
+    BT-47, BT-61): scheme "" without one; None without identifier."""
+    found = doc.xpath(party + "/ram:SpecifiedLegalOrganization/ram:ID", namespaces=NS)
+    return [found[0].get("schemeID") or "", found[0].text or ""] if found else None
+
+
+def _party_details(check, facts, doc):
+    """The party details besides names, addresses and VAT identifiers."""
+    seller = AGREEMENT + "/ram:SellerTradeParty"
+    buyer = AGREEMENT + "/ram:BuyerTradeParty"
+    # Legal registration identifiers, which every profile carries.
+    for key, party, oracle in (("seller_legal_id", seller, "O-BT30"), ("buyer_legal_id", buyer, "O-BT47")):
+        if facts.get(key):
+            got = _legal_id(doc, party)
+            check(oracle, got == list(facts[key]), f"{got} != {list(facts[key])}")
+    for key, path, oracle in (
+        ("seller_trading_name", seller + "/ram:SpecifiedLegalOrganization/ram:TradingBusinessName", "O-BT28"),
+        ("buyer_trading_name", buyer + "/ram:SpecifiedLegalOrganization/ram:TradingBusinessName", "O-BT45"),
+        ("seller_legal_info", seller + "/ram:Description", "O-BT33"),
+        ("buyer_reference", AGREEMENT + "/ram:BuyerReference", "O-BT10"),
+    ):
+        if facts.get(key):
+            got = xtext(doc, path)
+            check(oracle, got == [facts[key]], f"{got} != {facts[key]!r}")
+    if facts.get("buyer_contact"):
+        contact = buyer + "/ram:DefinedTradeContact"
+        got = {
+            "name": xtext1(doc, contact + "/ram:PersonName"),
+            "phone": xtext1(doc, contact + "/ram:TelephoneUniversalCommunication/ram:CompleteNumber"),
+            "email": xtext1(doc, contact + "/ram:EmailURIUniversalCommunication/ram:URIID"),
+        }
+        want = {key: facts["buyer_contact"].get(key) for key in ("name", "phone", "email")}
+        check("O-BG9", got == want, f"{got} != {want}")
+    if facts.get("tax_representative"):
+        representative = AGREEMENT + "/ram:SellerTaxRepresentativeTradeParty"
+        got = {
+            "name": xtext1(doc, representative + "/ram:Name"),
+            "vat": xtext1(doc, representative + "/ram:SpecifiedTaxRegistration/ram:ID[@schemeID='VA']"),
+            "country": xtext1(doc, representative + "/ram:PostalTradeAddress/ram:CountryID"),
+        }
+        want = {key: facts["tax_representative"].get(key) for key in ("name", "vat", "country")}
+        check("O-BG11", got == want, f"{got} != {want}")
+    if facts.get("payee"):
+        payee = SETTLEMENT + "/ram:PayeeTradeParty"
+        got = {
+            "name": xtext1(doc, payee + "/ram:Name"),
+            "ids": _party_ids(doc, payee),
+            "legal_id": _legal_id(doc, payee),
+        }
+        want = facts["payee"]
+        want = {
+            "name": want.get("name"),
+            "ids": [list(pair) for pair in want.get("ids", [])],
+            "legal_id": list(want["legal_id"]) if want.get("legal_id") else None,
+        }
+        check("O-BG10", got == want, f"{got} != {want}")
 
 
 def _allowance_charges(elements):
@@ -207,6 +273,7 @@ def check(facts, doc, pdf_text, profile):
     if facts.get("seller_country"):
         got = xtext(doc, seller + "/ram:PostalTradeAddress/ram:CountryID")
         check_("O-BT40", got == [facts["seller_country"]], f"{got} != {facts['seller_country']!r}")
+    _party_details(check_, facts, doc)
 
     if profile in WITH_ADDRESSES:
         for key, path, oracle in (
