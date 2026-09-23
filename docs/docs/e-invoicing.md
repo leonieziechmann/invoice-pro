@@ -139,7 +139,7 @@ For the generated XML payload to be valid, your input data must satisfy strict s
 
 Both the `sender` and `recipient` dictionaries must include:
 
-- **Country:** A country of the `country` module (e.g., `country.de`, `country.fr`, `country.us`), an ISO 3166-1 alpha-2 code (e.g., `"FR"`) or a country created with `country.custom(code: "NO", name: "Norge")`. Without `country`, the party is in the country of the locale region. See the [Country API](./api-reference/invoice/country.md) documentation for details.
+- **Country:** A country of the `country` module (e.g., `country.de`, `country.fr`, `country.us`), an ISO 3166-1 alpha-2 code (e.g., `"FR"`) or a country created with `country.custom(code: "NO", name: "Norge")`. Without `country`, the party is in the country of the locale region, and a `delivery-address` is in the recipient's country. See the [Country API](./api-reference/invoice/country.md) documentation for details.
 - **Address:** ZUGFeRD supports up to three distinct address lines (`ram:LineOne`, `ram:LineTwo`, and `ram:LineThree`). You can specify the address in any of the following polymorphic forms, which are fully supported:
   - **A single string or content:** Maps entirely to `ram:LineOne` (e.g., `"123 Main St"`).
   - **An array of strings or content:** Maps sequentially to the three lines. If there are more than three elements in the array, the remaining elements are joined automatically into `ram:LineThree` using a comma separator (e.g., `("123 Main St", "Suite 100", "4th Floor", "Room 402")` maps to `"123 Main St"`, `"Suite 100"`, and `"4th Floor, Room 402"` respectively).
@@ -240,7 +240,7 @@ Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the 
 - Zero Rated: `tax.zero()` (maps to category **Z**).
 - Tax Exempt: `tax.exempt(grounds: ..)` (maps to category **E**). The `grounds` are mandatory for exempt items (BR-E-10).
 - Reverse Charge: `tax.reverse-charge()` (maps to category **AE**). Requires the VAT identifier of the buyer.
-- Intra-community Supply: `tax.intra-community()` (maps to category **K**). Requires the VAT identifiers of both parties. Without a `delivery-address`, the buyer's country is stated as deliver-to country.
+- Intra-community Supply: `tax.intra-community()` (maps to category **K**). Requires the VAT identifiers of both parties. Without a `delivery-address`, the buyer's country is stated as deliver-to country; a `delivery-address` without its own `country` is in the buyer's country as well.
 - Export: `tax.export()` (maps to category **G**). Requires the seller VAT identifier.
 - Outside Scope / Small Business: `tax.outside-scope()` and `tax-exempt-small-biz: true` (map to category **O**). An invoice not subject to VAT carries no VAT identifiers, so the seller is identified by `tax-nr` or `id`. Items of category `O` cannot be mixed with other categories on one invoice.
 

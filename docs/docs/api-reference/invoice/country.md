@@ -18,7 +18,7 @@ The `country` key accepts:
 
 Any other value, e.g. `"Germany"`, stops the compilation with an error instead of being replaced by another country.
 
-Without `country`, the sender and the recipient are in the country of the [locale](./index.md#locale) region (e.g. `DE` for `locale.de-de`). For e-invoices, state the country of every party, above all for foreign parties.
+Without `country`, the sender and the recipient are in the country of the [locale](./index.md#locale) region (e.g. `DE` for `locale.de-de`), and a delivery address is in the recipient's country. For e-invoices, state the country of every party, above all for foreign parties.
 
 **Example Usage:**
 

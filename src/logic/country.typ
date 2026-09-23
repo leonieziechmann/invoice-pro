@@ -798,10 +798,16 @@
 }
 
 /// The country of a party and whether the party states it (`country` or
-/// `region`). Without, the party is in the country of `default-region`.
+/// `region`). Without, the party gets `default-country` (e.g. the recipient's
+/// country for a delivery address) or the country of `default-region`.
 ///
 /// -> dictionary
-#let resolve-party-country(party, default-region, field: "party") = {
+#let resolve-party-country(
+  party,
+  default-region,
+  default-country: auto,
+  field: "party",
+) = {
   let country-opt = party.at("country", default: auto)
   if country-opt not in (auto, none) {
     return (
@@ -820,7 +826,46 @@
       explicit: true,
     )
   }
+  if default-country != auto {
+    return (country: default-country, explicit: false)
+  }
   (country: country-from-region(default-region), explicit: false)
+}
+
+// Checks the `city` of a party: a string, content or a dictionary whose parts
+// are strings or content. A post code given as a number would lose its leading
+// zeros ("01067 Dresden"), so it is rejected instead of converted.
+#let _check-city(city, field) = {
+  if city == () { return none }
+  if city == none or type(city) in (str, content) { return city }
+  if type(city) != dictionary {
+    panic(
+      "`"
+        + field
+        + ".city` must be a string such as \"10115 Berlin\", content or a dictionary `(name: \"Berlin\", post-code: \"10115\")`, got "
+        + repr(city)
+        + ".",
+    )
+  }
+  for key in ("name", "post-code", "state", "display", "inline-display") {
+    let value = city.at(key, default: none)
+    if value != none and type(value) not in (str, content) {
+      panic(
+        "`"
+          + field
+          + ".city."
+          + key
+          + "` must be a string"
+          + if key == "post-code" {
+            " such as \"01067\", so that leading zeros are kept"
+          } else { "" }
+          + ", got "
+          + repr(value)
+          + ".",
+      )
+    }
+  }
+  city
 }
 
 #let normalize-party(
@@ -829,9 +874,17 @@
   is-recipient: false,
   sender-country-code: none,
   recipient-country-code: none,
+  // The country of a party without `country` (and `region`); `auto` is the
+  // country of `default-region`.
+  default-country: auto,
+  // The name of the party in error messages; `auto` is "sender" or
+  // "recipient".
+  field: auto,
 ) = {
   if type(party) != dictionary { return party }
-  let field = if is-recipient { "recipient" } else { "sender" }
+  let field = if field != auto { field } else if is-recipient {
+    "recipient"
+  } else { "sender" }
 
   let has-street = "street" in party and party.street != none
   let has-address = "address" in party and party.address != none
@@ -844,14 +897,17 @@
   }
 
   // 1. Resolve country
-  let resolved-country = resolve-party-country(
-    party,
-    default-region,
-    field: field,
-  ).country
+  let (country: resolved-country, explicit: country-explicit) = (
+    resolve-party-country(
+      party,
+      default-region,
+      default-country: default-country,
+      field: field,
+    )
+  )
 
   // 2. Parse / extract city data
-  let city-raw = party.at("city", default: none)
+  let city-raw = _check-city(party.at("city", default: none), field)
   let parsed-city = none
   if city-raw != none {
     if type(city-raw) == dictionary {
@@ -968,6 +1024,10 @@
       address-inline: address-inline,
       city-inline: city-inline,
       country: resolved-country,
+      // Whether the party states its country; otherwise it is the default
+      // (the locale region, or the recipient's country for a delivery
+      // address).
+      country-explicit: country-explicit,
       city-name: none,
       post-code: none,
       state: none,

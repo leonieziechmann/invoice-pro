@@ -28,7 +28,8 @@
   /// -> dictionary
   recipient: (:),
   /// Separate delivery or shipping address (e.g. if different from billing address).
-  /// Can also be specified as `recipient.delivery-address`.
+  /// Can also be specified as `recipient.delivery-address`. Without a
+  /// `country` of its own, it is in the recipient's country.
   /// -> none | dictionary
   delivery-address: none,
 
@@ -114,6 +115,12 @@
   types.require(
     delivery-address,
     "invoice::delivery-address",
+    none,
+    dictionary,
+  )
+  types.require(
+    recipient.at("delivery-address", default: none),
+    "invoice::recipient.delivery-address",
     none,
     dictionary,
   )
@@ -233,12 +240,16 @@
   } else {
     none
   }
+  // Without a country of its own, the delivery address is in the recipient's
+  // country, not in the country of the locale.
   let normalized-delivery-address = if raw-delivery-address != none {
     normalize-party(
       raw-delivery-address,
       default-region,
       is-recipient: true,
       sender-country-code: normalized-sender.country.code,
+      default-country: normalized-recipient.country,
+      field: "delivery-address",
     )
   } else {
     none
