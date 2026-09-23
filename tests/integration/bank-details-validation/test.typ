@@ -169,15 +169,23 @@
   zugferd: "en16931",
   zugferd-errors: "report",
 )
+// "report": what the QR code cannot carry is named by its placeholder
+#test-invoice(
+  sender-name: "Muster Gesellschaft für Beratung, Entwicklung und Vertrieb mbH & Co. KG",
+  iban: valid,
+  bic: "COBA22XXX",
+  zugferd: "en16931",
+  zugferd-errors: "report",
+)
 
 #context {
   let printed = query(<bank-details>).map(it => it.value)
-  assert.eq(printed.len(), 4)
+  assert.eq(printed.len(), 5)
   let lines(it) = plain(it).split("\n").map(line => line.trim())
   let payload(it) = find-all(it, image).map(qr => qr.alt.split("\n"))
 
   // The QR code carries the plain text of what is printed and of the XML.
-  let (first, second, hidden, reported) = printed
+  let (first, second, hidden, reported, placeholder) = printed
   assert(lines(first).contains("IBAN: DE89 3704 0044 0532 0130 00"))
   assert(lines(first).contains("BIC: COBADEFFXXX"))
   let epc = payload(first).first()
@@ -200,4 +208,11 @@
   )
   assert(plain(reported).contains("No EPC-QR code: invalid IBAN"))
   assert.eq(query(<report>).map(it => it.value), (("BR-DE-19",),))
+
+  assert.eq(payload(placeholder), ())
+  assert(
+    plain(placeholder).contains(
+      "No EPC-QR code: account holder too long, invalid BIC",
+    ),
+  )
 }
