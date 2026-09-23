@@ -1410,8 +1410,11 @@
 
   let origins = 0
   for line in model.lines {
-    let field = _line-field(line)
     let period = line.at("period", default: none)
+    let origin = line.at("origin", default: none)
+    // Most lines have neither.
+    if period == none and origin == none { continue }
+    let field = _line-field(line)
     if period != none and period.last() < period.first() {
       out.push(error(
         "BR-30",
@@ -1443,7 +1446,6 @@
       }
     }
 
-    let origin = line.at("origin", default: none)
     if origin == none { continue }
     origins += 1
     if profile.item-origin and origin not in codelists.countries {
