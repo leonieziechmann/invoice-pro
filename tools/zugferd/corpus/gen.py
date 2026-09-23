@@ -13,7 +13,8 @@ Populations
   mutation     a legal invoice with one required input removed ->
                AGREE_INVALID and invoice-pro names the rule
   metamorphic  twins that must agree on amounts: bundle quantity 1 vs 2,
-               reversed line order, another profile, another currency
+               reversed line order, items split into two lines, another
+               profile, another currency
   adversarial  legal invoices with unusual but valid input forms (content,
                Unicode, numbers as post codes, ...) -> no crash, no lost data
   random       nightly: random invoices WITHOUT the legal constraints ->
@@ -330,7 +331,7 @@ def _items(f, seller, opts):
     tax = f["tax"]
     prices = PRICES[f["amounts"]]
     quantities = QUANTITIES["fractional" if f["amounts"] == "fractional" else "default"]
-    lines, names, grounds, item_mods = [], [], [], []
+    by_k, names_by_k, grounds, item_mods = {}, {}, [], []
     for k in range(n):
         price = "0" if f["mods"] == "free-ship" else prices[k % 8]
         qty = quantities[k % 8]
@@ -352,7 +353,8 @@ def _items(f, seller, opts):
         if t is None and tax != "smallbiz":
             t = f"tax.vat({std})"
         name = opts.get("item_name", "Position {n}").format(n=k + 1)
-        args = [opts.get("item_label", "[{name}]").format(name=name), f"price: {price}", f"quantity: {qty}"]
+        head = [opts.get("item_label", "[{name}]").format(name=name), f"price: {price}"]
+        args = []
         if t:
             args.append(f"tax: {t}")
         if f["mods"] == "item-pct" and k == 0:
@@ -363,13 +365,15 @@ def _items(f, seller, opts):
             item_mods.append({"name": "Expresszuschlag", "charge": True, "amount": "25.00"})
         if f["delivery"] == "dates-all" or (f["delivery"] == "dates-mixed" and k == 0):
             args.append(f"date: {ITEM_PERIOD}")
-        lines.append((k, "  #item(" + ", ".join(args) + ")"))
-        names.append(name)
+        # `split`: the same item in two lines, quantity 1 and the rest.
+        parts = ["1", str(int(qty) - 1)] if opts.get("split") and qty.isdigit() and int(qty) >= 2 else [qty]
+        by_k[k] = ["  #item(" + ", ".join(head + [f"quantity: {part}"] + args) + ")" for part in parts]
+        names_by_k[k] = [name] * len(parts)
     order = list(range(n))
     if opts.get("reverse"):
         order.reverse()
-    lines = [dict(lines)[k] for k in order]
-    names = [names[k] for k in order]
+    lines = [line for k in order for line in by_k[k]]
+    names = [name for k in order for name in names_by_k[k]]
     if f["mods"] == "bundle2-pct":
         inner = lines[:2]
         qty = opts.get("bundle_qty", 2)
@@ -640,6 +644,13 @@ def metamorphic(rows):
         # Reversing the lines would move other items into the bundle.
         if f["lines"] > 1 and k % 3 == 0 and f["mods"] != "bundle2-pct":
             cases.append(_case(f"mm-reverse-{k:03d}", "metamorphic", f, opts={"reverse": True},
+                               twin={"of": f"pw{k:03d}", "relation": "same-totals"}))
+        # Splitting an item into two lines leaves every total unchanged when
+        # the line amounts are exact: net prices with two decimals, whole
+        # quantities, no modifier of the item itself, no bundle.
+        if (f["lines"] > 1 and f["mode"] == "exclusive" and f["amounts"] in ("plain", "large", "credit-line")
+                and f["mods"] not in ("item-pct", "item-abs", "bundle2-pct")):
+            cases.append(_case(f"mm-split-{k:03d}", "metamorphic", f, opts={"split": True},
                                twin={"of": f"pw{k:03d}", "relation": "same-totals"}))
         if k % 4 == 1:
             other = {"minimum": "basic-wl", "basic-wl": "basic", "basic": "en16931", "en16931": "basic",

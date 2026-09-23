@@ -130,6 +130,22 @@ def row(cid, cls="AGREE_VALID", expect="AGREE_VALID", oracle=(), missing=(), our
     }
 
 
+class Metamorphic(unittest.TestCase):
+    def test_twins_with_other_totals_fail(self):
+        doc = common.parse_xml(CII.encode("utf-8"))
+        other = common.parse_xml(CII.replace("<ram:GrandTotalAmount>1234.50", "<ram:GrandTotalAmount>1234.51").encode("utf-8"))
+        rows = [row("pw001"), row("mm-split-001"), row("mm-reverse-001")]
+        cases = {
+            "pw001": {},
+            "mm-split-001": {"twin": {"of": "pw001", "relation": "same-totals"}},
+            "mm-reverse-001": {"twin": {"of": "pw001", "relation": "same-totals"}},
+        }
+        run.metamorphic(rows, {"pw001": doc, "mm-split-001": other, "mm-reverse-001": doc}, cases)
+        self.assertEqual([r["oracle"] for r in rows[::2]], [[], []])
+        self.assertEqual([p.split(":")[0] for p in rows[1]["oracle"]], ["O-META-same-totals"])
+        self.assertIn("BT-112", rows[1]["oracle"][0])
+
+
 class KnownIssues(unittest.TestCase):
     def test_signature(self):
         r = row("rg-a", cls="FALSE_NEGATIVE", missing=["BR-AG-05"], official=["BR-AG-05"])
@@ -416,6 +432,16 @@ class Generator(unittest.TestCase):
         self.assertEqual((outside["seller_vat"], outside["buyer_vat"], outside["seller_ids"]),
                          (None, None, [["", gen.SELLER_ID]]))
         self.assertIsNone(facts(route="de-us")["buyer_vat"])
+
+    def test_split_twins(self):
+        f = dict(gen.SIMPLE, lines=3, route="de-de")  # quantities 1, 2, 1
+        src, facts = gen.render("x", f, opts={"split": True})
+        self.assertEqual(src.count("#item("), 4)
+        self.assertEqual(src.count("quantity: 2"), 0)
+        self.assertEqual(facts["line_names"], ["Position 1", "Position 2", "Position 2", "Position 3"])
+        rows = [dict(f, mode="inclusive"), f, dict(f, mods="item-pct")]
+        twins = [c["id"] for c in gen.metamorphic(rows) if c["id"].startswith("mm-split")]
+        self.assertEqual(twins, ["mm-split-001"])  # exact line amounts only
 
     def test_write_replaces_only_a_generated_corpus(self):
         base = common.build_dir()
