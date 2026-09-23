@@ -196,10 +196,12 @@ Invoiced to #info.recipient.name in #info.recipient.city.
 
 - **Sender Details (`#info.sender.*`)**:
   - `#info.sender.name`, `#info.sender.tax-nr`, `#info.sender.vat-id`
+  - `#info.sender.trading-name`, `#info.sender.legal-id`, `#info.sender.legal-info`
   - `#info.sender.address`, `#info.sender.city`, `#info.sender.country`
   - `#info.sender.email`, `#info.sender.phone`
 - **Recipient Details (`#info.recipient.*`)**:
   - `#info.recipient.name`, `#info.recipient.tax-nr`, `#info.recipient.vat-id`
+  - `#info.recipient.trading-name`, `#info.recipient.legal-id`
   - `#info.recipient.address`, `#info.recipient.city`, `#info.recipient.country`
   - `#info.recipient.buyer-reference`, `#info.recipient.customer-nr`
 - **Totals (`#info.total.*`)**:

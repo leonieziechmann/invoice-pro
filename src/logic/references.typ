@@ -1,5 +1,11 @@
 #import "payment-reference.typ": bank-signal, resolve-payment-reference
 
+// An identifier given as a dictionary, e.g. a typed identifier of the `id`
+// module (`id.leitweg(..)`), is printed as its identifier.
+#let _identifier-text(value) = {
+  if type(value) == dictionary { value.at("id", default: none) } else { value }
+}
+
 #let tax-nr(label: auto, value: auto) = {
   ctx => {
     let title = if label == auto {
@@ -135,9 +141,12 @@
       ctx.locale.strings.reference.buyer-reference
     } else { label }
     let val = if value == auto {
-      ctx.recipient.at("buyer-reference", default: ctx.recipient.at(
-        "leitweg-id",
-        default: ctx.at("buyer-reference", default: none),
+      _identifier-text(ctx.recipient.at(
+        "buyer-reference",
+        default: ctx.recipient.at(
+          "leitweg-id",
+          default: ctx.at("buyer-reference", default: none),
+        ),
       ))
     } else { value }
     (title, val)

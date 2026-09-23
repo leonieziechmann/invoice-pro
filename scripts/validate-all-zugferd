@@ -39,6 +39,9 @@ done
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-seller-id/test.typ"
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-auto/test.typ"
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-parties/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-party-details/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-tax-representative/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-minimum-legal-id/test.typ"
 "$VALIDATE_ZUGFERD" "tests/docs/e-invoicing-complete/test.typ"
 "$VALIDATE_ZUGFERD" "template/invoice.typ"
 

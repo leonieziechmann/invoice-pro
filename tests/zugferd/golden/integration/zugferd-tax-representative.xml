@@ -9,10 +9,10 @@
     </ram:GuidelineSpecifiedDocumentContextParameter>
   </rsm:ExchangedDocumentContext>
   <rsm:ExchangedDocument>
-    <ram:ID>ZUG-KLEIN-2026-001</ram:ID>
+    <ram:ID>AM-2026-017</ram:ID>
     <ram:TypeCode>380</ram:TypeCode>
     <ram:IssueDateTime>
-      <udt:DateTimeString format="102">20260706</udt:DateTimeString>
+      <udt:DateTimeString format="102">20260901</udt:DateTimeString>
     </ram:IssueDateTime>
   </rsm:ExchangedDocument>
   <rsm:SupplyChainTradeTransaction>
@@ -21,137 +21,126 @@
         <ram:LineID>1</ram:LineID>
       </ram:AssociatedDocumentLineDocument>
       <ram:SpecifiedTradeProduct>
-        <ram:Name>Dienstleistung</ram:Name>
+        <ram:Name>Machine tool, shipped from Frankfurt am Main to Lyon</ram:Name>
       </ram:SpecifiedTradeProduct>
       <ram:SpecifiedLineTradeAgreement>
         <ram:NetPriceProductTradePrice>
-          <ram:ChargeAmount>150.00</ram:ChargeAmount>
+          <ram:ChargeAmount>24500.00</ram:ChargeAmount>
         </ram:NetPriceProductTradePrice>
       </ram:SpecifiedLineTradeAgreement>
       <ram:SpecifiedLineTradeDelivery>
-        <ram:BilledQuantity unitCode="HUR">4.00</ram:BilledQuantity>
+        <ram:BilledQuantity unitCode="H87">1.00</ram:BilledQuantity>
       </ram:SpecifiedLineTradeDelivery>
       <ram:SpecifiedLineTradeSettlement>
         <ram:ApplicableTradeTax>
           <ram:TypeCode>VAT</ram:TypeCode>
-          <ram:CategoryCode>E</ram:CategoryCode>
+          <ram:CategoryCode>K</ram:CategoryCode>
           <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
         </ram:ApplicableTradeTax>
         <ram:SpecifiedTradeSettlementLineMonetarySummation>
-          <ram:LineTotalAmount>600.00</ram:LineTotalAmount>
-        </ram:SpecifiedTradeSettlementLineMonetarySummation>
-      </ram:SpecifiedLineTradeSettlement>
-    </ram:IncludedSupplyChainTradeLineItem>
-    <ram:IncludedSupplyChainTradeLineItem>
-      <ram:AssociatedDocumentLineDocument>
-        <ram:LineID>2</ram:LineID>
-      </ram:AssociatedDocumentLineDocument>
-      <ram:SpecifiedTradeProduct>
-        <ram:Name>Produkt</ram:Name>
-      </ram:SpecifiedTradeProduct>
-      <ram:SpecifiedLineTradeAgreement>
-        <ram:NetPriceProductTradePrice>
-          <ram:ChargeAmount>25.00</ram:ChargeAmount>
-        </ram:NetPriceProductTradePrice>
-      </ram:SpecifiedLineTradeAgreement>
-      <ram:SpecifiedLineTradeDelivery>
-        <ram:BilledQuantity unitCode="H87">10.00</ram:BilledQuantity>
-      </ram:SpecifiedLineTradeDelivery>
-      <ram:SpecifiedLineTradeSettlement>
-        <ram:ApplicableTradeTax>
-          <ram:TypeCode>VAT</ram:TypeCode>
-          <ram:CategoryCode>E</ram:CategoryCode>
-          <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
-        </ram:ApplicableTradeTax>
-        <ram:SpecifiedTradeSettlementLineMonetarySummation>
-          <ram:LineTotalAmount>250.00</ram:LineTotalAmount>
+          <ram:LineTotalAmount>24500.00</ram:LineTotalAmount>
         </ram:SpecifiedTradeSettlementLineMonetarySummation>
       </ram:SpecifiedLineTradeSettlement>
     </ram:IncludedSupplyChainTradeLineItem>
     <ram:ApplicableHeaderTradeAgreement>
-      <ram:BuyerReference>DE123456789-12345-12</ram:BuyerReference>
       <ram:SellerTradeParty>
-        <ram:ID>123/456/78901</ram:ID>
-        <ram:Name>Kleinunternehmer e.K.</ram:Name>
+        <ram:Name>Alpen Maschinen AG</ram:Name>
+        <ram:SpecifiedLegalOrganization>
+          <ram:ID schemeID="0183">CHE123456788</ram:ID>
+        </ram:SpecifiedLegalOrganization>
         <ram:DefinedTradeContact>
-          <ram:PersonName>Max Mustermann</ram:PersonName>
+          <ram:PersonName>Anna Keller</ram:PersonName>
           <ram:TelephoneUniversalCommunication>
-            <ram:CompleteNumber>+49 123 456789</ram:CompleteNumber>
+            <ram:CompleteNumber>+41 44 1234567</ram:CompleteNumber>
           </ram:TelephoneUniversalCommunication>
           <ram:EmailURIUniversalCommunication>
-            <ram:URIID>max@mustermann.de</ram:URIID>
+            <ram:URIID>billing@alpen-maschinen.example</ram:URIID>
           </ram:EmailURIUniversalCommunication>
         </ram:DefinedTradeContact>
         <ram:PostalTradeAddress>
-          <ram:PostcodeCode>12345</ram:PostcodeCode>
-          <ram:LineOne>Musterstraße 1</ram:LineOne>
-          <ram:CityName>Musterstadt</ram:CityName>
-          <ram:CountryID>DE</ram:CountryID>
+          <ram:PostcodeCode>8001</ram:PostcodeCode>
+          <ram:LineOne>Bahnhofstrasse 1</ram:LineOne>
+          <ram:CityName>Zürich</ram:CityName>
+          <ram:CountryID>CH</ram:CountryID>
         </ram:PostalTradeAddress>
         <ram:URIUniversalCommunication>
-          <ram:URIID schemeID="EM">max@mustermann.de</ram:URIID>
+          <ram:URIID schemeID="EM">billing@alpen-maschinen.example</ram:URIID>
         </ram:URIUniversalCommunication>
-        <ram:SpecifiedTaxRegistration>
-          <ram:ID schemeID="FC">123/456/78901</ram:ID>
-        </ram:SpecifiedTaxRegistration>
       </ram:SellerTradeParty>
       <ram:BuyerTradeParty>
-        <ram:Name>Kunde AG</ram:Name>
-        <ram:DefinedTradeContact>
-          <ram:PersonName>Einkauf</ram:PersonName>
-          <ram:EmailURIUniversalCommunication>
-            <ram:URIID>accounting@kunde.de</ram:URIID>
-          </ram:EmailURIUniversalCommunication>
-        </ram:DefinedTradeContact>
+        <ram:Name>Client SAS</ram:Name>
         <ram:PostalTradeAddress>
-          <ram:PostcodeCode>54321</ram:PostcodeCode>
-          <ram:LineOne>Kundenweg 5</ram:LineOne>
-          <ram:CityName>Kundenstadt</ram:CityName>
-          <ram:CountryID>DE</ram:CountryID>
+          <ram:PostcodeCode>69001</ram:PostcodeCode>
+          <ram:LineOne>10 Avenue Foch</ram:LineOne>
+          <ram:CityName>Lyon</ram:CityName>
+          <ram:CountryID>FR</ram:CountryID>
         </ram:PostalTradeAddress>
         <ram:URIUniversalCommunication>
-          <ram:URIID schemeID="EM">accounting@kunde.de</ram:URIID>
+          <ram:URIID schemeID="9957">FR61954506077</ram:URIID>
         </ram:URIUniversalCommunication>
+        <ram:SpecifiedTaxRegistration>
+          <ram:ID schemeID="VA">FR61954506077</ram:ID>
+        </ram:SpecifiedTaxRegistration>
       </ram:BuyerTradeParty>
+      <ram:SellerTaxRepresentativeTradeParty>
+        <ram:Name>Fiskalvertretung Muster GmbH</ram:Name>
+        <ram:PostalTradeAddress>
+          <ram:PostcodeCode>60311</ram:PostcodeCode>
+          <ram:LineOne>Steuerweg 3</ram:LineOne>
+          <ram:CityName>Frankfurt am Main</ram:CityName>
+          <ram:CountryID>DE</ram:CountryID>
+        </ram:PostalTradeAddress>
+        <ram:SpecifiedTaxRegistration>
+          <ram:ID schemeID="VA">DE987654328</ram:ID>
+        </ram:SpecifiedTaxRegistration>
+      </ram:SellerTaxRepresentativeTradeParty>
     </ram:ApplicableHeaderTradeAgreement>
     <ram:ApplicableHeaderTradeDelivery>
+      <ram:ShipToTradeParty>
+        <ram:PostalTradeAddress>
+          <ram:PostcodeCode>69001</ram:PostcodeCode>
+          <ram:LineOne>10 Avenue Foch</ram:LineOne>
+          <ram:CityName>Lyon</ram:CityName>
+          <ram:CountryID>FR</ram:CountryID>
+        </ram:PostalTradeAddress>
+      </ram:ShipToTradeParty>
       <ram:ActualDeliverySupplyChainEvent>
         <ram:OccurrenceDateTime>
-          <udt:DateTimeString format="102">20260706</udt:DateTimeString>
+          <udt:DateTimeString format="102">20260901</udt:DateTimeString>
         </ram:OccurrenceDateTime>
       </ram:ActualDeliverySupplyChainEvent>
     </ram:ApplicableHeaderTradeDelivery>
     <ram:ApplicableHeaderTradeSettlement>
-      <ram:PaymentReference>ZUG-KLEIN-2026-001</ram:PaymentReference>
+      <ram:PaymentReference>AM-2026-017</ram:PaymentReference>
       <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
       <ram:SpecifiedTradeSettlementPaymentMeans>
         <ram:TypeCode>58</ram:TypeCode>
         <ram:PayeePartyCreditorFinancialAccount>
-          <ram:IBANID>DE75512108001245126199</ram:IBANID>
+          <ram:IBANID>CH9300762011623852957</ram:IBANID>
         </ram:PayeePartyCreditorFinancialAccount>
         <ram:PayeeSpecifiedCreditorFinancialInstitution>
-          <ram:BICID>SOLADEST600</ram:BICID>
+          <ram:BICID>UBSWCHZH80A</ram:BICID>
         </ram:PayeeSpecifiedCreditorFinancialInstitution>
       </ram:SpecifiedTradeSettlementPaymentMeans>
       <ram:ApplicableTradeTax>
         <ram:CalculatedAmount>0.00</ram:CalculatedAmount>
         <ram:TypeCode>VAT</ram:TypeCode>
-        <ram:ExemptionReason>Umsatzsteuerfrei aufgrund der Kleinunternehmerregelung gemäß § 19 Abs. 1 UStG.</ram:ExemptionReason>
-        <ram:BasisAmount>850.00</ram:BasisAmount>
-        <ram:CategoryCode>E</ram:CategoryCode>
+        <ram:ExemptionReason>Tax-exempt intra-community supply</ram:ExemptionReason>
+        <ram:BasisAmount>24500.00</ram:BasisAmount>
+        <ram:CategoryCode>K</ram:CategoryCode>
         <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>
       <ram:SpecifiedTradePaymentTerms>
         <ram:DueDateDateTime>
-          <udt:DateTimeString format="102">20260720</udt:DateTimeString>
+          <udt:DateTimeString format="102">20261001</udt:DateTimeString>
         </ram:DueDateDateTime>
       </ram:SpecifiedTradePaymentTerms>
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-        <ram:LineTotalAmount>850.00</ram:LineTotalAmount>
-        <ram:TaxBasisTotalAmount>850.00</ram:TaxBasisTotalAmount>
+        <ram:LineTotalAmount>24500.00</ram:LineTotalAmount>
+        <ram:TaxBasisTotalAmount>24500.00</ram:TaxBasisTotalAmount>
         <ram:TaxTotalAmount currencyID="EUR">0.00</ram:TaxTotalAmount>
-        <ram:GrandTotalAmount>850.00</ram:GrandTotalAmount>
-        <ram:DuePayableAmount>850.00</ram:DuePayableAmount>
+        <ram:GrandTotalAmount>24500.00</ram:GrandTotalAmount>
+        <ram:DuePayableAmount>24500.00</ram:DuePayableAmount>
       </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
     </ram:ApplicableHeaderTradeSettlement>
   </rsm:SupplyChainTradeTransaction>

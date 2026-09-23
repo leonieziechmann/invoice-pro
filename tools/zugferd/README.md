@@ -12,6 +12,8 @@ How to run them, how to read their results and how to update golden files and kn
 | `run.py`                 | The runner: Typst, XSD, Mustang in one JVM, classification, oracles, known issues, gates.                                                                 |
 | `oracles.py`             | Semantic checks of the XML against the input and against the printed PDF.                                                                                 |
 | `known-issues.toml`      | Failure signatures of known bugs with their finding; the list can only shrink.                                                                            |
+| `bt-disposition.toml`    | The disposition of every business term of EN 16931: the input that states it, what it is derived from, or why it is not supported.                        |
+| `bt_disposition.py`      | Checks that every business term has a disposition; `scripts/zugferd-corpus` runs it before the corpus.                                                    |
 | `minimize.py`            | Shrinks a failing generated case to a minimal reproduction.                                                                                               |
 | `golden.py`              | Golden XML of the e-invoice test documents (`tests/zugferd/golden/`) and the reproducibility check.                                                       |
 | `java/MustangBatch.java` | Validates many files with Mustang in a single JVM; compiled against the Mustang jar on first use.                                                         |

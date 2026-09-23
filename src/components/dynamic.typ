@@ -314,6 +314,9 @@
         _to-content(
           res.map(x => if type(x) == content { x } else { [#x] }).join(", "),
         )
+      } else if type(res) == dictionary and "id" in res {
+        // An identifier with scheme, e.g. of the `id` module (`id.siret(..)`).
+        _to-content(res.id)
       } else {
         _to-content(res)
       }

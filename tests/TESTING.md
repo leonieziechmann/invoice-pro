@@ -43,6 +43,8 @@ tests/
     ├── validate/          # Business rule checks (diagnostics)
     ├── parties/           # Parties: electronic addresses, identifiers, keys
     ├── parties-invoice/   # Party inputs of whole invoices, XML and diagnostics
+    ├── identifiers/       # Typed identifiers of the `id` module, check digits
+    ├── party-details/     # Legal IDs, trading names, contacts, tax representative, payee
     ├── report/            # Error message, "report" and "ignore" modes
     ├── country-codes/     # Country code list, EAS scheme of VAT IDs
     └── golden/            # Golden XML of the e-invoice test documents (no tests,
@@ -423,6 +425,9 @@ The automated `validate-all-zugferd` suite covers:
 - `tests/integration/zugferd-seller-id/test.typ` — Seller identifier (BT-29) without tax registration (#42).
 - `tests/integration/zugferd-auto/test.typ` — `zugferd: auto` between German parties with complete data, written as XRechnung.
 - `tests/integration/zugferd-parties/test.typ` — Party data from imported or copied text in an XRechnung not subject to VAT (category `O`): an empty electronic address and a VAT ID with a zero width space, electronic addresses derived from the VAT IDs, a buyer name of two lines and a delivery address identified by a GLN given as `id`.
+- `tests/integration/zugferd-party-details/test.typ` — XRechnung to a public buyer with the seller's register number (BT-30), trading name (BT-28) and legal information (BT-33), the buyer's Leitweg-ID of the `id` module as buyer reference and electronic address, the buyer contact (BG-9) and a factoring company as payee (BG-10).
+- `tests/integration/zugferd-tax-representative/test.typ` — Swiss seller identified by its UID (BT-30) with a fiscal representative in Germany (BG-11), whose VAT identifier satisfies the rules of an intra-community supply (category `K`).
+- `tests/integration/zugferd-minimum-legal-id/test.typ` — Factur-X MINIMUM of a French micro-entrepreneur identified by its SIRET (BT-30) instead of a VAT identifier.
 - `tests/docs/e-invoicing-complete/test.typ` — Complete example of the e-invoicing documentation.
 - `template/invoice.typ` — Default release invoice template.
 
@@ -455,6 +460,7 @@ The Mustang validation above checks two dozen hand-written documents. The CI add
 | Check                  | What it shows                                                                                  | Command                             | CI job                                     |
 | :--------------------- | :--------------------------------------------------------------------------------------------- | :---------------------------------- | :----------------------------------------- |
 | Conformance corpus     | invoice-pro's verdict equals the official one, and the XML says what the input and the PDF say | `nix run .#zugferd-corpus`          | `corpus` in `zugferd-validation.yaml`      |
+| Business terms         | every business term of EN 16931 has an input, a derivation or a reason why it is not supported | (part of `zugferd-corpus`)          | `corpus`                                   |
 | Golden XML             | the XML of every e-invoice test document is unchanged, or changed on purpose                   | `nix run .#zugferd-golden`          | `golden` in `zugferd-validation.yaml`      |
 | Reproducibility        | two compilations of a document give bit-identical PDFs (same Typst and package version)        | (part of `zugferd-golden`)          | `golden`                                   |
 | Performance gate       | the e-invoice path stays within its budget                                                     | `nix run .#perf-gate`               | `performance` in `zugferd-validation.yaml` |
@@ -550,6 +556,26 @@ When the corpus fails:
    - a bug of the generator, an oracle or a constraint in `allowed()`: fix the tool (they stay small on purpose, so that they can be reviewed);
    - a known finding that is being worked on: add the signature to `known-issues.toml` with the finding id. Never add an entry to make a new class of failure disappear.
 
+#### Business Term Dispositions
+
+`tools/zugferd/bt-disposition.toml` states for every business term of EN 16931 (BT-1 to BT-165, BT-4 is not defined, and the business groups BG-1 to BG-32) what invoice-pro does with it, one line per term:
+
+```toml
+"BT-30" = { name = "Seller legal registration identifier", disposition = "input", input = "sender.legal-id (text or an identifier of the `id` module)" }
+"BT-72" = { name = "Actual delivery date", disposition = "derived", source = "the date of the items (`date` of `item`) when they share one, otherwise the invoice date" }
+"BT-17" = { name = "Tender or lot reference", disposition = "unsupported", reason = "no input for public procurement references" }
+```
+
+- `input`: an input of invoice-pro states the term, `input` names it (a parameter of `invoice`, a key of a party, a component or an argument of it);
+- `derived`: invoice-pro derives the term, `source` says from what;
+- `unsupported`: invoice-pro does not state the term, `reason` says why.
+
+`tools/zugferd/bt_disposition.py` (unit-tested by `test_bt_disposition.py`) fails when a term has no entry, an entry is no term of EN 16931, or a disposition lacks its `input`, `source` or `reason`; `scripts/zugferd-corpus` runs it before the corpus. So every business term has a decision, and a value without an input of its own cannot end up in another business term unnoticed, as the seller's tax number did in the seller identifier (issue #42). A change that adds an input, or starts to write a term, updates the line of the term in the same commit:
+
+```bash
+python3 tools/zugferd/bt_disposition.py   # ✔ 196 business terms of EN 16931 have a disposition (...)
+```
+
 #### Golden XML and Reproducibility
 
 `tools/zugferd/golden.py` takes the documents of `scripts/validate-all-zugferd` (one list for both checks), compiles each twice with a fixed creation timestamp and requires bit-identical PDFs: the same Typst and package version produce the same document, PDF and XML. It then compares the attached XML, pretty-printed, with `tests/zugferd/golden/<document>.xml` and shows a diff when they differ. Documents that import the published package (the template) are compiled against the checkout.
@@ -601,24 +627,25 @@ nix run .#check-pr
 
 Every non-trivial code block in `docs/docs/` must be registered here. When adding a new code section to the documentation, add it to this list and create a corresponding test under `tests/docs/` if possible. If no test is created yet, mark the entry as **⚠️ not implemented**.
 
-| Source file                      | Code ID            | Description                                                  | Test directory                  | Status             |
-| :------------------------------- | :----------------- | :----------------------------------------------------------- | :------------------------------ | :----------------- |
-| `intro.md`                       | `quick-glance`     | Full invoice with items, discount, and bank details          | `docs/intro-minimal/`           | ✅                 |
-| `getting-started.md`             | `first-invoice`    | Minimal invoice with items and tax configuration             | `docs/getting-started-minimal/` | ✅                 |
-| `api-reference/index.md`         | `blueprint`        | Architectural blueprint with items, payment, bank, signature | `docs/api-index-blueprint/`     | ✅                 |
-| `api-reference/invoice.md`       | `minimal-config`   | Minimal valid configuration example                          | `docs/api-invoice-minimal/`     | ✅                 |
-| `api-reference/components.md`    | `apply-bulk-tax`   | Apply block wrapping items with shared tax rate              | `docs/api-components-apply/`    | ✅                 |
-| `api-reference/theme.md`         | `din5008-example`  | DIN-5008 theme with custom parameters                        | `docs/api-theme-din5008/`       | ✅                 |
-| `api-reference/theme.md`         | `blank-example`    | Blank theme with native Typst page setup                     | `docs/api-theme-blank/`         | ✅                 |
-| `e-invoicing.md`                 | `custom-report`    | Theme `zugferd-report` function for a custom problem list    | `docs/e-invoicing-report/`      | ✅                 |
-| `e-invoicing.md`                 | `complete-example` | Complete ZUGFeRD-compliant invoice                           | `docs/e-invoicing-complete/`    | ✅                 |
-| `api-reference/locale/index.md`  | `locale-customize` | Locale customization with `locale.custom` overrides          | —                               | ⚠️ not implemented |
-| `api-reference/locale/index.md`  | `currency-format`  | Custom currency formatting override                          | —                               | ⚠️ not implemented |
-| `api-reference/locale/custom.md` | `pl-language`      | Polish language dictionary definition                        | —                               | ⚠️ not implemented |
-| `api-reference/locale/custom.md` | `pl-region`        | Polish region builder function                               | —                               | ⚠️ not implemented |
-| `api-reference/locale/custom.md` | `pl-factory`       | Building locale with `build-locale` factory                  | —                               | ⚠️ not implemented |
-| `api-reference/locale/custom.md` | `pl-usage`         | Using the custom locale in a document                        | —                               | ⚠️ not implemented |
-| `api-reference/locale/base.md`   | `schema-override`  | Schema inspection and partial override example               | —                               | ⚠️ not implemented |
+| Source file                            | Code ID                | Description                                                             | Test directory                   | Status             |
+| :------------------------------------- | :--------------------- | :---------------------------------------------------------------------- | :------------------------------- | :----------------- |
+| `intro.md`                             | `quick-glance`         | Full invoice with items, discount, and bank details                     | `docs/intro-minimal/`            | ✅                 |
+| `getting-started.md`                   | `first-invoice`        | Minimal invoice with items and tax configuration                        | `docs/getting-started-minimal/`  | ✅                 |
+| `api-reference/index.md`               | `blueprint`            | Architectural blueprint with items, payment, bank, signature            | `docs/api-index-blueprint/`      | ✅                 |
+| `api-reference/invoice.md`             | `minimal-config`       | Minimal valid configuration example                                     | `docs/api-invoice-minimal/`      | ✅                 |
+| `api-reference/components.md`          | `apply-bulk-tax`       | Apply block wrapping items with shared tax rate                         | `docs/api-components-apply/`     | ✅                 |
+| `api-reference/theme.md`               | `din5008-example`      | DIN-5008 theme with custom parameters                                   | `docs/api-theme-din5008/`        | ✅                 |
+| `api-reference/theme.md`               | `blank-example`        | Blank theme with native Typst page setup                                | `docs/api-theme-blank/`          | ✅                 |
+| `e-invoicing.md`                       | `custom-report`        | Theme `zugferd-report` function for a custom problem list               | `docs/e-invoicing-report/`       | ✅                 |
+| `e-invoicing.md`                       | `complete-example`     | Complete ZUGFeRD-compliant invoice                                      | `docs/e-invoicing-complete/`     | ✅                 |
+| `api-reference/invoice/identifiers.md` | `printing-identifiers` | Register number as legal registration identifier and printed in `extra` | `docs/api-identifiers-printing/` | ✅                 |
+| `api-reference/locale/index.md`        | `locale-customize`     | Locale customization with `locale.custom` overrides                     | —                                | ⚠️ not implemented |
+| `api-reference/locale/index.md`        | `currency-format`      | Custom currency formatting override                                     | —                                | ⚠️ not implemented |
+| `api-reference/locale/custom.md`       | `pl-language`          | Polish language dictionary definition                                   | —                                | ⚠️ not implemented |
+| `api-reference/locale/custom.md`       | `pl-region`            | Polish region builder function                                          | —                                | ⚠️ not implemented |
+| `api-reference/locale/custom.md`       | `pl-factory`           | Building locale with `build-locale` factory                             | —                                | ⚠️ not implemented |
+| `api-reference/locale/custom.md`       | `pl-usage`             | Using the custom locale in a document                                   | —                                | ⚠️ not implemented |
+| `api-reference/locale/base.md`         | `schema-override`      | Schema inspection and partial override example                          | —                                | ⚠️ not implemented |
 
 ---
 

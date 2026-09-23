@@ -314,7 +314,16 @@
 }
 
 // `rules`: the rule for a missing address and the rule for a missing scheme.
-#let _check-electronic-address(party, required, rules, field, term) = {
+// `represented`: the party is a seller with a tax representative, whose VAT
+// identifier is not the seller's `vat-id` (nor its address).
+#let _check-electronic-address(
+  party,
+  required,
+  rules,
+  field,
+  term,
+  represented: false,
+) = {
   let (missing-rule, scheme-rule) = rules
   let address = party.electronic-address
   if address == none or address.id == none {
@@ -322,7 +331,13 @@
     let make = if required == "error" { error } else { warning }
     // Name only the inputs that can still provide the address.
     let vat-id = party.at("stated-vat-id", default: none)
-    let hint = if vat-id == none {
+    let hint = if vat-id == none and represented {
+      (
+        "Set `electronic-address`, `vat-id` (the seller's own VAT identifier, not the one of its tax representative) or `email` on the "
+          + field
+          + "."
+      )
+    } else if vat-id == none {
       "Set `electronic-address`, `vat-id` or `email` on the " + field + "."
     } else {
       let prefix = vat-id-prefix(vat-id)
@@ -580,20 +595,295 @@
   out
 }
 
+// What an identifier of each kind of the `id` module identifies, for messages.
+#let _id-kinds = (
+  party: "a party identifier",
+  legal: "a legal registration identifier",
+  routing: "a Leitweg-ID",
+  custom: "an identifier",
+)
+
+// The typed identifiers of the `id` module a party gives (`typed-ids` of the
+// model): their problems (IP-ID-01, e.g. a wrong check digit), and an
+// identifier given for a business term it does not belong to (IP-ID-03): a
+// Leitweg-ID as party identifier, another identifier as Leitweg-ID, a GLN or
+// D-U-N-S number as legal registration identifier, or a register number as
+// party identifier.
+#let _check-typed-ids(party, field, term) = {
+  let out = ()
+  for entry in party.at("typed-ids", default: ()) {
+    let path = field + "." + entry.key
+    let scheme = entry.scheme
+    for problem in entry.problems {
+      out.push(error(
+        "IP-ID-01",
+        path,
+        if type(problem) == str { problem } else { repr(problem) },
+        hint: if entry.kind == "custom" {
+          "Give the code of the scheme and the identifier, e.g. `id.custom(\"0208\", \"0123456749\")`."
+        } else if scheme == none {
+          "Give the register number, e.g. `id.register(\"HRB 4711\", court: \"Amtsgericht München\")`."
+        } else {
+          (
+            "Check the identifier for typos. If it is right as it is, give it with `id.custom("
+              + _quoted(scheme)
+              + ", ..)`, which does not check it."
+          )
+        },
+      ))
+    }
+    if (
+      entry.kind == "routing"
+        and entry.key in ("id", "global-id", "location-id", "legal-id")
+    ) {
+      out.push(error(
+        "IP-ID-03",
+        path,
+        "A Leitweg-ID says where a public buyer receives its invoices; it does not identify the "
+          + term
+          + ", which `"
+          + entry.key
+          + "` stands for.",
+        hint: "Give the Leitweg-ID as `leitweg-id` of the recipient (the buyer reference, BT-10) and, if the buyer is reached by it, as its `electronic-address`.",
+      ))
+    } else if (
+      entry.key == "leitweg-id" and entry.kind not in ("routing", "custom")
+    ) {
+      out.push(error(
+        "IP-ID-03",
+        path,
+        "`leitweg-id` takes the Leitweg-ID of the buyer, but it is given "
+          + _id-kinds.at(entry.kind, default: "another identifier")
+          + ".",
+        hint: "Give the Leitweg-ID with `id.leitweg(..)`, and the identifier of the buyer as `id`, `global-id` or `legal-id`.",
+      ))
+    } else if entry.key == "legal-id" and entry.kind == "party" {
+      out.push(error(
+        "IP-ID-03",
+        path,
+        "The identifier of the scheme "
+          + _quoted(scheme)
+          + " identifies a company or a location, but no official registrar issues it, so it is no legal registration identifier of the "
+          + term
+          + ".",
+        hint: "Give it as `global-id` (the "
+          + term
+          + " identifier), or with `id.custom("
+          + _quoted(scheme)
+          + ", ..)` if it is the registration the "
+          + term
+          + " is known by.",
+      ))
+    } else if (
+      entry.kind == "legal"
+        and scheme == none
+        and entry.key in ("id", "global-id", "location-id")
+    ) {
+      out.push(error(
+        "IP-ID-03",
+        path,
+        "A register number is the legal registration identifier of the "
+          + term
+          + ", not its identifier, which `"
+          + entry.key
+          + "` stands for.",
+        hint: if field == "delivery-address" {
+          "The deliver-to location has no legal registration identifier: give its location identifier, e.g. `id.gln(..)`."
+        } else { "Give it as `legal-id`." },
+      ))
+    }
+  }
+  out
+}
+
+// BR-CL-11: the scheme of a legal registration identifier (BT-30, BT-47,
+// BT-61) is an ISO/IEC 6523 ICD code. Without a scheme it is stated as it is.
+#let _check-legal-id(party, field, term, bt) = {
+  let legal-id = party.at("legal-id", default: none)
+  if (
+    legal-id == none
+      or legal-id.scheme == none
+      or legal-id.scheme in codelists.icd
+  ) { return () }
+  (
+    error(
+      "BR-CL-11",
+      field + ".legal-id",
+      "The scheme "
+        + _quoted(legal-id.scheme)
+        + " of the "
+        + term
+        + " legal registration identifier ("
+        + bt
+        + ") is not an ISO/IEC 6523 code.",
+      hint: "Use the constructor of the `id` module for the register, e.g. `id.siret(..)`, `id.register(..)` for a register without a scheme, or `id.custom(..)` with the ICD code of the register, e.g. \"0208\" for a Belgian enterprise number.",
+    ),
+  )
+}
+
+// An input the profile has no business term for is not written into the
+// e-invoice: `lowest` is the lowest profile that states it.
+#let _not-carried(profile, field, term, lowest) = warning(
+  "IP-PROFILE-01",
+  field,
+  "The "
+    + profile.name
+    + " profile cannot state "
+    + term
+    + ", so `"
+    + field
+    + "` is not written into the e-invoice.",
+  hint: "Use the " + _quoted(lowest) + " profile or higher to state it.",
+)
+
+// The seller tax representative (BG-11): its name (BR-18), country (BR-20)
+// and VAT identifier (BR-56, BR-CO-09), and the address the VAT Directive
+// requires on the invoice (Art. 226 No. 15). An invoice not subject to VAT
+// states no VAT identifiers, so it cannot name a tax representative (BR-O-02).
+#let _check-tax-representative(model) = {
+  let representative = model.at("tax-representative", default: none)
+  if representative == none { return () }
+  let profile = model.profile
+  let field = "sender.tax-representative"
+  let out = _check-input-keys(representative, field, "tax representative")
+  if not profile.tax-representative {
+    out.push(_not-carried(
+      profile,
+      field,
+      "the seller tax representative (BG-11)",
+      "basic-wl",
+    ))
+    return out
+  }
+  if model.outside-scope {
+    out.push(error(
+      "BR-O-02",
+      field,
+      "An invoice not subject to VAT (O) states no VAT identifiers, so it cannot name the seller tax representative (BG-11), whose VAT identifier (BT-63) it would have to state (BR-56).",
+      hint: "Leave out `tax-representative` on invoices of items not subject to VAT.",
+    ))
+  }
+  if representative.name == none {
+    out.push(error(
+      "BR-18",
+      field + ".name",
+      "The name of the seller tax representative (BT-62) is missing.",
+      hint: "Set `name` on the tax representative.",
+    ))
+  }
+  if representative.vat-id == none {
+    out.push(error(
+      "BR-56",
+      field + ".vat-id",
+      "The VAT identifier of the seller tax representative (BT-63) is missing.",
+      hint: "Set `vat-id` on the tax representative, the VAT identifier it holds for the seller, e.g. `vat-id: \"DE123456789\"`.",
+    ))
+  } else {
+    out += _check-vat-id-prefix(representative.vat-id, field + ".vat-id")
+  }
+  out += _check-country(
+    representative.address.country,
+    "BR-20",
+    field + ".country",
+    "tax representative country code (BT-69)",
+    profile.en16931,
+  )
+  out += _check-country-of-vat-id(
+    representative,
+    field,
+    "tax representative",
+    "BT-69",
+  )
+  if (
+    representative.address.lines == () and representative.address.city == none
+  ) {
+    out.push(error(
+      "IP-VAT-226",
+      field + ".address",
+      "The postal address of the seller tax representative (BG-12) is missing, which the invoice must state by law (Art. 226 No. 15 of the VAT Directive 2006/112/EC).",
+      hint: "Set `address` and `city` on the tax representative.",
+    ))
+  }
+  out += _check-post-code(
+    representative,
+    field,
+    "tax representative",
+    "BT-66",
+    "BT-67",
+  )
+  out
+}
+
+// The payee (BG-10): it is named only when it is not the seller (BR-17), with
+// one identifier (CII-SR-451) of a known scheme (BR-CL-10, BR-CL-11).
+#let _check-payee(model) = {
+  let payee = model.at("payee", default: none)
+  if payee == none { return () }
+  let profile = model.profile
+  let field = "payee"
+  let out = _check-input-keys(payee, field, "payee")
+  out += _check-typed-ids(payee, field, "payee")
+  if not profile.payee {
+    out.push(_not-carried(profile, field, "the payee (BG-10)", "basic-wl"))
+    return out
+  }
+  let seller = model.seller
+  let seller-legal-id = seller.at("legal-id", default: none)
+  if payee.name == none {
+    out.push(error(
+      "BR-17",
+      field + ".name",
+      "The name of the payee (BT-59) is missing.",
+      hint: "Set `name` on the payee, e.g. the name of the factoring company that receives the payment.",
+    ))
+  } else if (
+    payee.name == seller.name
+      or (payee.id != none and payee.id == seller.id)
+      or (
+        payee.legal-id != none
+          and seller-legal-id != none
+          and payee.legal-id.id == seller-legal-id.id
+      )
+  ) {
+    out.push(error(
+      "BR-17",
+      field,
+      "The payee (BG-10) is stated when someone other than the seller receives the payment, but its name, identifier or legal registration identifier is the seller's.",
+      hint: "Leave out `payee` when the seller receives the payment itself.",
+    ))
+  }
+  out += _check-identifiers(payee, field, "payee")
+  out += _check-global-id(payee, "BR-CL-10", field)
+  out += _check-legal-id(payee, field, "payee", "BT-61")
+  if profile.en16931 {
+    out += _check-single-identifier(
+      payee,
+      "CII-SR-451",
+      field,
+      "payee identifier (BT-60)",
+    )
+  }
+  out
+}
+
 // The VAT categories that require the buyer VAT identifier (BT-48), with the
-// rules for an invoice line, a document level allowance and charge.
+// rules for an invoice line, a document level allowance and charge, and what
+// identifies the buyer for them (a reverse charge may take the legal
+// registration identifier instead).
 #let _buyer-vat-id-rules = (
   K: (
     line: "BR-IC-02",
     allowance: "BR-IC-03",
     charge: "BR-IC-04",
     term: "An intra-community supply (K)",
+    required: "the buyer VAT identifier (BT-48)",
   ),
   AE: (
     line: "BR-AE-02",
     allowance: "BR-AE-03",
     charge: "BR-AE-04",
     term: "Reverse charge (AE)",
+    required: "the buyer VAT identifier (BT-48) or legal registration identifier (BT-47)",
   ),
 )
 
@@ -621,10 +911,21 @@
   }
 
   let out = ()
+  let cross-border = model.seller.address.country != buyer.address.country
   for category in categories {
     // A reverse charge may identify the buyer by its legal registration
-    // identifier (BT-47) instead, e.g. a domestic reverse charge.
+    // identifier (BT-47) instead (BR-AE-02 to BR-AE-04), e.g. a domestic
+    // reverse charge under § 13b UStG. Across borders, the law still requires
+    // the buyer VAT identifier, which the profiles do not check then.
     if category == "AE" and buyer.at("legal-id", default: none) != none {
+      if cross-border {
+        out.push(error(
+          "IP-VAT-226",
+          "recipient.vat-id",
+          "A cross-border reverse charge (AE) must state the buyer VAT identifier (BT-48) by law (Art. 226 No. 4 of the VAT Directive 2006/112/EC); the legal registration identifier (BT-47) does not replace it.",
+          hint: "Set `vat-id` on the recipient.",
+        ))
+      }
       continue
     }
     let rules = _buyer-vat-id-rules.at(category)
@@ -648,7 +949,7 @@
     let (rule, message) = if (
       on-line or (profile.lines and not on-allowance and not on-charge)
     ) {
-      (rules.line, rules.term + " requires the buyer VAT identifier (BT-48).")
+      (rules.line, rules.term + " requires " + rules.required + ".")
     } else if on-allowance or on-charge {
       let (rule, kind) = if on-allowance {
         (rules.allowance, "allowance (BG-20)")
@@ -659,11 +960,11 @@
           + kind
           + " of the VAT category "
           + category
-          + " requires the buyer VAT identifier (BT-48).",
+          + " requires "
+          + rules.required
+          + ".",
       )
-    } else if (
-      category == "K" or model.seller.address.country != buyer.address.country
-    ) {
+    } else if category == "K" or cross-border {
       let subject = if category == "K" { rules.term } else {
         "A cross-border reverse charge (AE)"
       }
@@ -680,6 +981,8 @@
       message,
       hint: if rule == "IP-VAT-226" {
         "Set `vat-id` on the recipient. The BASIC WL profile has no invoice lines, so its validators do not check this."
+      } else if category == "AE" {
+        "Set `vat-id` on the recipient or, if the buyer has no VAT identifier (e.g. a domestic reverse charge), its `legal-id`, e.g. `legal-id: id.register(\"HRB 4711\", court: \"Amtsgericht München\")`."
       } else { "Set `vat-id` on the recipient." },
     ))
   }
@@ -737,7 +1040,19 @@
   let out = ()
   let seller = model.seller
   let home = vat-id-country(seller.at("stated-vat-id", default: seller.vat-id))
-  if home == none { home = seller.address.country }
+  // A seller without VAT identifier of its own that is registered for VAT
+  // through a tax representative dispatches the goods from the member state
+  // of the representative's VAT identifier (BT-63).
+  let representative = model.at("tax-representative", default: none)
+  let whose = "the seller's own country "
+  if home == none and representative != none {
+    home = vat-id-country(representative.vat-id)
+    whose = "the country of the seller's tax representative "
+  }
+  if home == none {
+    home = seller.address.country
+    whose = "the seller's own country "
+  }
   if (
     model.ship-to != none
       and home != none
@@ -746,7 +1061,8 @@
     out.push(warning(
       "BR-IC-12",
       "delivery-address.country",
-      "The intra-community supply (K) states the seller's own country "
+      "The intra-community supply (K) states "
+        + whose
         + _quoted(home)
         + " as the deliver-to country (BT-80), but the goods must be dispatched to another member state.",
       hint: "Set `country` on the delivery address or the recipient to the member state the goods are delivered to.",
@@ -844,28 +1160,83 @@
     out += _check-vat-id-prefix(buyer.vat-id, "recipient.vat-id")
   }
 
-  // BR-CO-26: the buyer must be able to identify the seller.
+  // BR-CO-26: the buyer must be able to identify the seller. The VAT
+  // identifier of a tax representative (BT-63) does not identify the seller.
+  let seller-legal-id = seller.at("legal-id", default: none)
+  let represented = model.at("tax-representative", default: none) != none
   if profile.id == "minimum" {
-    if seller.vat-id == none {
+    // MINIMUM states neither `ram:ID` nor `ram:GlobalID` of the seller.
+    if seller.vat-id == none and seller-legal-id == none {
       out.push(error(
         "BR-CO-26",
-        "sender.vat-id",
-        "The MINIMUM profile identifies the seller by the VAT identifier (BT-31), which is missing.",
-        hint: "Set `vat-id` on the sender, or use the \"basic-wl\" profile or higher to identify the seller by `tax-nr` or `id`.",
+        "sender",
+        "The MINIMUM profile identifies the seller by its VAT identifier (BT-31) or its legal registration identifier (BT-30), and both are missing.",
+        hint: if represented {
+          "The VAT identifier of the tax representative does not identify the seller. Set `legal-id` on the sender, e.g. the seller's registration number in its own country. A seller identified by `id` needs the \"basic-wl\" profile or higher."
+        } else {
+          "Set `vat-id` or `legal-id` on the sender, e.g. `legal-id: id.siret(\"..\")` or `legal-id: id.register(\"HRB ..\", court: \"Amtsgericht ..\")`. A seller identified by `tax-nr` or `id` needs the \"basic-wl\" profile or higher."
+        },
       ))
     }
   } else if (
-    seller.id == none and seller.global-id == none and seller.vat-id == none
+    seller.id == none
+      and seller.global-id == none
+      and seller-legal-id == none
+      and seller.vat-id == none
   ) {
     out.push(error(
       "BR-CO-26",
       "sender",
-      "The seller cannot be identified: neither a seller identifier (BT-29) nor a VAT identifier (BT-31) is given.",
-      hint: if model.outside-scope {
-        "An invoice not subject to VAT (O) states no VAT identifier (BR-O-02). Set `tax-nr` or `id` on the sender."
-      } else { "Set `vat-id`, `tax-nr` or `id` on the sender." },
+      "The seller cannot be identified: neither a seller identifier (BT-29), a legal registration identifier (BT-30) nor a VAT identifier (BT-31) is given.",
+      hint: if represented {
+        "The VAT identifier of the tax representative does not identify the seller. Set `id` or `legal-id` on the sender, e.g. the seller's registration number in its own country."
+      } else if model.outside-scope {
+        "An invoice not subject to VAT (O) states no VAT identifier (BR-O-02). Set `tax-nr`, `id` or `legal-id` on the sender."
+      } else { "Set `vat-id`, `tax-nr`, `id` or `legal-id` on the sender." },
     ))
   }
+
+  // Identifiers of the `id` module, legal registration identifiers
+  // (BT-30, BT-47) and the details only some profiles state.
+  out += _check-typed-ids(seller, "sender", "seller")
+  out += _check-typed-ids(buyer, "recipient", "buyer")
+  if ship-to != none {
+    out += _check-typed-ids(ship-to, "delivery-address", "deliver-to location")
+  }
+  out += _check-legal-id(seller, "sender", "seller", "BT-30")
+  out += _check-legal-id(buyer, "recipient", "buyer", "BT-47")
+  for (party, key, field, term, carried, lowest) in (
+    (
+      seller,
+      "trading-name",
+      "sender.trading-name",
+      "the seller trading name (BT-28)",
+      profile.seller-trading-name,
+      "basic-wl",
+    ),
+    (
+      seller,
+      "legal-info",
+      "sender.legal-info",
+      "the additional legal information of the seller (BT-33)",
+      profile.seller-legal-info,
+      "en16931",
+    ),
+    (
+      buyer,
+      "trading-name",
+      "recipient.trading-name",
+      "the buyer trading name (BT-45)",
+      profile.buyer-trading-name,
+      "en16931",
+    ),
+  ) {
+    if not carried and party.at(key, default: none) != none {
+      out.push(_not-carried(profile, field, term, lowest))
+    }
+  }
+  out += _check-tax-representative(model)
+  out += _check-payee(model)
 
   // Party identifiers (BT-29, BT-46) from BASIC WL on; the ship-to party
   // (BT-71) with the delivery information.
@@ -907,6 +1278,7 @@
       ("PEPPOL-EN16931-R020", "BR-62"),
       "sender",
       "seller electronic address (BT-34)",
+      represented: represented,
     )
     out += _check-electronic-address(
       buyer,
@@ -1345,11 +1717,25 @@
   }
 
   // The identifiers of the parties each category requires where it occurs:
-  // on lines (BR-x-02), allowances (BR-x-03) or charges (BR-x-04).
+  // on lines (BR-x-02), allowances (BR-x-03) or charges (BR-x-04). The VAT
+  // identifier of the seller tax representative (BT-63) stands in for the
+  // seller's own.
+  let representative = model.at("tax-representative", default: none)
+  let represented = (
+    representative != none
+      and model.profile.tax-representative
+      and representative.vat-id != none
+  )
+  let representative-hint = " A seller registered for VAT through a fiscal representative names it with `tax-representative: (name: .., address: .., city: .., country: .., vat-id: ..)` on the sender instead: the representative's VAT identifier is not the seller's `vat-id`."
   let taxed = categories.filter(c => (
     c in _taxed-categories and offset(c) != none
   ))
-  if taxed.len() > 0 and seller.vat-id == none and seller.tax-nr == none {
+  if (
+    taxed.len() > 0
+      and seller.vat-id == none
+      and seller.tax-nr == none
+      and not represented
+  ) {
     let first = offset(taxed.first())
     out.push(error(
       _category-rule(taxed.first(), 2 + first),
@@ -1357,8 +1743,8 @@
       _holders.at(first)
         + " with the VAT category "
         + taxed.join(", ")
-        + " require the seller VAT identifier (BT-31) or tax number (BT-32).",
-      hint: "Set `vat-id` or `tax-nr` on the sender.",
+        + " require the seller VAT identifier (BT-31), its tax number (BT-32) or the VAT identifier of its tax representative (BT-63).",
+      hint: "Set `vat-id` or `tax-nr` on the sender." + representative-hint,
     ))
   }
   for (category, term) in (
@@ -1366,12 +1752,18 @@
     ("G", "An export outside the EU (G)"),
   ) {
     let at = offset(category)
-    if category in categories and at != none and seller.vat-id == none {
+    if (
+      category in categories
+        and at != none
+        and seller.vat-id == none
+        and not represented
+    ) {
       out.push(error(
         _category-rule(category, 2 + at),
         "sender.vat-id",
-        term + " requires the seller VAT identifier (BT-31).",
-        hint: "Set `vat-id` on the sender.",
+        term
+          + " requires the seller VAT identifier (BT-31) or the VAT identifier of its tax representative (BT-63).",
+        hint: "Set `vat-id` on the sender." + representative-hint,
       ))
     }
   }
