@@ -129,6 +129,28 @@
     ))
   }
 
+  // IP-TAX-01: `tax: none` prints 0%, but does not say why no VAT is charged:
+  // zero rated, exempt or not subject to VAT. An e-invoice must say it with
+  // the VAT category of every item (BT-151).
+  let implicit = 0
+  for line in model.lines {
+    if line.at("implicit", default: false) { implicit += 1 }
+  }
+  if (
+    implicit > 0 or model.taxes.any(tax => tax.at("implicit", default: false))
+  ) {
+    out.push(error(
+      "IP-TAX-01",
+      "tax",
+      "The invoice sets `tax: none`, so "
+        + if implicit <= 1 { "an item has" } else {
+          str(implicit) + " items have"
+        }
+        + " no VAT category (BT-151): printed with 0%, it would be declared as zero rated (Z).",
+      hint: "Choose the VAT category with the `tax` module, e.g. `tax.exempt(grounds: ..)` for exempt items, `tax.outside-scope()` for supplies not subject to VAT or `tax.zero()` for zero rated goods, or set `tax-exempt-small-biz: true`.",
+    ))
+  }
+
   // IP-PRINT-02: the invoice prints its amounts in the currency the XML
   // states: with its code or the symbol of the locale, and not with "€" for
   // another currency. A formatter that prints no currency says nothing else.
@@ -551,31 +573,94 @@
 
 // --- VAT ------------------------------------------------------------------
 
+// Margin schemes have no category in EN 16931: they are written as exempt
+// with the note the VAT Directive requires (art. 226 no. 13 and 14).
+#let _margin-scheme-hint(scheme, german) = (
+  "EN 16931 has no category for margin schemes: write the items as exempt with the note the law requires, e.g. `tax.exempt(grounds: \"Margin scheme - "
+    + scheme
+    + "\")` (in Germany \""
+    + german
+    + "\")."
+)
+
 // Categories EN 16931 knows, and how to express the others.
 #let _category-hints = (
   AA: "Use `tax.vat(..)` with the reduced rate, e.g. `tax.vat(7%)`.",
   H: "Use `tax.vat(..)` with the higher rate.",
   N: "Use `tax.vat(..)` with the additional rate.",
   B: "Split payment (B) is not supported by Factur-X / ZUGFeRD.",
+  D: _margin-scheme-hint("travel agents", "Sonderregelung für Reisebüros"),
+  F: _margin-scheme-hint(
+    "second-hand goods",
+    "Gebrauchtgegenstände/Sonderregelung",
+  ),
+  I: _margin-scheme-hint("works of art", "Kunstgegenstände/Sonderregelung"),
+  J: _margin-scheme-hint(
+    "collector's items and antiques",
+    "Sammlungsstücke und Antiquitäten/Sonderregelung",
+  ),
 )
 
-// The rules requiring a seller VAT identifier or tax number per category.
-#let _seller-id-rules = (
-  S: "BR-S-02",
-  Z: "BR-Z-02",
-  E: "BR-E-02",
-  AE: "BR-AE-02",
-  L: "BR-AF-02",
-  M: "BR-AG-02",
+// The rule families of the VAT categories: BR-S-*, BR-IC-*, ...
+#let _category-rules = (
+  S: "BR-S",
+  Z: "BR-Z",
+  E: "BR-E",
+  AE: "BR-AE",
+  K: "BR-IC",
+  G: "BR-G",
+  O: "BR-O",
+  L: "BR-AF",
+  M: "BR-AG",
 )
 
-#let _zero-rate-rules = (
-  Z: "BR-Z-05",
-  E: "BR-E-05",
-  AE: "BR-AE-05",
-  K: "BR-IC-05",
-  G: "BR-G-05",
+// A rule of the family of a VAT category, e.g. `_category-rule("K", 2)` is
+// BR-IC-02.
+#let _category-rule(category, number) = (
+  _category-rules.at(category)
+    + "-"
+    + (if number < 10 { "0" } else { "" })
+    + str(number)
 )
+
+// The categories that need a seller VAT identifier or tax number (BR-x-02,
+// -03, -04); K and G need the VAT identifier.
+#let _taxed-categories = ("S", "Z", "E", "AE", "L", "M")
+
+// The rules of the VAT categories come in threes: for invoice lines (e.g.
+// BR-S-02, BR-S-05), document level allowances (BR-S-03, BR-S-06) and
+// document level charges (BR-S-04, BR-S-07). The offset of the rule that
+// applies to where a category occurs, or `none`: BASIC WL has no lines, so
+// there only the rules of allowances and charges apply.
+#let _rule-offset(occurrence, lines) = {
+  if lines and occurrence.line { 0 } else if occurrence.allowance {
+    1
+  } else if occurrence.charge { 2 } else { none }
+}
+
+// Who has the VAT category of a rule offset, for messages.
+#let _holders = ("Items", "Document level allowances", "Document level charges")
+
+// Where each VAT category and VAT group (by `key`) occurs: on lines, on
+// document level allowances or charges.
+#let _occurrences(model) = {
+  let none-yet = (line: false, allowance: false, charge: false)
+  let found = (:)
+  for line in model.lines {
+    for name in (line.category, line.key) {
+      if name == none { continue }
+      found.insert(name, found.at(name, default: none-yet) + (line: true))
+    }
+  }
+  for entry in model.allowance-charges {
+    let kind = if entry.charge { "charge" } else { "allowance" }
+    for name in (entry.category, entry.key) {
+      if name == none { continue }
+      found.insert(name, found.at(name, default: none-yet) + ((kind): true))
+    }
+  }
+  found
+}
 
 #let _basis-rules = (
   S: "BR-S-08",
@@ -595,11 +680,32 @@
   let out = ()
   let seller = model.seller
   let buyer = model.buyer
+  let lines = model.profile.lines
   let categories = model
     .taxes
     .map(tax => tax.category)
     .filter(category => category != none)
     .dedup()
+  let occurrences = _occurrences(model)
+  let none-yet = (line: false, allowance: false, charge: false)
+  // The rule offset of a VAT category or group (see `_rule-offset`).
+  let offset(name) = _rule-offset(
+    if name == none { none-yet } else {
+      occurrences.at(name, default: none-yet)
+    },
+    lines,
+  )
+
+  // BR-CO-18: an invoice has a VAT breakdown. With lines, BR-16 (no lines)
+  // says the same.
+  if model.taxes.len() == 0 and not lines {
+    out.push(error(
+      "BR-CO-18",
+      "line-items",
+      "The invoice has no VAT breakdown (BG-23).",
+      hint: "Add at least one `item` to `line-items`.",
+    ))
+  }
 
   // The number of VAT groups per category and rate as the XML states them.
   let stated-groups = (:)
@@ -651,27 +757,45 @@
       ))
       continue
     }
-    if category == "S" and tax.rate <= _zero {
+
+    // The rate of the lines (BR-x-05), allowances (BR-x-06) and charges
+    // (BR-x-07) of the group. In BASIC WL, a group of lines only is left to
+    // the rules of the VAT breakdown (BR-x-09).
+    let rate-rule = offset(tax.key)
+    if rate-rule != none { rate-rule = _category-rule(category, 5 + rate-rule) }
+    if category in ("S", "L", "M") and tax.rate <= _zero and rate-rule != none {
       out.push(error(
-        "BR-S-05",
+        rate-rule,
         field,
-        "A standard rated VAT category (S) needs a rate above 0%.",
+        (
+          S: "A standard rated VAT category (S)",
+          L: "The IGIC category (L)",
+          M: "The IPSI category (M)",
+        ).at(category)
+          + " needs a rate above 0%.",
         hint: "Use `tax.zero()` for zero rated or `tax.exempt(grounds: ..)` for exempt items.",
       ))
     }
-    if category == "L" and tax.rate <= _zero {
-      out.push(error(
-        "BR-AF-05",
-        field,
-        "The IGIC category (L) needs a rate above 0%.",
-      ))
+    if category in ("Z", "E", "AE", "K", "G") and tax.rate != _zero {
+      if rate-rule == none and tax.amount != _zero {
+        rate-rule = _category-rule(category, 9)
+      }
+      if rate-rule != none {
+        out.push(error(
+          rate-rule,
+          field,
+          "The VAT category " + category + " requires a rate of 0%.",
+          hint: "Use the matching constructor of the `tax` module, which sets the rate.",
+        ))
+      }
     }
-    if category in _zero-rate-rules and tax.rate != _zero {
+    // BR-O-09: items not subject to VAT carry no VAT, so O has no rate.
+    if category == "O" and tax.rate != _zero {
       out.push(error(
-        _zero-rate-rules.at(category),
+        "BR-O-09",
         field,
-        "The VAT category " + category + " requires a rate of 0%.",
-        hint: "Use the matching constructor of the `tax` module, which sets the rate.",
+        "Items not subject to VAT (O) carry no VAT, so they have no rate.",
+        hint: "Use `tax.outside-scope()`, which has none.",
       ))
     }
     if category == "E" and tax.reason == none {
@@ -684,45 +808,76 @@
     }
   }
 
-  let taxed = categories.filter(c => c in _seller-id-rules)
+  // The identifiers of the parties each category requires where it occurs:
+  // on lines (BR-x-02), allowances (BR-x-03) or charges (BR-x-04).
+  let taxed = categories.filter(c => (
+    c in _taxed-categories and offset(c) != none
+  ))
   if taxed.len() > 0 and seller.vat-id == none and seller.tax-nr == none {
+    let first = offset(taxed.first())
     out.push(error(
-      _seller-id-rules.at(taxed.first()),
+      _category-rule(taxed.first(), 2 + first),
       "sender",
-      "Items with the VAT category "
+      _holders.at(first)
+        + " with the VAT category "
         + taxed.join(", ")
         + " require the seller VAT identifier (BT-31) or tax number (BT-32).",
       hint: "Set `vat-id` or `tax-nr` on the sender.",
     ))
   }
-  for (category, rule, term) in (
-    ("K", "BR-IC-02", "An intra-community supply (K)"),
-    ("G", "BR-G-02", "An export outside the EU (G)"),
+  for (category, term) in (
+    ("K", "An intra-community supply (K)"),
+    ("G", "An export outside the EU (G)"),
   ) {
-    if category in categories and seller.vat-id == none {
+    let at = offset(category)
+    if category in categories and at != none and seller.vat-id == none {
       out.push(error(
-        rule,
+        _category-rule(category, 2 + at),
         "sender.vat-id",
         term + " requires the seller VAT identifier (BT-31).",
         hint: "Set `vat-id` on the sender.",
       ))
     }
   }
+  // An intra-community supply and a reverse charge to a buyer in another
+  // country need the buyer VAT identifier by law (VAT Directive art. 226 no.
+  // 4), also in BASIC WL, where the rules of lines do not apply (IP-VAT-226).
+  // A domestic reverse charge (e.g. § 13b UStG) does not.
+  let cross-border = seller.address.country != buyer.address.country
+  let buyer-identified = (
+    buyer.vat-id != none or buyer.at("legal-id", default: none) != none
+  )
+  let by-law = " by law (VAT Directive 2006/112/EC, art. 226 no. 4)"
   if "K" in categories and buyer.vat-id == none {
+    let at = offset("K")
     out.push(error(
-      "BR-IC-02",
+      if at == none { "IP-VAT-226" } else { _category-rule("K", 2 + at) },
       "recipient.vat-id",
-      "An intra-community supply (K) requires the buyer VAT identifier (BT-48).",
+      "An intra-community supply (K) requires the buyer VAT identifier (BT-48)"
+        + if at == none { by-law }
+        + ".",
       hint: "Set `vat-id` on the recipient.",
     ))
   }
-  if "AE" in categories and buyer.vat-id == none {
-    out.push(error(
-      "BR-AE-02",
-      "recipient.vat-id",
-      "Reverse charge (AE) requires the buyer VAT identifier (BT-48).",
-      hint: "Set `vat-id` on the recipient.",
-    ))
+  if "AE" in categories and not buyer-identified {
+    let at = offset("AE")
+    if at != none {
+      out.push(error(
+        _category-rule("AE", 2 + at),
+        "recipient.vat-id",
+        "Reverse charge (AE) requires the buyer VAT identifier (BT-48).",
+        hint: "Set `vat-id` on the recipient.",
+      ))
+    } else if cross-border {
+      out.push(error(
+        "IP-VAT-226",
+        "recipient.vat-id",
+        "A reverse charge (AE) to a buyer in another country requires the buyer VAT identifier (BT-48)"
+          + by-law
+          + ".",
+        hint: "Set `vat-id` on the recipient.",
+      ))
+    }
   }
   if "K" in categories and model.ship-to == none {
     out.push(error(

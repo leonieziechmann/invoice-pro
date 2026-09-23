@@ -162,6 +162,10 @@
   let with-tax(model, ..taxes) = {
     let model = model
     model.taxes = taxes.pos()
+    // The lines have the category of the (first) VAT group, as in an invoice.
+    for i in range(model.lines.len()) {
+      model.lines.at(i).category = model.taxes.first().category
+    }
     model
   }
   assert.eq(rules(with-tax(base, tax("AA", rate: "0.07"))), ("BR-CL-18",))

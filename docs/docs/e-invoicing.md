@@ -155,7 +155,7 @@ Both the `sender` and `recipient` dictionaries must include:
     ```
 - **Tax Identifiers:**
   - The **sender** should include a `tax-nr` (national tax number) and/or `vat-id` (value-added tax identifier, written with its country prefix, e.g. `"DE123456789"`; spaces are removed).
-  - The **recipient** (buyer) should include a `vat-id` if applicable. Reverse charge (`AE`) and intra-community supplies (`K`) require it.
+  - The **recipient** (buyer) should include a `vat-id` if applicable. Reverse charge (`AE`) and intra-community supplies (`K`) require it. `"basic-wl"` has no invoice lines, so EN 16931 checks the identifiers of the parties there only for document level discounts and surcharges; the buyer's VAT identifier of an intra-community supply or of a reverse charge to a buyer in another country is still required by law (VAT Directive, art. 226 no. 4), which `invoice-pro` checks as `IP-VAT-226`. A domestic reverse charge (e.g. § 13b UStG) does not need it.
   - The `"minimum"` profile identifies the seller only by its VAT identifier (BT-31), so the **sender** must have a `vat-id` there. Senders with only a `tax-nr` need `"basic-wl"` or higher.
 
 - **Seller Identifier (BT-29):** The buyer must be able to identify the seller (BR-CO-26), by the VAT identifier or a seller identifier. Without a VAT identifier, the `tax-nr` is used as seller identifier. If you have neither, or want to state a different identifier (e.g. your supplier number at the customer, or a company registration number), set `id` on the sender; it does not assert a tax registration. A globally registered identifier (e.g. a GLN) can be given with its ISO/IEC 6523 scheme:
@@ -259,11 +259,11 @@ Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the 
 - Export: `tax.export()` (maps to category **G**). Requires the seller VAT identifier.
 - Outside Scope / Small Business: `tax.outside-scope()` and `tax-exempt-small-biz: true` (map to category **O**). An invoice not subject to VAT carries no VAT identifiers, so the seller is identified by `tax-nr` or `id`. Items of category `O` cannot be mixed with other categories on one invoice.
 
-EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `M`. The special constructors in `tax.special` that map to other categories (e.g. `lower-rate`, the margin schemes or split payment `B`) cannot be used for e-invoices.
+EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `M`. The special constructors in `tax.special` that map to other categories (e.g. `lower-rate`, the margin schemes or split payment `B`) cannot be used for e-invoices. Items under a margin scheme are written as exempt with the note the law requires, e.g. `tax.exempt(grounds: "Margin scheme - second-hand goods")` (in Germany "Gebrauchtgegenstände/Sonderregelung"). `tax.special.ceuta-melilla(..)` (`M`) needs a rate above 0%, and items not subject to VAT (`O`) have none.
 
 Where EN 16931 requires an exemption reason (`AE`, `K`, `G`, `O`), the standard text (e.g. "Reverse charge") is used unless you pass your own `grounds`. For the taxed categories (`S`, `Z`, `L`, `M`), `grounds` are printed on the invoice but left out of the XML, which does not allow them there. If the items of one category have different `grounds`, each of them is printed, and the XML joins them with `; ` into the one exemption reason (BT-120) of the category.
 
-`tax: none` on the invoice is not a tax category: the items are printed with 0%, but an e-invoice must say why no VAT is charged, so choose one of the functions above instead.
+`tax: none` on the invoice is not a tax category: the items are printed with 0%, but an e-invoice must say why no VAT is charged, so it stops with the error `IP-TAX-01`. Choose one of the functions above instead.
 
 Document level discounts and surcharges (BG-20, BG-21) belong to a VAT category as well. An absolute amount is split over the categories of the items (see [VAT categories of modifiers](./api-reference/line-items/index.md#vat-categories-of-document-and-bundle-modifiers)); pin it to one with `tax`, e.g. `surcharge([Shipping], amount: 4.90, tax: tax.vat(19%))`.
 

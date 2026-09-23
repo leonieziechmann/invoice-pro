@@ -494,6 +494,8 @@
     key: _tax-key(tax),
     category: text-or-none(tax.at("category", default: none)),
     rate: rate,
+    // No tax was set for the item (`tax: none`), see `tax.implicit-zero`.
+    implicit: tax.at("implicit", default: false),
     allowances: allowances,
     charges: charges,
   )
@@ -628,6 +630,8 @@
         basis: to-decimal(tax.at("basis", default: 0)),
         amount: to-decimal(tax.at("absolute", default: 0)),
         reason: exemption-reason(category, tax.at("grounds", default: none)),
+        // Some item of the group has no tax (`tax: none`).
+        implicit: tax.at("implicit", default: false),
       )
     })
 
