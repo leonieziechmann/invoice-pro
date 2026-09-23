@@ -537,8 +537,8 @@ A failing case has a signature such as `FALSE_NEGATIVE missing=BR-AG-05 ours=- o
 When the corpus fails:
 
 1. Read the `NEW FAILURES` block: each signature shows the affected cases, an example file, the official messages and invoice-pro's diagnostics. The report also lists the deliberate stops (`INPUT_ERROR`) by message: they pass in the random population, but a new kind of message deserves a look, as it may block valid invoices. `build/zugferd/results.json` holds every detail, `build/zugferd/out/<case>.xml` the XML and `build/zugferd/out/<case>.pdf` the PDF.
-2. Re-run a single case: `./scripts/zugferd-corpus --only pw042` (or `python3 tools/zugferd/run.py build/zugferd/corpus --only pw042`).
-3. Shrink a generated case to its essence: `python3 tools/zugferd/minimize.py pw042` resets every feature to its simplest value while the signature stays the same and writes `build/zugferd/min/pw042.typ`.
+2. Re-run a single case: `./scripts/zugferd-corpus --only pw042` (or `python3 tools/zugferd/run.py build/zugferd/corpus --only pw042`). A metamorphic twin is only compared when its original runs as well, e.g. `--only 'mm-split-014,pw014'`.
+3. Shrink a generated case to its essence: `python3 tools/zugferd/minimize.py pw042` resets every feature to its simplest value while the signature stays the same and writes `build/zugferd/min/pw042.typ`. It works on one case at a time, so not on `O-META` failures, which need both twins.
 4. Decide what it is:
    - a bug in invoice-pro: fix it, and keep the minimal case as a regression case with the correct expectation;
    - a bug of the generator, an oracle or a constraint in `allowed()`: fix the tool (they stay small on purpose, so that they can be reviewed);
