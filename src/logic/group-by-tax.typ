@@ -67,14 +67,20 @@
       ))
     }
 
+    // Update the group in place: a copy of it would copy its items as well,
+    // which makes grouping quadratic in the number of items.
     total += item.total
-    let group = groups.at(tax-key)
-    group.total += item.total
-    group.grounds-list = tax.merge-grounds(group.grounds-list, item-grounds)
-    if item-grounds.len() == 0 { group.missing-grounds += 1 }
-    if tax.is-implicit(item.tax) { group.implicit = true }
-    if include-items { group.items.push(item) }
-    groups.insert(tax-key, group)
+    groups.at(tax-key).total += item.total
+    if item-grounds.len() == 0 {
+      groups.at(tax-key).missing-grounds += 1
+    } else {
+      groups.at(tax-key).grounds-list = tax.merge-grounds(
+        groups.at(tax-key).grounds-list,
+        item-grounds,
+      )
+    }
+    if tax.is-implicit(item.tax) { groups.at(tax-key).implicit = true }
+    if include-items { groups.at(tax-key).items.push(item) }
   }
 
   for (key, group) in groups {
