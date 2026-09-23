@@ -88,3 +88,40 @@ Because the `blank` theme applies strictly no document-level theming, the output
 
 // 3. Document body goes here
 ```
+
+---
+
+## Data for Custom Layouts
+
+A theme consists of one layout function per component, which can be replaced with `.with(..)`, e.g. `themes.blank.with(bank-details: (ctx, view) => ..)`. The components prepare their data before they call the layout, so a layout only draws: it neither normalizes nor checks values. Like the rest of the theming API, these data are not stable yet.
+
+### Bank Details
+
+The `bank-details` layout, `(ctx, view) => content`, receives:
+
+| Key                                         | Description                                                                                                                                                                                                                                          |
+| :------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `view.sender.name`                          | The account holder: the `name` of `bank-details`, else the sender name on one line.                                                                                                                                                                  |
+| `view.sender.bank`                          | The name of the bank, `""` if not given.                                                                                                                                                                                                             |
+| `view.sender.iban`                          | The IBAN without spaces and in upper case, `""` if missing. The built-in layout prints it in groups of four.                                                                                                                                         |
+| `view.sender.iban-valid`                    | Whether the IBAN is valid. It is only `false` for an e-invoice with `zugferd-errors: "report"`, otherwise an invalid IBAN stops the compilation.                                                                                                     |
+| `view.sender.bic`                           | The BIC without spaces and in upper case, `""` if not given.                                                                                                                                                                                         |
+| `view.qr-code.size`, `view.qr-code.display` | The size of the QR code, and whether the bank details show one.                                                                                                                                                                                      |
+| `view.qr-code.payload`                      | The EPC-QR code to draw: `beneficiary`, `iban`, `bic`, `amount`, `reference` and `text`, the arguments of `epc-qr-code` from the `sepay` package. `none` if no code is shown (it is hidden, or the currency is not EUR) or cannot be generated.      |
+| `view.qr-code.problems`                     | Why the EPC-QR code cannot be generated, as `(short: .., message: ..)`. Only for an e-invoice with `zugferd-errors: "report"`, otherwise the compilation stops before the layout is called. The built-in layout shows a placeholder that names them. |
+| `view.reference`, `view.text`               | The payment reference, as structured reference or as text (at most one of them is set).                                                                                                                                                              |
+| `view.show-reference`                       | Whether to print the payment reference.                                                                                                                                                                                                              |
+| `view.report-problems`                      | Whether problems are shown in the document (an e-invoice with `zugferd-errors: "report"`) instead of stopping the compilation.                                                                                                                       |
+| `view.payment-amount`                       | The amount to pay.                                                                                                                                                                                                                                   |
+
+### Exemption Notes
+
+The `line-items` layout, `(ctx, data, body) => content`, receives the legal notes below the line items that give the reason for an exemption (exemption grounds, reverse charge, the small business clause) as `data.exemption-notes`, in the order to print them. Each note has these keys:
+
+| Key      | Description                                                                                                                              |
+| :------- | :--------------------------------------------------------------------------------------------------------------------------------------- |
+| `kind`   | `"small-business"` for the clause of `tax-exempt-small-biz`, `"grounds"` for an exemption ground.                                        |
+| `marker` | The marker (`"*"`, `"**"`, ...) that links the note to the VAT line of its category or to its items, `none` if neither of them shows it. |
+| `body`   | The text of the note.                                                                                                                    |
+
+The VAT lines carry the same markers (`marker` of each entry of `data.taxes`), as do the items of a VAT category with several exemption grounds (`tax.marker` of each entry of `data.items`). With exemption notes, the built-in layout leaves out the standard tax statement (e.g. "All items are excl. 19% Tax.").
