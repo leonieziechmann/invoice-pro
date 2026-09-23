@@ -103,6 +103,13 @@
     date: "Data della prestazione per tutti gli articoli:",
   ),
 
+  tax-exemption: (
+    reverse-charge: "Inversione contabile",
+    intra-community: "Cessione intracomunitaria non imponibile",
+    export: "Esportazione non imponibile",
+    outside-scope: "Operazione fuori campo IVA",
+  ),
+
   units: (
     piece: "pezzo",
     "set": "set",

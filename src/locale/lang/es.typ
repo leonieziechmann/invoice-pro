@@ -103,6 +103,13 @@
     date: "Fecha de servicio para todos los artículos:",
   ),
 
+  tax-exemption: (
+    reverse-charge: "Inversión del sujeto pasivo",
+    intra-community: "Entrega intracomunitaria exenta de IVA",
+    export: "Exportación exenta de IVA",
+    outside-scope: "Operación no sujeta a IVA",
+  ),
+
   units: (
     piece: "unidad",
     "set": "juego",

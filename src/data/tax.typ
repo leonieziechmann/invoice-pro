@@ -347,6 +347,20 @@
   list
 }
 
+// The note of the language strings (`tax-exemption`) for a VAT category that
+// needs an exemption reason (BR-AE-10, BR-IC-10, BR-G-10, BR-O-10) when its
+// items give no grounds, or `none` for the other categories.
+#let default-grounds(category, strings) = {
+  let key = (
+    AE: "reverse-charge",
+    K: "intra-community",
+    G: "export",
+    O: "outside-scope",
+  ).at(str(category), default: none)
+  if key == none { return none }
+  strings.at("tax-exemption", default: (:)).at(key, default: none)
+}
+
 // All exemption grounds of a VAT category as one value: `none`, the single
 // ground, or every distinct ground joined with "; " (EN 16931 allows one
 // exemption reason, BT-120, per VAT category).

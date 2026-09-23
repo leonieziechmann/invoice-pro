@@ -186,7 +186,10 @@
 // --- 5. Intra-community supply: deliver to the buyer's country ---
 #model-test(tax: tax.intra-community(), model => {
   assert.eq(model.ship-to.address.country, "FR")
-  assert.eq(model.taxes.first().reason, "Intra-community supply")
+  assert.eq(
+    model.taxes.first().reason,
+    "Steuerfreie innergemeinschaftliche Lieferung",
+  )
 })[#line-items[#item([A], price: 1)]]
 
 #model-test(

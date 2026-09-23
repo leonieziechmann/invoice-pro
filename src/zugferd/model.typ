@@ -8,7 +8,7 @@
 #import "codelists.typ"
 #import "profile.typ": resolve-profile
 #import "../utils/coercion.typ": to-decimal, to-ratio
-#import "../data/tax.typ": to-tax-key
+#import "../data/tax.typ": default-grounds, to-tax-key
 #import "../data/unit.typ": unit-db
 #import "../locale/lang/lang.typ" as languages
 #import "../logic/payment-reference.typ": resolve-payment-reference
@@ -402,24 +402,22 @@
   }
 }
 
-// VAT exemption reason texts EN 16931 expects for a category (BR-AE-10,
-// BR-IC-10, BR-G-10, BR-O-10) when the tax has no `grounds` of its own.
-#let _default-exemption-reasons = (
-  AE: "Reverse charge",
-  K: "Intra-community supply",
-  G: "Export outside the EU",
-  O: "Not subject to VAT",
-)
-
 // Categories whose VAT breakdown must not carry an exemption reason
 // (BR-S-10, BR-Z-10, BR-AF-10, BR-AG-10).
 #let _taxed-categories = ("S", "Z", "L", "M")
 
-#let exemption-reason(category, grounds) = {
+/// The exemption reason (BT-120) of a VAT category: the plain text of its
+/// grounds. The VAT groups of the line items state the note of the language
+/// for the categories that need a reason (AE, K, G, O) when their items give
+/// no grounds, and print it (see `calculate-taxes`); without any, it is taken
+/// from `strings` the same way.
+///
+/// -> str | none
+#let exemption-reason(category, grounds, strings: (:)) = {
   if category in _taxed-categories { return none }
   let reason = text-or-none(grounds)
   if reason != none { reason } else {
-    _default-exemption-reasons.at(str(category), default: none)
+    text-or-none(default-grounds(category, strings))
   }
 }
 
@@ -629,7 +627,11 @@
         rate: to-ratio(tax.at("rate", default: 0)),
         basis: to-decimal(tax.at("basis", default: 0)),
         amount: to-decimal(tax.at("absolute", default: 0)),
-        reason: exemption-reason(category, tax.at("grounds", default: none)),
+        reason: exemption-reason(
+          category,
+          tax.at("grounds", default: none),
+          strings: ctx.at("locale", default: (:)).at("strings", default: (:)),
+        ),
         // Some item of the group has no tax (`tax: none`).
         implicit: tax.at("implicit", default: false),
       )

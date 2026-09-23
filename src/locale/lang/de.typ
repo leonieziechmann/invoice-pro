@@ -95,6 +95,13 @@
     date: "Leistungsdatum für alle Artikel:",
   ),
 
+  tax-exemption: (
+    reverse-charge: "Steuerschuldnerschaft des Leistungsempfängers",
+    intra-community: "Steuerfreie innergemeinschaftliche Lieferung",
+    export: "Steuerfreie Ausfuhrlieferung",
+    outside-scope: "Nicht steuerbarer Umsatz",
+  ),
+
   units: (
     piece: "Stück",
     "set": (singular: "Satz", plural: "Sätze"),

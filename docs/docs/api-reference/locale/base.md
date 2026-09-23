@@ -98,6 +98,17 @@ Static labels and dynamic text generators placed below the table.
 | `quantity`      | `str`                                    | Fallback text if a uniform quantity applies to all items.                                          |
 | `date`          | `str`                                    | Fallback text if a uniform service date applies to all items.                                      |
 
+### `tax-exemption`
+
+Notes on why no VAT is charged, for the tax categories that need one. When no item of such a category gives its own `grounds`, the note is printed below the line items and written as exemption reason (BT-120) into the e-invoice.
+
+| Key               | Type  | Description                                                                                       |
+| :---------------- | :---- | :------------------------------------------------------------------------------------------------ |
+| `reverse-charge`  | `str` | Reverse charge (`AE`), e.g. a `tax.new(category: "AE")` without grounds (e.g. "Reverse charge").  |
+| `intra-community` | `str` | Intra-community supply (`K`), `tax.intra-community()` (e.g. "Tax-exempt intra-community supply"). |
+| `export`          | `str` | Export outside the EU (`G`), `tax.export()` (e.g. "Tax-exempt export").                           |
+| `outside-scope`   | `str` | Not subject to VAT (`O`), `tax.outside-scope()` (e.g. "Not subject to VAT").                      |
+
 ### `units`
 
 Designations for common units of measure.
