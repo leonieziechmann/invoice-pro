@@ -532,6 +532,22 @@ The dates of the items are the service period of the invoice, unless you set `se
 )
 ```
 
+### 13. Currency (BT-5)
+
+The invoice currency (BT-5) is the currency of the locale (`EUR`, or `CHF` for the Swiss locales), unless you set `currency` on the invoice to an ISO 4217 code. The amounts are then printed in that currency in the number format of the locale: with its symbol for `EUR` (€), `USD` ($), `GBP` (£), `JPY` (¥), `PLN` (zł), `CZK` (Kč) and `HUF` (Ft), otherwise with its code (e.g. "1.234,50 CHF" or "1.234,50 SEK"), and rounded to its decimals (e.g. none for `JPY`).
+
+```typst
+#show: invoice.with(
+  locale: locale.de-de,
+  currency: "USD", // prints "1.234,50 $" and states USD in the e-invoice
+  // ...
+)
+```
+
+The EPC-QR code of the [bank details](./api-reference/components.md#bank-details) transfers euros only, so it is shown for invoices in euro only, and a credit transfer in another currency is written as a credit transfer (BT-81 `30`) instead of a SEPA credit transfer (`58`). An e-invoice whose printed amounts show another currency than the one it states stops with `IP-PRINT-02`, e.g. with a currency formatter of a custom locale that prints "zł" while the locale states `EUR`. The profiles based on EN 16931 accept only the currencies of its code list (`BR-CL-04`).
+
+**VAT in the national currency (BT-6, BT-111).** Within the EU, an invoice in another currency must also state the VAT amount in the national currency of the member state where the supply is taxed (Art. 230 VAT Directive), e.g. in euro for a supply taxed in Germany. `invoice-pro` does not support the VAT accounting currency (BT-6) and the VAT total in it (BT-111) yet: state the VAT amount in the national currency and the exchange rate in a note (`notes`), which is printed and written into the e-invoice (BT-22).
+
 ---
 
 ## Hardcoded Details & Limitations
@@ -539,6 +555,7 @@ The dates of the items are the service period of the invoice, unless you set `se
 - **Business Process URN (BT-23):** Whenever using the `"en16931"` or `"xrechnung"` profiles, the Business Process context URN is hardcoded to `urn:fdc:peppol.eu:2017:poacc:billing:01:1.0` (standard billing transaction).
 - **EAS Scheme Fallback:** If the prefix of a party's VAT ID has no known scheme and neither a custom `electronic-address` nor an email address is specified, the electronic address block is omitted from the XML payload.
 - **Plain Text:** Names, addresses and references given as content are written as their plain text; formatting is dropped.
+- **VAT Accounting Currency (BT-6, BT-111):** Not supported. See [Currency](#13-currency-bt-5).
 
 ---
 

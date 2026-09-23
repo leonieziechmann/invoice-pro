@@ -10,6 +10,7 @@
 #import "logic/country.typ": normalize-party, resolve-party-country
 #import "logic/document-type.typ": document-title, resolve-document-type
 #import "logic/notes.typ": normalize-notes
+#import "data/currency.typ": with-currency
 
 /// The main entry point for creating an invoice document.
 /// It orchestrates the theme, localization, and data calculation passes.
@@ -22,6 +23,13 @@
   /// The locale settings for language and number formatting.
   /// -> function
   locale: locale.de-de,
+  /// The currency of the invoice, an ISO 4217 code such as `"USD"`: the
+  /// e-invoice states it (BT-5), and the amounts are printed with its symbol
+  /// ("$", "£", ...) or, if it has no common symbol, its code ("CHF", "SEK",
+  /// ...) in the number format of the locale. `auto` is the currency of the
+  /// locale.
+  /// -> auto | str
+  currency: auto,
 
   /// A dictionary containing sender details (e.g., name, address).
   /// -> dictionary
@@ -141,6 +149,7 @@
 ) = {
   types.require(theme, "invoice::theme", function)
   types.require(locale, "invoice::locale", function)
+  types.require(currency, "invoice::currency", auto, str)
 
   types.require(sender, "invoice::sender", dictionary)
   types.require(recipient, "invoice::recipient", dictionary)
@@ -255,6 +264,7 @@
   /** Input Calculations **/
   let eval-theme = theme()
   let eval-locale = locale(base-language, base-region)
+  if currency != auto { eval-locale = with-currency(eval-locale, currency) }
   let document = resolve-document-type(document-type)
 
   let default-region = eval-locale.meta.region
@@ -390,6 +400,9 @@
     theme: eval-theme,
     locale: eval-locale,
     format: eval-locale.at("format", default: (:)),
+    // The invoice's own `currency` (`auto` for the locale's), which
+    // `eval-locale` already invoices in.
+    currency: currency,
 
     sender: normalized-sender,
     recipient: normalized-recipient,

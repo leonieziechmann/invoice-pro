@@ -1322,6 +1322,11 @@
     tax-mode: tax-mode,
     outside-scope: outside-scope,
     currency: currency,
+    // The input the currency comes from: the invoice's `currency`, or the
+    // locale.
+    currency-field: if ctx.at("currency", default: auto) == auto {
+      "locale"
+    } else { "currency" },
     printed-currency: printed-currency,
     invoice: (
       number: text-or-none(_field(ctx, "invoice-nr")),

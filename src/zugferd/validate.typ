@@ -90,21 +90,27 @@
       hint: "Set `date` on the invoice, e.g. `datetime(year: 2026, month: 7, day: 1)`.",
     ))
   }
+  // The invoice's `currency`, or the locale.
+  let currency-field = model.at("currency-field", default: "locale")
   if model.currency == none {
     out.push(error(
       "BR-05",
       "locale",
       "The invoice currency code (BT-5) is missing.",
-      hint: "Use a locale that defines `currency.code`, e.g. `locale.de-de`.",
+      hint: "Set `currency` on the invoice, e.g. `currency: \"EUR\"`, or use a locale that defines `currency.code`, e.g. `locale.de-de`.",
     ))
   } else if model.currency not in codelists.currencies {
     out.push(error(
       "BR-CL-04",
-      "locale",
+      currency-field,
       "The invoice currency code (BT-5) "
         + _quoted(model.currency)
         + " is not an ISO 4217 code.",
-      hint: "Use a currency code such as \"EUR\" or \"CHF\" in the locale.",
+      hint: if currency-field == "currency" {
+        "Set `currency` to an ISO 4217 code such as \"EUR\" or \"USD\"."
+      } else {
+        "Use a currency code such as \"EUR\" or \"CHF\" in the locale, or set `currency` on the invoice."
+      },
     ))
   } else if (
     model.profile.en16931
@@ -112,7 +118,7 @@
   ) {
     out.push(error(
       "BR-CL-04",
-      "locale",
+      currency-field,
       "The invoice currency code (BT-5) "
         + _quoted(model.currency)
         + " is missing in the code list of the EN 16931 validation, so no e-invoice in the "
@@ -180,7 +186,7 @@
           + "), but the e-invoice states the currency "
           + _quoted(model.currency)
           + " (BT-5).",
-        hint: "Set the currency of the locale's region to the printed one, e.g. `currency: (code: \"PLN\", symbol: \"zł\")` in a region builder or `locale.de-de.with((region: (currency: (code: \"PLN\", symbol: \"zł\"))))`; the amounts are then printed with its symbol.",
+        hint: "Set `currency` on the invoice to the printed currency, e.g. `currency: \"PLN\"`, or the currency of the locale's region, e.g. `currency: (code: \"PLN\", symbol: \"zł\")` in a region builder; the amounts are then printed with its symbol.",
       ))
       break
     }

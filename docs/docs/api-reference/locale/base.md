@@ -233,6 +233,10 @@ The currency formatters (`format.currency`, `format.currency-fine`) and the roun
 )
 ```
 
+:::tip
+To invoice in another currency with any locale, `currency` on the invoice is enough: `invoice(currency: "USD")` sets the code, the symbol and the decimals of the currency in the same way. Override the `currency` of the region only for a symbol or decimals of your own.
+:::
+
 ### `normalize`
 
 Functions mapping raw inputs to **Normalized** values.
