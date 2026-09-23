@@ -2,8 +2,11 @@
 #
 # Every entry names the audit finding (or issue) and the failure signatures it
 # explains, as the runner prints them under NEW FAILURES. A failing case whose
-# signature is listed here does not fail the run; `cases` (glob patterns of
-# case ids) narrows an entry to the cases that reproduce it.
+# signature is listed here does not fail the run. `cases` (glob patterns of
+# case ids) and `features` (values of the generator's dimensions, e.g.
+# `{ delivery = "dates-mixed" }`, a value or a list of values each) narrow an
+# entry to the cases that reproduce it; keep entries that narrow, so that
+# they cannot hide the same signature elsewhere.
 #
 # The list may only shrink: an entry that matches no failing case any more
 # ("XPASS") fails the run, so the fix removes its entry in the same commit.
@@ -95,6 +98,7 @@ signatures = ["FALSE_POSITIVE ours=BR-G-02 official=-"]
 finding = "core-basicwl-category-id-rules"
 note = "nightly: BASIC WL reports the line rules BR-x-02 instead of the document level BR-x-03/04, or none applies"
 cases = ["ru*"]
+features = { profile = "basic-wl" }
 signatures = [
   "FALSE_POSITIVE ours=BR-G-02 official=-",
   "FALSE_POSITIVE ours=BR-IC-02 official=-",
@@ -141,7 +145,7 @@ signatures = [
 [[issue]]
 finding = "amounts-delivery-date-mismatch"
 note = "BG-14 counts undated items with the invoice date; the printed service period does not"
-cases = ["pw*", "rl*", "mm-*", "ru*"]
+features = { delivery = "dates-mixed" }
 signatures = ["AGREE_VALID oracle=O-BG14"]
 
 [[issue]]

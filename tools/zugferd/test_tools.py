@@ -147,6 +147,23 @@ class KnownIssues(unittest.TestCase):
         self.assertEqual(len(failures), 3)
         self.assertEqual((hits, xpass), ([], []))
 
+    def test_known_issues_narrowed_by_features(self):
+        known = [{"finding": "f1", "signatures": ["AGREE_VALID oracle=O-BG14"], "features": {"delivery": "dates-mixed"}}]
+        mixed = dict(row("pw001", oracle=["O-BG14: x"]), features={"delivery": "dates-mixed", "lines": 3})
+        dated = dict(row("pw002", oracle=["O-BG14: x"]), features={"delivery": "dates-all", "lines": 3})
+        regression = row("rg-a", oracle=["O-BG14: x"])  # no features
+        failures, hits, xpass = run.triage([mixed, dated, regression], known)
+        # The same signature outside the named features is a new failure.
+        self.assertEqual([r["id"] for r in failures], ["pw002", "rg-a"])
+        self.assertEqual([ids for _, _, ids in hits], [["pw001"]])
+        # A list names several values; an entry that covers no case of the run is not xpass.
+        self.assertTrue(run.covers({"features": {"lines": [1, 3]}}, mixed))
+        self.assertFalse(run.covers({"features": {"lines": [1, 8]}}, mixed))
+        self.assertEqual(run.triage([dated], known)[2], [])
+        # It is xpass when it covers a case of the run that no longer fails.
+        passing = dict(row("pw003"), features={"delivery": "dates-mixed"})
+        self.assertEqual([s for _, s in run.triage([passing], known)[2]], ["AGREE_VALID oracle=O-BG14"])
+
     def test_hard_gates_are_never_known_issues(self):
         known = [
             {"finding": "f1", "signatures": ["FALSE_NEGATIVE ours=- official=BR-S-08"]},

@@ -308,16 +308,35 @@ def load_known(path):
     for entry in entries:
         if "finding" not in entry or "signatures" not in entry:
             raise common.ToolError(f"{path}: every [[issue]] needs `finding` and `signatures`")
+        features = entry.get("features")
+        if features is not None and (not isinstance(features, dict) or not features):
+            raise common.ToolError(f"{path}: `features` of {entry['finding']} must be a non-empty table")
     return entries
+
+
+def covers(entry, row):
+    """Whether a known-issue entry applies to a case: the case id matches one
+    of its `cases` globs, and the generator features have the values its
+    `features` table names (a value or a list of values per dimension).
+    Cases without features (regression cases) never match `features`."""
+    globs = entry.get("cases")
+    if globs and not any(fnmatch.fnmatchcase(row["id"], g) for g in globs):
+        return False
+    wanted = entry.get("features")
+    if not wanted:
+        return True
+    features = row.get("features") or {}
+    for dim, values in wanted.items():
+        if dim not in features or features[dim] not in (values if isinstance(values, list) else [values]):
+            return False
+    return True
 
 
 def match_known(row, entries):
     """(index of the entry, signature) that explains a failing row, or None."""
     for index, entry in enumerate(entries):
-        if row["signature"] in entry["signatures"]:
-            globs = entry.get("cases")
-            if not globs or any(fnmatch.fnmatchcase(row["id"], g) for g in globs):
-                return index, row["signature"]
+        if row["signature"] in entry["signatures"] and covers(entry, row):
+            return index, row["signature"]
     return None
 
 
@@ -473,13 +492,11 @@ def triage(rows, known, strict=False, check_xpass=True):
             else:
                 failures.append(row)
     # Every listed signature must still occur, so the list can only shrink.
-    # Entries whose cases are not part of this run are left alone.
+    # Entries that cover no case of this run are left alone.
     xpass = []
     if not strict and check_xpass:
-        ids = [row["id"] for row in rows]
         for index, entry in enumerate(known):
-            globs = entry.get("cases") or ["*"]
-            if not any(fnmatch.fnmatchcase(i, g) for i in ids for g in globs):
+            if not any(covers(entry, row) for row in rows):
                 continue
             for sig in entry["signatures"]:
                 if (index, sig) not in known_hits:
