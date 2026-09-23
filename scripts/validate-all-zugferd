@@ -40,6 +40,7 @@ done
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-paid-cash/test.typ"
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-cash-discount/test.typ"
 "$VALIDATE_ZUGFERD" "tests/docs/e-invoicing-complete/test.typ"
+"$VALIDATE_ZUGFERD" "tests/docs/e-invoicing-sepa-debit/test.typ"
 "$VALIDATE_ZUGFERD" "template/invoice.typ"
 
 echo ""

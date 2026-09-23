@@ -114,6 +114,18 @@ The `bank-details` layout, `(ctx, view) => content`, receives:
 | `view.report-problems`                      | Whether problems are shown in the document (an e-invoice with `zugferd-errors: "report"`) instead of stopping the compilation.                                                                                                                       |
 | `view.payment-amount`                       | The amount to pay.                                                                                                                                                                                                                                   |
 
+### Payment Means
+
+The `payment-means` layout, `(ctx, view) => content`, draws [`direct-debit`](./components.md#direct-debit), [`card-payment`](./components.md#card-payment) and [`paid`](./components.md#paid). It receives:
+
+| Key            | Description                                                                                                                                                                                                                                    |
+| :------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `view.kind`    | `"direct-debit"`, `"card"` or `"paid"`.                                                                                                                                                                                                        |
+| `view.text`    | The sentence to print first, e.g. that the invoice was paid, or `none`.                                                                                                                                                                        |
+| `view.details` | The details to print, in order, each as `(label: .., value: ..)`, e.g. the mandate reference or the last digits of the card number. An identifier has `valid` as well, which is only `false` for an e-invoice with `zugferd-errors: "report"`. |
+
+The `payment-goal` layout prints the payment sentence of the language, `ctx.locale.strings.payment.text` (or `text-due` with prepayments). The component sets it to the sentence of the payment means of the invoice, followed by the notes of the cash discounts, so a custom layout that prints it states the payment means as well. Its view has `payment-means`, the kind of payment means the sentence is for (`"transfer"`, `"direct-debit"`, `"card"` or `none`), and `discounts`, the cash discounts with `days`, `percent`, `basis` and the printed `note`.
+
 ### Exemption Notes
 
 The `line-items` layout, `(ctx, data, body) => content`, receives the legal notes below the line items that give the reason for an exemption (exemption grounds, reverse charge, the small business clause) as `data.exemption-notes`, in the order to print them. Each note has these keys:

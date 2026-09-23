@@ -426,6 +426,7 @@ The automated `validate-all-zugferd` suite covers:
 - `tests/integration/zugferd-paid-cash/test.typ` — XRechnung paid in cash (BT-81 = 10), with the printed payment sentence as payment terms (BT-20).
 - `tests/integration/zugferd-cash-discount/test.typ` — XRechnung with two cash discounts in the Skonto syntax of the KoSIT (BT-20, BR-DE-18), one with a base amount, and an account name (BT-85).
 - `tests/docs/e-invoicing-complete/test.typ` — Complete example of the e-invoicing documentation.
+- `tests/docs/e-invoicing-sepa-debit/test.typ` — Direct debit example of the e-invoicing documentation.
 - `template/invoice.typ` — Default release invoice template.
 
 #### When to Run ZUGFeRD Validation
@@ -610,10 +611,12 @@ Every non-trivial code block in `docs/docs/` must be registered here. When addin
 | `api-reference/index.md`         | `blueprint`        | Architectural blueprint with items, payment, bank, signature | `docs/api-index-blueprint/`     | ✅                 |
 | `api-reference/invoice.md`       | `minimal-config`   | Minimal valid configuration example                          | `docs/api-invoice-minimal/`     | ✅                 |
 | `api-reference/components.md`    | `apply-bulk-tax`   | Apply block wrapping items with shared tax rate              | `docs/api-components-apply/`    | ✅                 |
+| `api-reference/components.md`    | `payment-means`    | Cash discount, direct debit, card payment and paid invoice   | `docs/api-components-payment/`  | ✅                 |
 | `api-reference/theme.md`         | `din5008-example`  | DIN-5008 theme with custom parameters                        | `docs/api-theme-din5008/`       | ✅                 |
 | `api-reference/theme.md`         | `blank-example`    | Blank theme with native Typst page setup                     | `docs/api-theme-blank/`         | ✅                 |
 | `e-invoicing.md`                 | `custom-report`    | Theme `zugferd-report` function for a custom problem list    | `docs/e-invoicing-report/`      | ✅                 |
 | `e-invoicing.md`                 | `complete-example` | Complete ZUGFeRD-compliant invoice                           | `docs/e-invoicing-complete/`    | ✅                 |
+| `e-invoicing.md`                 | `direct-debit`     | XRechnung collected by SEPA direct debit                     | `docs/e-invoicing-sepa-debit/`  | ✅                 |
 | `api-reference/locale/index.md`  | `locale-customize` | Locale customization with `locale.custom` overrides          | —                               | ⚠️ not implemented |
 | `api-reference/locale/index.md`  | `currency-format`  | Custom currency formatting override                          | —                               | ⚠️ not implemented |
 | `api-reference/locale/custom.md` | `pl-language`      | Polish language dictionary definition                        | —                               | ⚠️ not implemented |

@@ -146,17 +146,33 @@ Labels for the payment configuration block.
 | `bic`            | `str` | Label for the Bank Identifier Code.              |
 | `reference`      | `str` | Label for the payment reference string.          |
 
+### `payment-means`
+
+Texts of the payment means besides the bank details: [`direct-debit`](../components.md#direct-debit), [`card-payment`](../components.md#card-payment) and [`paid`](../components.md#paid).
+
+| Key                                                                                                              | Type                            | Description                                                                                                  |
+| :--------------------------------------------------------------------------------------------------------------- | :------------------------------ | :----------------------------------------------------------------------------------------------------------- |
+| `method`                                                                                                         | `str`                           | Label of the payment method (e.g., `"Payment method"`).                                                      |
+| `transfer`, `direct-debit`, `sepa-direct-debit`, `card`, `credit-card`, `debit-card`, `cash`, `cheque`, `online` | `str`                           | Names of the payment methods (e.g., `"SEPA direct debit"`, `"Cash"`).                                        |
+| `mandate`, `creditor-id`, `debtor-iban`                                                                          | `str`                           | Labels of the details of a direct debit (e.g., `"Mandate reference"`).                                       |
+| `card-number`, `card-holder`                                                                                     | `str`                           | Labels of the details of a payment card (e.g., `"Card number"`).                                             |
+| `paid`                                                                                                           | `(content, content) => content` | Sentence of a paid invoice. Parameters map to `(sum, date)`; `date` is `none` if not given.                  |
+| `paid-due`                                                                                                       | `(content, content) => content` | Replaces `paid` when prepayments reduced the payable amount, so `sum` is the remaining amount that was paid. |
+
 ### `payment`
 
 Text blocks and phrasing for payment terms.
 
-| Key             | Type                            | Description                                                                                                                                                  |
-| :-------------- | :------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `text`          | `(content, content) => content` | Generates the final payment instruction sentence. Parameters map to `(sum, deadline)`.                                                                       |
-| `text-due`      | `(content, content) => content` | Replaces `text` when prepayments reduce the payable amount, so `sum` is the remaining amount due (e.g., `"the amount due"` instead of `"the total amount"`). |
-| `deadline-date` | `(content) => content`          | Text generator for a fixed target date (e.g., `[no later than #date]`).                                                                                      |
-| `deadline-days` | `(int) => str`                  | Text generator for a relative target date (e.g., `[within #str(days) days]`).                                                                                |
-| `deadline-soon` | `str`                           | Text for immediate/prompt payment.                                                                                                                           |
+| Key                                          | Type                             | Description                                                                                                                                                      |
+| :------------------------------------------- | :------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text`                                       | `(content, content) => content`  | Generates the final payment instruction sentence. Parameters map to `(sum, deadline)`.                                                                           |
+| `text-due`                                   | `(content, content) => content`  | Replaces `text` when prepayments reduce the payable amount, so `sum` is the remaining amount due (e.g., `"the amount due"` instead of `"the total amount"`).     |
+| `text-direct-debit`, `text-direct-debit-due` | `(content, content) => content`  | `text` and `text-due` when the amount is collected by [`direct-debit`](../components.md#direct-debit).                                                           |
+| `text-card`, `text-card-due`                 | `(content, content) => content`  | `text` and `text-due` when the amount is charged to a [`card-payment`](../components.md#card-payment).                                                           |
+| `cash-discount`                              | `(str, str, content) => content` | Note of a cash discount of the payment goal, printed after the payment sentence. Parameters map to `(percent, deadline, basis)`; `basis` is `none` if not given. |
+| `deadline-date`                              | `(content) => content`           | Text generator for a fixed target date (e.g., `[no later than #date]`).                                                                                          |
+| `deadline-days`                              | `(int) => str`                   | Text generator for a relative target date (e.g., `[within #str(days) days]`).                                                                                    |
+| `deadline-soon`                              | `str`                            | Text for immediate/prompt payment.                                                                                                                               |
 
 ### `signature`
 
