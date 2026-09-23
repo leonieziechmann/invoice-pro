@@ -14,12 +14,29 @@
 // LANGUAGE OVERRIDES (string.*)
 // -----------------------------------------------------------------------------
 
-/// Customizes the document type designations.
-/// - invoice (auto, str): e.g., "Invoice", "Rechnung", "Proforma"
+/// Customizes the document type designations, the default titles of the
+/// document types (`invoice(document-type: ..)`).
+/// - invoice (auto, str): e.g., "Invoice", "Rechnung"
+/// - credit-note (auto, str): e.g., "Credit Note", "Rechnungskorrektur"
+/// - corrected (auto, str): e.g., "Corrected Invoice", "Korrigierte Rechnung"
+/// - prepayment (auto, str): e.g., "Prepayment Invoice", "Anzahlungsrechnung"
+/// - self-billed (auto, str): e.g., "Self-Billing Invoice", "Gutschrift"
 /// -> dictionary
-#let document(invoice: auto) = (
+#let document(
+  invoice: auto,
+  credit-note: auto,
+  corrected: auto,
+  prepayment: auto,
+  self-billed: auto,
+) = (
   {
-    let payload = _clean-auto((invoice: invoice))
+    let payload = _clean-auto((
+      invoice: invoice,
+      credit-note: credit-note,
+      corrected: corrected,
+      prepayment: prepayment,
+      self-billed: self-billed,
+    ))
     return (strings: (document: payload))
   },
 )
@@ -52,6 +69,7 @@
 /// - quote-number (auto, str): e.g., "Quote No.", "Angebotsnummer"
 /// - delivery-note-number (auto, str): e.g., "Delivery Note No.", "Lieferschein-Nr."
 /// - preceding-invoice-number (auto, str): e.g., "Preceding Invoice No.", "Vorherige Rechnungsnummer"
+/// - preceding-invoice-date (auto, str): e.g., "Preceding Invoice Date", "Datum der vorherigen Rechnung"
 /// - due-date (auto, str): e.g., "Due Date", "Zahlbar bis"
 /// - payment-reference (auto, str): e.g., "Payment Reference", "Verwendungszweck"
 /// - contact-person (auto, str): e.g., "Contact Person", "Ansprechpartner:in"
@@ -76,6 +94,7 @@
   delivery-note-number: auto,
   delivery-address: auto,
   preceding-invoice-number: auto,
+  preceding-invoice-date: auto,
   due-date: auto,
   payment-reference: auto,
   contact-person: auto,
@@ -101,6 +120,7 @@
       delivery-note-number: delivery-note-number,
       delivery-address: delivery-address,
       preceding-invoice-number: preceding-invoice-number,
+      preceding-invoice-date: preceding-invoice-date,
       due-date: due-date,
       payment-reference: payment-reference,
       contact-person: contact-person,
@@ -127,6 +147,8 @@
 /// - subtotal (auto, str): e.g., "Subtotal", "Zwischensumme"
 /// - conjunction (auto, str): joins the last two item names of an automatic
 ///   bundle description, e.g., "and", "und"
+/// - origin (auto, str): label of the country of origin of an item, e.g.,
+///   "Country of origin", "Ursprungsland"
 /// -> dictionary
 #let line-items(
   position: auto,
@@ -142,6 +164,7 @@
   surcharge: auto,
   subtotal: auto,
   conjunction: auto,
+  origin: auto,
 ) = (
   {
     let payload = _clean-auto((
@@ -158,6 +181,7 @@
       surcharge: surcharge,
       subtotal: subtotal,
       conjunction: conjunction,
+      origin: origin,
     ))
 
     return (strings: (line-items: payload))
@@ -244,6 +268,10 @@
 /// - deadline-date (auto, fn): Function formatting a fixed date: (date) => str
 /// - deadline-days (auto, fn): Function formatting relative days: (days) => str
 /// - deadline-soon (auto, str): Text for immediate payment: e.g., "upon receipt"
+/// - text-credit (auto, fn): Main sentence of a credit note or a self-billed
+///   invoice, whose sender pays the amount: (sum, deadline) => content
+/// - deadline-soon-credit (auto, str): Text for immediate payment in
+///   `text-credit`: e.g., "promptly"
 /// -> dictionary
 #let payment(
   text: auto,
@@ -251,6 +279,8 @@
   deadline-date: auto,
   deadline-days: auto,
   deadline-soon: auto,
+  text-credit: auto,
+  deadline-soon-credit: auto,
 ) = (
   {
     let payload = _clean-auto((
@@ -259,6 +289,8 @@
       deadline-date: deadline-date,
       deadline-days: deadline-days,
       deadline-soon: deadline-soon,
+      text-credit: text-credit,
+      deadline-soon-credit: deadline-soon-credit,
     ))
     return (strings: (payment: payload))
   },

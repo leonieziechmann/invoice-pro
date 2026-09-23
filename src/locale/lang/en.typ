@@ -25,6 +25,10 @@
 
   document: (
     invoice: "Invoice",
+    credit-note: "Credit Note",
+    corrected: "Corrected Invoice",
+    prepayment: "Prepayment Invoice",
+    self-billed: "Self-Billing Invoice",
   ),
 
   address: (
@@ -50,6 +54,7 @@
     delivery-note-number: "Delivery Note No.",
     delivery-address: "Delivery Address",
     preceding-invoice-number: "Preceding Invoice No.",
+    preceding-invoice-date: "Preceding Invoice Date",
     due-date: "Due Date",
     payment-reference: "Payment Reference",
     contact-person: "Contact Person",
@@ -72,6 +77,7 @@
     subtotal: "Subtotal",
     prepayment: "Prepayment",
     conjunction: "and",
+    origin: "Country of origin",
   ),
 
   summary: (
@@ -140,6 +146,11 @@
       "days",
     ).join(" "),
     deadline-soon: "upon receipt",
+    text-credit: (
+      sum,
+      deadline,
+    ) => [We will transfer the amount of *#sum* #deadline to the account listed below.],
+    deadline-soon-credit: "promptly",
   ),
 
   signature: (

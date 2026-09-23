@@ -25,6 +25,13 @@
 
   document: (
     invoice: "Rechnung",
+    // The German VAT law reserves "Gutschrift" for self-billed invoices
+    // (§ 14 Abs. 2 Satz 2 UStG), so a credit note is a "Rechnungskorrektur".
+    credit-note: "Rechnungskorrektur",
+    corrected: "Korrigierte Rechnung",
+    prepayment: "Anzahlungsrechnung",
+    // Required on a self-billed invoice (§ 14 Abs. 4 Satz 1 Nr. 10 UStG).
+    self-billed: "Gutschrift",
   ),
 
   address: (
@@ -50,6 +57,7 @@
     delivery-note-number: "Lieferscheinnummer",
     delivery-address: "Lieferadresse",
     preceding-invoice-number: "Vorherige Rechnungsnummer",
+    preceding-invoice-date: "Datum der vorherigen Rechnung",
     due-date: "Fälligkeitsdatum",
     payment-reference: "Verwendungszweck",
     contact-person: "Ansprechpartner:in",
@@ -72,6 +80,7 @@
     subtotal: "Zwischensumme",
     prepayment: "Anzahlung",
     conjunction: "und",
+    origin: "Ursprungsland",
   ),
 
   summary: (
@@ -147,6 +156,11 @@
       "Tagen",
     ).join(" "),
     deadline-soon: "sofort nach Erhalt",
+    text-credit: (
+      sum,
+      deadline,
+    ) => [Den Betrag in Höhe von *#sum* überweisen wir #deadline auf das unten angegebene Konto.],
+    deadline-soon-credit: "umgehend",
   ),
 
   signature: (
