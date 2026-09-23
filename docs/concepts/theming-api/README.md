@@ -1,6 +1,6 @@
 # invoice-pro v0.5.0 Theming API: concept v2
 
-Status: concept v2 for maintainer review (2026-09-22). It replaces concept v1 (2026-09-21) and describes the prototype after phase 4 and two fix stages (layouts and polish, Appendix C): the maintainer's decisions on Q1–Q9 and the three phase-4 rulings are applied, and every name is the final one. The runnable prototype is in `prototype/`; paths that start with `prototype/` are relative to this bundle, and commands run from `prototype/`. Every `typst` block in this document is a test: `python scripts/make-doc-tests.py` reads the blocks from this file (each is preceded by an invisible `<!-- doc-test: name -->` marker) and writes them verbatim to `prototype/tests/doc/<name>.typ`, after the docs prelude `prototype/tests/doc/prelude.typ`, which supplies `party` (sender, recipient, invoice number) and `body()`. Three blocks have fixed companions: the package block of walkthrough 9 becomes the test package's `lib.typ`, the TOML block becomes the P4 data file, and the §2.6 and §3.3 blocks get a hidden prefix (the names they use) and a hidden suffix (assertions). All 20 `typst` blocks are typstyle-formatted and compile on **Typst 0.15.1 and 0.14.2**. The prototype suite (`sh scripts/run-all.sh`) passes 752/752 on both compilers.
+Status: concept v2 (2026-09-22), implemented in `src/` on this branch. It replaces concept v1 (2026-09-21) and describes the design after phase 4 and two fix stages (layouts and polish, Appendix C): the maintainer's decisions on Q1–Q9 and the three phase-4 rulings are applied, and every name is the final one. The design was built and verified in a prototype copy of the package, which stays in the git history of this branch; that phase is over. The engine now lives in `src/`, the repository's tytanic suite verifies it, and the user documentation is in `docs/docs/api-reference/theme/`. Results marked "on the prototype" were measured during the prototype phase on Typst 0.14.2 and 0.15.1 (its suite had 752 checks, §13.1); they are not results of the repository suite. Paths that start with `src/`, `tests/` or `docs/` are relative to the repository root; `figures/` and `process/` are relative to this document. The `typst` blocks use two names they do not define: `party` (sender, recipient, invoice number) and `body(n: 4)` (a letter body with n line items, payment terms, bank details and a signature). All 20 blocks are typstyle-formatted, and on the prototype they compiled on **Typst 0.15.1 and 0.14.2**.
 
 ---
 
@@ -18,15 +18,17 @@ One strict patch engine, shared with `locale`, folds everything. invoice-pro own
 
 - **Validation levels.** `invoice(validation: "draft" | "strict" | none)`, default `"draft"`. A draft always renders: it marks missing data inline, puts a badge and a watermark on every page and appends a report page with the legal basis of each problem. `strict` stops the build, and `none` checks nothing. `--input invoice-pro-validation=..` overrides the parameter. Document data (§ 14 UStG, EN 16931) is now checked, not only the theme.
 - **Ten presets** for different industries, on one shared looks kit: `classic`, `plain`, `corporate`, `elegant`, `prestige`, `bold`, `technical`, `soft`, `compact` and `boxed`. `modern` is gone.
-- **Country layouts that follow the sender.** `layout: auto` picks the page master from the sender's country: DIN 5008 A (DE), DIN 5008 B (AT), SN 010130 (CH), an A4 right-window layout (FR, IT, ES), an A4 left-window layout (GB) and US #10 (US). Each window layout lists the envelopes it was verified against. `theme.custom.proof(true)` prints the windows on the sheet, so you can hold it against a real envelope. CI renders a 4-item invoice for every preset and every sender region with `layout: auto` and requires exactly one page (80 checks). The Swiss layouts reserve no QR-bill zone; the zone is an explicit 0.5.x opt-in, `theme.layout.reserve-qr-bill(..)`.
+- **Country layouts that follow the sender.** `layout: auto` picks the page master from the sender's country: DIN 5008 A (DE), DIN 5008 B (AT), SN 010130 (CH), an A4 right-window layout (FR, IT, ES), an A4 left-window layout (GB) and US #10 (US). Each window layout lists the envelopes it was verified against. `theme.custom.proof(true)` prints the windows on the sheet, so you can hold it against a real envelope. On the prototype, a 4-item invoice needed exactly one page for every preset and every sender region with `layout: auto` (80 checks). The Swiss layouts reserve no QR-bill zone; the zone is an explicit 0.5.x opt-in, `theme.layout.reserve-qr-bill(..)`.
 - **Final names.** The semantic rename map was applied throughout, for example `region` → `area`, `x`/`y` → `left`/`top`, `resolve-theme` → `resolve` and `notices` → `notes` (§2.7).
-- **API gaps closed.** Designing eight looks exposed twelve gaps. The prototype now has a computed bottom margin, a totals row model, table knobs, label and numeric font roles, radii, `checks.pairs`, locale section strings, and a widow rule that keeps the totals with the last item row.
+- **API gaps closed.** Designing eight looks exposed twelve gaps. The engine now has a computed bottom margin, a totals row model, table knobs, label and numeric font roles, radii, `checks.pairs`, locale section strings, and a widow rule that keeps the totals with the last item row.
 
-**Compiler.** No minimum-compiler bump. Everything runs on Typst 0.14.2 and 0.15.1 with the same results (§13). Only the combined export `--pdf-standard a-3a,ua-1` needs 0.15.
+**Implementation.** The concept is implemented in `src/` on this branch: the engine in `src/theming/` and `src/validation/`, the merge in `src/utils/patch.typ` and the public facades in `src/public/` (§12). The 0.4 theme files and the letter-pro dependency are gone. The prototype phase is over (the prototype stays in the git history of this branch): the tytanic suite now verifies the implementation (`tests/theme/`, `tests/presets/`, `tests/layouts/`, `tests/validation/` and the migrated existing tests), and the user documentation lives in `docs/docs/api-reference/theme/`.
+
+**Compiler.** No minimum-compiler bump. On the prototype, everything ran on Typst 0.14.2 and 0.15.1 with the same results (§13). Only the combined export `--pdf-standard a-3a,ua-1` needs 0.15.
 
 **Cost.** About 34–46 maintainer-days for 0.4.3 plus 0.5.0 (§15), up from 25–35 in v1. The increase comes from validation, eight more presets and the country layouts.
 
-**What I need from you:** the open questions at the end of Appendix A. Above all, O1 (resolved in the prototype, please confirm): a Swiss sender now gets `sn-010130-right` without a QR-bill zone, and the zone is opt-in. Please also review the design changes the one-page rule made (O8).
+**What I need from you:** the open questions at the end of Appendix A. Above all, O1 (resolved in the implementation, please confirm): a Swiss sender now gets `sn-010130-right` without a QR-bill zone, and the zone is opt-in. Please also review the design changes the one-page rule made (O8).
 
 ## Design decisions at a glance
 
@@ -50,7 +52,7 @@ One strict patch engine, shared with `locale`, folds everything. invoice-pro own
 | Frame            | core-owned; bottom margin computed from the footer (`margin.bottom: auto`)                 | legal lines cannot fall off                          |
 | Envelopes        | window layouts declare envelopes; fit is checked; `proof()` overlay                        | "just works" without a guarantee                     |
 | Compliance       | core (root, measure), never a part                                                         | a replaced part cannot drop it                       |
-| Compiler         | stay on 0.14; tested on 0.14.2 and 0.15.1 (Q2)                                             | only one export flag differs                         |
+| Compiler         | stay on 0.14; prototype tested on 0.14.2 and 0.15.1 (Q2)                                   | only one export flag differs                         |
 | Deferred         | QR-bill component, reserved zones, NF/UK masks, `adjust`, table rewrite, more kinds        | all additive                                         |
 
 ---
@@ -120,7 +122,7 @@ The customization ladder has no cliff between the rungs:
 | `theme.classic`, `theme.plain`                                                            | presets                                                                                                                                                                                                                                                                                                          | frozen                                       |
 | `theme.corporate`, `elegant`, `prestige`, `bold`, `technical`, `soft`, `compact`, `boxed` | presets (§9)                                                                                                                                                                                                                                                                                                     | names stable; look experimental              |
 | `theme.layout`                                                                            | 16 layouts (§8.1), `derive(base, ..patches)`, the envelope catalogue `envelope`, `folded(..)`, the region functions `for-region`, `paper-for-region`, `digital-for-region`, `plain-for-region`, `sidebar-for-region`, `band-for-region`, `dense-for-region`, and `reserve-qr-bill(layout)` (0.5.x preview, §8.1) | per layout (§8.1)                            |
-| `theme.custom`                                                                            | the patch DSL (§2.4), `reset`, `replace`; `from-data` (experimental). A facade (`prototype/src/public/custom.typ`): internal helpers of the implementation do not leak                                                                                                                                           | frozen mechanism, provisional option helpers |
+| `theme.custom`                                                                            | the patch DSL (§2.4), `reset`, `replace`; `from-data` (experimental). A facade (`src/public/custom.typ`): internal helpers of the implementation do not leak                                                                                                                                                     | frozen mechanism, provisional option helpers |
 | `theme.resolve(theme, env:, validation:)`                                                 | evaluate a lazy theme outside an invoice (tests, package CI); `validation: "strict"` by default                                                                                                                                                                                                                  | frozen                                       |
 | `theme.parts`                                                                             | the default renderers as a module (`theme.parts.totals(ctx, view)`)                                                                                                                                                                                                                                              | names frozen                                 |
 | `theme.contrast`, `theme.on-color`, `theme.legible`                                       | colour helpers; `legible(fg, bg, target: 4.5)` darkens or lightens `fg` until it reaches the target                                                                                                                                                                                                              | stable                                       |
@@ -128,7 +130,7 @@ The customization ladder has no cliff between the rungs:
 | `payment-terms(days:, date:)`                                                             | the component (was `payment-goal`)                                                                                                                                                                                                                                                                               | frozen                                       |
 | locale `strings.validation.issues`, `roles`                                               | report texts of the theme and lint issues, keyed by the issue's `key` and applied to its `args` (§7.3); de, en, fr, it, es, base                                                                                                                                                                                 | provisional                                  |
 
-`build-theme` stays internal, and so does the looks kit (`prototype/src/theming/looks/kit.typ`). `prototype/tests/polish/exports.typ` pins the exported names of every public module to the documented lists, so an internal helper cannot become API by accident.
+`build-theme` stays internal, and so does the looks kit (`src/theming/looks/kit.typ`). A test in `tests/theme/` pins the exported names of every public module to the documented lists, so an internal helper cannot become API by accident.
 
 ### 2.2 The lazy theme
 
@@ -145,15 +147,15 @@ The customization ladder has no cliff between the rungs:
 )
 ```
 
-Any other named argument panics, and the message names the 0.4 parameters: ``theme `classic`: unexpected named argument(s) `form`. ... `form` is a 0.4 `themes.DIN-5008` parameter; see the migration table in the theme docs.`` A layout resolver that returns something other than a dict panics too (error case 40).
+Any other named argument panics, and the message names the 0.4 parameters: ``theme `classic`: unexpected named argument(s) `form`. ... `form` is a 0.4 `themes.DIN-5008` parameter; see the migration table in the theme docs.`` A layout resolver that returns something other than a dict panics too (§11).
 
 ### 2.3 Presets
 
-Ten presets ship. §9 describes each with its audience, idea, default layout and a figure. All of them compile on every layout, because looks patch only look-safe fields of standard area names (CI: 10 presets × 17 layouts, `layout: auto` included). Compiling is not the same as looking right, so the fix stages added visual guards: the dense header row renders cleanly with every look (20 checks), the serif letterhead fits every letterhead box with long names and wide or tall logos (a unit test plus 64 renders), and a 4-item invoice needs exactly one page for every preset in every sender region (80 checks). `minimal` stays a docs recipe.
+Ten presets ship. §9 describes each with its audience, idea, default layout and a figure. All of them compile on every layout, because looks patch only look-safe fields of standard area names (on the prototype: 10 presets × 17 layouts, `layout: auto` included). Compiling is not the same as looking right, so the fix stages added visual guards, also run on the prototype: the dense header row renders cleanly with every look (20 checks), the serif letterhead fits every letterhead box with long names and wide or tall logos (a unit test plus 64 renders), and a 4-item invoice needs exactly one page for every preset in every sender region (80 checks). `minimal` stays a docs recipe.
 
 ### 2.4 `theme.custom`: the patch DSL
 
-There is one helper per schema group, named after it. Every parameter defaults to `auto` (untouched), `none` means off, and `reset()` restores the default. Each helper returns a **one-element array**, so any number of helpers in a `{ import theme.custom: * .. }` block all apply. `prototype/tests/coverage.typ` asserts helper parameters == schema keys, in both directions.
+There is one helper per schema group, named after it. Every parameter defaults to `auto` (untouched), `none` means off, and `reset()` restores the default. Each helper returns a **one-element array**, so any number of helpers in a `{ import theme.custom: * .. }` block all apply. A test in `tests/theme/` asserts helper parameters == schema keys, in both directions.
 
 | Helper                                                                                                | Group   | Parameters                                                                                         | Tier         |
 | ----------------------------------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------- | ------------ |
@@ -184,8 +186,6 @@ There is one helper per schema group, named after it. Every parameter defaults t
 
 ### 2.6 Passing a theme
 
-<!-- doc-test: passing -->
-
 ```typst
 #let a = theme.classic                                           // the default
 #let b = theme.classic.with(layout: theme.layout.us-letter-digital) // another page master
@@ -194,7 +194,7 @@ There is one helper per schema group, named after it. Every parameter defaults t
 #show: invoice.with(theme: d, locale: locale.de-de, ..party)
 ```
 
-`acme-brand` is a `theme.custom.brand(..)` result and `acme` an imported theme package (walkthrough 9); the hidden prefix defines both.
+`acme-brand` is a `theme.custom.brand(..)` result and `acme` an imported theme package (walkthrough 9).
 
 ### 2.7 Migration and renames
 
@@ -217,14 +217,14 @@ There is one helper per schema group, named after it. Every parameter defaults t
 | `payment-goal(days: 14)`                             | `payment-terms(days: 14)`                                                                       |
 | a missing field printed `#recipient.name`            | draft marker ‹fehlt: …›, or a strict panic (§7)                                                 |
 
-**From concept v1 (Q7).** The names were never released, so there are no aliases. The strict merge rejects every old key with the list of allowed keys (`prototype/scripts/checks-naming.sh` proves it for `x`, `brand`, `regions`, `sizes.base` and `bank-details.qr`).
+**From concept v1 (Q7).** The names were never released, so there are no aliases. The strict merge rejects every old key with the list of allowed keys (verified on the prototype for `x`, `brand`, `regions`, `sizes.base` and `bank-details.qr`).
 
 | Concept v1                                                 | v2                                                                                           |
 | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | region, `regions:`, `region(..)`, `view.region`            | area, `areas:`, `area(..)`, `view.area`                                                      |
 | area anchors `x`, `y`; `marks.x`; envelope window `x`, `y` | `left`, `top` (exclusive with `right`, `bottom`)                                             |
 | area flag `brand: true`                                    | `stationery: true`                                                                           |
-| `stationery: "generated"` (default)                        | `stationery: none`; other values are misuse (case 41)                                        |
+| `stationery: "generated"` (default)                        | `stationery: none`; other values are misuse (§11)                                            |
 | `theme.resolve-theme(..)`                                  | `theme.resolve(..)`                                                                          |
 | `theme.layout.letter-digital`                              | `theme.layout.us-letter-digital`                                                             |
 | `fonts.figures`, `sizes.base`, `spacing.sm`, `spacing.md`  | `fonts.number-width`, `sizes.body`, `spacing.small`, `spacing.medium`                        |
@@ -245,7 +245,7 @@ Where "region" means a country, it stays: `env.region`, `text(region:)`, `for-re
 
 ## 3. Schemas (complete key listing)
 
-The schema is written once (`prototype/src/theming/schema.typ`) as `field(default, ..types)` leaves; defaults and types derive mechanically. In tokens and options **a function is a derivation** `t => value` unless the field's types include `function` (then it is a callback); array elements may always be derivations. The area fields `fill`, `stroke`, `gap`, `text`, `par`, `radius` and `rule` may derive. `options.custom` is opaque.
+The schema is written once (`src/theming/schema.typ`) as `field(default, ..types)` leaves; defaults and types derive mechanically. In tokens and options **a function is a derivation** `t => value` unless the field's types include `function` (then it is a callback); array elements may always be derivations. The area fields `fill`, `stroke`, `gap`, `text`, `par`, `radius` and `rule` may derive. `options.custom` is opaque.
 
 ### 3.1 The resolved theme (what parts see in `ctx.theme`)
 
@@ -266,7 +266,7 @@ The schema is written once (`prototype/src/theming/schema.typ`) as `field(defaul
 
 ### 3.2 Tokens: the frozen semantic tier (30 leaves)
 
-Rule: **a token is frozen only if a built-in part or preset reads it.** `prototype/scripts/mutation.sh` sets each token to an extreme value and asserts that a render of `classic`, `corporate`, `technical`, `prestige` or "rail" (classic with a dark letterhead) changes. All 30 pass; nothing is pending.
+Rule: **a token is frozen only if a built-in part or preset reads it.** A mutation run on the prototype set each token to an extreme value and asserted that a render of `classic`, `corporate`, `technical`, `prestige` or "rail" (classic with a dark letterhead) changes. All 30 passed; nothing is pending.
 
 | Path                  | Type                                 | Default                                   | Read by                                                  |
 | --------------------- | ------------------------------------ | ----------------------------------------- | -------------------------------------------------------- |
@@ -303,7 +303,7 @@ Rule: **a token is frozen only if a built-in part or preset reads it.** `prototy
 
 `fonts.regulated` (default `("Liberation Sans", "Arial", "Helvetica", "Libertinus Serif")`) exists for the 0.5.x reserved zones and is not frozen. Strokes are composed as `thickness + paint` at the use site. Tokens grow only additively.
 
-**Font rule.** Packages cannot ship fonts, and Typst embeds only Libertinus Serif, New Computer Modern and DejaVu Sans Mono. Every chain in the schema and in the presets therefore ends in an embedded family, and each preset is tested with `--ignore-system-fonts`.
+**Font rule.** Packages cannot ship fonts, and Typst embeds only Libertinus Serif, New Computer Modern and DejaVu Sans Mono. Every chain in the schema and in the presets therefore ends in an embedded family, and on the prototype each preset was tested with `--ignore-system-fonts`.
 
 ### 3.3 Layout (page master)
 
@@ -323,9 +323,7 @@ Rule: **a token is frozen only if a built-in part or preset reads it.** `prototy
 | `proof`                           | bool or array of envelope names                                | `false`                                                          | print-proof overlay (§8.3)                                                                                                                     |
 | `areas`                           | `dict<str, area or none>`                                      | standard stubs                                                   | ordered, open names, closed records; `none` = removed                                                                                          |
 
-DIN 5008 form A in full (the other layouts are in `prototype/src/theming/layouts.typ`):
-
-<!-- doc-test: din -->
+DIN 5008 form A in full (the other layouts are in `src/theming/layouts.typ`):
 
 ```typst
 #let din-5008-a = (
@@ -403,7 +401,7 @@ DIN 5008 form A in full (the other layouts are in `prototype/src/theming/layouts
 ))
 ```
 
-The hidden prefix is `#let derive = theme.layout.derive` and `#let E = theme.layout`; the hidden suffix asserts that the listing resolves equal to the shipped data. The recipient sits DIN-exactly 17.7 mm inside the address field, and its text stops at 100 mm (the DL window minus the 10 mm sideways play of an A4 sheet in a DL envelope).
+In the listing, `derive` is `theme.layout.derive` and `E` is `theme.layout`; on the prototype, the listing resolved equal to the shipped data. The recipient sits DIN-exactly 17.7 mm inside the address field, and its text stops at 100 mm (the DL window minus the 10 mm sideways play of an A4 sheet in a DL envelope).
 
 ### 3.4 Area (closed record, every field typed)
 
@@ -492,10 +490,10 @@ Custom part names need a package prefix (`acme/rail`); un-prefixed names are res
 
 ### 3.7 Checks
 
-| Path                  | Type                                                    | Default | Meaning                                                                                                            |
-| --------------------- | ------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
-| `checks.min-contrast` | none or number                                          | `none`  | report every checked pair below the value as `lint/contrast-*`; the presets are CI-checked at 4.5 with three seeds |
-| `checks.pairs`        | open map name → `t => (fg, bg)`, a literal pair or none | `(:)`   | extra pairs a look or user draws; merged by name, `none` drops one; malformed pairs are misuse                     |
+| Path                  | Type                                                    | Default | Meaning                                                                                                                      |
+| --------------------- | ------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `checks.min-contrast` | none or number                                          | `none`  | report every checked pair below the value as `lint/contrast-*`; on the prototype, the presets passed at 4.5 with three seeds |
+| `checks.pairs`        | open map name → `t => (fg, bg)`, a literal pair or none | `(:)`   | extra pairs a look or user draws; merged by name, `none` drops one; malformed pairs are misuse                               |
 
 Core pairs: text and text-muted on background, on-primary on primary, text-muted on tint, the title and discount colours on background, header text (or `header-style.fill`) on the header fill, `totals.color` on `totals.fill`, and **every area fill with its text colour**.
 
@@ -597,8 +595,6 @@ Wraps stack in patch order: look first, then positional patches, then `themed` s
 
 Every part is `(ctx, view) => content`, and a wrapper is `(ctx, view, inner) => content`. `ctx.theme` and `ctx.locale` are the contract; every other ctx key is internal.
 
-<!-- doc-test: parts -->
-
 ```typst
 #show: invoice.with(locale: locale.de-de, ..party, theme: theme.classic.with({
   import theme.custom: *
@@ -632,12 +628,12 @@ Obligations:
 | **Stable names, evolving look**                                       | the eight experimental presets: names and default layout families stay; appearance may change in a minor release (Q9)                                                                                                                                                                                                                                                                      |
 | **Provisional** (may change in a 0.5.x minor, with a changelog entry) | options and their helpers; the requirements and data rows; issue ids; non-bold view fields; all body views; `env.e-invoice`; `unread-options`; the envelope catalogue values; tagging of furniture                                                                                                                                                                                         |
 | **Experimental**                                                      | `us-letter-10`, `a4-window-right/left`, `sn-010130-right/left`, the sidebar, band and dense layouts; `themed` and `row`; `from-data`; `arrange` functions                                                                                                                                                                                                                                  |
-| **0.5.x (specified, not shipped)**                                    | the QR-bill component and `view.qr-bill`, reserved zones (`isolate`, `float`) and `reserve-qr-bill` (a preview in the prototype), `fonts.regulated`, the SN layouts as stable, NF/UK masks, `adjust`, the payment envelope, more kinds                                                                                                                                                     |
+| **0.5.x (specified, not shipped)**                                    | the QR-bill component and `view.qr-bill`, reserved zones (`isolate`, `float`) and `reserve-qr-bill` (a preview in `src/`), `fonts.regulated`, the SN layouts as stable, NF/UK masks, `adjust`, the payment envelope, more kinds                                                                                                                                                            |
 | **Internal**                                                          | every other ctx key, `spec`, `base`, sealing, `build-theme`, the looks kit, `view.tail`, the generic table renderer                                                                                                                                                                                                                                                                        |
 
 ### 5.3 Requirements by document kind
 
-The mechanism is frozen and the table is provisional. 0.5.0 ships the `invoice` row (`prototype/src/theming/validate.typ`). An unmet requirement is a `theme` issue: strict panics, draft marks it, none renders.
+The mechanism is frozen and the table is provisional. 0.5.0 ships the `invoice` row (`src/theming/validate.typ`). An unmet requirement is a `theme` issue: strict panics, draft marks it, none renders.
 
 | Requirement      | Satisfied by                                                      | Where                                                                                 | Waived by stationery |
 | ---------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------------------- |
@@ -671,7 +667,7 @@ Known platform limit: Typst 0.14 and 0.15 have no custom-XMP API, so the Factur-
 
 ## 6. Page frame & arbitrary formats
 
-The frame (`prototype/src/theming/frame.typ`) issues **one unconditional top-level `set page`**. It then renders:
+The frame (`src/theming/frame.typ`) issues **one unconditional top-level `set page`**. It then renders:
 
 1. `background`: the stationery (stretched to the sheet) and background areas (marks, bands, rails).
 2. The **computed bottom margin**: footer stacks are measured for the first, following and single-page cases. With `margin.bottom: auto` (every built-in layout), the margin is the tallest stack + `footer-descent` + `footer-clearance` (5 mm), at least 20 mm. A one-page invoice is sized for the page-1-of-1 footer only (it prints no "Page 1 of n" folio), so a small invoice keeps that room for the body. The rule is monotonic (more pages never make the margin smaller), so the page count settles; the footer-fit lint of an explicit margin still checks every page role. An explicit margin that is too small is `lint/footer-fit`: draft shows a numbered dashed overflow marker, strict panics.
@@ -694,8 +690,6 @@ The frame (`prototype/src/theming/frame.typ`) issues **one unconditional top-lev
 | regulated zones (R18)               | 0.5.x: an `after` area with `float` + `isolate`; footers relocated above it with the real page number (built as a preview: `reserve-qr-bill`)             |
 
 **A new format without forking** is a layout dict. An 80 mm thermal-roll receipt is 10 lines of data:
-
-<!-- doc-test: receipt -->
 
 ```typst
 // Any format is data: an 80 mm thermal-roll receipt (continuous page)
@@ -743,7 +737,7 @@ The level is an `invoice()` parameter, not a theme setting: the theme decides wh
 
 ### 7.2 Issue classes
 
-Every check that follows the level produces one record `(id, class, message, ref, fix, field, key, args)` (`prototype/src/validation/issue.typ`). `message` is the English developer text (the strict panic); `key` and `args` let the report print the problem in the document's language.
+Every check that follows the level produces one record `(id, class, message, ref, fix, field, key, args)` (`src/validation/issue.typ`). `message` is the English developer text (the strict panic); `key` and `args` let the report print the problem in the document's language.
 
 | Class       | What                                                               | Examples (ids)                                                                                                                                                                           | Blocks the XML in draft |
 | ----------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
@@ -763,9 +757,7 @@ All feedback is core-owned and brand-immune: fixed rose colours with a contrast 
 - **Report page** ("Prüfbericht") after the invoice, excluded from the page count, with a bookmarked heading and a real table header: number, class, problem, legal basis and fix per row, plus a callout when the XML was withheld.
 - **Keywords**: "Draft" is added; "ZUGFeRD, Factur-X" are dropped when the XML is withheld.
 
-The strings live in a new locale group `strings.validation` (de, en, fr, it, es, base). The report is fully localised: data issues use `fields` and `missing`, and every theme and lint issue (and the invalid IBAN) carries a `key` and `args` that select a text from `strings.validation.issues` (16 keys: contrast, footer fit, identity, roles, envelopes, fine size, logo alt text, CMYK, PDF images and others); role issues also name the localised `strings.validation.roles`. A key a locale lacks falls back to the English message. CI renders a real draft with IBAN, logo, fine-size and contrast problems in all five languages. The draft report compiles under `ua-1` and `a-3b`.
-
-<!-- doc-test: validation -->
+The strings live in a new locale group `strings.validation` (de, en, fr, it, es, base). The report is fully localised: data issues use `fields` and `missing`, and every theme and lint issue (and the invalid IBAN) carries a `key` and `args` that select a text from `strings.validation.issues` (16 keys: contrast, footer fit, identity, roles, envelopes, fine size, logo alt text, CMYK, PDF images and others); role issues also name the localised `strings.validation.roles`. A key a locale lacks falls back to the English message. On the prototype, a real draft with IBAN, logo, fine-size and contrast problems rendered in all five languages, and the draft report compiled under `ua-1` and `a-3b`.
 
 ```typst
 // draft (the default): the invoice renders, the gaps are marked, a report page follows
@@ -812,18 +804,18 @@ invoice-pro found 2 problems (validation: "strict"; preview them with validation
 
 **Swiss layouts and the QR-bill zone.** `sn-010130-right` and `sn-010130-left` reserve **no** QR-bill zone and print no placeholder, so a Swiss sender with the default theme gets a normal one-page invoice. The zone is an explicit opt-in, `theme.layout.reserve-qr-bill(layout)` (0.5.x preview): it adds the 210 × 105 mm `qr-bill` area at the bottom edge of the last page, moves the footer above it and, until the QR-bill component ships, draws a placeholder slip that may need a page of its own (P3). The folds stay at 99/192 mm, so a slip added later is never folded through.
 
-**Dense layouts.** `a4-dense` and `us-letter-dense` arrange recipient, references and title in one header row with an arrange function: a compact title (a stack, like `compact`'s, at most 40 % of the row) keeps the third column; a title that fills its line (a row with number and date, a banner) moves above the row and takes the full width. The serif looks render a title that shares a row compact and right-aligned. Every preset renders cleanly on both dense layouts (20 checks).
+**Dense layouts.** `a4-dense` and `us-letter-dense` arrange recipient, references and title in one header row with an arrange function: a compact title (a stack, like `compact`'s, at most 40 % of the row) keeps the third column; a title that fills its line (a row with number and date, a banner) moves above the row and takes the full width. The serif looks render a title that shares a row compact and right-aligned. Every preset renders cleanly on both dense layouts (20 checks on the prototype).
 
 ![Figure 4: every layout with the classic look, identical data, page 1. The Swiss layouts show no QR-bill zone; on the dense layouts classic's row title sits above the header row.](figures/fig-layouts.png)
 
 ### 8.2 Method and results
 
-A folded sheet moves inside its envelope, and Royal Mail and USPS test by tapping the letter on all four edges. A recipient box is only safe inside the part of the sheet that shows through the window **in every position**. The model (`prototype/src/theming/proof.typ`):
+A folded sheet moves inside its envelope, and Royal Mail and USPS test by tapping the letter on all four edges. A recipient box is only safe inside the part of the sheet that shows through the window **in every position**. The model (`src/theming/proof.typ`):
 
 1. The sheet is folded at `fold` (auto = `marks.fold`); the address panel is `[0, first fold]`, and the packet is as tall as the tallest panel.
 2. The packet may sit anywhere inside the envelope. Outer envelope sizes are used, which overstates the play, so the check errs on the safe side.
 3. The **band** is the window area the sheet shows in every position, minus 2 mm clearance.
-4. `prototype/tests/envelopes.typ` asserts, for every declared envelope, at least 5 recipient lines (US: 4) of at least 60 mm, with measured line metrics (first line 3.17 mm, pitch 4.37 mm at 10 pt).
+4. A test in `tests/theme/` asserts, for every declared envelope, at least 5 recipient lines (US: 4) of at least 60 mm, with measured line metrics (first line 3.17 mm, pitch 4.37 mm at 10 pt).
 
 | Layout            | Folds (mm)    | Envelope → lines in the band (line width)                                            | Confidence                                           |
 | ----------------- | ------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------- |
@@ -846,8 +838,6 @@ The catalogue `theme.layout.envelope` holds 21 records with their sources in `no
 ### 8.3 `proof()` and `envelopes()`
 
 `theme.custom.proof(true)` (or an array of envelope names) draws, on every invoice page, each envelope window in both extreme positions, the band that always shows, the fold and punch lines, the recipient box and a legend. Print one sheet and hold it against the real envelope. It is meant for a test print, never for production; tie it to an input:
-
-<!-- doc-test: proof -->
 
 ```typst
 // print one sheet with --input proof=1 and hold it against the envelope
@@ -878,9 +868,7 @@ The catalogue `theme.layout.envelope` holds 21 records with their sources in `no
 | `plain-for-region(region)`                      | `plain` on the region's paper                                                                                                                                        |
 | `sidebar-`, `band-`, `dense-for-region(region)` | the corporate, prestige and compact layouts on the region's paper                                                                                                    |
 
-Input may be any case, `none` or not a string. The preset resolvers are listed in §9. `prototype/tests/layout-region.typ` renders all 10 presets for de, at, ch, fr, it, es, gb, us and nl and reports which layout was used.
-
-<!-- doc-test: region -->
+Input may be any case, `none` or not a string. The preset resolvers are listed in §9. On the prototype, a test rendered all 10 presets for de, at, ch, fr, it, es, gb, us and nl and reported which layout was used.
 
 ```typst
 // layout: auto (the default) follows the SENDER's country: AT -> din-5008-b
@@ -898,7 +886,7 @@ Input may be any case, `none` or not a string. The preset resolvers are listed i
 
 ## 9. Preset catalogue
 
-Ten presets ship. Each is a look (`prototype/src/theming/looks/<name>.typ`) on a default layout resolver. The looks use only public mechanisms (tokens, options, look-safe area fields, part renderers) and share one internal kit (`looks/kit.typ`: value voices, label grids, totals rows, bank rows, the QR block). `elegant` and `prestige` are one serif family (`looks/serif.typ`): shared parts, two colourings. Every preset is CI-checked on 17 layouts (16 plus `auto`), for 9 sender regions, at contrast 4.5 with three seed colours, under PDF/A-3b with ZUGFeRD and under PDF/UA-1 with an image logo, for a one-page 4-item invoice on its default layout, for a one-page 4-item invoice in each of 8 sender regions (`layout: auto`: de, at, ch, fr, it, es, gb, us), and in a widow sweep.
+Ten presets ship. Each is a look (`src/theming/looks/<name>.typ`) on a default layout resolver. The looks use only public mechanisms (tokens, options, look-safe area fields, part renderers) and share one internal kit (`looks/kit.typ`: value voices, label grids, totals rows, bank rows, the QR block). `elegant` and `prestige` are one serif family (`looks/serif.typ`): shared parts, two colourings. On the prototype, every preset was checked on 17 layouts (16 plus `auto`), for 9 sender regions, at contrast 4.5 with three seed colours, under PDF/A-3b with ZUGFeRD and under PDF/UA-1 with an image logo, for a one-page 4-item invoice on its default layout, for a one-page 4-item invoice in each of 8 sender regions (`layout: auto`: de, at, ch, fr, it, es, gb, us), and in a widow sweep.
 
 | Preset      | Audience                                         | Idea                                                                                                                              | Default layout (DE / US)                            | Tier         |
 | ----------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------ |
@@ -913,9 +901,7 @@ Ten presets ship. Each is a look (`prototype/src/theming/looks/<name>.typ`) on a
 | `compact`   | wholesale, distribution, 40–80 line invoices     | 8.5 pt, item-number and unit columns, filled repeating header, delivery-note groups, boxed totals                                 | `a4-dense` / `us-letter-dense`                      | experimental |
 | `boxed`     | trades and crafts, print and fax                 | print-first ruled form boxes, heavy grotesque title, mono form labels; no fill carries meaning                                    | by region: `din-5008-a` / `us-letter-10`            | experimental |
 
-Any preset takes the same patches. On identical data the looks stay distinct (`prototype/tests/presets-set.typ` asserts that all looks resolve to different tokens and options):
-
-<!-- doc-test: presets -->
+Any preset takes the same patches. On identical data the looks stay distinct (a test in `tests/theme/` asserts that all looks resolve to different tokens and options):
 
 ```typst
 #let pick = sys.inputs.at("preset", default: "elegant") // any of the ten presets
@@ -933,7 +919,7 @@ Any preset takes the same patches. On identical data the looks stay distinct (`p
 
 ![Figure 6: all ten presets on identical data (same body, brand colour and logo, 4 items), page 1, each on its default layout for a German sender.](figures/fig-presets.png)
 
-![Figure 7: all ten presets with their own industry data (the gallery invoices in prototype/tests/gallery/ and, for classic and plain, prototype/tests/figures-gallery.typ).](figures/fig-presets-industry.png)
+![Figure 7: all ten presets with their own industry data (the preset galleries, now in tests/presets/).](figures/fig-presets-industry.png)
 
 **classic.** The frozen default, with the Q9 drift: computed footer margin, "Page 1 of 2" on page 1, the continuation line "sender · Invoice", a "Reference:" line and a grouped IBAN.
 
@@ -975,17 +961,15 @@ Any preset takes the same patches. On identical data the looks stay distinct (`p
 
 ![boxed: page 1](figures/preset-boxed.png)
 
-`minimal` stays a docs recipe (`prototype/tests/looks.typ`): no rules, no fills, one colour.
+`minimal` stays a docs recipe: no rules, no fills, one colour.
 
 ---
 
 ## 10. Walkthroughs
 
-Every snippet below is compiled verbatim by `prototype/tests/doc/<name>.typ`. The package block of (9) is `prototype/tests/pkgs/local/acme-theme/0.1.0/lib.typ` and the TOML block is `prototype/tests/doc/nordlicht.toml`. Font chains end in an embedded family, so the snippets render the same everywhere.
+Font chains end in an embedded family, so the snippets render the same everywhere.
 
-**P1: Freelancer, digital only, five minutes** (`p1`). The zebra, the header text and the on-primary colour all re-derive from the one colour.
-
-<!-- doc-test: p1 -->
+**P1: Freelancer, digital only, five minutes.** The zebra, the header text and the on-primary colour all re-derive from the one colour.
 
 ```typst
 #show: invoice.with(
@@ -1004,9 +988,7 @@ Every snippet below is compiled verbatim by `prototype/tests/doc/<name>.typ`. Th
 #body()
 ```
 
-**P2: GmbH, pre-printed paper + digital twin + ZUGFeRD** (`p2 --input output=print|pdf|einvoice`, Figure 8). One input value selects the mode. In `pdf` mode the rest-page art has its own header, so the continuation header is removed. `einvoice` also compiles under `--pdf-standard a-3b`.
-
-<!-- doc-test: p2 -->
+**P2: GmbH, pre-printed paper + digital twin + ZUGFeRD** (`--input output=print|pdf|einvoice`, Figure 8). One input value selects the mode. In `pdf` mode the rest-page art has its own header, so the continuation header is removed. On the prototype, `einvoice` also compiled under `--pdf-standard a-3b`.
 
 ```typst
 #let mode = sys.inputs.at("output", default: "pdf") // print | pdf | einvoice
@@ -1035,9 +1017,7 @@ Every snippet below is compiled verbatim by `prototype/tests/doc/<name>.typ`. Th
 
 ![Figure 8: P2 in the three stationery modes. print keeps the window and marks and drops the letterhead and footer (stationery "pre-printed"); pdf draws SVG art on the first and following pages; einvoice renders the generated furniture (stationery none).](figures/fig-stationery.png)
 
-**P3: Swiss SME, right or left window** (`p3`). A Swiss sender gets `sn-010130-right` from `layout: auto`; it is named explicitly here because the QR-bill zone is opt-in: `--input qr-bill=1` wraps the layout in `theme.layout.reserve-qr-bill(..)` (a **0.5.x preview**), which reserves the zone at the bottom of the last page and relocates the footer above it; the slip itself is a placeholder until the QR-bill component exists (O1). Switching the window side is two anchor patches, because setting `left` clears `right`.
-
-<!-- doc-test: p3 -->
+**P3: Swiss SME, right or left window.** A Swiss sender gets `sn-010130-right` from `layout: auto`; it is named explicitly here because the QR-bill zone is opt-in: `--input qr-bill=1` wraps the layout in `theme.layout.reserve-qr-bill(..)` (a **0.5.x preview**), which reserves the zone at the bottom of the last page and relocates the footer above it; the slip itself is a placeholder until the QR-bill component exists (O1). Switching the window side is two anchor patches, because setting `left` clears `right`.
 
 ```typst
 #let sn = theme.layout.sn-010130-right // what layout: auto picks for a Swiss sender
@@ -1056,9 +1036,7 @@ Every snippet below is compiled verbatim by `prototype/tests/doc/<name>.typ`. Th
 #body(n: int(sys.inputs.at("n", default: "4")))
 ```
 
-**P4: Agency, white-label brands in TOML** (`p4`, `prototype/tests/doc/nordlicht.toml`). In a data file, `"auto"` resets a value, `"none"` switches it off, and lengths and hex colours are coerced. A key typo fails with ``theme::tokens::colors has unknown key `primry`. Did you mean `primary`? ...``.
-
-<!-- doc-test: nordlicht.toml -->
+**P4: Agency, white-label brands in TOML** (the first block is `nordlicht.toml`). In a data file, `"auto"` resets a value, `"none"` switches it off, and lengths and hex colours are coerced. A key typo fails with ``theme::tokens::colors has unknown key `primry`. Did you mean `primary`? ...``.
 
 ```toml
 [theme.tokens.colors]
@@ -1081,8 +1059,6 @@ address = "Kai 1"
 city = "24103 Kiel"
 ```
 
-<!-- doc-test: p4 -->
-
 ```typst
 #let e = toml("nordlicht.toml")
 #show: invoice.with(
@@ -1097,9 +1073,7 @@ city = "24103 Kiel"
 #body()
 ```
 
-**P5: SaaS batch pipeline** (`p5`). The theme is an immutable value that is built once. The pipeline runs with `--input invoice-pro-validation=strict`, so an incomplete invoice fails the job instead of rendering a draft; `theme.resolve(company)` goes into its unit tests. The layout is explicit here because the job file names the region: `theme.layout.digital-for-region` returns `us-letter-digital` for us and `a4-digital` otherwise (`layout: auto` would follow the sender's country and give `classic` its window layout).
-
-<!-- doc-test: p5 -->
+**P5: SaaS batch pipeline.** The theme is an immutable value that is built once. The pipeline runs with `--input invoice-pro-validation=strict`, so an incomplete invoice fails the job instead of rendering a draft; `theme.resolve(company)` goes into its unit tests. The layout is explicit here because the job file names the region: `theme.layout.digital-for-region` returns `us-letter-digital` for us and `a4-digital` otherwise (`layout: auto` would follow the sender's country and give `classic` its window layout).
 
 ```typst
 // theme.typ of the pipeline: built once, an immutable value imported everywhere
@@ -1117,9 +1091,7 @@ city = "24103 Kiel"
 #body()
 ```
 
-**P6: Design studio: corporate on DIN B, wrap + replace** (`p6`). The called form is equivalent to `.with`; `ctx.locale` is part of the contract.
-
-<!-- doc-test: p6 -->
+**P6: Design studio: corporate on DIN B, wrap + replace.** The called form is equivalent to `.with`; `ctx.locale` is part of the contract.
 
 ```typst
 #show: invoice.with(locale: locale.de-de, ..party, theme: theme.corporate(
@@ -1151,9 +1123,7 @@ city = "24103 Kiel"
 #body()
 ```
 
-**P7: Accessibility-bound supplier** (`p7`, compiles under `--pdf-standard ua-1` on 0.14.2 and 0.15.1). Metadata and `lang` come from core, and a logo `image` without `alt` is `lint/logo-alt`. The recipient and title are tagged in reading order; the furniture, including the legal footer, is made of artifacts (Typst behaviour; O6).
-
-<!-- doc-test: p7 -->
+**P7: Accessibility-bound supplier** (on the prototype it compiled under `--pdf-standard ua-1` with 0.14.2 and 0.15.1). Metadata and `lang` come from core, and a logo `image` without `alt` is `lint/logo-alt`. The recipient and title are tagged in reading order; the furniture, including the legal footer, is made of artifacts (Typst behaviour; O6).
 
 ```typst
 #let logo = image("sw.svg", alt: "Stadtwerke Musterstadt")
@@ -1165,9 +1135,7 @@ city = "24103 Kiel"
 #body()
 ```
 
-**P8: US subsidiary, same brand** (`p8`). `locale.en-de` stands in until a US locale region ships. Footer content cells print at the fine size, and `info.*` motifs work in them.
-
-<!-- doc-test: p8 -->
+**P8: US subsidiary, same brand.** `locale.en-de` stands in until a US locale region ships. Footer content cells print at the fine size, and `info.*` motifs work in them.
 
 ```typst
 #import "corporate.typ": corporate // the same brand patch as in P2
@@ -1183,9 +1151,7 @@ city = "24103 Kiel"
 #body()
 ```
 
-**(9) Third-party package author** (`p9` + `prototype/tests/pkgs/local/acme-theme/0.1.0`, Figure 1). The package imports nothing from invoice-pro and lists only the areas it uses. The rail hosts the prefixed decoration part and the built-in `sender` part, which satisfies the supplier role. The bottom margin is computed from its footer.
-
-<!-- doc-test: acme-theme -->
+**(9) Third-party package author** (Figure 1). The first block is the package's `lib.typ`, imported as `@local/acme-theme:0.1.0` in the second. The package imports nothing from invoice-pro and lists only the areas it uses. The rail hosts the prefixed decoration part and the built-in `sender` part, which satisfies the supplier role. The bottom margin is computed from its footer.
 
 ```typst
 // @preview/acme-theme - NO invoice-pro import
@@ -1231,8 +1197,6 @@ city = "24103 Kiel"
 )
 ```
 
-<!-- doc-test: p9 -->
-
 ```typst
 #import "@local/acme-theme:0.1.0" as acme
 #show: invoice.with(locale: locale.de-de, ..party, theme: theme.classic.with(
@@ -1244,9 +1208,7 @@ city = "24103 Kiel"
 #let _ = theme.resolve(theme.classic.with(acme.patch, layout: acme.sidebar-a5))
 ```
 
-**(10) Scoped override** (`p10`, experimental).
-
-<!-- doc-test: p10 -->
+**(10) Scoped override** (experimental).
 
 ```typst
 #show: invoice.with(locale: locale.de-de, ..party)
@@ -1270,9 +1232,7 @@ city = "24103 Kiel"
 })[#bank-details(bank: "Hamburger Sparkasse", iban: "DE75512108001245126199")]
 ```
 
-**Company geometry** (`layout`): geometry goes into a derived layout, not into patches. The derived layout inherits the declared envelopes, so the fit check covers the new window position.
-
-<!-- doc-test: layout -->
+**Company geometry**: geometry goes into a derived layout, not into patches. The derived layout inherits the declared envelopes, so the fit check covers the new window position.
 
 ```typst
 // A company-specific window: geometry lives in a derived layout, not in patches
@@ -1294,7 +1254,7 @@ city = "24103 Kiel"
 
 ## 11. Error messages
 
-The house style is a `theme::` path, the value, the allowed set and a did-you-mean hint. Type errors keep the `types.require` wording, plus "(or a derivation `t => ..`)" where derivations are allowed. The prototype has 41 compile-fail cases, run under `--input invoice-pro-validation=strict`; `prototype/scripts/run-all.sh` compares their messages byte for byte with `prototype/tests/errors/expected.txt`. Of these, 17 follow the level (16 are also rendered under draft and none; case 17's fixture is not a real PDF), and 24 are misuse that panics even under `none`. A selection, verbatim:
+The house style is a `theme::` path, the value, the allowed set and a did-you-mean hint. Type errors keep the `types.require` wording, plus "(or a derivation `t => ..`)" where derivations are allowed. On the prototype, 41 compile-fail cases ran under `--input invoice-pro-validation=strict`, and their messages matched a recorded expectation byte for byte on both compilers. Of these, 17 follow the level (16 were also rendered under draft and none; case 17's fixture is not a real PDF), and 24 are misuse that panics even under `none`. A selection, verbatim:
 
 ```text
 theme::tokens::colors has unknown key `primry`. Did you mean `primary`? Allowed keys: primary, on-primary, primary-text, accent, accent-text, text, text-muted, border, tint, background
@@ -1331,7 +1291,7 @@ bank        measure: IBAN check (data issue), EPC payload, QR clamp
 themed      scope-theme(theme, patches): light finalize, scoped issues
 ```
 
-| File (`prototype/src/`)                                | Lines | Role                                                                                                  |
+| File (`src/`)                                          | Lines | Role                                                                                                  |
 | ------------------------------------------------------ | ----- | ----------------------------------------------------------------------------------------------------- |
 | `utils/patch.typ`                                      | 267   | shared merge, did-you-mean, patch flattening                                                          |
 | `theming/schema.typ`                                   | 361   | `field()`, token/option/check/area/layout schema, stubs, kinds, part-options                          |
@@ -1348,7 +1308,7 @@ themed      scope-theme(theme, patches): light finalize, scoped issues
 | `validation/{issue,data,render}.typ`                   | 496   | issue records (with `key`, `args`) and levels, data rows, markers, badge, watermark, report           |
 | **Total**                                              | 9,097 | concept v1: 2,146 (unformatted); the core without looks is 5,970 after typstyle                       |
 
-Outside `prototype/src/theming` the prototype touched `invoice.typ` (validation, env, sender first), `components/root.typ` (measured checks, XML withholding, keywords), `zugferd/build.typ` (checks moved out, no panics), `components/item.typ` and `bundle.typ` (unit plurals), `utils/coercion.typ` (dict item ids), the line-items table renderer (tail binding, header style, row knobs), and the five locales (`strings.validation` including `issues` and `roles`, `sections`, `document.page`, `document.continued-on`, `line-items.item-id` and `unit`, `signature.thanks`, `payment.text-due`). The 0.4 theme files (`themes/DIN-5008`, `blank`, the hidden table variants) are still present and go in step B.
+Outside `src/theming` the implementation also touches `invoice.typ` (validation, env, sender first), `components/root.typ` (measured checks, XML withholding, keywords), `zugferd/build.typ` (checks moved out, no panics), `components/item.typ` and `bundle.typ` (unit plurals), `utils/coercion.typ` (dict item ids), the line-items table renderer (tail binding, header style, row knobs), and the five locales (`strings.validation` including `issues` and `roles`, `sections`, `document.page`, `document.continued-on`, `line-items.item-id` and `unit`, `signature.thanks`, `payment.text-due`). The 0.4 theme files are removed (`themes/DIN-5008`, `themes/blank`, `themes/base.typ`, `themes/themes.typ`, the base-theme renderers with the hidden table variants, and the generic line-items and totals renderers), and so is the letter-pro dependency. The internal renderers that remain are `src/themes/components/line-items/{table,columns,global-info}.typ` and `src/themes/base-theme/{signature,payment-terms}.typ`.
 
 **loom 0.1.1 as-is:** only public API is used. Nice-to-haves: an official opaque ctx value (makes sealing a contract), a deep-merge `apply`, an exported `matcher.display`, a fix for the labelled-container crash, a version-independent motif key, and `ensure` distinguishing missing from `none`.
 
@@ -1356,16 +1316,16 @@ Outside `prototype/src/theming` the prototype touched `invoice.typ` (validation,
 
 ## 13. Feasibility evidence & Typst 0.14 validation
 
-### 13.1 Suite
+### 13.1 Prototype suite
 
-The prototype is a git repository; the bundled `prototype/` is a clean export of it (no history, logs or renders). `sh scripts/run-all.sh` runs everything and prints one line per check. The counts below are the lines of that output, grouped by area.
+The concept was verified on the prototype, a copy of the package that carried the new engine; it was removed when the engine moved to `src/` and stays in the git history of this branch. Its runner printed one line per check, and the counts below are the lines of that output, grouped by area. They describe the prototype phase, not the repository's tytanic suite (`tests/theme/`, `tests/presets/`, `tests/layouts/`, `tests/validation/` and the migrated existing tests), which now verifies the implementation.
 
 | Area                        | Checks  | Verified                                                                                                                                                                                                                                                                                                  |
 | --------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | semantics, coverage, naming | 9       | merge rules, stubs, anchor pairs, derivations, helper == schema both ways; the new names resolve, 5 old names are rejected, misuse case 41 panics under `none`                                                                                                                                            |
 | envelopes and proofs        | 8       | every declared envelope fits (§8.2); proof renders for 7 window layouts                                                                                                                                                                                                                                   |
 | walkthrough renders         | 10      | walkthrough tests, P2 in three modes and under `a-3b`, the third-party package                                                                                                                                                                                                                            |
-| doc snippets                | 19      | every `typst` block of this document, generated from it                                                                                                                                                                                                                                                   |
+| doc snippets                | 19      | every `typst` block of this document                                                                                                                                                                                                                                                                      |
 | error suite                 | 1       | 41 compile-fail cases, messages byte-identical on both compilers                                                                                                                                                                                                                                          |
 | validation                  | 45      | draft in 5 languages and 3 looks, none clean, strict/misuse 10 cases byte-identical, 16 follow-level cases render under draft and none, 23 misuse cases panic under none, draft under `a-3b` and `ua-1`, `none` + ZUGFeRD attaches the XML while draft withholds it                                       |
 | layout by region            | 29      | classic, corporate, plain × 9 regions; all 10 presets × 9 regions (one check); explicit layout wins                                                                                                                                                                                                       |
@@ -1374,18 +1334,18 @@ The prototype is a git repository; the bundled `prototype/` is a clean export of
 | audit                       | 11      | unit plurals, dict item ids, invalid IBAN as a data issue, profile wording                                                                                                                                                                                                                                |
 | layout fixes                | 122     | dense header row: 10 presets × `a4-dense`, `us-letter-dense` (20); Swiss layouts: 10 presets × right/left without a QR-bill zone on one page, `layout: auto` for a Swiss sender, the `reserve-qr-bill` opt-in (22); one page for a 4-item invoice: 10 presets × 8 sender regions with `layout: auto` (80) |
 | polish                      | 10      | serif letterhead unit test and 64 stress renders, public module exports, the draft report in 5 languages, issue keys in `src` == localised keys (16), doc logo assets                                                                                                                                     |
-| token mutation              | 1       | one run of `prototype/scripts/mutation.sh`: each of the 30 frozen tokens changes a render                                                                                                                                                                                                                 |
+| token mutation              | 1       | one mutation run: each of the 30 frozen tokens changes a render                                                                                                                                                                                                                                           |
 | **Total**                   | **752** | **752/752 on 0.15.1 (Windows) and 752/752 on 0.14.2 (NixOS, WSL), after typstyle formatting**                                                                                                                                                                                                             |
 
 The layout matrix proves that every look compiles on every layout, not that it looks right: the dense-layout defect of the phase-4 tree passed it. The layout-fix checks therefore assert geometry (no overlap in the dense header row, one page, no QR-bill zone), and the figures were rebuilt and inspected after the fixes. The one-page checks cover `layout: auto`; explicit window layouts are not guaranteed (O8).
 
 ### 13.2 Typst 0.14.2 vs 0.15.1
 
-- **No source change for 0.14.** The only difference the suite sees is cosmetic: 0.14 prints panic messages quoted and escaped. `prototype/scripts/panic-text.awk` normalises both forms (and folds multi-line strict panics) for the byte comparison. Users on 0.14 see the quoted form.
+- **No source change for 0.14.** The only difference the prototype suite saw is cosmetic: 0.14 prints panic messages quoted and escaped. The suite normalised both forms (and folded multi-line strict panics) for the byte comparison. Users on 0.14 see the quoted form.
 - **Exact 0.14.0 was not testable** offline (the nix store has 0.14.2). The 0.14.1 changelog fixes table-header tagging, which can affect PDF/UA-1 of the items table on 0.14.0. Recommend 0.14.2 or newer for PDF/UA; a CI job pinned to 0.14.0 settles it.
 - **Visual parity** (compat study on the phase-4a base, pinned fonts, 77 pages): 0.14.2 vs 0.15.1 identical on 71 pages; the other 6 differ in 8 pixels by at most 2/255 of anti-aliasing. No baseline or line-height shift, same page counts. Not re-run on the final tree (the pinned fonts are not in the repository).
 
-### 13.3 PDF standards (`prototype/scripts/pdf-standards.sh`, 13/13 on both compilers)
+### 13.3 PDF standards (on the prototype, 13/13 on both compilers)
 
 | Export                                               | 0.14.2                                                      | 0.15.1     |
 | ---------------------------------------------------- | ----------------------------------------------------------- | ---------- |
@@ -1397,7 +1357,7 @@ The layout matrix proves that every look compiles on every layout, not that it l
 
 ### 13.4 Performance
 
-Median of 5 runs, pinned fonts, full PDF compile of the final tree (`prototype/scripts/bench.sh`, one laptop, not idle; absolute times vary by about ±30 %).
+Median of 5 runs, pinned fonts, full PDF compile of the final prototype tree (one laptop, not idle; absolute times vary by about ±30 %).
 
 | Items | 0.4.2 (0.15.1) | sealed (0.15.1)  | unsealed (0.15.1) | 0.4.2 (0.14.2) | sealed (0.14.2)   | unsealed (0.14.2) |
 | ----- | -------------- | ---------------- | ----------------- | -------------- | ----------------- | ----------------- |
@@ -1446,7 +1406,7 @@ Two interleaved re-runs of n = 400 on 0.14.2 (0.4.2 and the prototype alternatin
 
 ## 15. Implementation roadmap (solo maintainer)
 
-Typst packages cannot publish `-rc` or `-dev` versions, so the only releases are 0.4.3 and 0.5.0. The steps are branches; the prototype code is the starting point for each.
+Typst packages cannot publish `-rc` or `-dev` versions, so the only releases are 0.4.3 and 0.5.0. The steps were planned as branches, each starting from the prototype code; on this branch the engine instead landed in `src/` in one commit, on top of the 0.4.2 bug fixes on main.
 
 | Step              | Scope                                                                                                                                                                                          | Days              |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
@@ -1510,7 +1470,7 @@ Interpretations taken by the phase-4 stages (please confirm or revert):
 
 ### A.3 Still open
 
-1. **O1 Swiss default (resolved in the prototype; please confirm).** Phase 4 mapped `ch` to an `sn-010130-right` that reserved the QR-bill zone, so a 4-item invoice of a Swiss sender took two pages and ended in a placeholder slip. The fix stage took the recommendation: `sn-010130-right` and `-left` reserve no zone and print no slip (experimental tier, one page for every preset), and the zone is the explicit opt-in `theme.layout.reserve-qr-bill(layout)` (0.5.x preview). _Still open:_ ship the QR-bill component in 0.5.0 or in 0.5.x; until then Swiss users print the payment part separately.
+1. **O1 Swiss default (resolved in the implementation; please confirm).** Phase 4 mapped `ch` to an `sn-010130-right` that reserved the QR-bill zone, so a 4-item invoice of a Swiss sender took two pages and ended in a placeholder slip. The fix stage took the recommendation: `sn-010130-right` and `-left` reserve no zone and print no slip (experimental tier, one page for every preset), and the zone is the explicit opt-in `theme.layout.reserve-qr-bill(layout)` (0.5.x preview). _Still open:_ ship the QR-bill component in 0.5.0 or in 0.5.x; until then Swiss users print the payment part separately.
 2. **O2 Legal rows outside the invoice row.** CH (Art. 26 MWSTG: no invoice number) and § 33 UStDV receipts (no recipient) need rows keyed by kind or region; the delivery date (§ 14 Abs. 4 Nr. 6 UStG) is not checked. The national references need a legal review.
 3. **O3 Test prints.** One physical print per window layout with the declared envelopes, the US fold and the Italian window first.
 4. **O4 Per-class levels** (`(data: "draft", theme: "strict")`): later, additively, if asked for.
@@ -1520,7 +1480,7 @@ Interpretations taken by the phase-4 stages (please confirm or revert):
 8. **O8 Look and layout leftovers.** Fixed by the layout and polish stages: the dense header row (every preset renders cleanly on `a4-dense` and `us-letter-dense`), `prestige`'s sender name on `sn-010130-right` (one line, logo plate intact), and two pages for 4 items on `us-letter-10` and `sn-010130` (one page for every preset × 8 sender regions with `layout: auto`). Still open:
    - `soft`'s totals card can still start a page alone (n = 20–22 on `a4-digital`), and `compact` keeps its totals with the last row only through the fallback;
    - a sender name of about 35 characters still wraps in the 80 × 30 mm SN letterhead box;
-   - the one-page guarantee covers `layout: auto` only. With the `prototype/tests/one-page.typ` data on an explicit window layout, 9 of 70 preset × layout pairs need two pages: `corporate` on `din-5008-b`, `a4-window-right` and `us-letter-10`; `bold` on `din-5008-b`, `a4-window-right`, `a4-window-left` and `us-letter-10`; `technical` on `din-5008-b`; `soft` on `us-letter-10` (Figure 2 shows `corporate` on `us-letter-10`, whose signature moves to page 2);
+   - the one-page guarantee covers `layout: auto` only. Measured on the prototype with the one-page test data on an explicit window layout, 9 of 70 preset × layout pairs need two pages: `corporate` on `din-5008-b`, `a4-window-right` and `us-letter-10`; `bold` on `din-5008-b`, `a4-window-right`, `a4-window-left` and `us-letter-10`; `technical` on `din-5008-b`; `soft` on `us-letter-10` (Figure 2 shows `corporate` on `us-letter-10`, whose signature moves to page 2);
    - some pairs have little spare room: `bold` on explicit `sn-010130-left` under 0.5 mm, `corporate` under 2 mm; the one-page margin rule depends on the page count, so it has hysteresis near the boundary;
    - design changes made for the one-page rule, for review: the `us-letter-10` footer drops the company block (the letterhead already names the company), `boxed` and `corporate` close with a tight signature (no handwriting gap), `boxed` body text is 9.5 pt (was 10 pt) with tighter form insets, `bold`'s poster block is slightly lower, and `us-letter-digital` uses a ½ in top margin;
    - `corporate`'s descriptions wrap in the 124 mm column.
@@ -1563,8 +1523,8 @@ Legend: C = covered, P = partial (the note says what is missing), X = excluded b
 | R27 kind-agnostic                       | SHOULD | C      | kind vocabulary, requirements and data rows by kind                                   |
 | R28 brand by key                        | SHOULD | C      | P4                                                                                    |
 | R29 context-sensitive                   | COULD  | P      | `env.region` drives the layout; kind-aware derivations 0.5.x                          |
-| R30 a-3b                                | MUST   | C      | P2, per-preset CI on 0.14.2 and 0.15.1                                                |
-| R31 ua-1                                | MUST   | P      | per-preset CI; furniture is artifacts (O6); tail tagging (O7)                         |
+| R30 a-3b                                | MUST   | C      | P2, per-preset checks on the prototype (0.14.2 and 0.15.1)                            |
+| R31 ua-1                                | MUST   | P      | per-preset checks on the prototype; furniture is artifacts (O6); tail tagging (O7)    |
 | R32 guard rails                         | SHOULD | C      | lint class: CMYK, PDF image, QR paper, footer fit, envelopes, contrast                |
 | R33 mono / ink saving                   | SHOULD | 0.5.x  | §15; `boxed` is print-first                                                           |
 | R34–R38                                 | WON'T  | X      | consistent                                                                            |
@@ -1572,7 +1532,7 @@ Legend: C = covered, P = partial (the note says what is missing), X = excluded b
 | R40 third-party packages                | MUST   | C      | (9), prefix rule, stubs, `theme.resolve` in package CI                                |
 | R41 path validation                     | SHOULD | C      | §11                                                                                   |
 | R42 output-mode switch                  | SHOULD | C      | P2; validation input override                                                         |
-| R43 specimen                            | COULD  | 0.5.x  | contact sheet exists as a test                                                        |
+| R43 specimen                            | COULD  | 0.5.x  | a contact sheet existed as a prototype test                                           |
 | R44 migration                           | SHOULD | C      | §2.7, named-argument hint                                                             |
 | #18 footer blocks + free content        | issue  | C      | `info.*` motifs in content cells (P8)                                                 |
 | #33 row fill                            | issue  | C      | zebra pair or callback                                                                |
@@ -1600,15 +1560,15 @@ Legend: C = covered, P = partial (the note says what is missing), X = excluded b
 | Checks         | + `checks.pairs`; contrast reports every failing pair                                                                                                                                                                                                                               |
 | Frame          | computed bottom margin; footer fit as lint; identity via labelled metadata after layout; page 1 of n; continuation line; widow rule (`view.tail`)                                                                                                                                   |
 | Core fixes     | unit plurals, dict item ids, invalid IBAN as a data issue, e-invoice builder no longer panics, en16931 wording, return-address clearance, font chains end embedded                                                                                                                  |
-| Compiler       | validated on 0.14.2 (752/752, 13/13 PDF standards); CRLF scripts and quoted panics fixed                                                                                                                                                                                            |
+| Compiler       | validated on 0.14.2 on the prototype (752/752, 13/13 PDF standards); CRLF scripts and quoted panics fixed                                                                                                                                                                           |
 | Resolved theme | + `issues`, `unread-options`                                                                                                                                                                                                                                                        |
 | Fix: Swiss     | `sn-010130-right/-left` reserve no QR-bill zone and print no placeholder (experimental, one page); the zone is the opt-in `theme.layout.reserve-qr-bill(layout)` (0.5.x preview) (O1)                                                                                               |
 | Fix: dense     | `a4-dense`/`us-letter-dense` header row by an arrange function: a compact title keeps the third column, a wide title moves above the row; the serif looks render a shared-row title compact (O8)                                                                                    |
 | Fix: one page  | a 4-item invoice needs one page for every preset × 8 sender regions (`layout: auto`): one-page computed margin sized for the page-1-of-1 footer, `us-letter-10` footer without the company block, `us-letter-digital` top margin ½ in, tighter `boxed`, `corporate` and `bold` (O8) |
 | Fix: serif     | the elegant/prestige letterhead never squeezes the logo column (logo above, beside, then scaled) and keeps the sender name on one line (tracking, then down to 72 % size)                                                                                                           |
-| Fix: exports   | `theme.custom` is a facade (`prototype/src/public/custom.typ`); internal helpers (`emit`, `clean-auto`, `_tokens`, ..) no longer leak; `prototype/tests/polish/exports.typ` pins every public module's exports                                                                      |
+| Fix: exports   | `theme.custom` is a facade (`src/public/custom.typ`); internal helpers (`emit`, `clean-auto`, `_tokens`, ..) no longer leak; a test in `tests/theme/` pins every public module's exports                                                                                            |
 | Fix: report    | issue records gain `key` and `args`; `strings.validation.issues`/`roles` in five languages; the draft report is fully localised with an English fallback (O5)                                                                                                                       |
-| Fix: fixtures  | the doc snippets use logo-sized marks (`prototype/tests/logo-*.svg`) instead of the full-page letterhead fixture; figures rebuilt without DEFECT marks                                                                                                                              |
+| Fix: fixtures  | the doc snippets were rendered with logo-sized marks instead of the full-page letterhead fixture; figures rebuilt without DEFECT marks                                                                                                                                              |
 
 ## Appendix D: Process & sources
 
@@ -1617,11 +1577,12 @@ Legend: C = covered, P = partial (the note says what is missing), X = excluded b
 1. Phase 1: seven research reports produced the ground truth, with path:line evidence.
 2. Phase 2: four proposals (tokens-first, structure-first, locale-symmetry, user-first) and three judges (maintainer, business user, API consistency); draft 1 was synthesized.
 3. Phase 3: six critics reviewed draft 1 with their own prototype copies; concept v1 fixed every accepted finding.
-4. Phase 4a: after the maintainer's answers, parallel workstreams in separate prototype copies: validation levels, country layouts, Typst 0.14 compatibility, naming (`rename-map.tsv`), four designer pairs with friction logs, and a design review (must-fix lists, twelve API gaps).
+4. Phase 4a: after the maintainer's answers, parallel workstreams in separate prototype copies: validation levels, country layouts, Typst 0.14 compatibility, naming (`process/phase-4/rename-map.tsv`), four designer pairs with friction logs, and a design review (must-fix lists, twelve API gaps).
 5. Phase 4b: merge stages in one git repository: merge-core (validation, country layouts, decisions), rename, three API branches (frame, body, tokens), four preset branches with one looks kit, and an audit against every promise. Then this document and the figures.
 6. Fix stages: `fix-layouts` (dense header row, Swiss layouts without a QR-bill zone, one page for small invoices; 122 checks) and `fix-polish` (serif letterhead, API hygiene, localised report, doc logos; 10 checks), merged into the one repository; then the figures were rebuilt and this document updated.
+7. Implementation: the engine moved from the prototype into `src/`, without the deleted 0.4 theme files and merged with the bug fixes that main received in the meantime (payment reference, unit plurals, items kept together across page breaks, ZUGFeRD profiles and item identifiers, document language); the prototype was removed, its tests were ported to the tytanic suite, and the user documentation was written in `docs/docs/api-reference/theme/`.
 
-Every stage ran the suite on Typst 0.15.1 (Windows) and 0.14.2 (NixOS in WSL) before handing over. Formatting: typstyle 0.14.1 on every `.typ` file of the prototype, including the generated doc snippets (so the `typst` blocks of this document are typstyle-formatted too), prettier 3.6.2 on this document.
+Up to the fix stages, every stage ran the prototype suite on Typst 0.15.1 (Windows) and 0.14.2 (NixOS in WSL) before handing over. Formatting: typstyle 0.14.1 on every `.typ` file of the prototype and on the `typst` blocks of this document, prettier 3.6.2 on this document.
 
 **Sources** (in `process/`, kept as produced; local paths are replaced by `<session>` and `<repo>`):
 
@@ -1631,19 +1592,6 @@ Every stage ran the suite on Typst 0.15.1 (Windows) and 0.14.2 (NixOS in WSL) be
 | proposals | `process/designs/tokens-first.md`, `structure-first.md`, `locale-symmetry.md`, `user-first.md`                                                                                                                     |
 | verdicts  | `process/designs/verdict-maintainer.md`, `verdict-business-user.md`, `verdict-api-consistency.md`, `_panel-digest.md`                                                                                              |
 | review    | `process/review/draft-1.md`, `process/review/critique-{snippets,semantics,future-proofing,coverage,maintainer-cost,platform}.md`                                                                                   |
-| phase 4   | the stage reports (validation-levels, country-layouts, compat-014, naming, looks-a to looks-d, design review, merge-core, rename, merge-api, merge-presets, audit), collected by the orchestrator                  |
+| phase 4   | `process/phase-4/phase-4a-results.md` (workstreams, design review), `phase-4b-results.md` (merge stages, audit), `phase-4c-results.md` (fix stages), `core-bugs.md`, `rename-map.tsv`                              |
 
-**Prototype layout** (`prototype/`, run from its root; `scripts/run-all.sh` needs LF line endings, enforced by `.gitattributes`).
-
-| Path                                                                                                                                                    | Content                                                                        |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `src/theming/`, `src/validation/`, `src/utils/patch.typ`, `src/public/{theme,layout,custom}.typ`                                                        | the engine (§12)                                                               |
-| `src/theming/looks/`                                                                                                                                    | the looks kit, the serif family and the other looks                            |
-| `tests/coverage.typ`, `semantics.typ`, `naming.typ`, `presets-set.typ`, `layout-region.typ`, `dense-header.typ`, `swiss.typ`, `one-page.typ`, `polish/` | assertion suites                                                               |
-| `tests/errors/`, `tests/validation/`                                                                                                                    | 41 compile-fail cases; draft, strict, api and themed tests                     |
-| `tests/envelopes.typ`, `tests/proof.typ`                                                                                                                | envelope fit table and proof renders                                           |
-| `tests/gallery/<preset>.typ`                                                                                                                            | one industry invoice per experimental preset                                   |
-| `tests/doc/`                                                                                                                                            | docs prelude, assets and one generated test per `typst` block of this document |
-| `tests/compat/`, `baseline-042/`                                                                                                                        | PDF-standard document and benchmark                                            |
-| `scripts/run-all.sh` + `checks-*.sh`, `mutation.sh`, `pdf-standards.sh`, `bench.sh`, `contact-sheet.sh`, `make-doc-tests.py`                            | runners; `make-doc-tests.py` generates `tests/doc/` from this document         |
-| `scripts/figures-build.sh`, `tests/figures-*.typ`                                                                                                       | rebuilds `../figures/` (needs Python with Pillow for the palette step)         |
+**Prototype and suite (superseded).** The prototype was a copy of the package with the new engine and a shell-driven suite of 752 checks, plus PDF-standard checks, a benchmark against 0.4.2 and the figure builder. On this branch the engine is in `src/` (§12), and the tytanic suite verifies it: engine tests in `tests/theme/`, preset galleries in `tests/presets/`, one page per layout in `tests/layouts/`, validation tests in `tests/validation/`, and the migrated existing tests, which keep their locations. The user documentation is in `docs/docs/api-reference/theme/` (overview, customization, layouts, parts and migration), with a validation page under `docs/docs/api-reference/invoice/`. The numbers in §13 and the figures in `figures/` come from the prototype and are kept as they are; the prototype itself remains in the git history.
