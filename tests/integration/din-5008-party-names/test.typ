@@ -64,7 +64,7 @@
 
   // EPC-QR code
   let printed = query(<bank-details>).map(it => it.value)
-  if printed.len() == 0 { return }
+  assert.eq(printed.len(), 1, message: "printed bank details")
   let epc = find-all(printed.first(), image).first().alt.split("\n")
   assert.eq(epc.at(5), seller, message: "EPC beneficiary")
 
