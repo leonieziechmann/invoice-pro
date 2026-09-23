@@ -701,6 +701,16 @@
   text-or-none(name)
 }
 
+// The text of a party detail that may be given as several lines, e.g.
+// `legal-info: ("Sitz: München", "Amtsgericht München, HRB 98765")`: its
+// lines joined by ", ", as `info` prints them.
+#let _lines-text(value) = {
+  if type(value) == array {
+    value = value.map(text-or-none).filter(line => line != none).join(", ")
+  }
+  text-or-none(value)
+}
+
 // A typed identifier of the `id` module (e.g. `id.siret(..)`): a dictionary
 // with the `kind` of the identifier and the `problems` found when it was made.
 #let _is-typed-id(value) = (
@@ -770,9 +780,9 @@
   (
     (
       name: _party-name(party),
-      trading-name: text-or-none(_field(party, "trading-name")),
+      trading-name: _lines-text(_field(party, "trading-name")),
       legal-id: _scheme-id(party.at("legal-id", default: none)),
-      legal-info: text-or-none(_field(party, "legal-info")),
+      legal-info: _lines-text(_field(party, "legal-info")),
       vat-id: if use-vat-id { vat-id } else { none },
       stated-vat-id: vat-id,
       tax-nr: _identifier(party.at("tax-nr", default: none)),

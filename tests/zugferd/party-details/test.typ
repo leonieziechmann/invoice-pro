@@ -194,6 +194,14 @@
   assert.eq(rules(m), ())
 
   // --- 4. Trading names (BT-28, BT-45) and legal information (BT-33) ---
+  // Given as several lines, they are joined as `info` prints them
+  assert.eq(
+    party-model(
+      (legal-info: ("Sitz: München", [Amtsgericht München, *HRB 98765*])),
+      role: "seller",
+    ).legal-info,
+    "Sitz: München, Amtsgericht München, HRB 98765",
+  )
   let m = base
   m.seller.trading-name = "Muster Design"
   m.seller.legal-info = "Geschäftsführer: Max Muster"
