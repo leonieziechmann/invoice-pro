@@ -71,6 +71,7 @@
     surcharge: "Surcharge",
     subtotal: "Subtotal",
     prepayment: "Prepayment",
+    conjunction: "and",
   ),
 
   summary: (

@@ -1,5 +1,7 @@
 #import "../loom-wrapper.typ": data-motif, loom, loom-key
-#import "../logic/calc-item.typ": calculate-item-data
+#import "../logic/calc-item.typ": (
+  calculate-item-data, require-positive-base-quantity,
+)
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
 #import "../data/tax.typ" as m-tax
@@ -34,6 +36,7 @@
         s.amount
       },
       description: s.description,
+      tax: s.at("tax", default: none),
     ))
   } else if modifier-type == dictionary {
     modifier
@@ -126,6 +129,7 @@
 
   types.require(quantity, "item::quantity", auto, types.decimal-like)
   types.require(base-quantity, "item::base-quantity", auto, types.decimal-like)
+  require-positive-base-quantity(base-quantity, "item")
   types.require(
     unit,
     "item::unit",
@@ -215,31 +219,13 @@
         input-gross,
         default: ctx.at("tax-mode", default: "exclusive") == "inclusive",
       )
-      update("tax", t => if type(t) != ratio { t } else {
-        let infer-tax = ctx
-          .at("locale", default: (:))
-          .at("normalize", default: (:))
-          .at("infer-tax", default: (..) => panic(
-            "item::tax can not be of type `ratio`.",
-          ))
-        infer-tax(t)
-      })
+      // Without a tax from anywhere (`tax: none` on the invoice), the item is
+      // zero rated, marked as implicit (see `tax.implicit-zero`).
+      update("tax", t => m-tax.resolve(ctx, t, "item"))
       derive(
         "tax",
-        {
-          if type(tax) == ratio {
-            let infer-tax = ctx
-              .at("locale", default: (:))
-              .at("normalize", default: (:))
-              .at("infer-tax", default: (..) => panic(
-                "item::tax can not be of type `ratio`.",
-              ))
-            infer-tax(tax)
-          } else {
-            m-tax.to-tax(tax)
-          }
-        },
-        default: m-tax.zero(),
+        m-tax.resolve(ctx, tax, "item"),
+        default: m-tax.implicit-zero(),
       )
 
       if ctx.at("tax-exempt-small-biz", default: false) {

@@ -62,7 +62,7 @@ You must provide either a `price` (unit price) **or** a `total` (fixed line tota
 | `name`          | `str` \| `content`                                                   | The primary title of the item.                                                                                                                                                                                                                                                     |
 | `description`   | `str` \| `content` \| `auto` \| `none`                               | Detailed text appearing below the name.                                                                                                                                                                                                                                            |
 | `quantity`      | `number` \| `auto`                                                   | The numeric amount being billed (defaults to 1).                                                                                                                                                                                                                                   |
-| `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g).                                                                                                                                                                                                                     |
+| `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g). Must be greater than 0.                                                                                                                                                                                             |
 | `unit`          | `str` \| `content` \| `dictionary` \| `function` \| `auto` \| `none` | The unit of measurement (e.g., `"h"`, `"pcs"`). Pass a function from the `unit` module or a dictionary for ZUGFeRD compliance — see below. With `auto`, it inherits the unit of an enclosing `group` or `apply`, otherwise it defaults to `unit.piece`.                            |
 | `date`          | `datetime` \| `array` \| `auto` \| `none`                            | When the service was provided. Use a single `datetime` or a range array `(datetime, datetime)`.                                                                                                                                                                                    |
 | `price`         | `number` \| `auto`                                                   | The price per unit.                                                                                                                                                                                                                                                                |
@@ -150,9 +150,9 @@ Groups multiple items together as a virtual single item while automatically aggr
 | Key             | Type                                                                 | Description                                                                                                                      |
 | --------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `name`          | `str` \| `content`                                                   | The name of the bundle.                                                                                                          |
-| `description`   | `str` \| `content` \| `auto` \| `none`                               | If set to `auto`, it automatically generates a comma-separated list of all child item names.                                     |
-| `quantity`      | `number` \| `auto`                                                   | The quantity of the bundle itself.                                                                                               |
-| `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g).                                                                   |
+| `description`   | `str` \| `content` \| `auto` \| `none`                               | If set to `auto`, it lists the names of all child items ("A, B and C", in the language of the locale).                           |
+| `quantity`      | `number` \| `auto`                                                   | The quantity of the bundle itself (defaults to 1). A nested bundle does not inherit it.                                          |
+| `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g). Must be greater than 0.                                           |
 | `unit`          | `str` \| `content` \| `dictionary` \| `function` \| `auto` \| `none` | The unit of measurement for the bundle. Accepts the same dictionary form, function, or string as `item` for ZUGFeRD compliance.  |
 | `item-id`       | `str` \| `dictionary` \| `auto` \| `none`                            | Article identifiers of the bundle for the ZUGFeRD XML. Same forms as on `item`. See [above](#the-item-id-parameter-and-zugferd). |
 | `date`          | `datetime` \| `array` \| `auto` \| `none`                            | If set to `auto`, calculates the date range based on the earliest and latest dates of the items inside the bundle.               |
@@ -170,6 +170,26 @@ If you place items with varying tax rates (e.g., mixing 19% and 7% items) or dif
 **Why this matters:**
 This automatic splitting ensures that your invoice remains legally compliant. Total amounts, sub-totals, and any modifiers applied to the bundle (such as a 10% bundle-wide discount) are proportionally distributed and calculated correctly across the different tax rates without any manual intervention required from you.
 :::
+
+Each line is named after the bundle and its VAT rate, formatted like everywhere else on the invoice (e.g., `Gift box (5,5% S)`).
+
+### Quantities and Modifiers of a Bundle
+
+The items of a bundle make up **one unit** of it (per `base-quantity`); the bundle's line is that unit price times its `quantity`. Modifiers inside a bundle behave like the modifiers of an item:
+
+- A **percentage** applies to the whole line, i.e. to every unit: 2 packages of 100.00 with `discount(.., amount: 10%)` are billed 200.00 − 20.00 = 180.00.
+- An **absolute amount** applies **once per line**, whatever the quantity: 2 packages of 100.00 with `discount(.., amount: 5)` are billed 195.00. For an amount per package, put the modifier on the items or multiply it yourself.
+
+A bundle can contain other bundles. A nested bundle is part of the enclosing bundle's line only (it is not listed on its own), and its `quantity` is the number of it in **one** enclosing bundle:
+
+```typst
+#bundle([Office kit], quantity: 3)[      // 3 × (2 × 100.00 − 10%) = 540.00
+  #bundle([Chair set], quantity: 2)[
+    #item([Chair], price: 100.00)
+    #discount([Set discount], amount: 10%)
+  ]
+]
+```
 
 ---
 
@@ -279,6 +299,7 @@ Helper Functions `discount(..)` and `surcharge(..)` use the exact same parameter
 | `amount`      | `ratio` \| `decimal-like` \| `auto`    | If a `ratio` (e.g., `-10%`), it acts as a relative percentage. If a `decimal-like` number (e.g., `15.00`), it acts as an absolute monetary amount.                         |
 | `input-gross` | `bool` \| `auto`                       | For absolute monetary amounts (e.g., `10.00` instead of `10%`), this defines if the entered value already includes tax. Follows standard cascading logic if set to `auto`. |
 | `description` | `str` \| `content` \| `auto` \| `none` | Extra context or conditions for the modifier.                                                                                                                              |
+| `tax`         | `ratio` \| `dictionary` \| `auto`      | Pins the modifier to one VAT category (e.g., `tax.vat(19%)` for shipping). If `auto`, it is spread over the VAT categories (see below). Not allowed to differ on an item.  |
 
 ### `input-gross`
 
@@ -307,6 +328,26 @@ If your modifier's `input-gross` setting does **not** match the global `tax-mode
 
 Because the system balances these adjustments across all relevant tax brackets to remain legally compliant, you may occasionally see a **1-cent difference** in the final total due to rounding.
 :::
+
+### VAT Categories of Document and Bundle Modifiers
+
+Every discount or surcharge belongs to a VAT category, just like an item. A modifier of an item always has the item's category. A modifier of the whole invoice or of a bundle is spread over the categories of its items:
+
+- A **percentage** applies to the total of every VAT category.
+- An **absolute amount** goes to the only VAT category, if there is one, even if its items add up to 0 or less (e.g., shipping for a free sample, a handling fee on a credit note). With several categories, it is split in proportion to their totals. Only the categories whose total has the sign of the whole invoice take part: a voucher on an invoice with sales at 19% and a return at 7% reduces the 19% sales only and never turns into a charge.
+
+Use `tax` to pin a modifier to one VAT category instead, e.g. shipping that is taxed at the standard rate although all goods are at a reduced rate. The category does not need any item:
+
+```typst
+#line-items[
+  #item([Book], price: 25.00, tax: tax.vat(7%))
+  #surcharge([Shipping], amount: 4.90, tax: tax.vat(19%))
+]
+```
+
+A pinned percentage applies to the items of its category only (with none, it is 0). On the invoice of a small business (`tax-exempt-small-biz: true`), which charges no VAT, `tax` is replaced by the small business scheme, just like the `tax` of the items.
+
+If the split is undefined (the VAT categories add up to 0, or there are no items at all), the invoice does not compile and asks for `tax`: an amount is never dropped silently.
 
 ---
 

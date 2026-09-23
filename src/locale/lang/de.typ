@@ -71,6 +71,7 @@
     surcharge: "Zuschlag",
     subtotal: "Zwischensumme",
     prepayment: "Anzahlung",
+    conjunction: "und",
   ),
 
   summary: (

@@ -72,18 +72,18 @@ The `locale.custom` module provides specialized functions to override specific g
 
 These functions allow you to change the text labels printed on the invoice.
 
-| Function                         | Parameters                                                                                                                        | Description                                              |
-| :------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------- |
-| `locale.custom.document(..)`     | `invoice`                                                                                                                         | Document titles (e.g., "Invoice", "Gutschrift").         |
-| `locale.custom.address(..)`      | `recipient`, `sender`                                                                                                             | Labels above addresses.                                  |
-| `locale.custom.reference(..)`    | `tax-number`, `invoice-number`, `vat-id`, `invoice-date`, `service-time`                                                          | Labels for the metadata header.                          |
-| `locale.custom.line-items(..)`   | `position`, `description`, `quantity`, `unit-price`, `price`, `total`, `vat`, `net`, `gross`, `discount`, `surcharge`, `subtotal` | Column headers and specific terms inside the item table. |
-| `locale.custom.summary(..)`      | `sum`, `vat-tax`, `total`, `including`, `excluding`                                                                               | Labels for the final calculation block.                  |
-| `locale.custom.global-info(..)`  | `tax-statement`, `unit`, `quantity`, `date`                                                                                       | General statements below the table.                      |
-| `locale.custom.bank-details(..)` | `account-holder`, `bank`, `iban`, `bic`, `reference`                                                                              | Labels for the bank details block.                       |
-| `locale.custom.payment(..)`      | `text`, `text-due`, `deadline-date`, `deadline-days`, `deadline-soon`                                                             | Text and deadline phrasing for the payment goal.         |
-| `locale.custom.signature(..)`    | `closing`                                                                                                                         | The sign-off text (e.g., "Sincerely").                   |
-| `locale.custom.legal(..)`        | `vat-exemption`                                                                                                                   | The legal notice for small business exemptions.          |
+| Function                         | Parameters                                                                                                                                       | Description                                              |
+| :------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------- |
+| `locale.custom.document(..)`     | `invoice`                                                                                                                                        | Document titles (e.g., "Invoice", "Gutschrift").         |
+| `locale.custom.address(..)`      | `recipient`, `sender`                                                                                                                            | Labels above addresses.                                  |
+| `locale.custom.reference(..)`    | `tax-number`, `invoice-number`, `vat-id`, `invoice-date`, `service-time`                                                                         | Labels for the metadata header.                          |
+| `locale.custom.line-items(..)`   | `position`, `description`, `quantity`, `unit-price`, `price`, `total`, `vat`, `net`, `gross`, `discount`, `surcharge`, `subtotal`, `conjunction` | Column headers and specific terms inside the item table. |
+| `locale.custom.summary(..)`      | `sum`, `vat-tax`, `total`, `including`, `excluding`                                                                                              | Labels for the final calculation block.                  |
+| `locale.custom.global-info(..)`  | `tax-statement`, `unit`, `quantity`, `date`                                                                                                      | General statements below the table.                      |
+| `locale.custom.bank-details(..)` | `account-holder`, `bank`, `iban`, `bic`, `reference`                                                                                             | Labels for the bank details block.                       |
+| `locale.custom.payment(..)`      | `text`, `text-due`, `deadline-date`, `deadline-days`, `deadline-soon`                                                                            | Text and deadline phrasing for the payment goal.         |
+| `locale.custom.signature(..)`    | `closing`                                                                                                                                        | The sign-off text (e.g., "Sincerely").                   |
+| `locale.custom.legal(..)`        | `vat-exemption`                                                                                                                                  | The legal notice for small business exemptions.          |
 
 :::note
 When the invoice contains a `#prepayment(..)`, the payment goal states the remaining amount due and uses `text-due` instead of `text`. If you override `text`, override `text-due` as well so both sentences stay consistent:

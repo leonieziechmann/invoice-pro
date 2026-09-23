@@ -1,5 +1,20 @@
 #import "../utils/coercion.typ"
+#import "../data/tax.typ" as m-tax
 
+/// Panics unless `base-quantity` (the quantity the price refers to) is above
+/// 0: the price is divided by it (BT-149, PEPPOL-EN16931-R121).
+#let require-positive-base-quantity(base-quantity, name) = {
+  let value = coercion.to-decimal(base-quantity)
+  if value == auto or value == none { return }
+  if value <= 0 {
+    panic(
+      name
+        + "::base-quantity must be greater than 0, got "
+        + str(value).replace("\u{2212}", "-")
+        + ". It is the quantity the price refers to, e.g. `base-quantity: 100` for a price per 100 pieces.",
+    )
+  }
+}
 
 #let calculate-item-data(ctx, name) = {
   let to-dec = coercion.to-decimal
@@ -10,6 +25,7 @@
   // 1. Quantity & Uni Normalization
   let quantity = to-dec(ctx.quantity)
   let base-quantity = to-dec(ctx.base-quantity)
+  require-positive-base-quantity(base-quantity, "item")
   let quantity-multiplier = quantity / base-quantity
   let unit = ctx.unit
 
@@ -50,6 +66,28 @@
   }
 
   let normalized-modifiers = raw-modifiers.map(modifier => {
+    // A modifier of an item always has the item's VAT category.
+    let pinned = modifier.at("tax", default: none)
+    if (
+      pinned not in (none, auto)
+        and m-tax.to-tax-key(pinned) != m-tax.to-tax-key(ctx.tax)
+    ) {
+      let text(value) = {
+        let result = coercion.to-string(value)
+        if type(result) == str { result } else { repr(value) }
+      }
+      panic(
+        "The modifier `"
+          + text(modifier.name)
+          + "` of the item `"
+          + text(name)
+          + "` is pinned to the VAT category "
+          + m-tax.describe(pinned)
+          + ", but the item has "
+          + m-tax.describe(ctx.tax)
+          + ". A modifier of an item always has the VAT category of the item: remove its `tax:`.",
+      )
+    }
     let is-relative = type(modifier.amount) == ratio
 
     let mod-type = if is-relative { "relative" } else { "absolute" }
@@ -83,7 +121,9 @@
   let final-tax = (
     rate: ctx.tax.rate,
     category: ctx.tax.category,
-    grounds: ctx.tax.grounds,
+    grounds: ctx.tax.at("grounds", default: none),
+    // No tax was set anywhere (`tax: none`), see `tax.implicit-zero`.
+    ..if m-tax.is-implicit(ctx.tax) { (implicit: true) },
   )
 
   // 6. Return Data

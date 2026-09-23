@@ -22,8 +22,9 @@
     /// The standard number of subunits/decimal places for financial totals (e.g., 2).
     decimals: 2,
 
-    /// The allowed number of decimal places for singular unit prices.
-    /// EN 16931 allows up to 4 decimal places for unit prices (BT-146).
+    /// The number of decimal places of unit prices (BT-146), used by
+    /// `normalize.money-fine` and the `currency-fine` format. EN 16931 does
+    /// not limit these decimals; 4 is the common precision of unit prices.
     decimals-fine: 4,
   )
 

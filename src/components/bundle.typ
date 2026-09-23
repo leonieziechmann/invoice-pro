@@ -1,6 +1,7 @@
 #import "../loom-wrapper.typ": compute-motif, loom, weave
 #import "../logic/modifier-applicator.typ": modifier-applicator
 #import "../logic/calc-bundle.typ": calculate-bundle
+#import "../logic/calc-item.typ": require-positive-base-quantity
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
 #import "../data/unit.typ"
@@ -83,6 +84,14 @@
   types.require(reference, "bundle::reference", none, auto, str)
 
   types.require(body, "bundle::body", none, content)
+  require-positive-base-quantity(base-quantity, "bundle")
+
+  let bundle-quantity = if quantity == auto { decimal("1") } else {
+    coercion.to-decimal(quantity)
+  }
+  let bundle-base-quantity = if base-quantity == auto { decimal("1") } else {
+    coercion.to-decimal(base-quantity)
+  }
 
   compute-motif(
     name: "bundle",
@@ -92,18 +101,12 @@
       derive("description", description)
       put("bundle-description", ctx.at("description", default: description))
 
+      // A nested bundle does not inherit the quantities of the enclosing one:
+      // its quantity is the number of it in one unit of the enclosing bundle.
       remove("quantity")
-      derive(
-        "bundle-quantity",
-        coercion.to-decimal(quantity),
-        default: decimal("1"),
-      )
+      put("bundle-quantity", bundle-quantity)
       remove("base-quantity")
-      derive(
-        "bundle-base-quantity",
-        coercion.to-decimal(base-quantity),
-        default: decimal("1"),
-      )
+      put("bundle-base-quantity", bundle-base-quantity)
       // Without an own unit, use the unresolved unit a `group` or `apply`
       // cascades. The resolved unit is kept under `bundle-unit`, so "unit"
       // still carries that cascaded input to the bundled items.
@@ -115,9 +118,7 @@
         m-unit.resolve(
           unit-input,
           ctx.locale,
-          quantity: if quantity != auto { coercion.to-decimal(quantity) } else {
-            ctx.at("bundle-quantity", default: decimal("1"))
-          },
+          quantity: bundle-quantity,
           default: m-unit.pcs,
         ),
       )
@@ -145,31 +146,13 @@
         default: ctx.at("tax-mode", default: "exclusive") == "inclusive",
       )
       ensure("tax-mode", "exclusive")
-      update("tax", t => if type(t) != ratio { t } else {
-        let infer-tax = ctx
-          .at("locale", default: (:))
-          .at("normalize", default: (:))
-          .at("infer-tax", default: (..) => panic(
-            "item::tax can not be of type `ratio`.",
-          ))
-        infer-tax(t)
-      })
+      // Without a tax from anywhere (`tax: none` on the invoice), the items
+      // are zero rated, marked as implicit (see `tax.implicit-zero`).
+      update("tax", t => m-tax.resolve(ctx, t, "bundle"))
       derive(
         "tax",
-        {
-          if type(tax) == ratio {
-            let infer-tax = ctx
-              .at("locale", default: (:))
-              .at("normalize", default: (:))
-              .at("infer-tax", default: (..) => panic(
-                "item::tax can not be of type `ratio`.",
-              ))
-            infer-tax(tax)
-          } else {
-            m-tax.to-tax(tax)
-          }
-        },
-        default: m-tax.zero(),
+        m-tax.resolve(ctx, tax, "bundle"),
+        default: m-tax.implicit-zero(),
       )
 
       derive("item-id", item-id)

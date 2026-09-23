@@ -73,6 +73,7 @@ Column headers and structural labels for the line-items table.
 | `discount`    | `str` | Label for applied discounts.                          |
 | `surcharge`   | `str` | Label for applied surcharges.                         |
 | `subtotal`    | `str` | Label indicating a running subtotal within the table. |
+| `conjunction` | `str` | Word before the last name of a bundle description.    |
 
 ### `summary`
 

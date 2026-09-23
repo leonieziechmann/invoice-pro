@@ -76,6 +76,7 @@
     surcharge: "Maggiorazione",
     subtotal: "Subtotale",
     prepayment: "Acconto",
+    conjunction: "e",
   ),
 
   /// Etichette per la sezione riepilogativa (piè di pagina della tabella)

@@ -81,6 +81,8 @@
     surcharge: "Surcharge",
     subtotal: "Subtotal",
     prepayment: "Prepayment",
+    /// Joins the last two item names of an automatic bundle description.
+    conjunction: "and",
   ),
 
   /// Labels for the summary section (footer of the table)

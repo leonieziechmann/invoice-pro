@@ -53,20 +53,6 @@
   let taxes = (:)
 
   for (key, group) in tax-groups.groups.pairs() {
-    let item-discounts-total = group
-      .items
-      .map(i => i.discounts)
-      .flatten()
-      .map(s => s.absolute)
-      .sum(default: decimal("0"))
-
-    let item-surcharges-total = group
-      .items
-      .map(i => i.surcharge)
-      .flatten()
-      .map(s => s.absolute)
-      .sum(default: decimal("0"))
-
     let scope-modifier-totals = modifier-groups.at(key)
 
     let unmodified-group-total = group.total
@@ -75,7 +61,14 @@
     let tax = (
       rate: group.tax.rate,
       category: group.tax.category,
+      // Every distinct exemption ground of the category, joined.
       grounds: group.tax.at("grounds", default: none),
+      // The same grounds one by one, for the printed notes.
+      grounds-list: group.at("grounds-list", default: ()),
+      // Items of the category without exemption grounds.
+      missing-grounds: group.at("missing-grounds", default: 0),
+      // Some item has no tax at all (`tax: none`), see `tax.implicit-zero`.
+      implicit: group.tax.at("implicit", default: false),
       absolute: decimal("0"),
       basis: decimal("0"),
     )

@@ -39,32 +39,28 @@
   (code: "Z", name: "Zero rated goods"),
 )
 
+// The key of the VAT group (rate and category) a tax belongs to. The rate may
+// be a ratio (`19%`) or decimal-like (`0.19`), as in a hand-built dictionary.
 #let to-tax-key(tax) = {
-  return str(coercion.to-decimal(tax.rate)) + "-" + tax.category
+  return str(coercion.to-ratio(tax.rate)) + "-" + tax.category
 }
 
-#let to-tax(value) = {
-  if type(value) == ratio {
-    vat(value)
-  } else if type(value) == dictionary {
-    value
-  } else if value == "exempt" {
-    exempt()
-  } else if value == "reverse-charge" {
-    reverse-charge()
-  } else if value == auto {
-    auto
-  } else if value == none {
-    zero()
-  } else {
-    panic("Invalid Tax Type!")
-  }
-}
-
+/// Creates a tax of any UNTDID 5305 category, for cases the constructors below
+/// do not cover.
+///
+/// -> dictionary
 #let new(
+  /// The tax rate, e.g. `19%` or `0%`.
+  /// -> ratio | int | float | decimal | str
   rate: 0%,
+  /// The UNTDID 5305 tax category code, e.g. `"S"` or `"E"`.
+  /// -> str
   category: "",
+  /// A human-readable identifier of the tax type.
+  /// -> str | content
   label: "",
+  /// The legal reason of an exemption or a 0% rate.
+  /// -> str | content | none
   grounds: none,
 ) = (
   rate: coercion.to-ratio(rate),
@@ -248,3 +244,114 @@
   label: "zero",
   grounds: grounds,
 )
+
+// The tax of an item for which no tax is set anywhere (`tax: none` on the
+// invoice). The printed invoice treats it as zero rated (Z), but "no tax" does
+// not say which of the 0% categories (Z, E, O, ...) applies, so it is marked
+// `implicit` and an e-invoice must not declare it as a zero rated supply.
+#let implicit-zero() = (..zero(), label: "implicit-zero", implicit: true)
+
+// A tax for messages, e.g. "19% S".
+#let describe(tax) = (
+  str(calc.round(float(coercion.to-ratio(tax.rate)) * 100, digits: 2))
+    + "% "
+    + tax.category
+)
+
+// Whether a tax is the placeholder of `implicit-zero`.
+#let is-implicit(tax) = (
+  type(tax) == dictionary and tax.at("implicit", default: false) == true
+)
+
+// A hand-built tax dictionary, normalized like the constructors: the rate
+// becomes a decimal ratio and missing keys get their defaults. Other keys
+// (such as `implicit`) are kept.
+#let normalize(value) = (
+  value
+    + new(
+      rate: value.at("rate", default: 0%),
+      category: value.at("category", default: ""),
+      label: value.at("label", default: ""),
+      grounds: value.at("grounds", default: none),
+    )
+)
+
+#let to-tax(value) = {
+  if type(value) == ratio {
+    vat(value)
+  } else if type(value) == dictionary {
+    normalize(value)
+  } else if value == "exempt" {
+    exempt()
+  } else if value == "reverse-charge" {
+    reverse-charge()
+  } else if value == auto {
+    auto
+  } else if value == none {
+    implicit-zero()
+  } else {
+    panic("Invalid Tax Type!")
+  }
+}
+
+// Resolves the tax input of a component (`name` is used in error messages):
+// a ratio is mapped to a tax by the region of the locale, a dictionary is
+// normalized, `none` becomes `implicit-zero` and `auto` stays `auto`.
+#let resolve(ctx, value, name) = {
+  if type(value) == ratio {
+    let infer-tax = (
+      ctx
+        .at("locale", default: (:))
+        .at("normalize", default: (:))
+        .at("infer-tax", default: (..) => panic(
+          name + "::tax can not be of type `ratio`.",
+        ))
+    )
+    infer-tax(value)
+  } else {
+    to-tax(value)
+  }
+}
+
+// --- Exemption grounds ---
+
+// Whether exemption grounds carry any text.
+#let has-grounds(grounds) = grounds not in (none, "", [], [ ])
+
+// The text an exemption ground is compared by, so that the same reason given
+// as a string and as content is listed once.
+#let grounds-key(grounds) = {
+  let text = coercion.to-string(grounds)
+  if type(text) == str { text.trim() } else { repr(grounds) }
+}
+
+// The distinct exemption grounds of a tax. The virtual item of a bundle can
+// carry several (`grounds-list`), every other tax at most one (`grounds`).
+#let grounds-of(tax) = {
+  let list = tax.at("grounds-list", default: none)
+  if type(list) == array { return list }
+  let grounds = tax.at("grounds", default: none)
+  if has-grounds(grounds) { (grounds,) } else { () }
+}
+
+// Adds the grounds of `more` that are not in `list` yet (compared by text).
+#let merge-grounds(list, more) = {
+  let keys = list.map(grounds-key)
+  for grounds in more {
+    let key = grounds-key(grounds)
+    if key not in keys {
+      list.push(grounds)
+      keys.push(key)
+    }
+  }
+  list
+}
+
+// All exemption grounds of a VAT category as one value: `none`, the single
+// ground, or every distinct ground joined with "; " (EN 16931 allows one
+// exemption reason, BT-120, per VAT category).
+#let join-grounds(list) = {
+  if list.len() == 0 { none } else if list.len() == 1 { list.first() } else {
+    list.join("; ")
+  }
+}

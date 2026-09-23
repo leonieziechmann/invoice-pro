@@ -76,6 +76,7 @@
     surcharge: "Recargo",
     subtotal: "Subtotal",
     prepayment: "Anticipo",
+    conjunction: "y",
   ),
 
   /// Etiquetas para la sección de resumen (pie de la tabla)

@@ -230,7 +230,18 @@ ZUGFeRD requires line-item units to comply with the **UN/ECE Recommendation 20**
   ```
 - **Automatic Mapping:** As a fallback, a string that is exactly a unit code (e.g. `"H87"`) is used as is, and common unit strings (such as `"h"`, `"hrs"`, `"Std."` for hours, or `"days"`, `"Tag"` for days) are mapped to their official codes. Any other string becomes `C62` ("one").
 
-Unit codes are checked against the UN/ECE Recommendation 20 code list. Prices keep up to six decimals, and a `base-quantity` (e.g. a price per 100 pieces) is written as the price base quantity (BT-149).
+Unit codes are checked against the UN/ECE Recommendation 20 code list. Unit prices are rounded to the fine precision of the locale (`normalize.money-fine`, 4 decimals by default) before the line totals are calculated, and the printed invoice and the XML use this rounded price. For prices with more decimals (e.g. energy tariffs), round them more finely, up to 6 decimals:
+
+```typst
+#show: invoice.with(
+  locale: locale.de-de.with(
+    locale.custom.normalize(money-fine: x => calc.round(x, digits: 6)),
+  ),
+  // ...
+)
+```
+
+A `base-quantity` (e.g. a price per 100 pieces) is written as the price base quantity (BT-149); it must be greater than 0.
 
 ### 3. Tax Category Codes
 
@@ -246,7 +257,11 @@ Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the 
 
 EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `M`. The special constructors in `tax.special` that map to other categories (e.g. `lower-rate`, the margin schemes or split payment `B`) cannot be used for e-invoices.
 
-Where EN 16931 requires an exemption reason (`AE`, `K`, `G`, `O`), the standard text (e.g. "Reverse charge") is used unless you pass your own `grounds`. For the taxed categories (`S`, `Z`, `L`, `M`), `grounds` are printed on the invoice but left out of the XML, which does not allow them there.
+Where EN 16931 requires an exemption reason (`AE`, `K`, `G`, `O`), the standard text (e.g. "Reverse charge") is used unless you pass your own `grounds`. For the taxed categories (`S`, `Z`, `L`, `M`), `grounds` are printed on the invoice but left out of the XML, which does not allow them there. If the items of one category have different `grounds`, each of them is printed, and the XML joins them with `; ` into the one exemption reason (BT-120) of the category.
+
+`tax: none` on the invoice is not a tax category: the items are printed with 0%, but an e-invoice must say why no VAT is charged, so choose one of the functions above instead.
+
+Document level discounts and surcharges (BG-20, BG-21) belong to a VAT category as well. An absolute amount is split over the categories of the items (see [VAT categories of modifiers](./api-reference/line-items/index.md#vat-categories-of-document-and-bundle-modifiers)); pin it to one with `tax`, e.g. `surcharge([Shipping], amount: 4.90, tax: tax.vat(19%))`.
 
 Avoid using raw percentages (e.g., `19%`) directly on items if you need strict validation, as using the `tax` module functions guarantees the category codes are assigned correctly.
 

@@ -1,4 +1,5 @@
 #import "../../../utils/types.typ"
+#import "../../../data/tax.typ" as m-tax
 
 #let render-global-info(
   ctx,
@@ -127,25 +128,37 @@
     }
   }
 
-  // Tax Exemption Grounds
+  // Tax Exemption Grounds: every distinct ground of every VAT category, each
+  // on its own line (a category can have items exempt for different reasons).
+  let rendered-keys = rendered-grounds.map(m-tax.grounds-key)
   for t in data.at("taxes", default: ()) {
-    let grounds = t.at("grounds", default: none)
-    if grounds != none and grounds != "" and grounds != [] {
-      if grounds not in rendered-grounds {
-        rendered-grounds.push(grounds)
-        let t-is-zero = (
-          t.at("raw-rate", default: none) == 0%
-            or t.at("raw-rate", default: none) == 0
-            or t.rate == [0%]
-            or t.rate == [0,0%]
-            or t.rate == [0.0%]
-        )
-        let marker = if not t-is-zero {
-          t.at("marker", default: none)
-        } else {
-          none
-        }
-        let marker-str = if marker != none and layout.show-total {
+    let grounds-list = t.at("grounds-list", default: none)
+    if type(grounds-list) != array {
+      grounds-list = m-tax.grounds-of(t)
+    }
+    let grounds-markers = t.at(
+      "grounds-markers",
+      default: grounds-list.map(_ => t.at("marker", default: none)),
+    )
+    let t-is-zero = (
+      t.at("raw-rate", default: none) == 0%
+        or t.at("raw-rate", default: none) == 0
+        or t.rate == [0%]
+        or t.rate == [0,0%]
+        or t.rate == [0.0%]
+    )
+    // The marker links a note to the VAT line of its category (not shown for
+    // 0%) or, with several grounds in one category, to the items (tax column).
+    let show-marker = (
+      (not t-is-zero and layout.show-total)
+        or (t.at("itemized-grounds", default: false) and layout.show-tax-rates)
+    )
+    for (grounds, marker) in grounds-list.zip(grounds-markers) {
+      if not m-tax.has-grounds(grounds) { continue }
+      let key = m-tax.grounds-key(grounds)
+      if key not in rendered-keys {
+        rendered-keys.push(key)
+        let marker-str = if marker != none and show-marker {
           super[#marker] + [ ]
         } else {
           []
