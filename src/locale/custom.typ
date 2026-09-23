@@ -125,6 +125,8 @@
 /// - discount (auto, str): e.g., "Discount", "Rabatt"
 /// - surcharge (auto, str): e.g., "Surcharge", "Zuschlag"
 /// - subtotal (auto, str): e.g., "Subtotal", "Zwischensumme"
+/// - conjunction (auto, str): joins the last two item names of an automatic
+///   bundle description, e.g., "and", "und"
 /// -> dictionary
 #let line-items(
   position: auto,
@@ -139,6 +141,7 @@
   discount: auto,
   surcharge: auto,
   subtotal: auto,
+  conjunction: auto,
 ) = (
   {
     let payload = _clean-auto((
@@ -154,6 +157,7 @@
       discount: discount,
       surcharge: surcharge,
       subtotal: subtotal,
+      conjunction: conjunction,
     ))
 
     return (strings: (line-items: payload))

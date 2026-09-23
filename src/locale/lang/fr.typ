@@ -76,6 +76,7 @@
     surcharge: "Supplément",
     subtotal: "Sous-total",
     prepayment: "Acompte",
+    conjunction: "et",
   ),
 
   /// Labels for the summary section (footer of the table)

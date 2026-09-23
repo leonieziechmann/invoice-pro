@@ -45,13 +45,9 @@
 
   let virtual-item-name = name
   if has-multiple-brackets {
-    let bracket-descriptor = (
-      "("
-        + str(calc.round(group.tax.rate * 100))
-        + "% "
-        + group.tax.category
-        + ")"
-    )
+    // "(5,5% S)": the rate as printed elsewhere, not rounded to an integer.
+    let rate = (ctx.locale.format.percent)(group.tax.rate)
+    let bracket-descriptor = "(" + rate + " " + group.tax.category + ")"
     virtual-item-name = (name, bracket-descriptor).join(" ")
   }
 
@@ -86,6 +82,14 @@
 }
 
 #let calculate-description(ctx, items) = {
+  // "A, B and C", with the conjunction of the invoice language.
+  let conjunction = (
+    ctx
+      .at("locale", default: (:))
+      .at("strings", default: (:))
+      .at("line-items", default: (:))
+      .at("conjunction", default: "and")
+  )
   let descripion-groups = (:)
 
   for item in items {
@@ -101,7 +105,7 @@
     .map(((key, names)) => {
       (
         key,
-        names.join(", ", last: " and ", default: none),
+        names.join(", ", last: " " + conjunction + " ", default: none),
       )
     })
     .to-dict()

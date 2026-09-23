@@ -150,7 +150,7 @@ Groups multiple items together as a virtual single item while automatically aggr
 | Key             | Type                                                                 | Description                                                                                                                      |
 | --------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `name`          | `str` \| `content`                                                   | The name of the bundle.                                                                                                          |
-| `description`   | `str` \| `content` \| `auto` \| `none`                               | If set to `auto`, it automatically generates a comma-separated list of all child item names.                                     |
+| `description`   | `str` \| `content` \| `auto` \| `none`                               | If set to `auto`, it lists the names of all child items ("A, B and C", in the language of the locale).                           |
 | `quantity`      | `number` \| `auto`                                                   | The quantity of the bundle itself (defaults to 1). A nested bundle does not inherit it.                                          |
 | `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g). Must be greater than 0.                                           |
 | `unit`          | `str` \| `content` \| `dictionary` \| `function` \| `auto` \| `none` | The unit of measurement for the bundle. Accepts the same dictionary form, function, or string as `item` for ZUGFeRD compliance.  |
@@ -170,6 +170,8 @@ If you place items with varying tax rates (e.g., mixing 19% and 7% items) or dif
 **Why this matters:**
 This automatic splitting ensures that your invoice remains legally compliant. Total amounts, sub-totals, and any modifiers applied to the bundle (such as a 10% bundle-wide discount) are proportionally distributed and calculated correctly across the different tax rates without any manual intervention required from you.
 :::
+
+Each line is named after the bundle and its VAT rate, formatted like everywhere else on the invoice (e.g., `Gift box (5,5% S)`).
 
 ### Quantities and Modifiers of a Bundle
 
