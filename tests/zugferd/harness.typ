@@ -84,12 +84,26 @@
 /// The first diagnostic of `rule`, or `none`.
 #let diagnostic(model, rule) = validate(model).find(d => d.rule == rule)
 
+/// Every element `tag` (e.g. "ram:BilledQuantity") with its attributes and
+/// text, as written in the XML the builder writes for a model.
+#let xml-elements(model, tag) = {
+  let elements = ()
+  for part in build-xml(model).split("<" + tag).slice(1) {
+    // Not another element whose name starts with `tag`
+    if not (part.starts-with(">") or part.starts-with(" ")) { continue }
+    elements.push(
+      "<" + tag + part.split("</" + tag + ">").first() + "</" + tag + ">",
+    )
+  }
+  elements
+}
+
 /// The text of every element `tag` (e.g. "ram:RateApplicablePercent") in the
 /// XML the builder writes for a model.
 #let xml-values(model, tag) = {
   let values = ()
-  for part in build-xml(model).split("<" + tag + ">").slice(1) {
-    values.push(part.split("</" + tag + ">").first())
+  for element in xml-elements(model, tag) {
+    values.push(element.split(">").at(1).split("<").first())
   }
   values
 }

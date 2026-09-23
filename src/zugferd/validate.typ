@@ -496,6 +496,7 @@
         hint: "Give the item a name that contains text.",
       ))
     }
+    let unit-issue = line.at("unit-issue", default: none)
     if line.unit-code not in codelists.units {
       out.push(error(
         "BR-CL-23",
@@ -504,6 +505,36 @@
           + _quoted(line.unit-code)
           + " is not a UN/ECE Recommendation 20 code.",
         hint: "Use a unit from the `unit` module, e.g. `unit.hour`, or a dictionary such as `(display: \"Std.\", code: \"HUR\")`.",
+      ))
+    } else if unit-issue != none and unit-issue.kind == "unknown" {
+      // The unit is written as a code, and a text invoice-pro does not know
+      // has none: writing "one" (C62) for it would be a guess.
+      out.push(error(
+        "BR-CL-23",
+        field,
+        "The unit "
+          + _quoted(unit-issue.text)
+          + " has no UN/ECE Recommendation 20 code (BT-130) invoice-pro knows.",
+        hint: "Use a unit from the `unit` module, e.g. `unit.hour` or `unit.square-metre`, or give its code: `(display: "
+          + _quoted(unit-issue.text)
+          + ", code: \"..\")`, e.g. \"C62\" for a number of units.",
+      ))
+    } else if unit-issue != none and unit-issue.kind == "ambiguous" {
+      out.push(warning(
+        "IP-UNIT-01",
+        field,
+        "The unit "
+          + _quoted(unit-issue.text)
+          + " is written as the UN/ECE Recommendation 20 code for "
+          + unit-issue.meaning
+          + ", although it is also a common abbreviation of \""
+          + unit-issue.abbreviation
+          + "\".",
+        hint: "Give the code explicitly, e.g. `(display: "
+          + _quoted(unit-issue.text)
+          + ", code: \"H87\")` for pieces, or `(display: .., code: "
+          + _quoted(unit-issue.text)
+          + ")` if you mean the code.",
       ))
     }
     if line.key == none or line.category == none {

@@ -288,8 +288,8 @@
   assert.eq(map-unit-code("hrs"), "HUR")
   assert.eq(map-unit-code([Std.]), "HUR")
   assert.eq(map-unit-code("Tage"), "DAY")
-  // "St" (Stück) is no unit code, "ST" (sheet) is
-  assert.eq(map-unit-code("St"), "C62")
+  // "St" (Stück) is the common abbreviation of pieces
+  assert.eq(map-unit-code("St"), "H87")
   assert.eq(map-unit-code(none), "C62")
 }
 

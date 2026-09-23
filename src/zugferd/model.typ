@@ -9,6 +9,8 @@
 #import "profile.typ": resolve-profile
 #import "../utils/coercion.typ": to-decimal, to-ratio
 #import "../data/tax.typ": to-tax-key
+#import "../data/unit.typ": unit-db
+#import "../locale/lang/lang.typ" as languages
 #import "../logic/payment-reference.typ": resolve-payment-reference
 
 #let _zero = decimal("0")
@@ -231,30 +233,146 @@
   seller
 }
 
-// Map common invoice-pro unit strings to UN/ECE recommendation 20 unit codes.
-#let map-unit-code(unit) = {
+// The UN/ECE Recommendation 20 codes of the units of the `unit` module, by
+// their key in the language files.
+#let _unit-codes = (
+  piece: "H87",
+  "set": "SET",
+  pair: "PR",
+  "lump-sum": "LS",
+  hour: "HUR",
+  day: "DAY",
+  month: "MON",
+  year: "ANN",
+  kilogram: "KGM",
+  gram: "GRM",
+  tonne: "TNE",
+  metre: "MTR",
+  "square-metre": "MTK",
+  millimetre: "MMT",
+  centimetre: "CMT",
+  kilometre: "KMT",
+  litre: "LTR",
+  "cubic-metre": "MTQ",
+)
+
+// Unit texts and the UN/ECE Recommendation 20 codes they stand for, by the
+// text in lower case without a trailing ".": the symbols and names of the
+// unit database, the unit names of every language of invoice-pro and common
+// abbreviations. Only whole texts match, never a part of one.
+#let _unit-aliases = {
+  let table = (:)
+  for (code, texts) in (
+    HUR: ("hr", "hrs", "std", "stunde", "stunden"),
+    MIN: ("min", "mins", "minute", "minutes", "minuten"),
+    SEC: ("s", "sec", "sek", "second", "seconds", "sekunde", "sekunden"),
+    WEE: ("wk", "wks", "week", "weeks", "woche", "wochen"),
+    MON: ("mon",),
+    ANN: ("yr", "yrs"),
+    KGM: ("kilo", "kilos"),
+    TNE: ("to", "tonnen"),
+    MTR: ("meter", "meters", "lfm"),
+    MTK: ("m2", "qm", "sqm", "square meter", "square meters"),
+    MTQ: ("m3", "cbm", "cubic meter", "cubic meters"),
+    LTR: ("ltr", "liter", "liters"),
+    MLT: ("ml",),
+    KWH: ("kwh",),
+    MWH: ("mwh",),
+    H87: ("st", "stk", "stck", "pc", "pcs", "pce"),
+    LS: ("psch", "pausch", "pauschal", "flat rate"),
+    IE: ("person", "persons", "pers", "personen"),
+    ZP: ("page", "pages", "seite", "seiten"),
+    P1: ("%", "percent", "prozent"),
+  ).pairs() {
+    for text in texts { table.insert(text, code) }
+  }
+  for unit in unit-db {
+    if unit.symbol != none { table.insert(lower(unit.symbol), unit.code) }
+    table.insert(lower(unit.name), unit.code)
+  }
+  for strings in (
+    languages.de,
+    languages.en,
+    languages.fr,
+    languages.it,
+    languages.es,
+  ) {
+    for (key, names) in strings.units.pairs() {
+      let code = _unit-codes.at(key, default: none)
+      if code == none { continue }
+      // A name, or its singular and plural.
+      let names = if type(names) == dictionary { names.values() } else {
+        (names,)
+      }
+      for name in names { table.insert(lower(name), code) }
+    }
+  }
+  table
+}
+
+// Unit codes that are also common German abbreviations of other units, with
+// what the code means and what the abbreviation stands for. Taken verbatim,
+// they most likely do not mean what the code says.
+#let _ambiguous-unit-codes = (
+  STK: ("stick", "Stück"),
+  PAL: ("pascal", "Palette"),
+  FL: ("flake ton", "Flasche"),
+  GL: ("gram per litre", "Glas"),
+  KT: ("kit", "Karton"),
+)
+
+/// The UN/ECE Recommendation 20 code of a unit (BT-130, BT-150):
+/// `(code: .., issue: ..)`.
+///
+/// A unit of the `unit` module or a dictionary carries its code. A text that
+/// is exactly a code (e.g. "H87") is taken as it is, but a code that is also a
+/// common abbreviation of another unit (e.g. "STK", the code of sticks) has
+/// the issue `(kind: "ambiguous", ..)`. Any other text is looked up in the
+/// unit names and abbreviations invoice-pro knows ("Std.", "m²", "qm",
+/// "Stück", "pauschal", ...). A text it does not know has the issue
+/// `(kind: "unknown", text: ..)` and the code C62 ("one") as placeholder:
+/// invoice-pro does not guess what it means. Without a unit, the quantity
+/// is a number of "one" (C62).
+///
+/// -> dictionary
+#let resolve-unit(unit) = {
   if type(unit) == dictionary {
     let code = compact(unit.at("code", default: none))
-    if code != none { return code }
+    if code != none { return (code: code, issue: none) }
     unit = unit.at("display", default: none)
   }
-  let raw = plain-text(unit)
-  // A unit written exactly as a code, e.g. "H87". Case-sensitive, so that "St"
-  // (Stück) is not taken for "ST" (sheet).
-  if raw in codelists.units { return raw }
-  let u = lower(raw)
-  if u in ("hrs", "hr", "h", "std.", "std", "stunde", "stunden") {
-    "HUR"
-  } else if u in ("day", "days", "tag", "tage") { "DAY" } else if (
-    u in ("month", "months", "monat", "monate")
-  ) { "MON" } else if u in ("year", "years", "jahr", "jahre") {
-    "ANN"
-  } else if u in ("kg",) { "KGM" } else if u in ("g", "gram") {
-    "GRM"
-  } else if u in ("m", "meter") { "MTR" } else if u in ("l", "liter") {
-    "LTR"
-  } else { "C62" }
+  let text = plain-text(unit)
+  if text == "" { return (code: "C62", issue: none) }
+  // A unit written exactly as a code; case-sensitive, so that "min" is not
+  // looked up as the code "MIN" but as an abbreviation (which gives the same).
+  if text in codelists.units {
+    let ambiguous = _ambiguous-unit-codes.at(text, default: none)
+    return (
+      code: text,
+      issue: if ambiguous != none {
+        (
+          kind: "ambiguous",
+          text: text,
+          meaning: ambiguous.first(),
+          abbreviation: ambiguous.last(),
+        )
+      },
+    )
+  }
+  let key = lower(text).trim(".", at: end)
+  let code = _unit-aliases.at(key, default: none)
+  // A plural with "s" ("heures", "kgs"), but not "ms" for "m".
+  if code == none and key.ends-with("s") and key.clusters().len() > 2 {
+    code = _unit-aliases.at(key.slice(0, -1), default: none)
+  }
+  if code != none { return (code: code, issue: none) }
+  (code: "C62", issue: (kind: "unknown", text: text))
 }
+
+/// The UN/ECE Recommendation 20 code of a unit, see `resolve-unit`.
+///
+/// -> str
+#let map-unit-code(unit) = resolve-unit(unit).code
 
 // Determine delivery date or period from items
 #let determine-delivery-dates(ctx, items) = {
@@ -355,6 +473,8 @@
   if type(item-id) == str { item-id = (seller: item-id) }
   if type(item-id) != dictionary { item-id = (:) }
 
+  let unit = resolve-unit(item.at("unit", default: none))
+
   (
     index: index,
     id: first-of(text-or-none(item.at("pos", default: none)), str(index + 1)),
@@ -365,7 +485,10 @@
     buyer-id: text-or-none(item-id.at("buyer", default: none)),
     quantity: quantity,
     base-quantity: base-quantity,
-    unit-code: map-unit-code(item.at("unit", default: none)),
+    unit-code: unit.code,
+    // A unit text without a known code, or a code that most likely means
+    // something else (see `resolve-unit`).
+    unit-issue: unit.issue,
     price: price,
     net: _net(to-decimal(item.at("total", default: 0)), rate, inclusive),
     key: _tax-key(tax),
