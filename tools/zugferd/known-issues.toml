@@ -1,0 +1,193 @@
+# Known failures of the e-invoice conformance corpus (tools/zugferd/run.py).
+#
+# Every entry names the audit finding (or issue) and the failure signatures it
+# explains, as the runner prints them under NEW FAILURES. A failing case whose
+# signature is listed here does not fail the run. `cases` (glob patterns of
+# case ids) and `features` (values of the generator's dimensions, e.g.
+# `{ delivery = "dates-mixed" }`, a value or a list of values each) narrow an
+# entry to the cases that reproduce it; keep entries that narrow, so that
+# they cannot hide the same signature elsewhere.
+#
+# The list may only shrink: an entry that matches no failing case any more
+# ("XPASS") fails the run, so the fix removes its entry in the same commit.
+# Adding an entry needs a finding or issue that is being worked on; it never
+# hides a new class of failure. No entry excuses a legal invoice that is not
+# AGREE_VALID (the hard gate); only oracle failures of legal invoices can be
+# known issues. `run.py --strict` ignores this file.
+
+# ---------------------------------------------------------------- silently invalid XML (FALSE_NEGATIVE)
+
+[[issue]]
+finding = "tax-ipsi-zero-rate-false-negative"
+note = "IPSI (M) at 0 % violates BR-AG-05; only the L check exists"
+cases = ["rg-ipsi-zero-rate"]
+signatures = ["FALSE_NEGATIVE missing=BR-AG-05 ours=- official=BR-AG-05"]
+
+[[issue]]
+finding = "fidelity-cat-rate-checks-m-o"
+note = "category O with a rate (BR-O-05, BR-O-09) is not reported"
+cases = ["rg-outside-scope-with-rate"]
+signatures = ["FALSE_NEGATIVE ours=- official=BR-O-09"]
+
+[[issue]]
+finding = "tax-rate-rounded-to-2-decimals"
+note = "VAT rates are written with 2 decimals: 8.125 % and 8.13 % collapse (BR-S-08)"
+cases = ["rg-rate-three-decimals"]
+signatures = ["FALSE_NEGATIVE ours=- official=BR-S-08"]
+
+[[issue]]
+finding = "amounts-skonto-br-de-18-false-negative"
+note = "payment terms (BT-20) lose their line breaks, the #SKONTO# line fails BR-DE-18"
+cases = ["rg-skonto-line-break"]
+signatures = ["FALSE_NEGATIVE ours=- official=BR-DE-18"]
+
+[[issue]]
+finding = "amounts-rounding-false-negative-custom-money"
+note = "a locale rounding money to 3 decimals yields amounts with 3 decimals"
+cases = ["rg-money-three-decimals"]
+signatures = ["FALSE_NEGATIVE ours=- official=BR-CO-10,BR-S-08"]
+
+[[issue]]
+finding = "core-eaddr-empty-uri"
+note = "an empty electronic-address is written as an empty URIUniversalCommunication"
+cases = ["rg-electronic-address-empty"]
+signatures = ["FALSE_NEGATIVE ours=- official=BR-63,FX-SCH-A-000168"]
+
+[[issue]]
+finding = "robustness-buyer-id-and-globalid-cii-sr-450"
+note = "buyer `id` and `global-id` are both written (CII-SR-450)"
+cases = ["rg-buyer-id-and-global-id"]
+signatures = ["FALSE_NEGATIVE missing=CII-SR-450 ours=- official=CII-SR-450"]
+
+[[issue]]
+finding = "verify-robustness-shipto-id-and-globalid-cii-sr-449"
+note = "deliver-to `id` and `global-id` are both written (CII-SR-449)"
+cases = ["rg-ship-to-id-and-global-id"]
+signatures = ["FALSE_NEGATIVE missing=CII-SR-449 ours=- official=CII-SR-449"]
+
+[[issue]]
+finding = "core-codelists-cen"
+note = "codes missing from the EN 16931 lists (VES) are accepted"
+cases = ["rg-currency-not-in-en16931-list"]
+signatures = ["FALSE_NEGATIVE missing=BR-CL-04 ours=- official=BR-CL-03,BR-CL-04"]
+
+[[issue]]
+finding = "core-basicwl-no-items"
+note = "BASIC WL without items has no VAT breakdown (BR-CO-18, XSD)"
+cases = ["rg-basic-wl-no-items"]
+signatures = ["FALSE_NEGATIVE missing=BR-CO-18 ours=- official=BR-CO-18,FX-SCH-A-000173,XSD"]
+
+[[issue]]
+finding = "fidelity-cat-xr-warning-rules"
+note = "BR-DE-27 / BR-DE-28 are warnings; they are errors by maintainer decision"
+cases = ["rg-xrechnung-phone-without-digits", "rg-xrechnung-idn-email"]
+signatures = [
+  "FALSE_NEGATIVE missing=BR-DE-27 ours=- official=BR-DE-27",
+  "FALSE_NEGATIVE missing=BR-DE-28 ours=- official=BR-DE-28",
+]
+
+# ---------------------------------------------------------------- blocked valid invoices (FALSE_POSITIVE, over-strict)
+
+[[issue]]
+finding = "core-basicwl-category-id-rules"
+note = "BASIC WL enforces BR-G-02, which the profile does not have"
+cases = ["rg-basic-wl-export-tax-number-only"]
+signatures = ["FALSE_POSITIVE ours=BR-G-02 official=-"]
+
+[[issue]]
+finding = "core-basicwl-category-id-rules"
+note = "nightly: BASIC WL reports the line rules BR-x-02 instead of the document level BR-x-03/04, or none applies"
+cases = ["ru*"]
+features = { profile = "basic-wl" }
+signatures = [
+  "FALSE_POSITIVE ours=BR-G-02 official=-",
+  "FALSE_POSITIVE ours=BR-IC-02 official=-",
+  "WRONG_RULE_ID ours=BR-AE-02 official=BR-AE-03",
+  "WRONG_RULE_ID ours=BR-AE-02 official=BR-AE-04",
+  "WRONG_RULE_ID ours=BR-G-02 official=BR-G-04",
+  "WRONG_RULE_ID ours=BR-IC-02 official=BR-IC-03",
+  "WRONG_RULE_ID ours=BR-IC-02 official=BR-IC-04",
+]
+
+[[issue]]
+finding = "robustness-basic-wl-ae-k-stricter"
+note = "BASIC WL reports BR-AE-02 instead of invoice-pro's own IP-VAT-226"
+cases = ["rg-basic-wl-reverse-charge-no-buyer-vat"]
+signatures = ["FALSE_POSITIVE missing=IP-VAT-226 ours=BR-AE-02 official=-"]
+
+[[issue]]
+finding = "robustness-smallbiz-buyer-eaddr-not-derived"
+note = "small business XRechnung: the buyer electronic address is not derived from the VAT ID"
+cases = ["rg-small-business-xrechnung-buyer-vat"]
+signatures = ["AGREE_INVALID ours=PEPPOL-EN16931-R010 official=PEPPOL-EN16931-R010"]
+
+# ---------------------------------------------------------------- crashes
+
+[[issue]]
+finding = "robustness-vatid-multibyte-slice-crash"
+note = "a VAT ID with a BOM / zero-width space crashes or keeps the invisible character"
+cases = ["ad-vat-bom", "ad-vat-zero-width-space"]
+signatures = ["CRASH ours=- official=-", "AGREE_VALID oracle=O-BT31"]
+
+# ---------------------------------------------------------------- wrong rule ids
+
+[[issue]]
+finding = "core-wrong-rule-ids"
+note = "BR-CL-10 instead of BR-CL-26 (deliver-to scheme), BR-CL-25 instead of BR-63 (no scheme)"
+cases = ["rg-ship-to-scheme-rule-id", "rg-electronic-address-without-scheme"]
+signatures = [
+  "WRONG_RULE_ID missing=BR-CL-26 ours=BR-CL-10 official=BR-CL-26,FX-SCH-A-000031",
+  "WRONG_RULE_ID missing=BR-63 ours=BR-CL-25 official=BR-63,FX-SCH-A-000037",
+]
+
+# ---------------------------------------------------------------- valid XML, wrong content (oracles)
+
+[[issue]]
+finding = "amounts-delivery-date-mismatch"
+note = "BG-14 counts undated items with the invoice date; the printed service period does not"
+features = { delivery = "dates-mixed" }
+signatures = ["AGREE_VALID oracle=O-BG14"]
+
+[[issue]]
+finding = "robustness-content-identifier-unicode-minus"
+note = "a hyphen before digits in content becomes U+2212 in identifiers (BT-1)"
+cases = ["ad-content-invoice-nr"]
+signatures = ["AGREE_VALID oracle=O-BT1"]
+
+[[issue]]
+finding = "parties-identifier-inputs-dropped"
+note = "a seller `id` given as (scheme, id) is dropped (BT-29)"
+cases = ["rg-seller-id-as-dictionary"]
+signatures = ["AGREE_VALID oracle=O-BT29"]
+
+[[issue]]
+finding = "robustness-unit-strings-mapped-to-c62"
+note = "unit symbols become C62; unknown free-text units are not reported"
+cases = ["rg-unit-codes", "rg-unit-unknown-text"]
+signatures = ["AGREE_VALID oracle=O-BT130", "AGREE_VALID ours=- official=-"]
+
+[[issue]]
+finding = "tax-default-reason-pdf-xml-divergence"
+note = "K/G/O without grounds: the XML states a default reason the PDF does not print"
+cases = ["rg-default-exemption-reason-printed"]
+signatures = ["AGREE_VALID oracle=O-PDF-BT120"]
+
+[[issue]]
+finding = "amounts-custom-locale-currency-eur"
+note = "a custom region that formats another currency but states no code yields BT-5 EUR"
+cases = ["rg-custom-locale-currency-format-only"]
+signatures = ["AGREE_VALID missing=IP-PRINT-02 ours=- official=-"]
+
+# ---------------------------------------------------------------- invoice-pro's own rules (maintainer decisions)
+
+[[issue]]
+finding = "amounts-doctype-gutschrift-written-as-380"
+note = "subject \"Gutschrift\" without a document type is written as invoice 380 (IP-DOC-01)"
+cases = ["rg-credit-note-subject"]
+signatures = ["AGREE_VALID missing=IP-DOC-01 ours=- official=-"]
+
+[[issue]]
+finding = "tax-none-silently-zero-rated"
+note = "`tax: none` is written as category Z (IP-TAX-01)"
+cases = ["rg-tax-none"]
+signatures = ["AGREE_VALID missing=IP-TAX-01 ours=- official=-"]

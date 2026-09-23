@@ -5,15 +5,30 @@ on:
     paths:
       - "src/**"
       - "tests/integration/**"
+      - "tests/docs/**"
+      - "tests/zugferd/**"
       - "template/**"
+      - "tools/**"
+      - "scripts/**"
       - "flake.nix"
+      - "flake.lock"
   pull_request:
     branches: [main]
     paths:
       - "src/**"
       - "tests/integration/**"
+      - "tests/docs/**"
+      - "tests/zugferd/**"
       - "template/**"
+      - "tools/**"
+      - "scripts/**"
       - "flake.nix"
+      - "flake.lock"
+  # Nightly: a larger corpus with random invoices outside the legal
+  # constraints, and the linearity check of the performance gate.
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
 
 jobs:
   validate:
@@ -55,3 +70,95 @@ jobs:
           name: zugferd-xml
           path: /tmp/extracted/
           retention-days: 5
+
+  # Every generated and regression invoice against the official validators
+  # (XSD, Mustang) and the semantic oracles. Hard gates: no FALSE_NEGATIVE,
+  # FALSE_POSITIVE or CRASH on the legal population, no failure outside
+  # tools/zugferd/known-issues.toml, no known issue that no longer occurs.
+  corpus:
+    name: Conformance corpus
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 #  v17
+        with:
+          name: typ-flow
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Run the conformance corpus
+        run: nix run .#zugferd-corpus --accept-flake-config -- --population ${{ github.event_name == 'schedule' && 'nightly' || 'pr' }}
+
+      - name: Archive results
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: zugferd-corpus
+          path: |
+            build/zugferd/results.json
+            build/zugferd/corpus/
+            build/zugferd/out/*.xml
+          retention-days: 7
+
+  # The e-invoice test documents compile to bit-identical PDFs and their XML
+  # equals the committed golden files (tests/zugferd/golden).
+  golden:
+    name: Golden XML and reproducibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 #  v17
+        with:
+          name: typ-flow
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Compare with the golden XML
+        run: nix run .#zugferd-golden --accept-flake-config
+
+  # Share of the e-invoice path in the compile time (typst --timings).
+  performance:
+    name: Performance gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 #  v17
+        with:
+          name: typ-flow
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Measure the e-invoice path
+        run: nix run .#perf-gate --accept-flake-config -- --json build/perf/gate.json ${{ github.event_name == 'schedule' && '--nightly' || '' }}
+
+      - name: Archive measurements
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: perf-gate
+          path: build/perf/gate.json
+          retention-days: 30

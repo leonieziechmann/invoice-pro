@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# E-invoice conformance corpus: generates the corpus of invoices
+# (tools/zugferd/corpus/gen.py), then compiles every case once and compares
+# invoice-pro's own verdict and the XML with the official validators (XSD
+# and Mustang) and the semantic oracles (tools/zugferd/run.py).
+# See tests/TESTING.md, "E-invoice conformance and performance (CI)".
+#
+# Usage: zugferd-corpus [--population pr|nightly|legal] [run.py options ...]
+#        e.g. zugferd-corpus --jobs 4 --only 'pw01*'
+#
+# Needs Python 3.11+ with lxml and pypdf ($PYTHON, default python3), Typst
+# ($TYPST_BIN, default typst), a JDK ($JAVA_BIN/$JAVAC_BIN or $JAVA_HOME,
+# default java/javac) and the Mustang CLI jar 2.14.0 ($MUSTANG_JAR). The Nix
+# app `nix run .#zugferd-corpus` provides all of them.
+set -euo pipefail
+
+if [ ! -f "typst.toml" ]; then
+  echo "Error: zugferd-corpus must be run from the root of the invoice-pro repository." >&2
+  exit 1
+fi
+
+PYTHON="${PYTHON:-python3}"
+population="pr"
+run_args=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --population)
+      population="$2"
+      shift 2
+      ;;
+    --population=*)
+      population="${1#*=}"
+      shift
+      ;;
+    *)
+      run_args+=("$1")
+      shift
+      ;;
+  esac
+done
+
+# The tools check themselves first: classification, report parsing, oracles,
+# generator constraints (a few seconds, no Typst or Java).
+"$PYTHON" -m unittest discover --quiet -s tools/zugferd -p 'test_*.py'
+"$PYTHON" tools/zugferd/corpus/gen.py --population "$population"
+exec "$PYTHON" tools/zugferd/run.py ${run_args[@]+"${run_args[@]}"}
