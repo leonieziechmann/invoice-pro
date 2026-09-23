@@ -401,7 +401,7 @@ The automated `validate-all-zugferd` suite covers:
 - `tests/integration/zugferd-basic/test.typ` — EN 16931 / XRechnung profile with standard VAT, a tax-exempt item and document-level modifiers.
 - `tests/integration/zugferd-profile-basic/test.typ` — Factur-X BASIC profile; the seller contact (BG-6) and BIC (BT-86) are set but must be omitted.
 - `tests/integration/zugferd-profile-minimum/test.typ` — Factur-X MINIMUM profile; header data and document totals only, with the seller address reduced to its country code (BT-40).
-- `tests/integration/zugferd-small-biz/test.typ` — Small business exemption (§19 UStG, tax category `O`).
+- `tests/integration/zugferd-small-biz/test.typ` — Small business exemption (§ 19 Abs. 1 UStG, tax category `E`) of a seller with only a tax number.
 - `tests/integration/zugferd-outside-scope/test.typ` — Tax outside scope / non-taxable transactions.
 - `tests/integration/zugferd-en16931/test.typ` — Full EN 16931 / XRechnung profile.
 - `tests/integration/zugferd-reverse-charge/test.typ` — Reverse charge mechanism (tax category `AE`).
@@ -410,7 +410,9 @@ The automated `validate-all-zugferd` suite covers:
 - `tests/integration/zugferd-delivery-address/test.typ` — Separate delivery address (BG-13, `ram:ShipToTradeParty`).
 - `tests/integration/zugferd-inclusive/test.typ` — Gross prices (`tax-mode: "inclusive"`) written as net amounts that add up to the printed totals.
 - `tests/integration/zugferd-precision/test.typ` — Unit prices with four decimals, fractional quantities, a price per base quantity (BT-149) and a credited line.
-- `tests/integration/zugferd-small-biz-modifiers/test.typ` — Small business exemption (category `O`) with item and document level discounts and surcharges.
+- `tests/integration/zugferd-small-biz-modifiers/test.typ` — Small business exemption (category `E`) with item and document level discounts and surcharges.
+- `tests/integration/zugferd-small-biz-xrechnung/test.typ` — XRechnung of a small business with only a VAT identifier; the buyer's electronic address (BT-49) comes from its VAT identifier.
+- `tests/integration/zugferd-small-biz-at/test.typ`, `zugferd-small-biz-fr/test.typ`, `zugferd-small-biz-es/test.typ` — Small business exemption (category `E`) in Austria (EN 16931), France (BASIC WL, SIREN as tax registration) and Spain (BASIC).
 - `tests/integration/zugferd-intra-community/test.typ` — Intra-community supply (category `K`) with the deliver-to country taken from the buyer.
 - `tests/integration/zugferd-text/test.typ` — Styled content, smart quotes and XML special characters in names, reasons and references.
 - `tests/integration/zugferd-seller-id/test.typ` — Seller identifier (BT-29) without tax registration (#42).
