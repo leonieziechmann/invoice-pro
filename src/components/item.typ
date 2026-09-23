@@ -1,5 +1,7 @@
 #import "../loom-wrapper.typ": data-motif, loom, loom-key
-#import "../logic/calc-item.typ": calculate-item-data
+#import "../logic/calc-item.typ": (
+  calculate-item-data, require-positive-base-quantity,
+)
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
 #import "../data/tax.typ" as m-tax
@@ -127,6 +129,7 @@
 
   types.require(quantity, "item::quantity", auto, types.decimal-like)
   types.require(base-quantity, "item::base-quantity", auto, types.decimal-like)
+  require-positive-base-quantity(base-quantity, "item")
   types.require(
     unit,
     "item::unit",

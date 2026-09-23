@@ -1,6 +1,21 @@
 #import "../utils/coercion.typ"
 #import "../data/tax.typ" as m-tax
 
+/// Panics unless `base-quantity` (the quantity the price refers to) is above
+/// 0: the price is divided by it (BT-149, PEPPOL-EN16931-R121).
+#let require-positive-base-quantity(base-quantity, name) = {
+  let value = coercion.to-decimal(base-quantity)
+  if value == auto or value == none { return }
+  if value <= 0 {
+    panic(
+      name
+        + "::base-quantity must be greater than 0, got "
+        + str(value).replace("\u{2212}", "-")
+        + ". It is the quantity the price refers to, e.g. `base-quantity: 100` for a price per 100 pieces.",
+    )
+  }
+}
+
 #let calculate-item-data(ctx, name) = {
   let to-dec = coercion.to-decimal
   let to-ratio = coercion.to-ratio
@@ -10,6 +25,7 @@
   // 1. Quantity & Uni Normalization
   let quantity = to-dec(ctx.quantity)
   let base-quantity = to-dec(ctx.base-quantity)
+  require-positive-base-quantity(base-quantity, "item")
   let quantity-multiplier = quantity / base-quantity
   let unit = ctx.unit
 

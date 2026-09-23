@@ -1,6 +1,7 @@
 #import "../loom-wrapper.typ": loom
 #import "../utils/coercion.typ"
 #import "../data/tax.typ"
+#import "calc-item.typ": require-positive-base-quantity
 
 #let create-virtual-tax-item(
   ctx,
@@ -21,6 +22,7 @@
 
   let quantity = ctx.bundle-quantity
   let base-quantity = ctx.bundle-base-quantity
+  require-positive-base-quantity(base-quantity, "bundle")
   let quantity-modifier = quantity / base-quantity
 
   let discount-sum = bracket-discounts

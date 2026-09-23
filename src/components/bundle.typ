@@ -1,6 +1,7 @@
 #import "../loom-wrapper.typ": compute-motif, loom, weave
 #import "../logic/modifier-applicator.typ": modifier-applicator
 #import "../logic/calc-bundle.typ": calculate-bundle
+#import "../logic/calc-item.typ": require-positive-base-quantity
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
 #import "../data/unit.typ"
@@ -83,6 +84,7 @@
   types.require(reference, "bundle::reference", none, auto, str)
 
   types.require(body, "bundle::body", none, content)
+  require-positive-base-quantity(base-quantity, "bundle")
 
   compute-motif(
     name: "bundle",
