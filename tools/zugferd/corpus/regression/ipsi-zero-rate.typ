@@ -27,7 +27,7 @@
     address: "Calle Mayor 2",
     city: (name: "Madrid", post-code: "28001"),
     country: country.es,
-    vat-id: "ESA87654321",
+    vat-id: "ESA87654323",
     email: "facturas@comprador.example",
   ),
   invoice-nr: "RG-IPSI-0",

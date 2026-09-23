@@ -17,7 +17,7 @@
     address: "Damrak 1",
     city: "1012 AB Amsterdam",
     country: "NL",
-    vat-id: "NL123456789B01",
+    vat-id: "NL123456782B01",
     email: "factuur@klant.example",
   ),
   invoice-nr: "RG-POST-CODE-NL",

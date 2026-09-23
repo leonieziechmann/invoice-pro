@@ -1,6 +1,6 @@
 // expect: AGREE_VALID
 // finding: core-codelists-cen
-// facts: {"buyer_country": "GB", "buyer_vat": "XI123456789"}
+// facts: {"buyer_country": "GB", "buyer_vat": "XI123456782"}
 //
 // Goods delivered to Northern Ireland are intra-community supplies: the buyer
 // has a VAT identifier with the prefix "XI" and the country is "GB". A check
@@ -17,7 +17,7 @@
     address: "1 Example Road",
     city: (name: "Belfast", post-code: "BT1 1AA"),
     country: "GB",
-    vat-id: "XI123456789",
+    vat-id: "XI123456782",
     email: "accounts@customer.example",
   ),
   invoice-nr: "RG-VAT-PREFIX-XI",

@@ -1,6 +1,6 @@
 // expect: AGREE_VALID
 // finding: parties-country-string-silently-replaced
-// facts: {"buyer_country": "GB", "buyer_vat": "GB123456789"}
+// facts: {"buyer_country": "GB", "buyer_vat": "GB123456782"}
 //
 // "UK" is the common name, not the ISO code of the United Kingdom: a country
 // given as "UK" is written as "GB" (BT-55). It was replaced by the country of
@@ -17,7 +17,7 @@
     address: "1 Example Road",
     city: (name: "London", post-code: "EC1A 1BB"),
     country: "UK",
-    vat-id: "GB123456789",
+    vat-id: "GB123456782",
     email: "accounts@customer.example",
   ),
   invoice-nr: "RG-COUNTRY-UK",
