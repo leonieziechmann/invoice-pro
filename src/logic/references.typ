@@ -1,4 +1,5 @@
 #import "payment-reference.typ": bank-signal, resolve-payment-reference
+#import "service-period.typ": format-service-period, resolve-service-period
 
 // An identifier given as a dictionary, e.g. a typed identifier of the `id`
 // module (`id.leitweg(..)`), is printed as its identifier.
@@ -67,49 +68,17 @@
     let title = if label == auto {
       ctx.locale.strings.reference.service-time
     } else { label }
+    // The service period the e-invoice states as well (BT-72, BG-14).
     let val = if value == auto {
-      let dates = ()
-      if "items" in ctx and ctx.items != none {
-        for item in ctx.items {
-          if item.date != none {
-            if type(item.date) == array {
-              for d in item.date {
-                if type(d) == datetime {
-                  dates.push(d)
-                }
-              }
-            } else if type(item.date) == datetime {
-              dates.push(item.date)
-            }
-          }
-        }
-      }
-      if dates.len() == 0 {
-        if type(ctx.invoice-date) == datetime {
-          (ctx.locale.format.date)(ctx.invoice-date)
-        } else {
-          ctx.invoice-date
-        }
-      } else {
-        let min-date = dates.first()
-        let max-date = dates.first()
-        for d in dates {
-          if d < min-date { min-date = d }
-          if d > max-date { max-date = d }
-        }
-        let format-date(d) = {
-          if type(d) == datetime {
-            (ctx.locale.format.date)(d)
-          } else {
-            str(d)
-          }
-        }
-        if min-date == max-date {
-          format-date(min-date)
-        } else {
-          format-date(min-date) + " – " + format-date(max-date)
-        }
-      }
+      let items = ctx.at("items", default: none)
+      format-service-period(
+        resolve-service-period(
+          if items == none { () } else { items },
+          ctx.invoice-date,
+          service-period: ctx.at("service-period", default: none),
+        ),
+        ctx.locale.format.date,
+      )
     } else {
       value
     }
@@ -304,6 +273,19 @@
         default: none,
       ))
     } else { value }
+    (title, val)
+  }
+}
+
+#let preceding-invoice-date(label: auto, value: auto) = {
+  ctx => {
+    let title = if label == auto {
+      ctx.locale.strings.reference.preceding-invoice-date
+    } else { label }
+    let val = if value == auto {
+      ctx.at("preceding-invoice-date", default: none)
+    } else { value }
+    if type(val) == datetime { val = (ctx.locale.format.date)(val) }
     (title, val)
   }
 }

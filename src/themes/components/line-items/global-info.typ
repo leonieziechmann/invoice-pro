@@ -25,7 +25,7 @@
       and not layout.multiple-tax-rates
       and data.items.len() > 0
       and not data.tax-exempt-small-biz
-      and exemption-notes.len() == 0
+      and exemption-notes.all(note => note.at("kind", default: none) == "note")
   ) {
     let tax-rate = data.items.first(default: (tax: (rate: [0%]))).tax.rate
     let tax-text = if is-net { sum-str.excluding } else { sum-str.including }

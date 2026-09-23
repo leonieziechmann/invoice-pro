@@ -27,6 +27,11 @@
   /// Designations for document types
   document: (
     invoice: "Facture",
+    credit-note: "Avoir",
+    corrected: "Facture rectificative",
+    prepayment: "Facture d'acompte",
+    // Mention required on a self-billed invoice (art. 242 nonies A CGI).
+    self-billed: "Autofacturation",
   ),
 
   /// Address-related designations
@@ -54,6 +59,7 @@
     delivery-note-number: "N° de bon de livraison",
     delivery-address: "Adresse de livraison",
     preceding-invoice-number: "N° facture rectifiée",
+    preceding-invoice-date: "Date de la facture rectifiée",
     due-date: "Date d'échéance",
     payment-reference: "Référence de paiement",
     contact-person: "Personne de contact",
@@ -77,6 +83,7 @@
     subtotal: "Sous-total",
     prepayment: "Acompte",
     conjunction: "et",
+    origin: "Pays d'origine",
   ),
 
   /// Labels for the summary section (footer of the table)
@@ -157,6 +164,11 @@
       "jours",
     ).join(" "),
     deadline-soon: "dès réception",
+    text-credit: (
+      sum,
+      deadline,
+    ) => [Nous vous virerons le montant de *#sum* #deadline sur le compte indiqué ci-dessous.],
+    deadline-soon-credit: "sans délai",
   ),
 
   /// Greetings and signature area

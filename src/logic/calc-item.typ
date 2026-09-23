@@ -1,4 +1,6 @@
 #import "../utils/coercion.typ"
+#import "../utils/text.typ": plain-text
+#import "country.typ": normalize-code
 #import "../data/tax.typ" as m-tax
 
 /// The decimals of a quantity (BT-129, BT-149). A quantity is rounded to them
@@ -41,6 +43,22 @@
       )
     })
   }
+}
+
+/// The ISO 3166-1 alpha-2 code of the country of origin of an item
+/// (`origin`): a country of the `country` module (`country.de`), a country
+/// dictionary (`country.custom(..)`) or a code such as "DE". An empty text
+/// states no country; anything else that is not a code is an error.
+///
+/// -> none | str
+#let origin-code(origin) = {
+  let country = if type(origin) == function { origin() } else { origin }
+  let code = if type(country) == dictionary {
+    country.at("code", default: none)
+  } else { country }
+  if code == none or code == auto { return none }
+  if type(code) in (str, content) and plain-text(code) == "" { return none }
+  normalize-code(code, "item::origin")
 }
 
 #let calculate-item-data(ctx, name) = {
@@ -174,5 +192,7 @@
 
     item-id: coercion.to-item-id(ctx.item-id),
     reference: ctx.reference,
+    note: ctx.at("note", default: none),
+    origin: origin-code(ctx.at("origin", default: none)),
   )
 }

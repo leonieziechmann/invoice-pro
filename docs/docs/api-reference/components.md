@@ -39,24 +39,26 @@ The EPC-QR code is only generated when it is shown and the invoice currency is E
 `bank-details` makes these checks itself, before the theme draws the bank details. A custom theme layout that draws no QR code therefore needs `qr-code: (display: false)` as well.
 :::
 
-| Key                   | Type                         | Description                                                                                                                                                                       |
-| --------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                | `auto` \| `none` \| `str`    | The name of the account holder. If set to `auto`, it automatically defaults to the sender's name (on one line).                                                                   |
-| `bank`                | `none` \| `str`              | The name of the banking institution.                                                                                                                                              |
-| `iban`                | `none` \| `str`              | The International Bank Account Number (IBAN), with or without spaces. Required; it is checked for its structure and check digits.                                                 |
-| `bic`                 | `none` \| `str`              | The Bank Identifier Code (BIC/SWIFT). If omitted or `none`, the BIC field is hidden in the bank details block and omitted from the EPC-QR code.                                   |
-| `reference`           | `auto` \| `none` \| `str`    | The structured payment reference to be used by the customer. If `auto`, it falls back to the invoice's `payment-reference`, then to the `invoice-nr`. `none` omits the reference. |
-| `text`                | `none` \| `str`              | Unstructured payment reference text, as an alternative to `reference` (mutually exclusive).                                                                                       |
-| `payment-amount`      | `auto` \| `none` \| `number` | The specific amount to be paid. If `auto`, it uses the remaining amount due (or full gross total if no prepayments are present).                                                  |
-| `show-reference`      | `bool`                       | Whether to display the reference field in the output. Defaults to `true`.                                                                                                         |
-| `account-holder-text` | `auto`                       | Optional custom text to label the account holder field.                                                                                                                           |
-| `qr-code`             | `dictionary`                 | Configuration for a payment QR code (e.g., EPC-QR). Accepts keys like `display` (bool) and `size` (length, defaults to `5em`).                                                    |
+| Key                   | Type                         | Description                                                                                                                                                                                                         |
+| --------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                | `auto` \| `none` \| `str`    | The name of the account holder. If set to `auto`, it automatically defaults to the sender's name (on one line), or the recipient's on a credit note or a self-billed invoice, which the sender pays.                |
+| `bank`                | `none` \| `str`              | The name of the banking institution.                                                                                                                                                                                |
+| `iban`                | `none` \| `str`              | The International Bank Account Number (IBAN), with or without spaces. Required; it is checked for its structure and check digits.                                                                                   |
+| `bic`                 | `none` \| `str`              | The Bank Identifier Code (BIC/SWIFT). If omitted or `none`, the BIC field is hidden in the bank details block and omitted from the EPC-QR code.                                                                     |
+| `reference`           | `auto` \| `none` \| `str`    | The structured payment reference to be used by the customer. If `auto`, it falls back to the invoice's `payment-reference`, then to the `invoice-nr`. `none` omits the reference.                                   |
+| `text`                | `none` \| `str`              | Unstructured payment reference text, as an alternative to `reference` (mutually exclusive).                                                                                                                         |
+| `payment-amount`      | `auto` \| `none` \| `number` | The specific amount to be paid. If `auto`, it uses the remaining amount due (or full gross total if no prepayments are present).                                                                                    |
+| `show-reference`      | `bool`                       | Whether to display the reference field in the output. Defaults to `true`.                                                                                                                                           |
+| `account-holder-text` | `auto`                       | Optional custom text to label the account holder field.                                                                                                                                                             |
+| `qr-code`             | `dictionary`                 | Configuration for a payment QR code (e.g., EPC-QR). Accepts keys like `display` (bool; `false` by default on a credit note or a self-billed invoice, which the sender pays) and `size` (length, defaults to `5em`). |
 
 ---
 
 ## `payment-goal`
 
 Displays the payment deadline and terms for the invoice. You can specify a strict deadline date or a relative number of days.
+
+On a credit note or a self-billed invoice (see [`document-type`](./invoice/index.md#document-type)), the sender pays the amount, so the sentence says that the sender transfers it (`payment.text-credit` of the [locale](./locale/base.md)), e.g. "Den Betrag in Höhe von … überweisen wir innerhalb von 14 Tagen auf das unten angegebene Konto."
 
 :::note
 You can provide either `days` or a specific `date`. If you provide `days`, the system calculates the deadline relative to the main [invoice date](./invoice).

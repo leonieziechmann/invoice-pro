@@ -162,12 +162,33 @@
       // reasons, to each of these items.
       let markers = assign-markers(tax-applicator.taxes)
 
+      // The label of the country of origin of an item.
+      let item-strings = ctx.locale.strings.at("line-items", default: (:))
+      let origin-label = item-strings.at("origin", default: none)
+
       let format-item(item) = loom.mutator.batch(item, {
         import loom.mutator: *
 
         update("name", x => [#x])
-        put("has-description", item.description != none)
-        update("description", x => [#x])
+        // The description, followed by the note and the country of origin of
+        // the item (`item(note: .., origin: ..)`), each on a line of its own.
+        let note = item.at("note", default: none)
+        let origin = item.at("origin", default: none)
+        if note == none and origin == none {
+          put("has-description", item.description != none)
+          update("description", x => [#x])
+        } else {
+          let details = ()
+          if item.description != none { details.push([#item.description]) }
+          if note != none { details.push([#note]) }
+          if origin != none {
+            details.push(if origin-label == none { [#origin] } else {
+              [#origin-label: #origin]
+            })
+          }
+          put("has-description", true)
+          put("description", details.join(linebreak()))
+        }
 
         put("has-date", item.date != none)
         update("date", format.date)
@@ -481,6 +502,11 @@
           )
         },
       )
+      // The notes of the invoice (`invoice(notes: ..)`), which the e-invoice
+      // states as well (BT-22), follow the exemption notes.
+      for note in ctx.at("notes", default: ()) {
+        notes.push((kind: "note", marker: none, body: note.text))
+      }
 
       let view = (
         items: formated-items,
@@ -489,7 +515,9 @@
         surcharges: formated-surcharges,
         prepayments: formated-prepayments,
         taxes: formated-taxes,
-        // Every note is `(kind: .., marker: .., body: ..)`, in print order.
+        // Every note is `(kind: .., marker: .., body: ..)`, in print order:
+        // the exemption notes (kind "small-business" or "grounds"), then the
+        // notes of the invoice (kind "note").
         exemption-notes: notes,
         total: formated-total,
         unmodified-total: unmodified-formated-total,

@@ -44,6 +44,18 @@
   "ram:IssueDateTime": _date(invoice.issue-date),
 )
 
+// Emits the notes of the invoice (BT-22 with the subject code BT-21).
+#let build-notes(notes) = {
+  let entries = ()
+  for note in notes {
+    entries.push((
+      "ram:Content": note.content,
+      "ram:SubjectCode": note.subject-code,
+    ))
+  }
+  entries
+}
+
 // Emits a postal address (BG-5, BG-8, BG-15). ZUGFeRD knows three address
 // lines; any further lines are joined into the third one.
 #let build-postal-address(address) = {
@@ -331,6 +343,10 @@
   if profile.item-description and line.description != none {
     product.insert("ram:Description", line.description)
   }
+  let origin = line.at("origin", default: none)
+  if profile.item-origin and origin != none {
+    product.insert("ram:OriginTradeCountry", ("ram:ID": origin))
+  }
 
   // BT-146 is the price of BT-149 units, e.g. a price per 100 pieces.
   let price = ("ram:ChargeAmount": fmt-price(line.price))
@@ -354,6 +370,14 @@
   }
 
   let line-settlement = ("ram:ApplicableTradeTax": applicable-trade-tax)
+  // BG-26: the date or period of the item.
+  let period = line.at("period", default: none)
+  if period != none {
+    line-settlement.insert("ram:BillingSpecifiedPeriod", (
+      "ram:StartDateTime": _date(period.first()),
+      "ram:EndDateTime": _date(period.last()),
+    ))
+  }
   let line-allowance-charges = (
     line.allowances.map(a => build-allowance-charge(false, a.amount, a.reason))
       + line.charges.map(c => build-allowance-charge(true, c.amount, c.reason))
@@ -369,10 +393,15 @@
     ("ram:LineTotalAmount": fmt-amount(line.net)),
   )
 
+  let document-line = ("ram:LineID": line.id)
+  // BT-127: the note of the item.
+  let note = line.at("note", default: none)
+  if note != none {
+    document-line.insert("ram:IncludedNote", ("ram:Content": note))
+  }
+
   (
-    "ram:AssociatedDocumentLineDocument": (
-      "ram:LineID": line.id,
-    ),
+    "ram:AssociatedDocumentLineDocument": document-line,
     "ram:SpecifiedTradeProduct": product,
     "ram:SpecifiedLineTradeAgreement": (
       "ram:NetPriceProductTradePrice": price,
@@ -505,6 +534,15 @@
       "ram:IssuerAssignedID": invoice.contract-nr,
     ))
   }
+  // BT-11: the project reference is its identifier; the name the syntax
+  // requires as well is the same text.
+  let project = invoice.at("project", default: none)
+  if profile.procuring-project and project != none {
+    header-agreement.insert("ram:SpecifiedProcuringProject", (
+      "ram:ID": project,
+      "ram:Name": project,
+    ))
+  }
 
   let header-delivery = (:)
   if profile.addresses {
@@ -575,9 +613,21 @@
     ),
   )
   if profile.document-references and invoice.preceding-invoice-nr != none {
-    trade-settlement.insert("ram:InvoiceReferencedDocument", (
-      "ram:IssuerAssignedID": invoice.preceding-invoice-nr,
-    ))
+    let reference = ("ram:IssuerAssignedID": invoice.preceding-invoice-nr)
+    // BT-26: the date of the preceding invoice.
+    let date = invoice.at("preceding-invoice-date", default: none)
+    if type(date) == datetime {
+      reference.insert("ram:FormattedIssueDateTime", (
+        "qdt:DateTimeString": ("@format": "102", "": fmt-date(date)),
+      ))
+    }
+    trade-settlement.insert("ram:InvoiceReferencedDocument", reference)
+  }
+
+  let exchanged-document = build-exchanged-document(invoice)
+  let notes = invoice.at("notes", default: ())
+  if profile.notes and notes != () {
+    exchanged-document.insert("ram:IncludedNote", build-notes(notes))
   }
 
   let transaction = (:)
@@ -599,7 +649,7 @@
       "@xmlns:udt": "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100",
       "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
       "rsm:ExchangedDocumentContext": build-document-context(profile),
-      "rsm:ExchangedDocument": build-exchanged-document(invoice),
+      "rsm:ExchangedDocument": exchanged-document,
       "rsm:SupplyChainTradeTransaction": transaction,
     ),
   )

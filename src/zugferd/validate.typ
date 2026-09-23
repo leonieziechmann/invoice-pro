@@ -20,6 +20,7 @@
 #import "codelists.typ"
 #import "xml.typ": fmt-number, rate-digits
 #import "model.typ": vat-eas-codes, vat-id-country, vat-id-prefix
+#import "document.typ": note-subject-code-valid, title-kind
 #import "../utils/iban.typ": iban-valid
 
 #let _zero = decimal("0")
@@ -89,21 +90,27 @@
       hint: "Set `date` on the invoice, e.g. `datetime(year: 2026, month: 7, day: 1)`.",
     ))
   }
+  // The invoice's `currency`, or the locale.
+  let currency-field = model.at("currency-field", default: "locale")
   if model.currency == none {
     out.push(error(
       "BR-05",
       "locale",
       "The invoice currency code (BT-5) is missing.",
-      hint: "Use a locale that defines `currency.code`, e.g. `locale.de-de`.",
+      hint: "Set `currency` on the invoice, e.g. `currency: \"EUR\"`, or use a locale that defines `currency.code`, e.g. `locale.de-de`.",
     ))
   } else if model.currency not in codelists.currencies {
     out.push(error(
       "BR-CL-04",
-      "locale",
+      currency-field,
       "The invoice currency code (BT-5) "
         + _quoted(model.currency)
         + " is not an ISO 4217 code.",
-      hint: "Use a currency code such as \"EUR\" or \"CHF\" in the locale.",
+      hint: if currency-field == "currency" {
+        "Set `currency` to an ISO 4217 code such as \"EUR\" or \"USD\"."
+      } else {
+        "Use a currency code such as \"EUR\" or \"CHF\" in the locale, or set `currency` on the invoice."
+      },
     ))
   } else if (
     model.profile.en16931
@@ -111,7 +118,7 @@
   ) {
     out.push(error(
       "BR-CL-04",
-      "locale",
+      currency-field,
       "The invoice currency code (BT-5) "
         + _quoted(model.currency)
         + " is missing in the code list of the EN 16931 validation, so no e-invoice in the "
@@ -179,10 +186,312 @@
           + "), but the e-invoice states the currency "
           + _quoted(model.currency)
           + " (BT-5).",
-        hint: "Set the currency of the locale's region to the printed one, e.g. `currency: (code: \"PLN\", symbol: \"zł\")` in a region builder or `locale.de-de.with((region: (currency: (code: \"PLN\", symbol: \"zł\"))))`; the amounts are then printed with its symbol.",
+        hint: "Set `currency` on the invoice to the printed currency, e.g. `currency: \"PLN\"`, or the currency of the locale's region, e.g. `currency: (code: \"PLN\", symbol: \"zł\")` in a region builder; the amounts are then printed with its symbol.",
       ))
       break
     }
+  }
+  out
+}
+
+// --- Document type --------------------------------------------------------
+
+// What a title names that is no invoice at all, for IP-DOC-01.
+#let _no-invoice = (
+  quote: "a quote",
+  delivery-note: "a delivery note",
+  order: "an order",
+  pro-forma: "a pro forma invoice",
+  reminder: "a payment reminder",
+)
+
+// The document types XRechnung allows (BR-DE-17).
+#let _xrechnung-type-codes = (
+  "326": true,
+  "380": true,
+  "381": true,
+  "384": true,
+  "389": true,
+  "875": true,
+  "876": true,
+  "877": true,
+)
+
+// IP-DOC-01: the title of a document without `document-type` names another
+// kind of document than the invoice (BT-3 = 380) the e-invoice states, e.g.
+// "Gutschrift": the e-invoice would ask the buyer to pay a credit note.
+#let _check-title(invoice) = {
+  let document = invoice.document
+  if document.input != auto { return () }
+  let named = title-kind(invoice.title)
+  if named == none or named.kind == "invoice" { return () }
+  let title = _quoted(invoice.title)
+  let as-invoice = "or `document-type: \"invoice\"` if it is an invoice."
+  let (message, hint) = if named.kind in _no-invoice {
+    (
+      "The subject "
+        + title
+        + " names "
+        + _no-invoice.at(named.kind)
+        + ", which is no invoice, but the e-invoice states a commercial invoice (BT-3 = "
+        + document.code
+        + ").",
+      "Do not set `zugferd` for quotes, delivery notes, orders, pro forma invoices or payment reminders: an e-invoice is only written for invoices and credit notes. Set `document-type: \"invoice\"` if it is an invoice.",
+    )
+  } else if named.kind == "corrected" {
+    (
+      "The subject "
+        + title
+        + " names a corrected invoice, but the e-invoice states a new commercial invoice (BT-3 = "
+        + document.code
+        + "), which the buyer would book and pay a second time.",
+      "Set `document-type: \"corrected\"` (384) and `preceding-invoice-nr` to the invoice it replaces, `document-type: \"credit-note\"` (381) for a credit note, "
+        + as-invoice,
+    )
+  } else if named.kind == "self-billed" {
+    (
+      "The subject "
+        + title
+        + " names a self-billed invoice, but the e-invoice states a commercial invoice of the sender (BT-3 = "
+        + document.code
+        + ").",
+      "Set `document-type: \"self-billed\"` (389): the sender is then the buyer, who issues the invoice, and the recipient the seller. Set `document-type: \"invoice\"` if it is an invoice.",
+    )
+  } else {
+    (
+      "The subject "
+        + title
+        + " names a credit note"
+        + if named.kind == "credit-note-or-self-billed" {
+          " or a self-billed invoice"
+        }
+        + ", but the e-invoice states a commercial invoice (BT-3 = "
+        + document.code
+        + "), which asks the buyer to pay.",
+      "Set `document-type: \"credit-note\"` (381) for a credit note and enter the credited items with positive prices, "
+        + if named.kind == "credit-note-or-self-billed" {
+          "`document-type: \"self-billed\"` (389) for a self-billed invoice (which German VAT law calls \"Gutschrift\"), "
+        } else {
+          // "Rechnungskorrektur" and the like also name a corrected invoice.
+          "`document-type: \"corrected\"` (384) for an invoice that replaces the preceding one, "
+        }
+        + as-invoice,
+    )
+  }
+  (error("IP-DOC-01", "subject", message, hint: hint),)
+}
+
+/// Checks the document type (BT-3): that the title of the document does not
+/// name another kind of document (IP-DOC-01), that the profile allows the
+/// type (BR-DE-17), and that the amounts have the sign of the type.
+///
+/// -> array
+#let check-document-type(model) = {
+  let invoice = model.invoice
+  let document = invoice.at("document", default: none)
+  if type(document) != dictionary { return () }
+  let out = _check-title(invoice)
+  let code = invoice.type-code
+
+  // XRechnung only warns about BR-DE-17, but validators such as Mustang
+  // reject the invoice, so invoice-pro reports an error.
+  if model.profile.xrechnung and code not in _xrechnung-type-codes {
+    out.push(error(
+      "BR-DE-17",
+      "document-type",
+      "XRechnung does not allow the document type "
+        + _quoted(code)
+        + " (BT-3), only 326, 380, 381, 384, 389, 875, 876 and 877.",
+      hint: if code == "386" {
+        "XRechnung has no prepayment invoice: state the advance payment as an invoice (`document-type: \"invoice\"`) or a partial invoice (`document-type: \"326\"`), or use the \"en16931\" profile (as `zugferd: auto` does)."
+      } else {
+        "Use one of these document types, or the \"en16931\" profile (as `zugferd: auto` does)."
+      },
+    ))
+  }
+
+  // The preceding invoice reference (BG-3), from BASIC WL on: its number
+  // (BT-25) is required (BR-55), and a corrected invoice replaces the
+  // invoice it names. A document that amends an invoice must refer to it
+  // (Art. 219 of the VAT Directive), which XRechnung checks as BR-DE-26.
+  // XRechnung only warns about BR-DE-26, but validators such as Mustang
+  // reject the invoice.
+  if model.profile.document-references {
+    let number = invoice.at("preceding-invoice-nr", default: none)
+    if (
+      number == none
+        and invoice.at("preceding-invoice-date", default: none) != none
+    ) {
+      out.push(error(
+        "BR-55",
+        "preceding-invoice-nr",
+        "The date of the preceding invoice (BT-26) is given, but not its number (BT-25), which a preceding invoice reference must have.",
+        hint: "Set `preceding-invoice-nr` on the invoice.",
+      ))
+    } else if number == none and code == "384" {
+      out.push(error(
+        if model.profile.xrechnung { "BR-DE-26" } else { "IP-DOC-02" },
+        "preceding-invoice-nr",
+        "A corrected invoice (BT-3 = "
+          + code
+          + ") replaces a preceding invoice, but it names none (BG-3).",
+        hint: "Set `preceding-invoice-nr` (and `preceding-invoice-date`) to the invoice it corrects.",
+      ))
+    }
+  }
+
+  // A credit note states the credited amounts as positive amounts: a
+  // negative credit note asks the buyer to pay (IP-DOC-03). An invoice with
+  // a negative total is valid, but a credit note is the document for it.
+  let gross = model.totals.gross
+  if document.credit and gross < _zero {
+    out.push(error(
+      "IP-DOC-03",
+      "line-items",
+      "A credit note (BT-3 = "
+        + code
+        + ") states the credited amounts as positive amounts, but its total is "
+        + fmt-number(gross)
+        + ", which would ask the buyer to pay "
+        + fmt-number(-gross)
+        + ".",
+      hint: "Enter the credited items with positive prices: the document type already says that the amounts are credited to the buyer.",
+    ))
+  } else if not document.credit and gross < _zero {
+    out.push(warning(
+      "IP-DOC-04",
+      "line-items",
+      "The total is negative ("
+        + fmt-number(gross)
+        + "), but the document type "
+        + _quoted(code)
+        + " (BT-3) is no credit note: the e-invoice asks the buyer to pay a negative amount.",
+      hint: "For a credit, set `document-type: \"credit-note\"` and enter the credited items with positive prices.",
+    ))
+  }
+  out
+}
+
+// --- Document data --------------------------------------------------------
+
+/// Checks the data of the document besides its type: the notes (BT-21,
+/// BT-22), the project reference (BT-11), and that the service period the
+/// invoice prints is the one the XML states (IP-PERIOD-01).
+///
+/// -> array
+#let check-document-data(model) = {
+  let out = ()
+  let profile = model.profile
+
+  // The notes are printed in any case, but only BASIC WL and the richer
+  // profiles can state them.
+  let notes = model.invoice.at("notes", default: ())
+  if notes.len() > 0 and not profile.notes {
+    out.push(warning(
+      "IP-PROFILE-01",
+      "notes",
+      "The "
+        + profile.name
+        + " profile has no invoice notes (BT-22), so `notes` are printed, but not written into the e-invoice.",
+      hint: "Use the \"basic-wl\" profile or a richer one to state them.",
+    ))
+  }
+  // The project reference (BT-11) exists in EN 16931 and XRechnung only.
+  if (
+    model.invoice.at("project", default: none) != none
+      and not profile.procuring-project
+  ) {
+    out.push(warning(
+      "IP-PROFILE-01",
+      "project",
+      "The "
+        + profile.name
+        + " profile has no project reference (BT-11), so `project` is not written into the e-invoice.",
+      hint: "Use the \"en16931\" or \"xrechnung\" profile to state it.",
+    ))
+  }
+  // MINIMUM states neither the service period (BT-72, BG-14) nor the
+  // preceding invoice (BG-3), which exist from BASIC WL on.
+  if (
+    not profile.settlement
+      and model.at("delivery", default: (:)).at("source", default: none)
+        == "invoice"
+  ) {
+    out.push(warning(
+      "IP-PROFILE-01",
+      "service-period",
+      "The "
+        + profile.name
+        + " profile has no service period (BT-72, BG-14), so `service-period` is not written into the e-invoice.",
+      hint: "Use the \"basic-wl\" profile or a richer one to state it.",
+    ))
+  }
+  if not profile.document-references {
+    let given = ()
+    for key in ("preceding-invoice-nr", "preceding-invoice-date") {
+      if model.invoice.at(key, default: none) != none { given.push(key) }
+    }
+    if given.len() > 0 {
+      out.push(warning(
+        "IP-PROFILE-01",
+        given.first(),
+        "The "
+          + profile.name
+          + " profile has no preceding invoice reference (BG-3), so "
+          + given.map(key => "`" + key + "`").join(" and ")
+          + if given.len() == 1 { " is" } else { " are" }
+          + " not written into the e-invoice.",
+        hint: "Use the \"basic-wl\" profile or a richer one to state it.",
+      ))
+    }
+  }
+  if profile.notes {
+    for note in notes {
+      let code = note.subject-code
+      if code != none and not note-subject-code-valid(code) {
+        out.push(error(
+          "BR-CL-08",
+          "notes",
+          "The subject code "
+            + _quoted(code)
+            + " of a note (BT-21) is not a code of UNTDID 4451.",
+          hint: "Use a code such as \"AAI\" (general information), \"REG\" (regulatory information), \"TXD\" (tax declaration) or \"SUR\" (supplier remarks), or leave out `subject-code`.",
+        ))
+      }
+    }
+  }
+
+  // IP-PERIOD-01: a service period printed as a text of its own (e.g.
+  // `references.service-time(value: "Juni 2026")`) cannot reach the XML,
+  // which states the service period of the items or the invoice date. The
+  // delivery information exists from BASIC WL on.
+  let delivery = model.at("delivery", default: (:))
+  let printed = delivery.at("printed", default: none)
+  let stated = delivery.at("text", default: none)
+  if (
+    profile.settlement
+      and printed != none
+      and stated != none
+      and printed != stated
+  ) {
+    out.push(warning(
+      "IP-PERIOD-01",
+      "references",
+      "The invoice prints the service period "
+        + _quoted(printed)
+        + ", but the e-invoice states "
+        + _quoted(stated)
+        + " ("
+        + if delivery.at("period", default: none) != none { "BG-14" } else {
+          "BT-72"
+        }
+        + ")"
+        + if delivery.at("source", default: none) == "invoice-date" {
+          ", the invoice date, as no item has a date"
+        }
+        + ".",
+      hint: "Set `service-period` on the invoice, e.g. `service-period: (datetime(year: 2026, month: 6, day: 1), datetime(year: 2026, month: 6, day: 30))`, and print it with `references.service-time()`.",
+    ))
   }
   out
 }
@@ -1476,6 +1785,102 @@
   out
 }
 
+/// Checks the period and the country of origin of the lines (BG-26,
+/// BT-159): the order of the dates of a period (BR-30), a date outside the
+/// service period of the invoice (PEPPOL-EN16931-R110 and R111 in XRechnung,
+/// else IP-PERIOD-02) and the country code (BR-CL-15).
+///
+/// -> array
+#let check-line-data(model) = {
+  let profile = model.profile
+  if not profile.lines { return () }
+  let out = ()
+
+  // The service period of the invoice: the delivery date (BT-72) or the
+  // invoicing period (BG-14). The dates of the items can only leave it if
+  // the invoice sets `service-period`.
+  let delivery = model.at("delivery", default: (:))
+  let invoicing-period = delivery.at("period", default: none)
+  let date = delivery.at("date", default: none)
+  let service-period = if invoicing-period != none {
+    invoicing-period
+  } else if (
+    date != none
+  ) { (date, date) }
+  // PEPPOL-EN16931-R110 and R111 of XRechnung compare the lines with BG-14.
+  let peppol = profile.xrechnung and invoicing-period != none
+  let span(period) = {
+    let start = period.first().display("[year]-[month]-[day]")
+    let end = period.last().display("[year]-[month]-[day]")
+    if start == end { start } else { start + " to " + end }
+  }
+
+  let origins = 0
+  for line in model.lines {
+    let period = line.at("period", default: none)
+    let origin = line.at("origin", default: none)
+    // Most lines have neither.
+    if period == none and origin == none { continue }
+    let field = _line-field(line)
+    if period != none and period.last() < period.first() {
+      out.push(error(
+        "BR-30",
+        field,
+        "The period of the item (BG-26) ends before it starts: "
+          + span(period)
+          + ".",
+        hint: "Give the `date` of the item as `(start, end)`, the earlier date first.",
+      ))
+    } else if period != none and service-period != none {
+      let rules = ()
+      if period.first() < service-period.first() {
+        rules.push(if peppol { "PEPPOL-EN16931-R110" } else { "IP-PERIOD-02" })
+      }
+      if period.last() > service-period.last() {
+        rules.push(if peppol { "PEPPOL-EN16931-R111" } else { "IP-PERIOD-02" })
+      }
+      for rule in rules.dedup() {
+        out.push((if peppol { error } else { warning })(
+          rule,
+          field,
+          "The date of the item ("
+            + span(period)
+            + ") is outside the service period of the invoice ("
+            + span(service-period)
+            + ").",
+          hint: "Set `service-period` on the invoice to a period that includes the dates of all items, or leave it out: the dates of the items are the service period then.",
+        ))
+      }
+    }
+
+    if origin == none { continue }
+    origins += 1
+    if profile.item-origin and origin not in codelists.countries {
+      out.push(error(
+        "BR-CL-15",
+        field,
+        "The country of origin (BT-159) "
+          + _quoted(origin)
+          + " is not in the ISO 3166-1 code list of EN 16931.",
+        hint: if origin == "EL" { _country-hints.EL } else {
+          "Give `origin` as a country of the `country` module (e.g. `country.de`) or an ISO 3166-1 code such as \"DE\"."
+        },
+      ))
+    }
+  }
+  if origins > 0 and not profile.item-origin {
+    out.push(warning(
+      "IP-PROFILE-01",
+      "item.origin",
+      "The "
+        + profile.name
+        + " profile has no country of origin of an item (BT-159), so `origin` is printed, but not written into the e-invoice.",
+      hint: "Use the \"en16931\" or \"xrechnung\" profile to state it.",
+    ))
+  }
+  out
+}
+
 // --- VAT ------------------------------------------------------------------
 
 // Margin schemes have no category in EN 16931: they are written as exempt
@@ -2115,8 +2520,11 @@
 #let validate(model) = {
   let diagnostics = (
     check-document(model)
+      + check-document-type(model)
+      + check-document-data(model)
       + check-parties(model)
       + check-lines(model)
+      + check-line-data(model)
       + check-taxes(model)
       + check-payment(model)
       + check-consistency(model)

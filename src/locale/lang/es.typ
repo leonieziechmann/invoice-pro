@@ -27,6 +27,11 @@
   /// Denominaciones para tipos de documentos
   document: (
     invoice: "Factura",
+    credit-note: "Factura de abono",
+    corrected: "Factura rectificativa",
+    prepayment: "Factura de anticipo",
+    // Mention required on a self-billed invoice (art. 6 RD 1619/2012).
+    self-billed: "Facturación por el destinatario",
   ),
 
   /// Denominaciones relacionadas con la dirección
@@ -54,6 +59,7 @@
     delivery-note-number: "Nº de albarán",
     delivery-address: "Dirección de entrega",
     preceding-invoice-number: "Nº de factura rectificada",
+    preceding-invoice-date: "Fecha de la factura rectificada",
     due-date: "Fecha de vencimiento",
     payment-reference: "Concepto de pago",
     contact-person: "Persona de contacto",
@@ -77,6 +83,7 @@
     subtotal: "Subtotal",
     prepayment: "Anticipo",
     conjunction: "y",
+    origin: "País de origen",
   ),
 
   /// Etiquetas para la sección de resumen (pie de la tabla)
@@ -166,6 +173,16 @@
 
     /// Texto para pago inmediato.
     deadline-soon: "al recibir la factura",
+
+    /// Frase de pago de una factura de abono o de una factura emitida por el
+    /// destinatario: el remitente paga el importe al destinatario.
+    text-credit: (
+      sum,
+      deadline,
+    ) => [Le transferiremos el importe de *#sum* #deadline a la cuenta indicada a continuación.],
+
+    /// Texto para un pago inmediato en `text-credit`.
+    deadline-soon-credit: "de inmediato",
   ),
 
   /// Saludo y área de firma

@@ -234,8 +234,9 @@ class KnownIssues(unittest.TestCase):
         self.assertIn("HARD GATE BROKEN", text)
 
     def test_known_issues_file(self):
+        # The list only shrinks, down to no entry at all.
         entries = run.load_known(HERE / "known-issues.toml")
-        self.assertTrue(entries)
+        self.assertIsInstance(entries, list)
         for entry in entries:
             self.assertTrue(entry["finding"])
             self.assertTrue(entry["signatures"])

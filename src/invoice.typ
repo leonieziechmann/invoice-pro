@@ -8,6 +8,12 @@
 #import "locale/lang/base.typ": base-language
 #import "locale/region/base.typ": base-region
 #import "logic/country.typ": normalize-party, resolve-party-country
+#import "logic/document-type.typ": document-title, resolve-document-type
+#import "logic/notes.typ": normalize-notes
+#import "logic/service-period.typ": (
+  format-service-period, resolve-service-period,
+)
+#import "data/currency.typ": with-currency
 
 /// The main entry point for creating an invoice document.
 /// It orchestrates the theme, localization, and data calculation passes.
@@ -20,6 +26,13 @@
   /// The locale settings for language and number formatting.
   /// -> function
   locale: locale.de-de,
+  /// The currency of the invoice, an ISO 4217 code such as `"USD"`: the
+  /// e-invoice states it (BT-5), and the amounts are printed with its symbol
+  /// ("$", "£", ...) or, if it has no common symbol, its code ("CHF", "SEK",
+  /// ...) in the number format of the locale. `auto` is the currency of the
+  /// locale.
+  /// -> auto | str
+  currency: auto,
 
   /// A dictionary containing sender details (e.g., name, address).
   /// -> dictionary
@@ -46,11 +59,29 @@
   /// The date of the invoice. Defaults to today.
   /// -> datetime
   date: datetime.today(),
-  /// The subject line of the invoice.
+  /// The date or period `(start, end)` of the supply, printed by
+  /// `references.service-time()` (which the default `references` include if
+  /// it is given) and written to the e-invoice (BT-72 or BG-14). If `none`,
+  /// the earliest to the latest date of the items, or the invoice date if no
+  /// item has a date.
+  /// -> none | datetime | array
+  service-period: none,
+  /// The subject line of the invoice. If `auto`, the title of the
+  /// `document-type` in the language of the locale, e.g. "Rechnung".
   /// -> string | content
   subject: auto,
+  /// The type of the document (BT-3 of the e-invoice): `"invoice"` (380),
+  /// `"credit-note"` (381, amounts credited to the buyer, stated as positive
+  /// amounts), `"corrected"` (384, replaces `preceding-invoice-nr`),
+  /// `"prepayment"` (386), `"self-billed"` (389, issued by the buyer: the
+  /// sender is the buyer and the recipient the seller), or another code of
+  /// UNTDID 1001 for invoices and credit notes, e.g. `"326"` for a partial
+  /// invoice. `auto` is an invoice.
+  /// -> auto | str | int
+  document-type: auto,
   /// Reference information for the document header (e.g., customer number).
-  /// If `auto`, defaults to displaying sender tax-nr, sender vat-id, and recipient vat-id in exclusive tax-mode (B2B), or none in inclusive tax-mode (B2C).
+  /// If `auto`, defaults to displaying sender tax-nr, sender vat-id, and recipient vat-id in exclusive tax-mode (B2B), or none in inclusive tax-mode (B2C),
+  /// followed by the `service-period`, the `preceding-invoice-nr` and the `preceding-invoice-date` if they are given.
   /// -> auto | none | dictionary | array | function
   references: auto,
   /// The unique identifier or number of the invoice.
@@ -81,12 +112,22 @@
   /// Preceding invoice number (for credit notes / corrections).
   /// -> none | string | content
   preceding-invoice-nr: none,
+  /// The date of the preceding invoice (BT-26 of the e-invoice), next to
+  /// `preceding-invoice-nr`.
+  /// -> none | datetime
+  preceding-invoice-date: none,
   /// Explicit due date for payment.
   /// -> none | datetime | string | content
   due-date: none,
   /// Custom payment reference / purpose (Verwendungszweck).
   /// -> none | string | content
   payment-reference: none,
+  /// Notes about the invoice as a whole: a text, or an array of texts and
+  /// dictionaries `(text: .., subject-code: ..)` with a UNTDID 4451 subject
+  /// code (e.g. `"AAI"`). They are printed below the line items and written
+  /// into the e-invoice (BT-22, BT-21).
+  /// -> none | str | content | array
+  notes: none,
 
   /// The default tax rate to apply if not specified elsewhere.
   /// If `auto`, it is inferred from the locale.
@@ -119,6 +160,7 @@
 ) = {
   types.require(theme, "invoice::theme", function)
   types.require(locale, "invoice::locale", function)
+  types.require(currency, "invoice::currency", auto, str)
 
   types.require(sender, "invoice::sender", dictionary)
   types.require(recipient, "invoice::recipient", dictionary)
@@ -143,7 +185,26 @@
   )
 
   types.require(date, "invoice::date", datetime)
+  types.require(
+    service-period,
+    "invoice::service-period",
+    none,
+    types.date-like,
+  )
+  if (
+    type(service-period) == array
+      and service-period.last() < service-period.first()
+  ) {
+    panic(
+      "invoice::service-period ends before it starts: "
+        + service-period.first().display()
+        + " to "
+        + service-period.last().display()
+        + ". Give it as `(start, end)`.",
+    )
+  }
   types.require(subject, "invoice::subject", auto, str, content)
+  types.require(document-type, "invoice::document-type", auto, str, int)
   types.require(
     references,
     "invoice::references",
@@ -179,6 +240,12 @@
     str,
     content,
   )
+  types.require(
+    preceding-invoice-date,
+    "invoice::preceding-invoice-date",
+    none,
+    datetime,
+  )
   types.require(due-date, "invoice::due-date", none, datetime, str, content)
   types.require(
     payment-reference,
@@ -188,6 +255,7 @@
     content,
   )
   types.require(tax-nr, "invoice::tax-nr", none, str, content)
+  types.require(notes, "invoice::notes", none, str, content, array)
 
   types.require(tax, "invoice::tax", none, auto, types.tax-like)
   types.require(tax-mode, "invoice::tax-mode", "inclusive", "exclusive")
@@ -214,6 +282,8 @@
   /** Input Calculations **/
   let eval-theme = theme()
   let eval-locale = locale(base-language, base-region)
+  if currency != auto { eval-locale = with-currency(eval-locale, currency) }
+  let document = resolve-document-type(document-type)
 
   let default-region = eval-locale.meta.region
   let sender = sender
@@ -268,15 +338,18 @@
   } else {
     none
   }
-  // Without a country of its own, the delivery address is in the recipient's
-  // country, not in the country of the locale.
+  // Without a country of its own, the delivery address is in the buyer's
+  // country, not in the country of the locale: the recipient's, or the
+  // sender's on a self-billed invoice, which the buyer issues.
   let normalized-delivery-address = if raw-delivery-address != none {
     normalize-party(
       raw-delivery-address,
       default-region,
       is-recipient: true,
       sender-country-code: normalized-sender.country.code,
-      default-country: normalized-recipient.country,
+      default-country: if document.self-billed {
+        normalized-sender.country
+      } else { normalized-recipient.country },
       field: if delivery-address != none { "delivery-address" } else {
         "recipient.delivery-address"
       },
@@ -288,7 +361,7 @@
     normalized-recipient.insert("delivery-address", normalized-delivery-address)
   }
 
-  if subject == auto { subject = eval-locale.strings.document.invoice }
+  if subject == auto { subject = document-title(document, eval-locale.strings) }
 
   let document-subject = (subject, invoice-nr).join(" ")
   let document-tax = if tax != auto { tax } else { eval-locale.tax.default-vat }
@@ -326,6 +399,49 @@
           recipient-vat-id,
         ))
       }
+    }
+    // A self-billed invoice, which the buyer (the sender) issues for the
+    // seller (the recipient), states the seller's tax number or VAT ID (e.g.
+    // § 14 Abs. 4 Satz 1 Nr. 2 UStG), and the buyer's VAT ID.
+    if tax-mode != "inclusive" and document.self-billed {
+      let labels = eval-locale.strings.reference
+      document-references = ()
+      for (label, value) in (
+        (labels.recipient-tax-number, normalized-recipient.tax-nr),
+        (labels.recipient-vat-id, normalized-recipient.vat-id),
+        (labels.vat-id, normalized-sender.vat-id),
+      ) {
+        if value != none and value != "" {
+          document-references.push((label, value))
+        }
+      }
+    }
+    // The service period and the preceding invoice (e.g. of a credit note or
+    // a corrected invoice) are printed if they are given, as the e-invoice
+    // states them (BT-72 or BG-14, BG-3): the service period is part of the
+    // invoice (e.g. § 14 Abs. 4 Satz 1 Nr. 6 UStG), and a document that
+    // amends an invoice refers to it (Art. 219 of the VAT Directive).
+    let labels = eval-locale.strings.reference
+    if service-period != none {
+      document-references.push((
+        labels.service-time,
+        format-service-period(
+          resolve-service-period((), date, service-period: service-period),
+          eval-locale.format.date,
+        ),
+      ))
+    }
+    if preceding-invoice-nr not in (none, "", []) {
+      document-references.push((
+        labels.preceding-invoice-number,
+        preceding-invoice-nr,
+      ))
+    }
+    if preceding-invoice-date != none {
+      document-references.push((
+        labels.preceding-invoice-date,
+        (eval-locale.format.date)(preceding-invoice-date),
+      ))
     }
   } else if type(references) == function {
     document-references = references
@@ -368,6 +484,24 @@
     zugferd: zugferd,
     zugferd-errors: zugferd-errors,
   )
+  // Document data most invoices leave out joins the context only if it is
+  // given: the context reaches every component and call, and each value it
+  // carries costs time on long invoices. It is read with a default.
+  for (key, value) in (
+    // The invoice's own `currency`, which `eval-locale` already invoices in.
+    currency: currency,
+    service-period: service-period,
+    // The title of the document (the subject without the invoice number),
+    // which the e-invoice compares with the document type.
+    title: if zugferd != none { subject },
+    // The resolved `document-type`, see `resolve-document-type`.
+    document-type: if document-type != auto { document },
+    preceding-invoice-date: preceding-invoice-date,
+    // `(text: .., subject-code: ..)` each, see `normalize-notes`.
+    notes: normalize-notes(notes),
+  ) {
+    if value not in (none, auto, ()) { inputs.insert(key, value) }
+  }
 
   /** Data Calculations **/
   let weaved-body = weave(

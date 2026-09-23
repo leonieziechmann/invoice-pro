@@ -120,6 +120,19 @@
   /// -> str | auto | none
   reference: auto, // str optional
 
+  /// A note about the item, printed below its description and written into
+  /// the e-invoice (BT-127). Not for an item inside a `bundle`, which is no
+  /// line of its own.
+  /// -> str | content | auto | none
+  note: auto,
+  /// The country of origin of the item: a country of the `country` module
+  /// (e.g. `country.de`) or an ISO 3166-1 alpha-2 code such as `"DE"`.
+  /// Printed with its code below the description and written into the
+  /// e-invoice (BT-159). Not for an item inside a `bundle`, which is no line
+  /// of its own.
+  /// -> function | dictionary | str | auto | none
+  origin: auto,
+
   /// An array of specific modifiers (discounts or surcharges) applied specifically to this item.
   /// -> array | auto | none
   modifier: auto,
@@ -155,6 +168,18 @@
 
   types.require(item-id, "item::item-id", none, auto, str, dictionary)
   types.require(reference, "item::reference", none, auto, str)
+  // Checked only if given, as most items have neither.
+  if note != auto { types.require(note, "item::note", none, types.text-like) }
+  if origin != auto {
+    types.require(
+      origin,
+      "item::origin",
+      none,
+      types.text-like,
+      dictionary,
+      function,
+    )
+  }
 
   types.require(
     modifier,
@@ -234,6 +259,21 @@
 
       derive("item-id", item-id)
       derive("reference", reference)
+      // Set only if given, so that items without them carry no extra keys
+      // (`calculate-item-data` reads them with a default).
+      if note != auto { put("note", note) }
+      if origin != auto { put("origin", origin) }
+      // The items of a bundle are no lines of their own: the bundle is
+      // printed and written as one line, which names its items, so a note or
+      // a country of origin of one of them would be lost.
+      if (
+        (note not in (auto, none) or origin not in (auto, none))
+          and ctx.at("bundle-quantity", default: none) != none
+      ) {
+        panic(
+          "item::note and item::origin are not supported on an item inside a `bundle`: the bundle is one line of the invoice, which prints and states neither the note nor the country of origin of its items. Mention them in the `description` of the bundle, or list the item outside the bundle.",
+        )
+      }
 
       derive("modifier", evaluate-modifier(ctx, modifier), default: ())
       update("modifier", evaluate-modifier.with(ctx))

@@ -428,6 +428,7 @@ The automated `validate-all-zugferd` suite covers:
 - `tests/integration/zugferd-party-details/test.typ` — XRechnung to a public buyer with the seller's register number (BT-30), trading name (BT-28) and legal information (BT-33), the buyer's Leitweg-ID of the `id` module as buyer reference and electronic address, the buyer contact (BG-9) and a factoring company as payee (BG-10).
 - `tests/integration/zugferd-tax-representative/test.typ` — Swiss seller identified by its UID (BT-30) with a fiscal representative in Germany (BG-11), whose VAT identifier satisfies the rules of an intra-community supply (category `K`).
 - `tests/integration/zugferd-minimum-legal-id/test.typ` — Factur-X MINIMUM of a French micro-entrepreneur identified by its SIRET (BT-30) instead of a VAT identifier.
+- `tests/integration/zugferd-credit-note/test.typ` — Credit note (document type `381`) with positive amounts in XRechnung: the preceding invoice (BT-25), the refund date and the buyer's account the amount is refunded to (BG-16).
 - `tests/docs/e-invoicing-complete/test.typ` — Complete example of the e-invoicing documentation.
 - `template/invoice.typ` — Default release invoice template.
 
@@ -637,6 +638,8 @@ Every non-trivial code block in `docs/docs/` must be registered here. When addin
 | `api-reference/theme.md`               | `din5008-example`      | DIN-5008 theme with custom parameters                                   | `docs/api-theme-din5008/`        | ✅                 |
 | `api-reference/theme.md`               | `blank-example`        | Blank theme with native Typst page setup                                | `docs/api-theme-blank/`          | ✅                 |
 | `e-invoicing.md`                       | `custom-report`        | Theme `zugferd-report` function for a custom problem list               | `docs/e-invoicing-report/`       | ✅                 |
+| `e-invoicing.md`                       | `credit-note`          | Credit note (document type 381) with a preceding invoice                | `docs/e-invoicing-credit-note/`  | ✅                 |
+| `e-invoicing.md`                       | `item-data`            | Note, date and country of origin of items                               | `docs/e-invoicing-item-data/`    | ✅                 |
 | `e-invoicing.md`                       | `complete-example`     | Complete ZUGFeRD-compliant invoice                                      | `docs/e-invoicing-complete/`     | ✅                 |
 | `api-reference/invoice/identifiers.md` | `printing-identifiers` | Register number as legal registration identifier and printed in `extra` | `docs/api-identifiers-printing/` | ✅                 |
 | `api-reference/locale/index.md`        | `locale-customize`     | Locale customization with `locale.custom` overrides                     | —                                | ⚠️ not implemented |

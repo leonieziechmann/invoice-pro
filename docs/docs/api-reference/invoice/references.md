@@ -66,12 +66,12 @@ All reference builders accept optional `label` and `value` parameters (e.g. `ref
 
 ### Document & Core
 
-| Function                      | Default Source / Logic                                  | Description                                                                                            |
-| :---------------------------- | :------------------------------------------------------ | :----------------------------------------------------------------------------------------------------- |
-| **`references.invoice-nr`**   | `ctx.invoice-nr`                                        | Invoice identifier / number.                                                                           |
-| **`references.invoice-date`** | `ctx.invoice-date` (`date`)                             | Invoice issue date, formatted according to locale.                                                     |
-| **`references.due-date`**     | `ctx.due-date` or derived from `#payment-goal()`        | Payment deadline date.                                                                                 |
-| **`references.service-time`** | Computed min & max dates across all `item.date` entries | Period or date of service delivery. Falls back to invoice date if items don't define individual dates. |
+| Function                      | Default Source / Logic                                                           | Description                                                                                                                                                        |
+| :---------------------------- | :------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`references.invoice-nr`**   | `ctx.invoice-nr`                                                                 | Invoice identifier / number.                                                                                                                                       |
+| **`references.invoice-date`** | `ctx.invoice-date` (`date`)                                                      | Invoice issue date, formatted according to locale.                                                                                                                 |
+| **`references.due-date`**     | `ctx.due-date` or derived from `#payment-goal()`                                 | Payment deadline date.                                                                                                                                             |
+| **`references.service-time`** | The invoice's `service-period`, else the earliest and latest `date` of the items | Period or date of service delivery, as the e-invoice states it (BT-72 / BG-14). Items without a date do not count; the invoice date is used if no item has a date. |
 
 ### Customer & Recipient
 
@@ -84,16 +84,17 @@ All reference builders accept optional `label` and `value` parameters (e.g. `ref
 
 ### Orders, Projects & Procurement
 
-| Function                              | Default Source / Logic                                 | Description                                                                  |
-| :------------------------------------ | :----------------------------------------------------- | :--------------------------------------------------------------------------- |
-| **`references.order-nr`**             | `ctx.order-nr`, `recipient.order-nr`, or `po-nr`       | Customer purchase order / PO number (BT-13).                                 |
-| **`references.order-date`**           | `ctx.order-date` or `recipient.order-date`             | Date the order was placed.                                                   |
-| **`references.project`**              | `ctx.project` or `ctx.project-nr`                      | Project name or tracking reference (BT-11).                                  |
-| **`references.contract-nr`**          | `ctx.contract-nr`                                      | Framework agreement or contract number (BT-12).                              |
-| **`references.quote-nr`**             | `ctx.quote-nr` or `ctx.offer-nr`                       | Preceding quotation or estimate reference number.                            |
-| **`references.delivery-note-nr`**     | `ctx.delivery-note-nr`                                 | Despatch advice / delivery note number (BT-16).                              |
-| **`references.delivery-address`**     | `ctx.delivery-address` or `recipient.delivery-address` | Separate delivery / shipping destination address (BG-13 / BT-56-79).         |
-| **`references.preceding-invoice-nr`** | `ctx.preceding-invoice-nr` or `original-invoice-nr`    | Preceding invoice reference for credit notes or correction invoices (BT-25). |
+| Function                                | Default Source / Logic                                 | Description                                                                  |
+| :-------------------------------------- | :----------------------------------------------------- | :--------------------------------------------------------------------------- |
+| **`references.order-nr`**               | `ctx.order-nr`, `recipient.order-nr`, or `po-nr`       | Customer purchase order / PO number (BT-13).                                 |
+| **`references.order-date`**             | `ctx.order-date` or `recipient.order-date`             | Date the order was placed.                                                   |
+| **`references.project`**                | `ctx.project` or `ctx.project-nr`                      | Project name or tracking reference (BT-11).                                  |
+| **`references.contract-nr`**            | `ctx.contract-nr`                                      | Framework agreement or contract number (BT-12).                              |
+| **`references.quote-nr`**               | `ctx.quote-nr` or `ctx.offer-nr`                       | Preceding quotation or estimate reference number.                            |
+| **`references.delivery-note-nr`**       | `ctx.delivery-note-nr`                                 | Despatch advice / delivery note number (BT-16).                              |
+| **`references.delivery-address`**       | `ctx.delivery-address` or `recipient.delivery-address` | Separate delivery / shipping destination address (BG-13 / BT-56-79).         |
+| **`references.preceding-invoice-nr`**   | `ctx.preceding-invoice-nr` or `original-invoice-nr`    | Preceding invoice reference for credit notes or correction invoices (BT-25). |
+| **`references.preceding-invoice-date`** | `ctx.preceding-invoice-date`                           | Date of the preceding invoice, formatted according to locale (BT-26).        |
 
 ### Sender, Contacts & Banking
 

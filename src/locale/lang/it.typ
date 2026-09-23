@@ -27,6 +27,11 @@
   /// Denominazioni per i tipi di documento
   document: (
     invoice: "Fattura",
+    credit-note: "Nota di credito",
+    corrected: "Fattura rettificativa",
+    prepayment: "Fattura di acconto",
+    // Mention required on a self-billed invoice (art. 21 DPR 633/1972).
+    self-billed: "Autofatturazione",
   ),
 
   /// Denominazioni relative all'indirizzo
@@ -54,6 +59,7 @@
     delivery-note-number: "N. documento di trasporto",
     delivery-address: "Indirizzo di consegna",
     preceding-invoice-number: "N. fattura precedente",
+    preceding-invoice-date: "Data fattura precedente",
     due-date: "Data di scadenza",
     payment-reference: "Causale di pagamento",
     contact-person: "Referente",
@@ -77,6 +83,7 @@
     subtotal: "Subtotale",
     prepayment: "Acconto",
     conjunction: "e",
+    origin: "Paese di origine",
   ),
 
   /// Etichette per la sezione riepilogativa (piè di pagina della tabella)
@@ -162,6 +169,16 @@
 
     /// Testo per pagamento immediato/rapido.
     deadline-soon: "alla ricezione",
+
+    /// Frase di pagamento di una nota di credito o di un'autofattura: il
+    /// mittente versa l'importo al destinatario.
+    text-credit: (
+      sum,
+      deadline,
+    ) => [Vi verseremo l'importo di *#sum* #deadline sul conto indicato di seguito.],
+
+    /// Testo per un pagamento immediato in `text-credit`.
+    deadline-soon-credit: "senza indugio",
   ),
 
   /// Saluti e area firma

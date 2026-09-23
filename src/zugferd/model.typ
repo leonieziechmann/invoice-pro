@@ -12,6 +12,10 @@
 #import "../data/unit.typ": unit-db
 #import "../locale/lang/lang.typ" as languages
 #import "../logic/payment-reference.typ": resolve-payment-reference
+#import "../logic/document-type.typ": resolve-document-type
+#import "../logic/service-period.typ": (
+  format-service-period, resolve-service-period,
+)
 
 #let _zero = decimal("0")
 
@@ -1042,32 +1046,70 @@
 /// -> str
 #let map-unit-code(unit) = resolve-unit(unit).code
 
-// Determine delivery date or period from items
-#let determine-delivery-dates(ctx, items) = {
-  let all-dates = ()
-  for item in items {
-    let item-date = item.at("date", default: none)
-    if item-date == auto or item-date == none {
-      all-dates.push(ctx.invoice-date)
-    } else if type(item-date) == datetime {
-      all-dates.push(item-date)
-    } else if type(item-date) == array {
-      for d in item-date {
-        if type(d) == datetime {
-          all-dates.push(d)
-        }
-      }
+/// The delivery date (BT-72) or the invoicing period (BG-14) of the
+/// e-invoice: the service period the invoice prints (see
+/// `resolve-service-period`), as `(date: .., period: ..)`. A single date is
+/// the delivery date, a period its first and last date.
+///
+/// -> dictionary
+#let _delivery(period) = {
+  if period == none {
+    (date: none, period: none)
+  } else if period.start == period.end {
+    (date: period.start, period: none)
+  } else {
+    (date: none, period: (period.start, period.end))
+  }
+}
+
+#let _service-period(ctx, items) = resolve-service-period(
+  items,
+  ctx.at("invoice-date", default: none),
+  service-period: ctx.at("service-period", default: none),
+)
+
+#let determine-delivery-dates(ctx, items) = _delivery(_service-period(
+  ctx,
+  items,
+))
+
+// The text of the service period the invoice prints as a reference (one
+// labelled like `references.service-time`), or `none`.
+#let _printed-service-period(ctx) = {
+  let strings = ctx.at("locale", default: (:)).at("strings", default: (:))
+  let labels = strings.at("reference", default: (:))
+  let label = text-or-none(labels.at("service-time", default: none))
+  let references = ctx.at("references", default: ())
+  if label == none or type(references) != array { return none }
+  for reference in references {
+    if type(reference) != array or reference.len() != 2 { continue }
+    let (title, value) = reference
+    if type(title) in (str, content) and text-or-none(title) == label {
+      return if type(value) in (str, content) { text-or-none(value) }
     }
   }
+  none
+}
 
-  let sorted-dates = all-dates.filter(d => type(d) == datetime).sorted().dedup()
-  if sorted-dates.len() == 0 {
-    (date: ctx.invoice-date, period: none)
-  } else if sorted-dates.len() == 1 {
-    (date: sorted-dates.first(), period: none)
-  } else {
-    (date: none, period: (sorted-dates.first(), sorted-dates.last()))
+// The notes of the invoice (BT-22 and BT-21, see `normalize-notes`): the
+// plain text of each note with its line breaks, and its subject code in upper
+// case. A note without text is left out.
+#let _notes(notes) = {
+  let result = ()
+  for note in notes {
+    if type(note) != dictionary { continue }
+    let content = plain-text(
+      note.at("text", default: none),
+      keep-newlines: true,
+    )
+    if content == "" { continue }
+    let code = compact(note.at("subject-code", default: none))
+    result.push((
+      content: content,
+      subject-code: if code != none { upper(code) },
+    ))
   }
+  result
 }
 
 // Categories whose VAT breakdown must not carry an exemption reason
@@ -1100,6 +1142,21 @@
 // Net amount of a (possibly gross) amount, rounded to 2 decimals.
 #let _net(amount, rate, inclusive) = {
   if inclusive { calc.round(amount / (1 + rate), digits: 2) } else { amount }
+}
+
+// The invoice line period (BG-26) of an item: its date as a period of one
+// day, or its period, as `(start, end)`; `none` without a date.
+#let _line-period(date) = {
+  if type(date) == datetime { return (date, date) }
+  if (
+    type(date) == array
+      and date.len() == 2
+      and type(date.first()) == datetime
+      and type(date.last()) == datetime
+  ) {
+    return (date.first(), date.last())
+  }
+  none
 }
 
 // An invoice line (BG-25) with net amounts.
@@ -1173,6 +1230,16 @@
     implicit: tax.at("implicit", default: false),
     allowances: allowances,
     charges: charges,
+    // BT-127: the note of the item, with its line breaks.
+    note: {
+      let note = item.at("note", default: none)
+      if note != none { note = plain-text(note, keep-newlines: true) }
+      if note == "" { none } else { note }
+    },
+    // BG-26: the date or period of the item as `(start, end)`.
+    period: _line-period(item.at("date", default: none)),
+    // BT-159: the country of origin, an ISO 3166-1 code.
+    origin: item.at("origin", default: none),
   )
 }
 
@@ -1235,6 +1302,13 @@
 #let build-model(ctx, item-data, payment-goal: none, bank: none) = {
   let sender = ctx.at("sender", default: (:))
   let recipient = ctx.at("recipient", default: (:))
+  // The document type (BT-3), see `resolve-document-type`.
+  let document = ctx.at("document-type", default: none)
+  if type(document) != dictionary { document = resolve-document-type(auto) }
+  // The buyer issues a self-billed invoice: the sender of the document is
+  // the buyer and its recipient the seller. From here on, `sender` is the
+  // seller and `recipient` the buyer.
+  if document.self-billed { (sender, recipient) = (recipient, sender) }
   let profile = resolve-profile(
     ctx.at("zugferd", default: "en16931"),
     country-code(recipient),
@@ -1364,6 +1438,10 @@
     })
   }
 
+  // The service period and the date format the invoice prints it with.
+  let service-period = _service-period(ctx, items)
+  let format-date = locale.at("format", default: (:)).at("date", default: none)
+
   let iban = if bank != none { compact(bank.at("iban", default: none)) }
   let bic = if bank != none { compact(bank.at("bic", default: none)) }
 
@@ -1395,14 +1473,18 @@
       if terms != none { terms-input = "payment-goal" }
     }
     // Without days or a date, the payment goal prints that the amount is due
-    // at once ("sofort nach Erhalt"), which are the payment terms.
+    // at once ("sofort nach Erhalt"), which are the payment terms. On a
+    // document whose sender pays (a credit note or a self-billed invoice),
+    // it prints that the sender pays at once ("umgehend") instead.
     if terms == none and due-date == none and goal-date == none {
-      terms = payment-terms(
-        locale
-          .at("strings", default: (:))
-          .at("payment", default: (:))
-          .at("deadline-soon", default: none),
+      let strings = (
+        locale.at("strings", default: (:)).at("payment", default: (:))
       )
+      let soon = strings.at("deadline-soon", default: none)
+      if document.sender-pays {
+        soon = strings.at("deadline-soon-credit", default: soon)
+      }
+      terms = payment-terms(soon)
       if terms != none { terms-input = "payment-goal" }
     }
   }
@@ -1412,10 +1494,20 @@
     tax-mode: tax-mode,
     outside-scope: outside-scope,
     currency: currency,
+    // The input the currency comes from: the invoice's `currency`, or the
+    // locale.
+    currency-field: if ctx.at("currency", default: auto) == auto {
+      "locale"
+    } else { "currency" },
     printed-currency: printed-currency,
     invoice: (
       number: text-or-none(_field(ctx, "invoice-nr")),
-      type-code: "380",
+      type-code: document.code,
+      // The resolved `document-type`, and the title printed on the document
+      // (the subject without the invoice number), which must not name
+      // another kind of document (IP-DOC-01).
+      document: document,
+      title: text-or-none(ctx.at("title", default: none)),
       issue-date: ctx.at("invoice-date", default: none),
       // A Leitweg-ID of the `id` module is stated without its scheme.
       buyer-reference: text-or-none(_id-text(first-of(
@@ -1441,13 +1533,30 @@
         ctx.at("preceding-invoice-nr", default: none),
         ctx.at("original-invoice-nr", default: none),
       )),
+      // BT-26, a `datetime` or `none`.
+      preceding-invoice-date: ctx.at("preceding-invoice-date", default: none),
+      // BT-22 and BT-21: `(content: .., subject-code: ..)` each.
+      notes: _notes(ctx.at("notes", default: ())),
+      // BT-11: the project reference.
+      project: text-or-none(ctx.at("project", default: none)),
     ),
     seller: seller,
     buyer: buyer,
     ship-to: ship-to,
     tax-representative: tax-representative,
     payee: payee,
-    delivery: determine-delivery-dates(ctx, items),
+    // The service period (BT-72 or BG-14), see `resolve-service-period` for
+    // its `source`. `text` is how `references.service-time` prints it,
+    // `printed` the text of the service period the invoice prints as a
+    // reference, if any.
+    delivery: _delivery(service-period)
+      + (
+        source: if service-period != none { service-period.source },
+        text: if type(format-date) == function {
+          text-or-none(format-service-period(service-period, format-date))
+        },
+        printed: _printed-service-period(ctx),
+      ),
     lines: lines,
     allowance-charges: allowance-charges,
     taxes: breakdown,

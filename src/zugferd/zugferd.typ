@@ -8,6 +8,38 @@
 
 #let _has-errors(diagnostics) = diagnostics.any(d => d.level == "error")
 
+// On a self-billed invoice, the sender of the document is the buyer and its
+// recipient the seller (see `build-model`). The validator names the inputs
+// of the seller as `sender` and those of the buyer as `recipient`, so they
+// change places in the field and the texts of each diagnostic.
+#let _other-party = (sender: "recipient", recipient: "sender")
+
+#let _swap-parties(text) = {
+  if type(text) != str { return text }
+  text
+    .replace("the sender", "\u{E000}")
+    .replace("the recipient", "the sender")
+    .replace("\u{E000}", "the recipient")
+}
+
+#let _self-billed-diagnostic(d) = {
+  let field = d.at("field", default: none)
+  if type(field) == str {
+    let (first, ..rest) = field.split(".")
+    if first in _other-party {
+      field = (_other-party.at(first), ..rest).join(".")
+    }
+  }
+  (
+    d
+      + (
+        field: field,
+        message: _swap-parties(d.at("message", default: none)),
+        hint: _swap-parties(d.at("hint", default: none)),
+      )
+  )
+}
+
 // The errors that kept a better candidate profile out of reach and that the
 // chosen profile does not report itself, as warnings of the chosen profile.
 #let _skipped-warnings(skipped, diagnostics) = {
@@ -66,6 +98,10 @@
   if skipped.len() > 0 {
     model.profile.skipped = skipped.map(c => (id: c.id, name: c.name))
     diagnostics += _skipped-warnings(skipped, diagnostics)
+  }
+  let document = model.invoice.at("document", default: (:))
+  if document.at("self-billed", default: false) {
+    diagnostics = diagnostics.map(_self-billed-diagnostic)
   }
 
   (

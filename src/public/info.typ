@@ -17,6 +17,7 @@
 #let quote-nr = dynamic("quote-nr")
 #let delivery-note-nr = dynamic("delivery-note-nr")
 #let preceding-invoice-nr = dynamic("preceding-invoice-nr")
+#let preceding-invoice-date = dynamic("preceding-invoice-date")
 #let payment-reference = dynamic("payment-reference")
 #let buyer-reference = dynamic("buyer-reference")
 #let subject = dynamic("subject")

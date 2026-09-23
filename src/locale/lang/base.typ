@@ -29,9 +29,19 @@
     resolve-plural: resolve-plural,
   ),
 
-  /// Designations for document types
+  /// Designations for document types: the default title of the document
+  /// (`invoice(document-type: ..)`).
   document: (
     invoice: "Invoice",
+    /// A credit note (381), which credits amounts to the buyer.
+    credit-note: "Credit Note",
+    /// A corrected invoice (384), which replaces the preceding invoice.
+    corrected: "Corrected Invoice",
+    /// A prepayment invoice (386) for an advance payment.
+    prepayment: "Prepayment Invoice",
+    /// A self-billed invoice (389), issued by the buyer. The VAT Directive
+    /// (Art. 226 No. 10a) requires the mention "Self-billing" on it.
+    self-billed: "Self-Billing Invoice",
   ),
 
   /// Address-related designations
@@ -59,6 +69,7 @@
     delivery-note-number: "Delivery Note No.",
     delivery-address: "Delivery Address",
     preceding-invoice-number: "Preceding Invoice No.",
+    preceding-invoice-date: "Preceding Invoice Date",
     due-date: "Due Date",
     payment-reference: "Payment Reference",
     contact-person: "Contact Person",
@@ -83,6 +94,8 @@
     prepayment: "Prepayment",
     /// Joins the last two item names of an automatic bundle description.
     conjunction: "and",
+    /// Label of the country of origin of an item (`item(origin: ..)`).
+    origin: "Country of origin",
   ),
 
   /// Labels for the summary section (footer of the table)
@@ -188,6 +201,18 @@
     /// Text for immediate/prompt payment.
     /// -> str
     deadline-soon: "upon receipt",
+
+    /// The payment sentence of a document whose sender pays the amount to
+    /// its recipient: a credit note or a self-billed invoice.
+    /// -> (content|str, content|str) => content
+    text-credit: (
+      sum,
+      deadline,
+    ) => [We will transfer the amount of *#sum* #deadline to the account listed below.],
+
+    /// Text for an immediate payment in `text-credit`.
+    /// -> str
+    deadline-soon-credit: "promptly",
   ),
 
   /// Greetings and signature area
