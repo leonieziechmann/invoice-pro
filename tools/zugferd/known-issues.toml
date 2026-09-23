@@ -11,9 +11,9 @@
 # The list may only shrink: an entry that matches no failing case any more
 # ("XPASS") fails the run, so the fix removes its entry in the same commit.
 # Adding an entry needs a finding or issue that is being worked on; it never
-# hides a new class of failure. No entry excuses a FALSE_NEGATIVE,
-# FALSE_POSITIVE, CRASH or GUARD_ONLY on the legal population (the hard
-# gates). `run.py --strict` ignores this file.
+# hides a new class of failure. No entry excuses a legal invoice that is not
+# AGREE_VALID (the hard gate); only oracle failures of legal invoices can be
+# known issues. `run.py --strict` ignores this file.
 
 # ---------------------------------------------------------------- silently invalid XML (FALSE_NEGATIVE)
 

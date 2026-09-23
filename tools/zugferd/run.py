@@ -21,8 +21,8 @@ For every case:
 Failures are grouped by signature. `known-issues.toml` lists the signatures
 of known bugs with their finding: a known signature does not fail the run,
 an unknown one does, and so does a known one that no longer occurs (xpass),
-so the list can only shrink. `--strict` ignores the list. The hard gates
-(HARD on the legal population) cannot be excused by the list.
+so the list can only shrink. `--strict` ignores the list. The hard gate,
+every legal invoice is AGREE_VALID, cannot be excused by the list.
 
 Exit code: 0 all green (or only known issues), 1 failures, 2 setup error.
 """
@@ -59,8 +59,9 @@ CLASSES = {
     "INPUT_ERROR": "the compilation stopped with the expected message about the input (a deliberate check)",
     "NO_XML": "no e-invoice XML attached",
 }
-# The hard gates: none of these may occur on the legal population, and no
-# entry of known-issues.toml can excuse them.
+# The hard gate: every legal invoice is AGREE_VALID, and no entry of
+# known-issues.toml can excuse another class there. The report counts these
+# classes separately (silently invalid, falsely blocked, crashed).
 HARD = ("FALSE_NEGATIVE", "FALSE_POSITIVE", "CRASH", "GUARD_ONLY")
 STRUCTURAL = re.compile(r"^(XSD|\?|FX-SCH-.*|MUSTANG-CRASH)$")
 # How Typst reports a `panic(..)` or a failed `assert(..)` of the package.
@@ -485,8 +486,10 @@ def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass):
 
 
 def breaks_hard_gate(row):
-    """A hard class on the legal population: never excused by known issues."""
-    return row.get("population") == "legal" and row["cls"] in HARD
+    """A legal invoice that is not AGREE_VALID (silently invalid, blocked by
+    invoice-pro, crashed, no XML): never excused by known issues. Oracle
+    failures of valid legal invoices can be known issues."""
+    return row.get("population") == "legal" and row["cls"] != "AGREE_VALID"
 
 
 def triage(rows, known, strict=False, check_xpass=True):
@@ -494,14 +497,16 @@ def triage(rows, known, strict=False, check_xpass=True):
     new ones and known issues. Returns (new failures, [(entry, signature,
     case ids)], [(entry, signature)] of listed signatures that did not occur).
     """
-    failures, known_hits = [], {}
+    failures, known_hits, seen = [], {}, set()
     for row in rows:
         passed = row["class_ok"] and not row["missing_rules"] and not row["oracle"] and not breaks_hard_gate(row)
         row["verdict"] = "PASS" if passed else "FAIL"
         if row["verdict"] == "FAIL":
             row["signature"] = signature(row)
-            hit = None if strict or breaks_hard_gate(row) else match_known(row, known)
+            hit = None if strict else match_known(row, known)
             if hit:
+                seen.add(hit)  # the issue still occurs, excused or not
+            if hit and not breaks_hard_gate(row):
                 row["known"] = known[hit[0]]["finding"]
                 known_hits.setdefault(hit, []).append(row["id"])
             else:
@@ -514,7 +519,7 @@ def triage(rows, known, strict=False, check_xpass=True):
             if not any(covers(entry, row) for row in rows):
                 continue
             for sig in entry["signatures"]:
-                if (index, sig) not in known_hits:
+                if (index, sig) not in seen:
                     xpass.append((entry, sig))
     hits = [(known[index], sig, ids) for (index, sig), ids in known_hits.items()]
     return failures, hits, xpass
@@ -535,10 +540,9 @@ def report(rows, failures, known_hits, xpass, timing, use_mustang):
         lines.append(f"  {pop:12s} {sum(counts.values()):4d}: {shown}")
     legal = [r for r in rows if r["population"] == "legal"]
     hard = {c: sum(1 for r in legal if r["cls"] == c) for c in HARD}
-    broken = sum(hard.values())
-    lines.append(("HARD GATE BROKEN" if broken else "hard gates") + " (legal population, never a known issue): "
-                 + ", ".join(f"{c} {n}" for c, n in hard.items())
-                 + f", not AGREE_VALID {sum(1 for r in legal if r['cls'] != 'AGREE_VALID')}")
+    broken = sum(1 for r in legal if breaks_hard_gate(r))
+    lines.append(("HARD GATE BROKEN" if broken else "hard gate") + " (legal population, never a known issue): "
+                 + ", ".join(f"{c} {n}" for c, n in hard.items()) + f", not AGREE_VALID {broken}")
     oracle_fail = sum(1 for r in rows if r["oracle"])
     lines.append(f"PASS {sum(r['verdict'] == 'PASS' for r in rows)}  FAIL {sum(r['verdict'] == 'FAIL' for r in rows)}"
                  f"  (known issues {sum(len(ids) for _, _, ids in known_hits)}, oracle failures {oracle_fail})")

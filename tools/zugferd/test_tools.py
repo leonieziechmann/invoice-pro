@@ -204,9 +204,12 @@ class KnownIssues(unittest.TestCase):
             row("pw001", cls="FALSE_NEGATIVE", official=["BR-S-08"], population="legal"),
             # An oracle failure on the legal population can be a known issue.
             row("pw002", oracle=["O-BG14: x"], population="legal"),
+            # invoice-pro blocks a legal invoice with its own rule.
+            row("pw003", cls="STRICTER", ours=["IP-VAT-226"], population="legal"),
         ]
+        known.append({"finding": "f3", "signatures": [run.signature(rows[-1])]})
         failures, hits, xpass = run.triage(rows, known)
-        self.assertEqual([r["id"] for r in failures], ["pw001"])
+        self.assertEqual([r["id"] for r in failures], ["pw001", "pw003"])
         self.assertEqual(sorted(ids[0] for _, _, ids in hits), ["pw002", "rg-a"])
         self.assertEqual(xpass, [])
         text, ok = run.report(rows, failures, hits, xpass, {"total_s": 0, "compile_s": 0, "mustang_wait_s": 0, "jobs": 1}, True)
