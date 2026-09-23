@@ -28,6 +28,14 @@
     m.profile = resolve-profile("minimum", "FR")
     assert.eq(xml-elements(m, "ram:InvoiceReferencedDocument"), ())
     assert.eq(rules(m), ())
+    // ... which is reported as a warning
+    assert.eq(rules(m, level: "warning"), ("IP-PROFILE-01",))
+    let d = diagnostic(m, "IP-PROFILE-01")
+    assert.eq(d.field, "preceding-invoice-nr")
+    assert.eq(
+      d.message,
+      "The MINIMUM profile has no preceding invoice reference (BG-3), so `preceding-invoice-nr` and `preceding-invoice-date` are not written into the e-invoice.",
+    )
   },
 )[
   #line-items[#item([Consulting], price: 1000)]

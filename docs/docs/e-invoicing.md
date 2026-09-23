@@ -347,7 +347,7 @@ The `"basic"` profile only supports the standard identifier. See [The `item-id` 
 
 `order-nr` (BT-13), `contract-nr` (BT-12), `delivery-note-nr` (BT-16) and `preceding-invoice-nr` (BT-25, e.g. for corrections) are written to the XML where the profile supports them. `project` is written as the project reference (BT-11), which public buyers often require, in the `"en16931"` and `"xrechnung"` profiles; the other profiles have none, which is reported as a warning (`IP-PROFILE-01`).
 
-`preceding-invoice-date` (a `datetime`) is the date of the preceding invoice (BT-26), written next to its number from the `"basic-wl"` profile on; `references.preceding-invoice-date()` prints it. The default `references` print the number and the date of the preceding invoice if you give them. A date without `preceding-invoice-nr` cannot be written and stops the e-invoice (`BR-55`). A corrected invoice (`document-type: "corrected"`) replaces the preceding invoice, so it must name it: `BR-DE-26` in XRechnung (which KoSIT only warns about, but Mustang rejects), `IP-DOC-02` in the other profiles, as the VAT Directive (Art. 219) requires a document that amends an invoice to refer to it.
+`preceding-invoice-date` (a `datetime`) is the date of the preceding invoice (BT-26), written next to its number from the `"basic-wl"` profile on (`"minimum"` has no preceding invoice reference, which is reported as a warning, `IP-PROFILE-01`); `references.preceding-invoice-date()` prints it. The default `references` print the number and the date of the preceding invoice if you give them. A date without `preceding-invoice-nr` cannot be written and stops the e-invoice (`BR-55`). A corrected invoice (`document-type: "corrected"`) replaces the preceding invoice, so it must name it: `BR-DE-26` in XRechnung (which KoSIT only warns about, but Mustang rejects), `IP-DOC-02` in the other profiles, as the VAT Directive (Art. 219) requires a document that amends an invoice to refer to it.
 
 ### 9. Document Type (BT-3)
 
@@ -431,7 +431,7 @@ The date or period of the supply is mandatory invoice content in many countries 
 2. else from the earliest to the latest `date` of the items (of `item`, `bundle` and `group`, a date or a period). Items without a date do not count when others have one;
 3. else the invoice date, if no item has a date.
 
-A single date is written as the actual delivery date (BT-72), a period as the invoicing period (BG-14, BT-73 and BT-74), both from the `"basic-wl"` profile on. The default `references` print a `service-period` you set; with references of your own, add `references.service-time()`:
+A single date is written as the actual delivery date (BT-72), a period as the invoicing period (BG-14, BT-73 and BT-74), both from the `"basic-wl"` profile on (`"minimum"` has neither: a `service-period` is then reported as a warning, `IP-PROFILE-01`). The default `references` print a `service-period` you set; with references of your own, add `references.service-time()`:
 
 ```typst
 #show: invoice.with(

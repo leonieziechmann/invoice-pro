@@ -410,6 +410,41 @@
       hint: "Use the \"en16931\" or \"xrechnung\" profile to state it.",
     ))
   }
+  // MINIMUM states neither the service period (BT-72, BG-14) nor the
+  // preceding invoice (BG-3), which exist from BASIC WL on.
+  if (
+    not profile.settlement
+      and model.at("delivery", default: (:)).at("source", default: none)
+        == "invoice"
+  ) {
+    out.push(warning(
+      "IP-PROFILE-01",
+      "service-period",
+      "The "
+        + profile.name
+        + " profile has no service period (BT-72, BG-14), so `service-period` is not written into the e-invoice.",
+      hint: "Use the \"basic-wl\" profile or a richer one to state it.",
+    ))
+  }
+  if not profile.document-references {
+    let given = ()
+    for key in ("preceding-invoice-nr", "preceding-invoice-date") {
+      if model.invoice.at(key, default: none) != none { given.push(key) }
+    }
+    if given.len() > 0 {
+      out.push(warning(
+        "IP-PROFILE-01",
+        given.first(),
+        "The "
+          + profile.name
+          + " profile has no preceding invoice reference (BG-3), so "
+          + given.map(key => "`" + key + "`").join(" and ")
+          + if given.len() == 1 { " is" } else { " are" }
+          + " not written into the e-invoice.",
+        hint: "Use the \"basic-wl\" profile or a richer one to state it.",
+      ))
+    }
+  }
   if profile.notes {
     for note in notes {
       let code = note.subject-code

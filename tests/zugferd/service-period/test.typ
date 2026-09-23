@@ -157,6 +157,14 @@
   assert.eq(model.delivery.period, june)
   assert.eq(model.delivery.source, "invoice")
   assert.eq(rules(model, level: "warning"), ())
+  // MINIMUM states no service period, which is reported as a warning
+  let m = model
+  m.profile = resolve-profile("minimum", "FR")
+  assert.eq(rules(m, level: "warning"), ("IP-PROFILE-01",))
+  assert.eq(diagnostic(m, "IP-PROFILE-01").field, "service-period")
+  // ... but only for the invoice's own service period
+  m.delivery.source = "items"
+  assert.eq(rules(m, level: "warning"), ())
 })[
   #line-items[#item([Wartung Juni], price: 100)]
   #payment-goal(days: 14)
