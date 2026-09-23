@@ -49,18 +49,32 @@ You can pass multiple custom overrides into your locale function. Only the field
 :::
 
 ```typst
-#import "@preview/invoice-pro:0.1.0": invoice, locale
+#import "@preview/invoice-pro:0.5.0": invoice, locale
 
 #show: invoice.with(
-  locale: locale.en-de.with({
-    import locale.custom: *
-
-    document(invoice: "Proforma Invoice")
-    line-items(position: "Pos.", unit-price: "Price/Unit")
-  }),
+  locale: locale.en-de.with(
+    locale.custom.document(
+      invoice: "Proforma Invoice",
+      page: (current, total) => [#current / #total],
+    ),
+    locale.custom.line-items(position: "Pos.", unit-price: "Price/Unit"),
+  ),
   // ...
 )
 ```
+
+:::tip
+The helpers can also be called in a code block: each returns a list with one patch, and the lists of a code block join, so every helper takes effect.
+
+```typst
+locale: locale.en-de.with({
+  import locale.custom: *
+  document(invoice: "Proforma Invoice")
+  line-items(position: "Pos.", unit-price: "Price/Unit")
+}),
+```
+
+:::
 
 ---
 
@@ -72,22 +86,23 @@ The `locale.custom` module provides specialized functions to override specific g
 
 These functions allow you to change the text labels printed on the invoice.
 
-| Function                          | Parameters                                                                                                                                                                                                                                                                                                                                                                                                                             | Description                                              |
-| :-------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------- |
-| `locale.custom.document(..)`      | `invoice`, `credit-note`, `corrected`, `prepayment`, `self-billed`                                                                                                                                                                                                                                                                                                                                                                     | Document titles (e.g., "Invoice", "Gutschrift").         |
-| `locale.custom.address(..)`       | `recipient`, `sender`                                                                                                                                                                                                                                                                                                                                                                                                                  | Labels above addresses.                                  |
-| `locale.custom.reference(..)`     | `tax-number`, `invoice-number`, `vat-id`, `invoice-date`, `service-time`, `customer-number`, `buyer-reference`, `recipient-vat-id`, `recipient-tax-number`, `order-number`, `order-date`, `project`, `contract-number`, `quote-number`, `delivery-note-number`, `delivery-address`, `preceding-invoice-number`, `preceding-invoice-date`, `due-date`, `payment-reference`, `contact-person`, `contact-phone`, `contact-email`, `payee` | Labels for the metadata header.                          |
-| `locale.custom.line-items(..)`    | `position`, `description`, `quantity`, `unit-price`, `price`, `total`, `vat`, `net`, `gross`, `discount`, `surcharge`, `subtotal`, `conjunction`, `origin`                                                                                                                                                                                                                                                                             | Column headers and specific terms inside the item table. |
-| `locale.custom.summary(..)`       | `sum`, `vat-tax`, `total`, `including`, `excluding`                                                                                                                                                                                                                                                                                                                                                                                    | Labels for the final calculation block.                  |
-| `locale.custom.global-info(..)`   | `tax-statement`, `unit`, `quantity`, `date`                                                                                                                                                                                                                                                                                                                                                                                            | General statements below the table.                      |
-| `locale.custom.bank-details(..)`  | `account-holder`, `bank`, `iban`, `bic`, `reference`                                                                                                                                                                                                                                                                                                                                                                                   | Labels for the bank details block.                       |
-| `locale.custom.payment-means(..)` | `method`, `transfer`, `direct-debit`, `sepa-direct-debit`, `card`, `credit-card`, `debit-card`, `cash`, `cheque`, `online`, `mandate`, `creditor-id`, `debtor-iban`, `card-number`, `card-holder`, `paid`, `paid-due`, `paid-credit`                                                                                                                                                                                                   | Texts of `direct-debit`, `card-payment` and `paid`.      |
-| `locale.custom.payment(..)`       | `text`, `text-due`, `text-direct-debit`, `text-direct-debit-due`, `text-card`, `text-card-due`, `cash-discount`, `deadline-date`, `deadline-days`, `deadline-soon`, `text-credit`, `deadline-soon-credit`                                                                                                                                                                                                                              | Text and deadline phrasing for the payment goal.         |
-| `locale.custom.signature(..)`     | `closing`                                                                                                                                                                                                                                                                                                                                                                                                                              | The sign-off text (e.g., "Sincerely").                   |
-| `locale.custom.legal(..)`         | `vat-exemption`                                                                                                                                                                                                                                                                                                                                                                                                                        | The legal notice for small business exemptions.          |
+| Function                          | Parameters                                                                                                                                                                                                                                                                                                                                                                                                                             | Description                                                                                                                                                                                                    |
+| :-------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `locale.custom.document(..)`      | `invoice`, `credit-note`, `corrected`, `prepayment`, `self-billed`, `page`, `continued-on`                                                                                                                                                                                                                                                                                                                                             | Document titles (e.g., "Invoice", "Gutschrift"), the page label `(current, total) => content` and the note `(page) => content` on a page whose content continues.                                              |
+| `locale.custom.sections(..)`      | `details`, `payment`, `bank-details`, `how-to-pay`                                                                                                                                                                                                                                                                                                                                                                                     | Section headings some themes print (provisional).                                                                                                                                                              |
+| `locale.custom.address(..)`       | `recipient`, `sender`                                                                                                                                                                                                                                                                                                                                                                                                                  | Labels above addresses.                                                                                                                                                                                        |
+| `locale.custom.reference(..)`     | `tax-number`, `invoice-number`, `vat-id`, `invoice-date`, `service-time`, `customer-number`, `buyer-reference`, `recipient-vat-id`, `recipient-tax-number`, `order-number`, `order-date`, `project`, `contract-number`, `quote-number`, `delivery-note-number`, `delivery-address`, `preceding-invoice-number`, `preceding-invoice-date`, `due-date`, `payment-reference`, `contact-person`, `contact-phone`, `contact-email`, `payee` | Labels for the reference block.                                                                                                                                                                                |
+| `locale.custom.line-items(..)`    | `position`, `item-id`, `unit`, `description`, `quantity`, `unit-price`, `price`, `total`, `vat`, `net`, `gross`, `discount`, `surcharge`, `subtotal`, `conjunction`, `origin`                                                                                                                                                                                                                                                          | Column headers and specific terms inside the item table.                                                                                                                                                       |
+| `locale.custom.summary(..)`       | `sum`, `vat-tax`, `total`, `including`, `excluding`, `prepayment`, `amount-due`                                                                                                                                                                                                                                                                                                                                                        | Labels for the final calculation block.                                                                                                                                                                        |
+| `locale.custom.global-info(..)`   | `tax-statement`, `unit`, `quantity`, `date`                                                                                                                                                                                                                                                                                                                                                                                            | General statements below the table.                                                                                                                                                                            |
+| `locale.custom.bank-details(..)`  | `account-holder`, `bank`, `iban`, `bic`, `reference`                                                                                                                                                                                                                                                                                                                                                                                   | Labels for the bank details block.                                                                                                                                                                             |
+| `locale.custom.payment-means(..)` | `method`, `transfer`, `direct-debit`, `sepa-direct-debit`, `card`, `credit-card`, `debit-card`, `cash`, `cheque`, `online`, `mandate`, `creditor-id`, `debtor-iban`, `card-number`, `card-holder`, `paid`, `paid-due`, `paid-credit`                                                                                                                                                                                                   | Texts of `direct-debit`, `card-payment` and `paid`.                                                                                                                                                            |
+| `locale.custom.payment(..)`       | `text`, `text-due`, `text-direct-debit`, `text-direct-debit-due`, `text-card`, `text-card-due`, `cash-discount`, `deadline-date`, `deadline-days`, `deadline-soon`, `text-credit`, `deadline-soon-credit`                                                                                                                                                                                                                              | The payment sentence (`text-due` after prepayments; `text-credit` on a credit note or a self-billed invoice), the sentences of a direct debit and a card payment, the cash discount and the deadline phrasing. |
+| `locale.custom.signature(..)`     | `closing`, `thanks`                                                                                                                                                                                                                                                                                                                                                                                                                    | The sign-off text (e.g., "Sincerely") and a closing thanks some themes print.                                                                                                                                  |
+| `locale.custom.legal(..)`         | `vat-exemption`                                                                                                                                                                                                                                                                                                                                                                                                                        | The legal notice for small business exemptions.                                                                                                                                                                |
 
 :::note
-When the invoice contains a `#prepayment(..)`, the payment goal states the remaining amount due and uses `text-due` instead of `text`. If you override `text`, override `text-due` as well so both sentences stay consistent (likewise `text-direct-debit-due` and `text-card-due`, the sentences of a [direct debit](../components.md#direct-debit) and a [card payment](../components.md#card-payment)):
+When the invoice contains a `#prepayment(..)`, the payment terms state the remaining amount due and use `text-due` instead of `text`. If you override `text`, override `text-due` as well so both sentences stay consistent (likewise `text-direct-debit-due` and `text-card-due`, the sentences of a [direct debit](../components.md#direct-debit) and a [card payment](../components.md#card-payment)):
 
 ```typst
 #show: invoice.with(
@@ -127,10 +142,25 @@ If you are using `locale.de-de` but want to display "EUR" instead of the "€" s
 #show: invoice.with(
   locale: locale.de-de.with(
     locale.custom.format(
-      currency: (val) => str(calc.round(val, digits: 2)) + " EUR",
-      currency-fine: (val) => str(val) + " EUR"
-    )
+      currency: val => str(calc.round(val, digits: 2)) + " EUR",
+      currency-fine: val => str(val) + " EUR",
+    ),
   ),
   // ...
 )
 ```
+
+### Validation Texts
+
+The markers, the badge, the watermark and the report page of a [draft](../invoice/validation.md) use the language group `validation`. There is no helper for it; patch the locale with a dictionary:
+
+```typst
+#show: invoice.with(
+  locale: locale.en-de.with((
+    strings: (validation: (marker: field => [‹to do: #field›])),
+  )),
+  // ...
+)
+```
+
+The keys are listed in the [Base Schema](./base.md#validation).

@@ -8,6 +8,10 @@ Before the XML is embedded, `invoice-pro` checks the invoice data against the bu
 
 This page describes what is checked, how the problems are reported and what you can do with them. How the XML itself is tested is described in [Testing and Conformance](./conformance.md).
 
+:::note
+These rules are checked once the invoice data is complete. Under the default `validation: "draft"`, an invoice without data the law requires on every invoice (e.g. its number or the seller's VAT identifier) renders as a draft with a report page and attaches no XML; `validation: "strict"` stops the compilation instead (see [Validation](../api-reference/invoice/validation.md)). `validation: none` switches off these checks of the invoice data, but not the rules of the e-invoice: `zugferd-errors` alone decides about them.
+:::
+
 ## The Error Listing
 
 By default, the compilation fails with the complete list. Each entry names the rule, the input to look at, what is wrong and how to fix it:
@@ -16,8 +20,8 @@ By default, the compilation fails with the complete list. Each entry names the r
 error: assertion failed: The e-invoice (ZUGFeRD / Factur-X, profile XRechnung 3.0) is not valid: 2 errors.
   1. [BR-DE-15] recipient.buyer-reference: XRechnung requires the buyer reference (BT-10), e.g. the Leitweg-ID.
      Hint: Set `buyer-reference` (or `leitweg-id`) on the recipient.
-  2. [BR-CO-25] payment-goal: An amount is due, but neither the payment due date (BT-9) nor the payment terms (BT-20) are given.
-     Hint: Add `#payment-goal(days: 14)` or set `due-date` on the invoice.
+  2. [BR-CO-25] payment-terms: An amount is due, but neither the payment due date (BT-9) nor the payment terms (BT-20) are given.
+     Hint: Add `#payment-terms(days: 14)` or set `due-date` on the invoice.
 Set `zugferd-errors: "report"` on the invoice to list these problems in the document instead.
 ```
 
@@ -103,7 +107,7 @@ The `zugferd-errors` parameter of `invoice` decides what happens with the proble
 | `"report"`          | Errors and warnings are listed in a box at the top of the invoice instead of stopping the compilation, which is handy while filling in the data in the preview. If the theme shows no report, errors stop the compilation as with `"panic"` (see [Custom Report Layout](#custom-report-layout)). The XML of an invoice with errors is attached as a draft: as `invoice-draft.xml` instead of `factur-x.xml` (or `xrechnung.xml`) and with the relationship `"data"`, so that no receiving software takes it for the e-invoice. With warnings only, the XML is attached as usual. |
 | `"ignore"`          | The check is skipped on purpose: the XML is attached as usual (`factur-x.xml` or `xrechnung.xml`, relationship of the profile), whatever its errors. It may then be invalid, and you are responsible for it. Use this only if you validate the XML yourself, e.g. when a recipient explicitly accepts a deviation.                                                                                                                                                                                                                                                               |
 
-A missing or invalid IBAN in [`bank-details`](../api-reference/components.md#bank-details), or an invalid IBAN or creditor identifier of a [`direct-debit`](../api-reference/components.md#direct-debit), makes the printed invoice wrong as well, so it stops the compilation with a message naming it, also with `"ignore"`. With `"report"`, it is marked where it is printed instead (a placeholder takes the place of the EPC-QR code), and the report lists it as an error (`BR-DE-19` or `BR-DE-20` in XRechnung, `IP-PAY-01` or `IP-PAY-02` otherwise), so the XML is attached as a draft.
+A missing or invalid IBAN in [`bank-details`](../api-reference/components.md#bank-details) makes the printed invoice wrong as well. It is a problem of the invoice data, so the [validation level](../api-reference/invoice/validation.md) decides first: a draft lists it on its report page and attaches no XML, and `validation: "strict"` stops the compilation with a message naming it, whatever `zugferd-errors` says. An invalid IBAN or creditor identifier of a [`direct-debit`](../api-reference/components.md#direct-debit) stops the compilation with a message naming it at every level, also with `"ignore"`. With `"report"` (and, for the IBAN of `bank-details`, `validation: none`), they are marked where they are printed instead (a placeholder takes the place of the EPC-QR code), and the report lists them as errors (`BR-DE-19` or `BR-DE-20` in XRechnung, `IP-PAY-01` or `IP-PAY-02` otherwise), so the XML is attached as a draft.
 
 ```typst
 #show: invoice.with(
@@ -119,16 +123,16 @@ An invoice with errors is not a valid e-invoice. With `"report"`, it carries its
 
 ## Custom Report Layout
 
-In `"report"` mode, the list is rendered by the theme function `zugferd-report`, which receives the context and the check result. The result contains the resolved `profile` (with `id`, `name`, `automatic` and, for `auto`, the `skipped` profiles) and the `diagnostics`, an array of dictionaries with the keys `level` (`"error"` or `"warning"`), `rule`, `field`, `message` and `hint`:
+In `"report"` mode, the list is rendered by the `zugferd-report` [part](../api-reference/theme/parts.md) of the theme, which receives the context and the check result. The result contains the resolved `profile` (with `id`, `name`, `automatic` and, for `auto`, the `skipped` profiles) and the `diagnostics`, an array of dictionaries with the keys `level` (`"error"` or `"warning"`), `rule`, `field`, `message` and `hint`:
 
 ```typst
 #show: invoice.with(
-  theme: themes.DIN-5008().with(
-    zugferd-report: (ctx, result) => {
+  theme: theme.classic.with(
+    theme.custom.part("zugferd-report", (ctx, result) => {
       for d in result.diagnostics [
         - *#d.rule* (#d.level): #d.message
       ]
-    },
+    }),
   ),
   zugferd: "en16931",
   zugferd-errors: "report",
@@ -136,7 +140,7 @@ In `"report"` mode, the list is rendered by the theme function `zugferd-report`,
 )
 ```
 
-Whatever the function returns is placed above the invoice body as content (a string works as well). A theme can do without the list with `zugferd-report: none`. Errors must not go unnoticed, though: if the theme shows no report (`none`, or a function that returns `none` or empty content), errors stop the compilation as with `"panic"`, and only warnings are left out. Any other value is rejected with an error naming `theme::zugferd-report`.
+Whatever the part returns is placed above the invoice body as content (a string works as well). A theme can do without the list with `theme.custom.part("zugferd-report", none)`. Errors must not go unnoticed, though: if the theme shows no report (`none`, or a part that returns `none` or empty content), errors stop the compilation as with `"panic"`, and only warnings are left out. A part that is no function is rejected with an error naming `theme::parts::zugferd-report`. To restyle the default list instead of replacing it, wrap the part (`theme.custom.wrap("zugferd-report", ..)`).
 
 ## Printed Details
 
@@ -147,13 +151,12 @@ The printed invoice and its XML are one invoice, so the printed invoice shows wh
 
 The default `references` and every [preset](../api-reference/invoice/references.md#preset-packages) print both. A detail counts as shown in a reference sign of any title (e.g. `references.seller-vat-id()`, `references.service-time()` or `("Lieferdatum", "01.09.2026")`), in the name and address lines or the `extra` of the sender or the recipient, in the text of the invoice (e.g. `#info.sender.vat-id`) and, for the date of the supply, with the dates of the items. Identifiers are compared without spaces, and the date of the supply as the XML states it, in the date format of the locale: a sentence such as "Leistungsdatum entspricht Rechnungsdatum" is not recognized, so print the date with `references.service-time()`. The invoice date does not count as the date of the supply.
 
-`invoice-pro` knows what the page shows only for a theme that says what it prints (`prints`, see [What the Theme Prints](../api-reference/theme.md#what-the-theme-prints)): the DIN-5008 theme prints the reference signs and the `extra` of the parties. The blank theme and themes without `prints` are not checked, and neither is `IP-PRINT-03` with a `header` or `footer` of the theme, which may show the tax number. A page header or footer of your own (`set page(header: ..)`) cannot be read: give company details such as the tax number as the `footer` of the theme instead, e.g. `themes.DIN-5008(footer: ..)`.
+`invoice-pro` reads what the page shows from the layout of the theme (see [What the Theme Prints](../api-reference/theme/parts.md#what-the-theme-prints)): the reference signs, the `extra` of the parties, and the seller's VAT identifier and tax number of the legal footer (the `registration` part), wherever an area of the layout hosts them. A theme whose areas host no reference signs, such as `theme.plain`, is not checked. Content the check cannot read (content cells of an area, parts of your own, wrapped or replaced parts, stationery) may show the tax number, so `IP-PRINT-03` is not reported then. The theme owns the page, so a page header or footer of your own (`set page(header: ..)`) does not apply: give company details such as the tax number to the theme instead, e.g. as content in its `footer` area (`theme.custom.area("footer", parts: (..))`).
 
 ```typst
 #import "@preview/invoice-pro:0.5.0": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
   zugferd: "en16931",
   sender: (
     name: "Consulting Group GmbH",
@@ -189,7 +192,7 @@ The default `references` and every [preset](../api-reference/invoice/references.
   #item([On-site Workshop], quantity: 8, unit: unit.hour, price: 120.00)
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
   bank: "Global Business Bank",

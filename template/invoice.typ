@@ -10,11 +10,19 @@
  * ZUGFeRD (experimental): Export as PDF/A-3B to embed XML.
  * - Web App: File > Export As -> PDF -> PDF/A-3B -> download icon
  * - CLI: typst compile --pdf-standard a-3b file.typ
+ *
+ * Validation: while required data is missing, the invoice renders as a
+ * draft with markers and a report page, and the XML is not embedded.
+ * Use `validation: "strict"` (or --input invoice-pro-validation=strict)
+ * to stop the compilation instead, e.g. before sending.
  */
 
 
 #show: invoice.with(
-  theme: themes.DIN-5008(form: "A"),
+  // Presets: classic, plain, corporate, elegant, prestige, bold, technical,
+  // soft, compact, boxed. Add your brand with
+  // theme.classic.with(theme.custom.brand(color: rgb("#0f766e"))).
+  theme: theme.classic,
   locale: locale.de-de,
   zugferd: "en16931",
   sender: (
@@ -42,7 +50,6 @@
   ),
   invoice-nr: "2026-01",
 )
-#set text(10pt)
 
 #line-items[
   #bundle(
@@ -113,7 +120,7 @@
   #surcharge([Processing and Service Fee], amount: 15.00)
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
   bank: "Musterbank",

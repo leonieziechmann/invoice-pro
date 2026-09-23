@@ -1,29 +1,32 @@
 // Documentation: api-reference/components.md, the examples of
-// `payment-goal` (cash discount), `direct-debit`, `card-payment` and `paid`.
+// `payment-terms` (cash discount), `direct-debit`, `card-payment` and `paid`.
 // The documentation shows the English texts with an illustrative amount;
 // here they are printed with the number format of `locale.en-de`.
 
 #import "/src/lib.typ": *
-#import "/src/themes/base-theme/payment-goal.typ": render-payment-goal
-#import "/src/themes/base-theme/payment-means.typ": render-payment-means
 #import "/tests/integration/payment-reference/harness.typ": plain
 
-// Records what the layouts print, per example.
-#let capturing-theme(example) = themes.blank.with(
-  payment-goal: (ctx, view) => {
-    let printed = render-payment-goal(ctx, view)
-    [#metadata((example, "goal", plain(printed)))<printed>#printed]
-  },
-  payment-means: (ctx, view) => {
-    let printed = render-payment-means(ctx, view)
+// Records what the parts print, per example.
+#let capturing-theme(example) = theme.plain.with(
+  theme.custom.wrap("payment-terms", (ctx, view, inner) => {
+    let printed = inner(ctx, view)
+    [#metadata((example, "terms", plain(printed)))<printed>#printed]
+  }),
+  theme.custom.wrap("payment-means", (ctx, view, inner) => {
+    let printed = inner(ctx, view)
     [#metadata((example, view.kind, plain(printed)))<printed>#printed]
-  },
+  }),
 )
 
 #let example(name, body) = invoice(
   theme: capturing-theme(name),
   locale: locale.en-de,
-  sender: (name: "Muster GmbH", address: "Hauptstraße 1", city: "10115 Berlin"),
+  sender: (
+    name: "Muster GmbH",
+    address: "Hauptstraße 1",
+    city: "10115 Berlin",
+    vat-id: "DE123456789",
+  ),
   recipient: (name: "Kunde AG", address: "Domstraße 5", city: "50667 Köln"),
   invoice-nr: "RE-1",
   date: datetime(year: 2026, month: 9, day: 1),
@@ -34,7 +37,7 @@
 
 // "4. Cash Discount (Skonto)"
 #example("cash-discount")[
-  #payment-goal(
+  #payment-terms(
     days: 30,
     discount: (
       (days: 7, percent: 3%),
@@ -46,7 +49,7 @@
 
 // `direct-debit`
 #example("direct-debit")[
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #direct-debit(
     mandate: "M-2026-017",
     creditor-id: "DE98ZZZ09999999999",
@@ -56,7 +59,7 @@
 
 // `card-payment`
 #example("card-payment")[
-  #payment-goal()
+  #payment-terms()
   #card-payment(last4: "4242", holder: "Claire Martin", kind: "credit")
 ]
 
@@ -82,11 +85,11 @@
   )
 
   expect(
-    "cash-discount/goal",
+    "cash-discount/terms",
     "Please transfer the total amount of 119,00 € within 30 days to the account listed below. For payment within 7 days, a cash discount of 3% is granted. For payment within 14 days, a cash discount of 2% on 100,00 € is granted.",
   )
   expect(
-    "direct-debit/goal",
+    "direct-debit/terms",
     "The total amount of 119,00 € will be collected from your account by direct debit within 14 days.",
   )
   expect(
@@ -94,7 +97,7 @@
     "Payment method: SEPA direct debit\nMandate reference: M-2026-017\nCreditor identifier: DE98ZZZ09999999999\nYour IBAN: DE02 1203 0000 0000 2020 51",
   )
   expect(
-    "card-payment/goal",
+    "card-payment/terms",
     "The total amount of 119,00 € will be charged to your card upon receipt.",
   )
   expect(

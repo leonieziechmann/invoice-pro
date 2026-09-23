@@ -25,9 +25,9 @@ Any other code of UNTDID 1001 for invoices and credit notes can be given as text
 EN 16931 states a credit note with **positive** amounts: the items are the credited amounts, entered with positive prices, and `document-type: "credit-note"` says that they are credited to the buyer. The amount due (BT-115) is the amount the buyer gets back.
 
 - A credit note with a negative total would ask the buyer to pay, so it stops the e-invoice (`IP-DOC-03`). An invoice with a negative total is valid, but a credit note is the document for it (`IP-DOC-04`, a warning).
-- As long as an amount is due, the credit note says when or how the buyer gets it (`BR-CO-25`): [`payment-goal`](../../api-reference/components.md#payment-goal) prints that the amount is transferred within the given days (and states that date, BT-9), a textual `due-date` (e.g. `due-date: "Der Betrag wird mit Ihrer nächsten Rechnung verrechnet."`) states the terms (BT-20).
+- As long as an amount is due, the credit note says when or how the buyer gets it (`BR-CO-25`): [`payment-terms`](../../api-reference/components.md#payment-terms) prints that the amount is transferred within the given days (and states that date, BT-9), a textual `due-date` (e.g. `due-date: "Der Betrag wird mit Ihrer nächsten Rechnung verrechnet."`) states the terms (BT-20).
 - [`bank-details`](../../api-reference/components.md#bank-details) on a credit note are the account the amount is paid to, usually the buyer's: the account holder defaults to the recipient's name, and no EPC-QR code is printed. Do not reuse the bank details of your invoices on a credit note: your own account would be printed with the buyer as its holder and stated as the account the credit is paid into. XRechnung requires payment instructions (BG-16) on credit notes as well (`BR-DE-1`): the recipient's account you transfer the amount to, `paid` if it is paid already, or for a set-off against an invoice `paid(method: (code: "97", name: [Verrechnung]))`.
-- The sender of a credit note or a self-billed invoice pays the amount, so it cannot collect it from the recipient: [`direct-debit`](../../api-reference/components.md#direct-debit), [`card-payment`](../../api-reference/components.md#card-payment) and a cash discount of the payment goal (`discount`) stop the compilation on these documents. [`paid`](../../api-reference/components.md#paid) states that the amount has been paid already.
+- The sender of a credit note or a self-billed invoice pays the amount, so it cannot collect it from the recipient: [`direct-debit`](../../api-reference/components.md#direct-debit), [`card-payment`](../../api-reference/components.md#card-payment) and a cash discount of `payment-terms` (`discount`) stop the compilation on these documents. [`paid`](../../api-reference/components.md#paid) states that the amount has been paid already.
 - A document that amends an invoice must refer to it (Art. 219 VAT Directive): set `preceding-invoice-nr` (and `preceding-invoice-date`) to the invoice the credit note refers to. The default `references` print them.
 - The date of the supply of a credit note is the one of the supply it credits: set `service-period` to it, or give the items their `date`. The date of the credit note is not the date of the supply, so without them the credit note states none (see [Service Period](#service-period-bt-72--bg-14)).
 - In German, a credit note is titled "Rechnungskorrektur": the German VAT law reserves "Gutschrift" for self-billed invoices (§ 14 Abs. 2 Satz 2 UStG). A commercial credit note titled "Gutschrift" is permitted as well; set `subject: "Gutschrift"` together with `document-type: "credit-note"` if you prefer it.
@@ -64,10 +64,15 @@ EN 16931 states a credit note with **positive** amounts: the items are the credi
 )
 
 #line-items[
-  #item([Workshop cancelled by us], quantity: 1, price: 1500.00, tax: tax.vat(19%))
+  #item(
+    [Workshop cancelled by us],
+    quantity: 1,
+    price: 1500.00,
+    tax: tax.vat(19%),
+  )
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
   bank: "Acme Bank",
@@ -81,7 +86,7 @@ The buyer issues a self-billed invoice for the seller, e.g. a publisher for the 
 
 - The XML states the recipient as seller (BG-4) and the sender as buyer (BG-7). The messages of the e-invoice name the inputs, e.g. `recipient.vat-id` for the seller VAT identifier.
 - The default references and every preset state the tax number and VAT ID of the seller (the recipient), which the law requires on the invoice, and the VAT ID of the buyer (the sender); `references.seller-tax-nr()`, `references.seller-vat-id()` and `references.buyer-vat-id()` print them in references of your own.
-- The payment goal says that the sender transfers the amount, and the [`bank-details`](../../api-reference/components.md#bank-details) are the seller's account, without EPC-QR code.
+- `payment-terms` says that the sender transfers the amount, and the [`bank-details`](../../api-reference/components.md#bank-details) are the seller's account, without EPC-QR code.
 - The title is the mention the law requires on a self-billed invoice (Art. 226 No. 10a VAT Directive): "Gutschrift" in German (§ 14 Abs. 4 Satz 1 Nr. 10 UStG), "Self-Billing Invoice" in English, "Autofacturation" in French, "Autofatturazione" in Italian and "Facturación por el destinatario" in Spanish. Keep it in a `subject` of your own.
 
 ### Titles That Name Another Document
@@ -125,7 +130,10 @@ The printed service period must be the one the XML states (`IP-PERIOD-01`). `ref
 #show: invoice.with(
   notes: (
     "Lieferung frei Haus.",
-    (text: "Es gelten unsere Allgemeinen Geschäftsbedingungen.", subject-code: "AAI"),
+    (
+      text: "Es gelten unsere Allgemeinen Geschäftsbedingungen.",
+      subject-code: "AAI",
+    ),
   ),
   // ...
 )

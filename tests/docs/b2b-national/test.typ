@@ -1,6 +1,4 @@
 // Source: docs/docs/b2b.md — "1. National B2B Invoice (Standard VAT)"
-// Compile-only: the example must compile as documented (it used to
-// carry an invalid IBAN).
 #import "/src/lib.typ": *
 
 #show: invoice.with(
@@ -22,10 +20,8 @@
       phone: "+49 89 123456",
       email: "billing@techsolutions.de",
     ),
-    extra: (
-      "Geschäftsführer": "Max Mustermann",
-      "Handelsregister": "Amtsgericht München, HRB 987654",
-    ),
+    register: [Amtsgericht München, HRB 987654],
+    management: [Geschäftsführer: Max Mustermann],
   ),
 
   recipient: (
@@ -67,10 +63,10 @@
   )
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
-  bank: "Commerzbank",
-  iban: "DE89370400440532013000",
-  bic: "COBADEFFXXX",
+  bank: "Stadtsparkasse München",
+  iban: "DE47701500001234567890",
+  bic: "SSKMDEMMXXX",
 )

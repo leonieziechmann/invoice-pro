@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Components API
 
-This section details the standalone components you can use in your invoice, such as payment instructions, bank details, and signature blocks.
+This section details the standalone components you can use in your invoice, such as payment instructions, bank details, and signature blocks. Each component computes its data and hands it to a [part](./theme/parts.md) of the theme, which renders it; to restyle a component, wrap or replace its part.
 
 :::info
 **Looking for items and modifiers?**
@@ -32,11 +32,11 @@ In the EPC-QR code, `reference` and the `invoice-nr` fill the structured referen
 :::
 
 :::info IBAN and EPC-QR code
-The IBAN is checked (structure and check digits) whether or not a QR code is shown. It is printed in groups of four, and written to the EPC-QR code and the ZUGFeRD XML without spaces and in upper case, so `"de89 3704 0044 0532 0130 00"` is fine. A missing or invalid IBAN stops the compilation with a message naming it. With an e-invoice and `zugferd-errors: "report"`, it is marked in the bank details instead, the EPC-QR code is replaced by a placeholder, and the report lists it as an error, so the XML is attached as a draft (see [Validation and Error Reporting](../e-invoicing/validation.md)).
+The IBAN is checked (structure and check digits) whether or not a QR code is shown. It is printed in groups of four, and written to the EPC-QR code and the ZUGFeRD XML without spaces and in upper case, so `"de89 3704 0044 0532 0130 00"` is fine. A missing or invalid IBAN is a problem of the invoice data that the [validation level](./invoice/validation.md) handles: a draft lists it on its report page and withholds the ZUGFeRD XML, and `validation: "strict"` stops the compilation with a message naming it. Without these checks (`validation: none`), an e-invoice with `zugferd-errors: "report"` marks it in the bank details, replaces the EPC-QR code by a placeholder and lists it in its report as an error, so the XML is attached as a draft (see [Validation and Error Reporting](../e-invoicing/validation.md)).
 
-The EPC-QR code is only generated when it is shown and the invoice currency is EUR. It carries the plain text of the account holder, so a styled or multi-line sender name works as well; with `name: auto`, the account holder is the sender name on one line, as in the ZUGFeRD XML. The QR code allows at most 70 bytes for the account holder name (non-ASCII characters such as umlauts count twice), 35 for a structured `reference` and 140 for `text`, and a BIC of 8 or 11 letters and digits. If a value does not fit, the compilation stops and says which one (with an e-invoice and `zugferd-errors: "report"`, the placeholder of the QR code names it instead): set a shorter account name with `name`, or hide the QR code with `qr-code: (display: false)`.
+The EPC-QR code is only generated when it is shown and the invoice currency is EUR. It carries the plain text of the account holder, so a styled or multi-line sender name works as well; with `name: auto`, the account holder is the sender name on one line, as in the ZUGFeRD XML. The QR code allows at most 70 bytes for the account holder name (non-ASCII characters such as umlauts count twice), 35 for a structured `reference` and 140 for `text`, and a BIC of 8 or 11 letters and digits. If a value does not fit, the code is left out: a draft shows a placeholder that names the problem and lists it on its report page, `validation: "strict"` stops the compilation with its message, and with an e-invoice and `zugferd-errors: "report"`, the placeholder names it as well. Set a shorter account name with `name`, or hide the QR code with `qr-code: (display: false)`.
 
-`bank-details` makes these checks itself, before the theme draws the bank details. A custom theme layout that draws no QR code therefore needs `qr-code: (display: false)` as well.
+`bank-details` makes these checks itself, before the `bank-details` part of the theme draws the bank details. A theme that draws no QR code (`theme.custom.bank-details(show-qr: false)`, or a part of its own that leaves it out) therefore needs `qr-code: (display: false)` as well.
 
 The EPC-QR code asks the buyer to transfer the amount. By default, it is therefore only shown when the invoice is paid by credit transfer: not next to a [`direct-debit`](#direct-debit) or a [`card-payment`](#card-payment), and not on a [`paid`](#paid) invoice. `qr-code: (display: true)` shows it anyway.
 :::
@@ -52,13 +52,13 @@ The EPC-QR code asks the buyer to transfer the amount. By default, it is therefo
 | `payment-amount`      | `auto` \| `none` \| `number` | The specific amount to be paid. If `auto`, it uses the remaining amount due (or full gross total if no prepayments are present).                                                                                                                                                                                                                                                                                 |
 | `show-reference`      | `bool`                       | Whether to display the reference field in the output. Defaults to `true`.                                                                                                                                                                                                                                                                                                                                        |
 | `account-holder-text` | `auto`                       | Optional custom text to label the account holder field.                                                                                                                                                                                                                                                                                                                                                          |
-| `qr-code`             | `dictionary`                 | Configuration for a payment QR code (e.g., EPC-QR). Accepts `display` (bool, by default whether the buyer pays by credit transfer; `false` on a credit note or a self-billed invoice, which the sender pays) and `size` (length, defaults to `5em`).                                                                                                                                                             |
+| `qr-code`             | `dictionary`                 | Configuration for the payment QR code (EPC-QR). `display` (bool) shows or hides it; by default, it is shown when the buyer pays by credit transfer, and not on a credit note or a self-billed invoice, which the sender pays. `size` (a length, at least 20mm) overrides the size the theme sets with `theme.custom.bank-details(qr-size: ..)`.                                                                  |
 
 ---
 
-## `payment-goal`
+## `payment-terms`
 
-Displays the payment deadline and terms for the invoice. You can specify a strict deadline date or a relative number of days, and cash discounts for an earlier payment.
+Displays the payment deadline and terms for the invoice. You can specify a strict deadline date or a relative number of days, and cash discounts for an earlier payment. Before v0.6.0 this component was called `payment-goal`.
 
 On a credit note or a self-billed invoice (see [`document-type`](./invoice/index.md#document-type)), the sender pays the amount, so the sentence says that the sender transfers it (`payment.text-credit` of the [locale](./locale/base.md)), e.g. "Den Betrag in Höhe von … überweisen wir innerhalb von 14 Tagen auf das unten angegebene Konto." A cash discount (`discount`) is not supported on these documents and stops the compilation.
 
@@ -67,7 +67,7 @@ You can provide either `days` or a specific `date`. If you provide `days`, the s
 :::
 
 :::info Payment means
-The sentence follows the payment means of the invoice: it asks for a transfer to the account of the [`bank-details`](#bank-details), announces a [`direct-debit`](#direct-debit), or says that the amount is charged to the card of a [`card-payment`](#card-payment). An invoice that is [`paid`](#paid) has no payment goal.
+The sentence follows the payment means of the invoice: it asks for a transfer to the account of the [`bank-details`](#bank-details), announces a [`direct-debit`](#direct-debit), or says that the amount is charged to the card of a [`card-payment`](#card-payment). An invoice that is [`paid`](#paid) has no payment terms.
 :::
 
 | Key        | Type                                       | Description                                                                                                                                                            |
@@ -78,44 +78,46 @@ The sentence follows the payment means of the invoice: it asks for a transfer to
 
 ### Examples
 
-The visual output of the component changes based on the parameters provided. Below are the standard English translations for the output strings:
+The visual output of the component changes based on the parameters provided. Below are the outputs of `locale.en-de`:
 
 #### 1. Default (Prompt Payment)
 
 If no parameters are provided, the system requests prompt payment.
 
 ```typst
-#payment-goal()
+#payment-terms()
 ```
 
-> Please transfer the total amount of **123.45€** upon receipt to the account listed below.
+> Please transfer the total amount of **123,45 €** upon receipt to the account listed below.
 
 #### 2. Relative Deadline
 
 Using the `days` parameter to specify a timeframe.
 
 ```typst
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 ```
 
-> Please transfer the total amount of **123.45€** within 14 days to the account listed below.
+> Please transfer the total amount of **123,45 €** within 14 days to the account listed below.
 
 #### 3. Fixed Deadline
 
 Using the `date` parameter to specify an absolute deadline.
 
 ```typst
-#payment-goal(date: datetime(day: 1, month: 1, year: 2026))
+#payment-terms(date: datetime(day: 1, month: 1, year: 2026))
 ```
 
-> Please transfer the total amount of **123.45€** no later than 01.01.2026 to the account listed below.
+> Please transfer the total amount of **123,45 €** no later than 01.01.2026 to the account listed below.
+
+After a [prepayment](./line-items/index.md), the sentence names the amount due instead of the total (locale string `payment.text-due`).
 
 #### 4. Cash Discount (Skonto)
 
 Using the `discount` parameter to grant a discount for an earlier payment. Each step is printed after the payment sentence:
 
 ```typst
-#payment-goal(
+#payment-terms(
   days: 30,
   discount: (
     (days: 7, percent: 3%),
@@ -124,7 +126,7 @@ Using the `discount` parameter to grant a discount for an earlier payment. Each 
 )
 ```
 
-> Please transfer the total amount of **123.45€** within 30 days to the account listed below. For payment within 7 days, a cash discount of 3% is granted. For payment within 14 days, a cash discount of 2% on 100.00€ is granted.
+> Please transfer the total amount of **123,45 €** within 30 days to the account listed below. For payment within 7 days, a cash discount of 3% is granted. For payment within 14 days, a cash discount of 2% on 100,00 € is granted.
 
 `days` is a whole number of days, and `percent` a percentage between 0% and 100% with at most two decimals, as the e-invoice states it. A cash discount changes no amount of the invoice: the buyer deducts it when paying in time. In an e-invoice, the discounts are written into the payment terms (BT-20), in XRechnung in the syntax of the KoSIT (e.g. `#SKONTO#TAGE=7#PROZENT=3.00#`, see [Cash Discount](../e-invoicing/invoice-data/payment.md#cash-discount-skonto)).
 
@@ -132,10 +134,10 @@ Using the `discount` parameter to grant a discount for an earlier payment. Each 
 
 ## `direct-debit`
 
-Collects the amount of the invoice by SEPA direct debit from the account of the buyer. It prints the payment method, the mandate reference, your creditor identifier and the debited account, and the [`payment-goal`](#payment-goal) announces the direct debit instead of asking for a transfer. In an e-invoice, it is the payment means (BT-81 = 59, SEPA direct debit; 49 in another currency than euro) with the mandate reference (BT-89), the creditor identifier (BT-90) and the debited account (BT-91).
+Collects the amount of the invoice by SEPA direct debit from the account of the buyer. It prints the payment method, the mandate reference, your creditor identifier and the debited account, and the [`payment-terms`](#payment-terms) announces the direct debit instead of asking for a transfer. In an e-invoice, it is the payment means (BT-81 = 59, SEPA direct debit; 49 in another currency than euro) with the mandate reference (BT-89), the creditor identifier (BT-90) and the debited account (BT-91).
 
 ```typst
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #direct-debit(
   mandate: "M-2026-017",
   creditor-id: "DE98ZZZ09999999999",
@@ -143,7 +145,7 @@ Collects the amount of the invoice by SEPA direct debit from the account of the 
 )
 ```
 
-> The total amount of **123.45€** will be collected from your account by direct debit within 14 days.
+> The total amount of **123,45 €** will be collected from your account by direct debit within 14 days.
 >
 > Payment method: SEPA direct debit \
 > Mandate reference: M-2026-017 \
@@ -162,14 +164,14 @@ An invalid creditor identifier or IBAN stops the compilation with a message nami
 
 ## `card-payment`
 
-States that the amount of the invoice is paid with, or charged to, a payment card. It prints the kind of card, the last digits of the card number and the card holder, and the [`payment-goal`](#payment-goal) says that the amount is charged to the card. In an e-invoice, it is the payment means (BT-81 = 54 for a credit card, 55 for a debit card, 48 for a card of either kind) with the last digits of the card number (BT-87) and the card holder (BT-88); the profiles below EN 16931 state only the payment means code.
+States that the amount of the invoice is paid with, or charged to, a payment card. It prints the kind of card, the last digits of the card number and the card holder, and the [`payment-terms`](#payment-terms) says that the amount is charged to the card. In an e-invoice, it is the payment means (BT-81 = 54 for a credit card, 55 for a debit card, 48 for a card of either kind) with the last digits of the card number (BT-87) and the card holder (BT-88); the profiles below EN 16931 state only the payment means code.
 
 ```typst
-#payment-goal()
+#payment-terms()
 #card-payment(last4: "4242", holder: "Claire Martin", kind: "credit")
 ```
 
-> The total amount of **123.45€** will be charged to your card upon receipt.
+> The total amount of **123,45 €** will be charged to your card upon receipt.
 >
 > Payment method: Credit card \
 > Card number: \*\*\*\* 4242 \
@@ -187,15 +189,15 @@ On a credit note or a self-billed invoice, whose sender pays the amount, `card-p
 
 ## `paid`
 
-States that the invoice is paid already, e.g. in cash or by card at the counter. It prints that the amount was paid, and how, and that nothing is due. An invoice that is paid has no [`payment-goal`](#payment-goal) and no payment terms: `paid` together with a `payment-goal` or with a text as `due-date` of the invoice (e.g. `due-date: "sofort"`) stops the compilation, while a `datetime` as `due-date` is the date the payment was due. In an e-invoice, the total is the paid amount (BT-113), nothing is due (BT-115), the payment means is the one it was paid with (BT-81), and the printed sentence is the payment terms (BT-20).
+States that the invoice is paid already, e.g. in cash or by card at the counter. It prints that the amount was paid, and how, and that nothing is due. An invoice that is paid has no [`payment-terms`](#payment-terms) and no payment terms: `paid` together with a `payment-terms` or with a text as `due-date` of the invoice (e.g. `due-date: "sofort"`) stops the compilation, while a `datetime` as `due-date` is the date the payment was due. In an e-invoice, the total is the paid amount (BT-113), nothing is due (BT-115), the payment means is the one it was paid with (BT-81), and the printed sentence is the payment terms (BT-20).
 
 ```typst
 #paid(method: "cash", date: datetime(year: 2026, month: 9, day: 1))
 ```
 
-> The total amount of **123.45€** was paid on 01.09.2026. \
+> The total amount of **123,45 €** was paid on 01.09.2026. \
 > Payment method: Cash \
-> Amount Due: 0.00€
+> Amount Due: 0,00 €
 
 | Key      | Type                                       | Description                                                                                                                                                                                                                                                                                                                                    |
 | :------- | :----------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -244,7 +246,7 @@ While a `bundle` aggregates items into a single grouped line item and a `group` 
 If you have multiple items that share a specific tax rate (e.g., books with a reduced 7% tax rate), you can wrap them in an `apply` block instead of setting the `tax` parameter on every single item.
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": item, apply, tax
+#import "@preview/invoice-pro:0.5.0": apply, item, tax
 
 // ...
 #apply(tax: tax.vat(7%))[
@@ -262,7 +264,7 @@ If you have multiple items that share a specific tax rate (e.g., books with a re
 ```
 
 :::warning
-**Advanced Usage for Power Users:** Because `apply` interfaces directly with the internal state representation, power users can also use it to override deeper internal functions—such as temporarily changing the [`locale`](./locale), [`theme`](./theme), or formatting logic for a specific scope. However, this requires knowledge of the internal data structure and should be used with caution!
+**Advanced Usage for Power Users:** Because `apply` interfaces directly with the internal state representation, power users can also use it to override deeper internal values—such as the [`locale`](./locale) or formatting logic for a specific scope. However, this requires knowledge of the internal data structure and should be used with caution! To re-theme part of the body, use [`themed`](./theme/parts.md#scoped-overrides-themed) instead.
 :::
 
 ---

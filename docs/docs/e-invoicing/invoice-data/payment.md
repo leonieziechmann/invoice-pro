@@ -4,16 +4,16 @@ sidebar_position: 4
 
 # Payment
 
-The payment details of an e-invoice come from the components that print them: the payment goal, the bank details, a direct debit, a card payment or a paid invoice. So the printed invoice and its XML always state the same payment.
+The payment details of an e-invoice come from the components that print them: the payment terms, the bank details, a direct debit, a card payment or a paid invoice. So the printed invoice and its XML always state the same payment.
 
 ## Payment Terms and Instructions
 
-- **Due Date or Payment Terms (BT-9 / BT-20):** As long as an amount is due, the invoice must state when to pay (BR-CO-25). Add a [`payment-goal`](../../api-reference/components.md#payment-goal) (with `days` or a `date`) or set `due-date` on the invoice. A textual `date` or `due-date` (e.g. `[upon receipt]`) is written as payment terms, with its line breaks. An invoice that is [paid already](#paid-invoices) has nothing due and needs neither.
+- **Due Date or Payment Terms (BT-9 / BT-20):** As long as an amount is due, the invoice must state when to pay (BR-CO-25). Add [`payment-terms`](../../api-reference/components.md#payment-terms) (with `days` or a `date`) or set `due-date` on the invoice. A textual `date` or `due-date` (e.g. `[upon receipt]`) is written as payment terms, with its line breaks. An invoice that is [paid already](#paid-invoices) has nothing due and needs neither.
 - **Payment Instructions (BG-16):** The components that say how the buyer pays are the payment means of the e-invoice (see below). IBAN and BIC are written without spaces and in upper case; they are the same values the bank details print and the EPC-QR code carries.
 
 ## Payment Means
 
-Each payment means has a component that prints it and states it in the e-invoice, so the printed invoice and the XML always say the same. The payment goal prints the sentence of the payment means: it asks for a transfer only when the buyer pays by credit transfer.
+Each payment means has a component that prints it and states it in the e-invoice, so the printed invoice and the XML always say the same. `payment-terms` prints the sentence of the payment means: it asks for a transfer only when the buyer pays by credit transfer.
 
 | Component                                                        | Payment means code (BT-81)                                       | Written details                                                                                                  |
 | :--------------------------------------------------------------- | :--------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------- |
@@ -29,13 +29,12 @@ Each payment means has a component that prints it and states it in the e-invoice
 
 ## Direct Debit
 
-A SEPA direct debit needs the mandate the buyer signed and your creditor identifier; XRechnung requires the IBAN of the debited account as well. The payment goal then announces the debit instead of asking for a transfer:
+A SEPA direct debit needs the mandate the buyer signed and your creditor identifier; XRechnung requires the IBAN of the debited account as well. `payment-terms` then announces the debit instead of asking for a transfer:
 
 ```typst
 #import "@preview/invoice-pro:0.5.0": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
   locale: locale.en-de,
   zugferd: "xrechnung",
   sender: (
@@ -68,7 +67,7 @@ A SEPA direct debit needs the mandate the buyer signed and your creditor identif
 
 // "The total amount of 297,50 € will be collected from your account by
 // direct debit within 14 days."
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #direct-debit(
   mandate: "M-2026-017",
@@ -79,7 +78,7 @@ A SEPA direct debit needs the mandate the buyer signed and your creditor identif
 
 ## Paid Invoices
 
-An invoice that is paid already, e.g. in cash or by card at the counter, uses [`paid`](../../api-reference/components.md#paid) instead of a payment goal: it prints that the amount was paid, and how, and that nothing is due. The e-invoice states the total as paid amount (BT-113), nothing due (BT-115) and the payment means it was paid with. `method` is one of `"cash"` (10), `"cheque"` (20), `"online"` (68), `"card"` (48, or the code of the `card-payment`), `"transfer"` (58, or 30 in another currency than euro) and `"direct-debit"` (59, or 49), or another code of UNTDID 4461 with its printed name, e.g. `(code: "97", name: [Clearing])`.
+An invoice that is paid already, e.g. in cash or by card at the counter, uses [`paid`](../../api-reference/components.md#paid) instead of `payment-terms`: it prints that the amount was paid, and how, and that nothing is due. The e-invoice states the total as paid amount (BT-113), nothing due (BT-115) and the payment means it was paid with. `method` is one of `"cash"` (10), `"cheque"` (20), `"online"` (68), `"card"` (48, or the code of the `card-payment`), `"transfer"` (58, or 30 in another currency than euro) and `"direct-debit"` (59, or 49), or another code of UNTDID 4461 with its printed name, e.g. `(code: "97", name: [Clearing])`.
 
 ```typst
 #paid(method: "cash", date: datetime(year: 2026, month: 9, day: 1))
@@ -92,7 +91,7 @@ A card payment or a direct debit adds its details with its own component. XRechn
 #card-payment(last4: "4242", holder: "Claire Martin", kind: "credit")
 ```
 
-With prepayments, the printed sentence states the remaining amount that was paid; the e-invoice states the total as paid amount either way. An invoice that is paid has no payment goal and no payment terms: `paid` next to `payment-goal`, or next to a text as `due-date` of the invoice, which would be the payment terms (BT-20) instead of the sentence that it is paid, stops the compilation. A `datetime` as `due-date` is the due date (BT-9) the payment met.
+With prepayments, the printed sentence states the remaining amount that was paid; the e-invoice states the total as paid amount either way. An invoice that is paid has no payment terms: `paid` next to `payment-terms`, or next to a text as `due-date` of the invoice, which would be the payment terms (BT-20) instead of the sentence that it is paid, stops the compilation. A `datetime` as `due-date` is the due date (BT-9) the payment met.
 
 A payment means code of its own must be the code of the component that details its kind, as the invoice states one (BT-81): `paid(method: (code: "54", name: [Visa]))` next to `card-payment(kind: "credit")` states 54 with the card details and prints its name, but next to `card-payment()` (48, a card of any kind) it stops the compilation, as one of the codes would be lost.
 
@@ -100,12 +99,12 @@ On a credit note or a self-billed invoice, the sender paid the amount to the rec
 
 ## Cash Discount (Skonto)
 
-A cash discount for a payment within fewer days is part of the payment goal. One entry is printed after the payment sentence and written into the payment terms (BT-20):
+A cash discount for a payment within fewer days is part of `payment-terms`. One entry is printed after the payment sentence and written into the payment terms (BT-20):
 
 ```typst
 // "... within 30 days ... For payment within 14 days, a cash discount of 2%
 // is granted."
-#payment-goal(days: 30, discount: (days: 14, percent: 2%))
+#payment-terms(days: 30, discount: (days: 14, percent: 2%))
 ```
 
 An array states several steps, and `basis` the amount a discount applies to, e.g. `discount: ((days: 7, percent: 3%), (days: 14, percent: 2%, basis: 1000))`. XRechnung states each step as a line in the syntax of the KoSIT (`BR-DE-18`), e.g. `#SKONTO#TAGE=14#PROZENT=2.00#`, with `#BASISBETRAG=` for the basis; the other profiles state the printed sentences. The percentage has at most two decimals, as the e-invoice states it. A cash discount changes no amount of the invoice: the buyer deducts it when paying in time. It is therefore no [`discount`](../../api-reference/line-items/index.md#adjustments-modifier-discount--surcharge), which reduces the amounts of the invoice no matter when the buyer pays.

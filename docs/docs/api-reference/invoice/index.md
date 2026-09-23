@@ -4,10 +4,10 @@ sidebar_position: 1
 
 # Invoice API
 
-The `invoice` function is the main entry point of the `invoice-pro` package. It sets up the page layout, visual theme, localization settings, and the global tax configuration for the entire document.
+The `invoice` function is the main entry point of the `invoice-pro` package. It sets up the page layout, visual theme, localization settings, validation level, and the global tax configuration for the entire document.
 
 :::info
-Every invoice document must start with a `#show: invoice.with(..)` rule. All other components, such as `line-items` or [`payment-goal`](../components.md#payment-goal), must be placed **after** this show rule.
+Every invoice document must start with a `#show: invoice.with(..)` rule. All other components, such as `line-items` or [`payment-terms`](../components.md#payment-terms), must be placed **after** this show rule.
 
 If you forget the show rule, your components will remain invisible because they rely on the underlying `loom` state engine to render properly.
 :::
@@ -20,7 +20,7 @@ Initializes the document and orchestrates the data calculation passes.
 
 | Key                      | Type                                                                                         | Description                                                                                                                                                                                                                                                                                                                                                                                                            |
 | :----------------------- | :------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `theme`                  | `function`                                                                                   | The visual theme to apply to the invoice. See [Themes](#theme) below.                                                                                                                                                                                                                                                                                                                                                  |
+| `theme`                  | `function`                                                                                   | The visual theme: a lazy theme such as `theme.classic` (the default). See [Theme](#theme) below.                                                                                                                                                                                                                                                                                                                       |
 | `locale`                 | `function`                                                                                   | The locale settings for language and number formatting. See [Locales](#locale) below.                                                                                                                                                                                                                                                                                                                                  |
 | `currency`               | `auto` \| `str`                                                                              | The currency of the invoice, an ISO 4217 code such as `"USD"`: the e-invoice states it (BT-5), and the amounts are printed with its symbol (`$`, `£`, `¥`, ...) or its code (e.g. `CHF`) in the number format of the locale. `auto` is the currency of the locale. See [Currency](../../e-invoicing/invoice-data/document.md#currency-bt-5).                                                                           |
 | `sender`                 | `dictionary`                                                                                 | Sender details (e.g., name, address, contact info).                                                                                                                                                                                                                                                                                                                                                                    |
@@ -49,8 +49,9 @@ Initializes the document and orchestrates the data calculation passes.
 | `tax-mode`               | `"exclusive"` \| `"inclusive"`                                                               | Sets the global baseline for tax calculation. `"exclusive"` treats standard prices as net. `"inclusive"` treats standard prices as gross.                                                                                                                                                                                                                                                                              |
 | `tax-exempt-small-biz`   | `bool`                                                                                       | If `true`, applies the small business tax exemption logic based on the selected locale.                                                                                                                                                                                                                                                                                                                                |
 | `zugferd`                | `none` \| `auto` \| `"minimum"` \| `"basic-wl"` \| `"basic"` \| `"en16931"` \| `"xrechnung"` | _(Experimental)_ Embeds a machine-readable ZUGFeRD / Factur-X XML into the PDF. Requires compiling with `--pdf-standard=a-3b`.                                                                                                                                                                                                                                                                                         |
-| `zugferd-errors`         | `"panic"` \| `"report"` \| `"ignore"`                                                        | What to do when the e-invoice data violates the rules of the profile: stop with a list of all problems (default), list them in the document and attach the XML as a draft, or attach it anyway. See [Validation and Error Reporting](../../e-invoicing/validation.md).                                                                                                                                                 |
-| `body`                   | `content`                                                                                    | The content of the invoice, containing your [`line-items`](../line-items/index.md) and other layout components.                                                                                                                                                                                                                                                                                                        |
+| `zugferd-errors`         | `"panic"` \| `"report"` \| `"ignore"`                                                        | What to do when the e-invoice data violates the rules of the profile: stop with a list of all problems (default), list them in the document and attach the XML as a draft, or attach it anyway. A draft with missing invoice data attaches no XML and validates none (see `validation`). See [Validation and Error Reporting](../../e-invoicing/validation.md).                                                        |
+| `validation`             | `"draft"` \| `"strict"` \| `none`                                                            | What happens when required data or output is missing. Defaults to `"draft"`. See [Validation](#validation) below.                                                                                                                                                                                                                                                                                                      |
+| `body`                   | `content`                                                                                    | The content of the invoice, containing your [`line-items`](../line-items/index.md) and other components.                                                                                                                                                                                                                                                                                                               |
 
 ## Key Parameters Explained
 
@@ -60,7 +61,7 @@ While the table above lists all available options, a few parameters dictate the 
 
 These parameters define the contact details for the invoicing party (sender) and the customer (recipient). Both parameters accept a standard dictionary.
 
-Standard keys generally include `name`, `address`, and `city`. Additionally, you can use the `extra` key to provide arbitrary supplementary information (like phone numbers, email addresses, or commercial register numbers) styled according to your theme.
+Standard keys are `name`, `address`, and `city`, plus `country`, `vat-id`, and `tax-nr`. Two optional sender keys feed the legal footer (the `registration` part of the theme): `register` for the commercial register entry and `management` for the managing directors. The `extra` key provides supplementary information such as phone numbers and email addresses; the themes print it next to the address and in the footer.
 
 Just like the header `references`, the `extra` field accepts either a dictionary of key-value pairs or an array of `(label, value)` tuples.
 
@@ -85,11 +86,14 @@ sender: (
   name: "Max Mustermann",
   address: ("Musterstraße 1", "Hinterhaus 2"),
   city: "12345 Musterstadt",
+  vat-id: "DE123456789",
+  register: [Amtsgericht Musterstadt, HRB 12345],
+  management: [Managing director: Max Mustermann],
   extra: (
     "Phone": "+49 123 456789",
     "Email": "max@mustermann.de",
-    "Web": "www.mustermann.de"
-  )
+    "Web": "www.mustermann.de",
+  ),
 ),
 recipient: (
   name: "Acme Corporation",
@@ -97,9 +101,9 @@ recipient: (
   city: "54321 Metropolis",
   extra: (
     ("Contact Person", "Jane Doe"),
-    ("Department", "Accounting")
-  )
-)
+    ("Department", "Accounting"),
+  ),
+),
 ```
 
 :::tip
@@ -121,16 +125,32 @@ _See the [Locale API Reference](../locale/index.md) for the full list and custom
 
 ### `theme`
 
-The theme dictates the visual layout and styling of your invoice. You must pass a theme function from the `themes` module.
+The theme dictates the page master and the look of your invoice. Pass a lazy theme from the `theme` namespace, uncalled or customized with `.with(..)`: `theme.classic` (the default), `theme.plain`, `theme.corporate`, `theme.elegant`, `theme.prestige`, `theme.bold`, `theme.technical`, `theme.soft`, `theme.compact` or `theme.boxed`.
 
-:::note
-The theming engine is currently undergoing expansion. At the moment, there are two primary themes available:
+Without `layout:`, the preset picks its page master from the **sender's** country: DIN 5008 form A for a German sender, form B in Austria, SN 010130 in Switzerland, US Letter #10 in the US. An explicit `layout:` always wins.
 
-- `themes.DIN-5008()`: A standard German business letter layout.
-- `themes.blank`: A minimal, bare-bones layout.
-  :::
+```typst
+theme: theme.classic.with(
+  theme.custom.brand(color: rgb("#0f766e")),
+  layout: theme.layout.din-5008-b,
+),
+```
 
-_See the [Theme API Reference](../theme.md) for more details._
+_See the [Theming API](../theme/index.md) for presets, customization, layouts and parts._
+
+### `validation`
+
+The validation level decides what happens when legally required data (such as the invoice number or the recipient's address) or output the theme must carry is missing.
+
+| Level               | Behavior                                                                                                                                             |
+| :------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"draft"` (default) | The document renders with inline markers, a badge, a watermark, and a report page. A ZUGFeRD XML with missing data is withheld.                      |
+| `"strict"`          | The compilation stops and lists every problem. Use it for sending and in CI.                                                                         |
+| `none`              | No checks. With `zugferd` set, nothing withholds the XML: the rules of the e-invoice still apply as `zugferd-errors` says. Never use it for sending. |
+
+`--input invoice-pro-validation=strict|draft|none` overrides the parameter. Misuse such as unknown keys always stops the compilation.
+
+_See the [Validation](./validation.md) page for the checks, the draft report, and the ZUGFeRD behavior._
 
 ### `tax` & `tax-exempt-small-biz`
 
@@ -160,7 +180,7 @@ The document type says what kind of document the invoice is. Unless you set `sub
 
 Any other UNTDID 1001 code of an invoice or credit note is accepted as text (e.g. `"326"` for a partial invoice) and printed with the title of its kind.
 
-On a credit note and a self-billed invoice, the sender pays the amount to the recipient: [`payment-goal`](../components.md#payment-goal) says so, and the [`bank-details`](../components.md#bank-details) are the recipient's account (its name, or on a self-billed invoice the name of the `payee`, is the default account holder) without EPC-QR code. The titles can be changed with [`locale.custom.document`](../locale/custom.md), the payment sentence with `locale.custom.payment(text-credit: ..)`.
+On a credit note and a self-billed invoice, the sender pays the amount to the recipient: [`payment-terms`](../components.md#payment-terms) says so, and the [`bank-details`](../components.md#bank-details) are the recipient's account (its name, or on a self-billed invoice the name of the `payee`, is the default account holder) without EPC-QR code. The titles can be changed with [`locale.custom.document`](../locale/custom.md), the payment sentence with `locale.custom.payment(text-credit: ..)`.
 
 ```typst
 #show: invoice.with(
@@ -282,13 +302,13 @@ With `zugferd: auto`, `invoice-pro` chooses the richest profile the invoice sati
 
 For accurate UN/CEFACT unit codes in the embedded XML, use the dictionary form for `unit` on your line items — see the [Line Items API](../line-items/index.md#item) for details.
 
-**Validation:** Before the XML is embedded, the invoice data is checked against the business rules of the profile. All problems are listed at once, each with the rule, the input to fix and a hint. With `zugferd-errors: "report"` they are shown in the document instead of stopping the compilation. See [Validation and Error Reporting](../../e-invoicing/validation.md) for details and the [Invoice Data](../../e-invoicing/invoice-data/index.md) pages for the data each profile requires.
+**Validation:** Before the XML is embedded, the invoice data is checked against the business rules of the profile. All problems are listed at once, each with the rule, the input to fix and a hint. With `zugferd-errors: "report"` they are shown in the document instead of stopping the compilation. A draft (`validation: "draft"`, the default) with missing invoice data attaches no XML at all: its report page names what is missing, and the e-invoice is validated once the data is complete. See [Validation and Error Reporting](../../e-invoicing/validation.md) for details, [Validation](./validation.md#zugferd--factur-x) for the validation levels, and the [Invoice Data](../../e-invoicing/invoice-data/index.md) pages for the data each profile requires.
 
 ---
 
 ## Minimal Valid Configuration
 
-While the `invoice` function offers many ways to customize your document, you only need to provide a few core parameters to generate a legally valid and functional invoice. At a bare minimum, you must define the sender, the recipient, a unique invoice number, and your tax identifier.
+While the `invoice` function offers many ways to customize your document, you only need to provide a few core parameters to generate a legally valid and functional invoice. At a bare minimum, you must define the sender, the recipient, a unique invoice number, and your tax identifier. If one of them is missing, the invoice renders as a draft that marks the gap (see [Validation](./validation.md)).
 
 Here is an example of the minimal boilerplate needed to get started:
 

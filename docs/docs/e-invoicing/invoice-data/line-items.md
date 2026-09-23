@@ -113,7 +113,7 @@ The dates of the items are the service period of the invoice, unless you set `se
   )
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
   bank: "Acme Bank",

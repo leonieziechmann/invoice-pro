@@ -69,7 +69,7 @@ What the invoice prints beyond its profile stays on the page only: the validatio
 ## Getting Started
 
 1. **Choose a profile:** set `zugferd: auto` (or another profile) on the invoice.
-2. **Give the data the profile needs:** both parties need their name, address and country, the seller its VAT identifier or tax number, and a payment goal or due date must say when to pay. If something is missing, the compilation stops with a list of what to add (see [Validation and Error Reporting](./validation.md)); [Invoice Data](./invoice-data/index.md) explains every input.
+2. **Give the data the profile needs:** both parties need their name, address and country, the seller its VAT identifier or tax number, and payment terms or a due date must say when to pay. If data every invoice needs is missing, the invoice renders as a draft that marks it and attaches no XML (see [Validation](../api-reference/invoice/validation.md)); what the profile needs beyond it stops the compilation with a list of what to add (see [Validation and Error Reporting](./validation.md)). [Invoice Data](./invoice-data/index.md) explains every input.
 3. **Compile as PDF/A-3b.** To produce a valid ZUGFeRD hybrid PDF, you **must** compile your Typst document to conform to the **PDF/A-3** standard (`a-3b`). This is a hard requirement for attaching files inside a PDF/A compliant document:
 
    ```bash
@@ -82,13 +82,13 @@ The recipient's software finds the attached `factur-x.xml` (or `xrechnung.xml`) 
 
 ### When the Data Is Incomplete
 
-The `zugferd-errors` parameter of `invoice` decides what happens with the problems the validation finds:
+Missing invoice data comes first: under the default `validation: "draft"`, an invoice without data the law requires on every invoice (for example its number or the seller's VAT identifier) renders as a draft with a report page, and its XML is withheld until the data is complete; `validation: "strict"` stops the compilation instead (see [Validation](../api-reference/invoice/validation.md)). Once that data is complete, the rules of the e-invoice are checked, and the `zugferd-errors` parameter of `invoice` decides what happens with the problems they find:
 
-| Value               | Behavior                                                                                                                            |
-| :------------------ | :---------------------------------------------------------------------------------------------------------------------------------- |
-| `"panic"` (default) | Errors stop the compilation with the complete list. An invoice with warnings only compiles.                                         |
-| `"report"`          | The problems are listed in a box at the top of the invoice, which helps while you fill in the data; the XML is attached as a draft. |
-| `"ignore"`          | The XML is attached whatever its errors. Use this only if you validate the XML yourself.                                            |
+| Value               | Behavior                                                                                                                                                                     |
+| :------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"panic"` (default) | Errors stop the compilation with the complete list. An invoice with warnings only compiles.                                                                                  |
+| `"report"`          | The problems are listed in a box at the top of the invoice (the `zugferd-report` part of the theme), which helps while you fill in the data; the XML is attached as a draft. |
+| `"ignore"`          | The XML is attached whatever its errors. Use this only if you validate the XML yourself.                                                                                     |
 
 See [Validation and Error Reporting](./validation.md) for the details.
 
@@ -114,7 +114,6 @@ Here is a full example of a ZUGFeRD-compliant invoice configuration:
 #import "@preview/invoice-pro:0.5.0": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
   // Enable the comfort EN 16931 e-invoicing profile
   zugferd: "en16931",
 
@@ -177,7 +176,7 @@ Here is a full example of a ZUGFeRD-compliant invoice configuration:
   )
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
   bank: "Global Business Bank",

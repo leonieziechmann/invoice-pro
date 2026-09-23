@@ -91,14 +91,13 @@ The following milestones are planned for future releases of the core engine:
 - [x] (v0.3.0) **Internationalization (i18n):** Built-in support for English and other locales (currently generates German invoices by default).
 - [x] (v0.4.0) **ZUGFeRD Support:** (Experimental) Embedding XML data for fully compliant, **Normalized** e-invoicing based on standards like **UNTDID 5305**.
 - [x] (v0.5.0) **Validated E-Invoicing:** (Experimental) Checking every e-invoice against the rules of EN 16931, Factur-X and XRechnung before its XML is attached.
-- [ ] (WIP) **Theming Engine:** Allow easy customization of accent colors and fonts to match corporate identities.
+- [x] (v0.6.0) **Theming Engine:** Ten presets, brand colors, fonts and logos, page layouts for window envelopes in several countries, and replaceable parts; validation levels that mark missing invoice data.
 - [ ] **Data Loading:** Helper functions to load invoice items directly from JSON, CSV, or YAML data sources.
 
 ## Existing Dependencies
 
 The current architecture relies on the following optimized packages:
 
-- `letter-pro` for the DIN layout.
 - `sepay` for EPC-QR-Code generation.
 - `ibanator` (through `sepay`) for the IBAN check of the EPC-QR-Code.
 - `loom` for reactive document rendering.
@@ -108,6 +107,7 @@ The current architecture relies on the following optimized packages:
 
 - Special thanks to [classy-german-invoice](https://github.com/erictapen/typst-invoice) by Kerstin Humm, which served as architectural inspiration and provided the foundational logic for the EPC-QR-Code implementation.
 - The ZUGFeRD e-invoicing implementation was contributed by [Michael Fuchs (theexiile1305)](https://github.com/theexiile1305).
+- Up to v0.5, the DIN 5008 page layout was drawn by [letter-pro](https://typst.app/universe/package/letter-pro). Since v0.6.0, invoice-pro draws its page frame itself.
   :::
 
 ## License

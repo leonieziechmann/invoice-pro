@@ -84,17 +84,27 @@ For invoicing a private consumer within your own country, showing gross prices a
 = Vielen Dank für Ihre Bestellung!
 
 #line-items[
-  #item([Premium Ergonomische Maus], quantity: 1, unit: unit.piece, price: 89.90)
-  #item([Mechanische Tastatur (RGB)], quantity: 1, unit: unit.piece, price: 149.00)
+  #item(
+    [Premium Ergonomische Maus],
+    quantity: 1,
+    unit: unit.piece,
+    price: 89.90,
+  )
+  #item(
+    [Mechanische Tastatur (RGB)],
+    quantity: 1,
+    unit: unit.piece,
+    price: 149.00,
+  )
   #item([Versicherter Versand], quantity: 1, unit: unit.piece, price: 5.90)
 ]
 
-#payment-goal(days: 7)
+#payment-terms(days: 7)
 
 #bank-details(
-  bank: "Deutsche Kreditbank",
-  iban: "DE02120300000000202051",
-  bic: "BYLADEM1001",
+  bank: "Berliner Volksbank",
+  iban: "DE45100900001234567890",
+  bic: "BEVODEBBXXX",
 )
 ```
 
@@ -135,15 +145,25 @@ For small businesses operating under a local exemption tax scheme (such as the _
 = Fotoshootings & Bildbearbeitung
 
 #line-items[
-  #item([Portrait-Fotoshooting (2 Std.)], quantity: 1, unit: unit.piece, price: 180.00)
-  #item([Bildnachbearbeitung (Premium)], quantity: 5, unit: unit.piece, price: 15.00)
+  #item(
+    [Portrait-Fotoshooting (2 Std.)],
+    quantity: 1,
+    unit: unit.piece,
+    price: 180.00,
+  )
+  #item(
+    [Bildnachbearbeitung (Premium)],
+    quantity: 5,
+    unit: unit.piece,
+    price: 15.00,
+  )
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
-  bank: "Commerzbank",
-  iban: "DE89370400440532013000",
-  bic: "COBADEFFXXX",
+  bank: "Sparkasse KölnBonn",
+  iban: "DE12370501980532135700",
+  bic: "COLSDE33XXX",
 )
 ```

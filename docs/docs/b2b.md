@@ -29,21 +29,21 @@ B2B invoicing differs significantly from B2C invoicing due to strict tax auditin
 
 When issuing a B2B invoice, specific data points must be provided to ensure the recipient can successfully claim their input tax deduction. Below is an explanation of these fields and how they map to the `invoice` configurations:
 
-| Data Point               | Why it is Important / Legal Meaning                                                                             | Where to Find it                                             | Parameter in `invoice-pro`                                                          |
-| :----------------------- | :-------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------- | :---------------------------------------------------------------------------------- |
-| **Full Supplier Name**   | Identifies the service provider / creditor who is legally contracting.                                          | Trade register or business registration document.            | `sender.name`                                                                       |
-| **Supplier Address**     | Defines the official registered office or place of business.                                                    | Business registration.                                       | `sender.address` or `sender.street`, `sender.city`, `sender.country`                |
-| **Supplier Tax ID**      | Used by local tax offices for tax assessment. Required if no VAT ID is available.                               | Issued by your local tax authority on registration.          | `sender.tax-nr`                                                                     |
-| **Supplier VAT ID**      | Identifies the seller as a registered taxable entity in the EU VAT system. Mandatory for cross-border EU trade. | Applied for and issued by your central tax authority.        | `sender.vat-id`                                                                     |
-| **Company Registration** | Legal transparency requirement for corporations (e.g., GmbH, AG) showing register details.                      | Commercial register extract (e.g., _Handelsregisternummer_). | `sender.extra` (printed), `sender.legal-id` (e-invoice)                             |
-| **Full Buyer Name**      | Identifies the recipient who is legally authorized to deduct the input VAT.                                     | Client contract, purchase order, or registry search.         | `recipient.name`                                                                    |
-| **Buyer Address**        | Defines the billing address of the customer. Must match their official records.                                 | Provided by the customer.                                    | `recipient.address` or `recipient.street`, `recipient.city`, `recipient.country`    |
-| **Buyer VAT ID**         | Mandatory for zero-rated intra-community supplies and reverse-charge transactions.                              | Provided by the customer (verify via VIES).                  | `recipient.vat-id`                                                                  |
-| **Buyer Reference**      | A routing ID (e.g., _Leitweg-ID_) used by corporate or public buyers to automatically process invoices.         | Provided by the customer in their purchase order.            | `recipient.buyer-reference`                                                         |
-| **Invoice Number**       | Unique, sequential identifier to track invoices chronologically and prevent duplicates.                         | Generated sequentially by your billing system.               | `invoice-nr`                                                                        |
-| **Invoice Date**         | Date of document issue. Starts the payment term and assigns the tax period.                                     | The day the invoice is generated.                            | `date` (defaults to today)                                                          |
-| **Performance Date**     | The date or period when the services/goods were actually supplied (required for VAT accrual).                   | Delivery notes, timesheets, or milestone reports.            | `service-period` or the `date` of the items, printed by `references.service-time()` |
-| **Tax Rate & Mode**      | Specifies how tax is calculated. Net pricing is default.                                                        | Dictated by local tax law based on the type of service.      | `tax-mode: "exclusive"` and `tax` (using the `tax` module)                          |
+| Data Point               | Why it is Important / Legal Meaning                                                                             | Where to Find it                                             | Parameter in `invoice-pro`                                                                             |
+| :----------------------- | :-------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------- | :----------------------------------------------------------------------------------------------------- |
+| **Full Supplier Name**   | Identifies the service provider / creditor who is legally contracting.                                          | Trade register or business registration document.            | `sender.name`                                                                                          |
+| **Supplier Address**     | Defines the official registered office or place of business.                                                    | Business registration.                                       | `sender.address` or `sender.street`, `sender.city`, `sender.country`                                   |
+| **Supplier Tax ID**      | Used by local tax offices for tax assessment. Required if no VAT ID is available.                               | Issued by your local tax authority on registration.          | `sender.tax-nr`                                                                                        |
+| **Supplier VAT ID**      | Identifies the seller as a registered taxable entity in the EU VAT system. Mandatory for cross-border EU trade. | Applied for and issued by your central tax authority.        | `sender.vat-id`                                                                                        |
+| **Company Registration** | Legal transparency requirement for corporations (e.g., GmbH, AG) showing register details.                      | Commercial register extract (e.g., _Handelsregisternummer_). | `sender.register` and `sender.management` (printed in the legal footer), `sender.legal-id` (e-invoice) |
+| **Full Buyer Name**      | Identifies the recipient who is legally authorized to deduct the input VAT.                                     | Client contract, purchase order, or registry search.         | `recipient.name`                                                                                       |
+| **Buyer Address**        | Defines the billing address of the customer. Must match their official records.                                 | Provided by the customer.                                    | `recipient.address` or `recipient.street`, `recipient.city`, `recipient.country`                       |
+| **Buyer VAT ID**         | Mandatory for zero-rated intra-community supplies and reverse-charge transactions.                              | Provided by the customer (verify via VIES).                  | `recipient.vat-id`                                                                                     |
+| **Buyer Reference**      | A routing ID (e.g., _Leitweg-ID_) used by corporate or public buyers to automatically process invoices.         | Provided by the customer in their purchase order.            | `recipient.buyer-reference`                                                                            |
+| **Invoice Number**       | Unique, sequential identifier to track invoices chronologically and prevent duplicates.                         | Generated sequentially by your billing system.               | `invoice-nr`                                                                                           |
+| **Invoice Date**         | Date of document issue. Starts the payment term and assigns the tax period.                                     | The day the invoice is generated.                            | `date` (defaults to today)                                                                             |
+| **Performance Date**     | The date or period when the services/goods were actually supplied (required for VAT accrual).                   | Delivery notes, timesheets, or milestone reports.            | `service-period` or the `date` of the items, printed by `references.service-time()`                    |
+| **Tax Rate & Mode**      | Specifies how tax is calculated. Net pricing is default.                                                        | Dictated by local tax law based on the type of service.      | `tax-mode: "exclusive"` and `tax` (using the `tax` module)                                             |
 
 ---
 
@@ -77,10 +77,8 @@ For invoicing a business client within the same country (e.g., Germany) where st
       phone: "+49 89 123456",
       email: "billing@techsolutions.de",
     ),
-    extra: (
-      "Geschäftsführer": "Max Mustermann",
-      "Handelsregister": "Amtsgericht München, HRB 987654",
-    ),
+    register: [Amtsgericht München, HRB 987654],
+    management: [Geschäftsführer: Max Mustermann],
   ),
 
   recipient: (
@@ -108,16 +106,26 @@ For invoicing a business client within the same country (e.g., Germany) where st
 
 #line-items[
   #item([IT-Architektur Beratung], quantity: 15, unit: unit.hour, price: 120.00)
-  #item([Backend Softwareentwicklung], quantity: 40, unit: unit.hour, price: 95.00)
-  #item([Server-Setup & Deployment], quantity: 1, unit: unit.piece, price: 450.00)
+  #item(
+    [Backend Softwareentwicklung],
+    quantity: 40,
+    unit: unit.hour,
+    price: 95.00,
+  )
+  #item(
+    [Server-Setup & Deployment],
+    quantity: 1,
+    unit: unit.piece,
+    price: 450.00,
+  )
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
-  bank: "Commerzbank",
-  iban: "DE89370400440532013000",
-  bic: "COBADEFFXXX",
+  bank: "Stadtsparkasse München",
+  iban: "DE47701500001234567890",
+  bic: "SSKMDEMMXXX",
 )
 ```
 
@@ -165,11 +173,11 @@ For invoicing a business client in another EU country where the recipient is res
   #item([User Research Sessions], quantity: 8, unit: unit.hour, price: 100.00)
 ]
 
-#payment-goal(days: 30)
+#payment-terms(days: 30)
 
 #bank-details(
   bank: "Commerzbank Berlin",
-  iban: "DE89370400440532013000",
-  bic: "COBADEFFXXX",
+  iban: "DE38100400000532135700",
+  bic: "COBADEBBXXX",
 )
 ```

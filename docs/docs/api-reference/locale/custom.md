@@ -31,6 +31,8 @@ Every custom dictionary you provide is deep-merged against `base-language` and `
 Review the internal `base-language` and `base-region` structures to understand the minimum viable overrides required. Only override fields that deviate from the standard fallback.
 :::
 
+v0.6.0 added the groups `sections` and `validation` and several keys (such as `document.page` and `signature.thanks`); see the [Base Schema](./base.md). A custom language without them shows the English base texts until you translate them.
+
 ---
 
 ## Example: Building a "Europe East" Package
@@ -80,7 +82,7 @@ Here, we define the currency, how dates are formatted, how values are **Normaliz
 #import "@preview/invoice-pro:0.5.0": locale, tax
 
 // The region builder function
-#let region-pl = (lang) => (
+#let region-pl = lang => (
   meta: (
     region: "pl",
   ),
@@ -91,18 +93,22 @@ Here, we define the currency, how dates are formatted, how values are **Normaliz
     symbol: "zł",
   ),
   format: (
-    // Customize date formatting
-    date: (val) => if type(val) == datetime {
+    // Customize date formatting: a date, a range, or none (no date)
+    date: val => if type(val) == datetime {
       val.display("[day].[month].[year]")
-    } else {
+    } else if type(val) == array {
       // Handle date ranges safely
-      val.first().display("[day].[month].[year]") + " - " + val.last().display("[day].[month].[year]")
-    }
+      (
+        val.first().display("[day].[month].[year]")
+          + " - "
+          + val.last().display("[day].[month].[year]")
+      )
+    },
   ),
   tax: (
     // Set standard Polish VAT
     default-vat: tax.vat(23%),
-  )
+  ),
 )
 ```
 
@@ -152,13 +158,13 @@ Users of your published package can now simply import your locale and pass it di
 
 When defining the `lang` parameter for the factory, refer to the language override keys. When defining the `region` parameter, your function must return a dictionary conforming to the following structure:
 
-| Key         | Type         | Description                                                                                                                             |
-| :---------- | :----------- | :-------------------------------------------------------------------------------------------------------------------------------------- |
-| `meta`      | `dictionary` | Contains the `region` string identifier (e.g., `"pl"`, `"cz"`).                                                                         |
-| `currency`  | `dictionary` | The currency of the region (`code`, `symbol`, `decimals`, `decimals-fine`). The e-invoice states its `code` as invoice currency (BT-5). |
-| `format`    | `dictionary` | Functions controlling the conversion of integers/floats/dates to strings (e.g., `currency`, `date`, `percent`).                         |
-| `normalize` | `dictionary` | Functions determining rounding logic for `money`, `money-fine`, and `infer-tax` parameters.                                             |
-| `tax`       | `dictionary` | Contains default `data.tax` objects to be applied globally (e.g., `default-vat`, `small-enterprise-special-scheme`).                    |
+| Key         | Type         | Description                                                                                                                                 |
+| :---------- | :----------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| `meta`      | `dictionary` | Contains the `region` string identifier (e.g., `"pl"`, `"cz"`).                                                                             |
+| `currency`  | `dictionary` | The currency of the region (`code`, `symbol`, `decimals`, `decimals-fine`). The e-invoice states its `code` as invoice currency (BT-5).     |
+| `format`    | `dictionary` | Functions controlling the conversion of integers/floats/dates to strings (e.g., `currency`, `date`, `percent`).                             |
+| `normalize` | `dictionary` | Functions determining rounding logic for `money`, `money-fine`, and `infer-tax` parameters.                                                 |
+| `tax`       | `dictionary` | Contains default tax objects (built with the `tax` module) to be applied globally (e.g., `default-vat`, `small-enterprise-special-scheme`). |
 
 :::info
 The currency formatting and rounding follow the `currency` of the region: a region (or an override such as `locale.de-de.with((region: (currency: (code: "USD", symbol: "$"))))`) that sets the `currency` but not `format.currency`, `format.currency-fine`, `normalize.money` or `normalize.money-fine` gets them derived from it, so the printed amounts and the currency code of the e-invoice always agree. If you provide your own currency formatter, it must print the same currency: an e-invoice whose printed amounts show another currency than its code stops with the error `IP-PRINT-02`. Unit prices (`currency-fine`) may be printed in a subunit instead, e.g. `32,45 ct` for an energy tariff.

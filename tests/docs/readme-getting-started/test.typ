@@ -1,7 +1,7 @@
+// Source: README.md — "Basic Usage"
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(form: "A", font: "libertinus serif"),
   locale: locale.en-de,
   sender: (
     name: "Your Company / Name",
@@ -41,7 +41,7 @@
 ]
 
 // Payment Terms
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 // Bank Details with QR Code
 #bank-details(

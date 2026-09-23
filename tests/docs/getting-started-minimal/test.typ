@@ -1,13 +1,14 @@
+// Source: docs/docs/getting-started.md — "Your First Invoice"
 #import "/src/lib.typ": *
 
 // 1. Initialize the document using a show rule
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
   // Sender and recipient configurations
   sender: (
     name: "Acme Corporation",
     address: "123 Business Rd",
     city: "Metropolis, NY 10001",
+    vat-id: "DE123456789", // Your VAT ID or tax number (tax-nr) is required
   ),
   recipient: (
     name: "John Doe",
