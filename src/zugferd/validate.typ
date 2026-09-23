@@ -1598,12 +1598,23 @@
     } else if entry.kind == "direct-debit" {
       sepa-debit = sepa-debit or entry.type-code == "59"
       if entry.field == "paid" {
-        // `paid(method: "direct-debit")` without the direct debit.
-        if xrechnung and entry.type-code == "59" {
+        // `paid(method: "direct-debit")` without the direct debit: XRechnung
+        // requires the direct debit (BG-19) of a SEPA direct debit, and the
+        // mandate reference of any direct debit (PEPPOL-EN16931-R061).
+        if xrechnung {
+          let sepa = entry.type-code == "59"
           out.push(error(
-            "BR-DE-25-a",
+            if sepa { "BR-DE-25-a" } else { "PEPPOL-EN16931-R061" },
             "paid.method",
-            "A SEPA direct debit (BT-81 = 59) states the direct debit (BG-19), but none is given.",
+            if sepa {
+              "A SEPA direct debit (BT-81 = 59) states the direct debit (BG-19), but none is given."
+            } else {
+              (
+                "A direct debit (BT-81 = "
+                  + entry.type-code
+                  + ") states the mandate reference (BT-89), but none is given."
+              )
+            },
             hint: "Add `#direct-debit(mandate: .., creditor-id: .., debtor-iban: ..)` with the direct debit the invoice was paid with.",
           ))
         }

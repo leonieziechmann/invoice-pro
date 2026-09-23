@@ -268,6 +268,19 @@
   m.profile = en16931
   assert.eq(rules(m), ())
 })[#items #paid(method: "direct-debit")]
+// Outside the euro area, XRechnung requires the mandate reference of any
+// direct debit (49, PEPPOL-EN16931-R061)
+#model-test(..xrechnung, locale: locale.de-ch, model => {
+  assert.eq(model.payment.means, (means("49", "direct-debit", "paid"),))
+  assert.eq(rules(model), ("PEPPOL-EN16931-R061",))
+  assert.eq(diagnostic(model, "PEPPOL-EN16931-R061").field, "paid.method")
+  let m = model
+  m.profile = en16931
+  assert.eq(rules(m), ())
+})[
+  #line-items[#item([Consulting], price: 100, tax: tax.vat(19%))]
+  #paid(method: "direct-debit")
+]
 
 // Another payment means code of UNTDID 4461, with its printed name
 #model-test(..xrechnung, model => {
