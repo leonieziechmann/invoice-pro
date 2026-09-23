@@ -424,6 +424,61 @@
   )
 }
 
+// Keys of a party dictionary that the party does not know (see `input-keys`
+// of the model). A misspelled key the e-invoice reads is an error, as its value
+// would be missing without notice; any other unknown key is a warning, as its
+// value is not written into the e-invoice.
+#let _check-input-keys(party, field, term) = {
+  let out = ()
+  for entry in party.at("input-keys", default: ()) {
+    let owner = if entry.within == none { "the " + term } else {
+      "`" + entry.within + "`"
+    }
+    if entry.einvoice and entry.like == none {
+      // A key of an identifier dictionary that has no `id`.
+      out.push(error(
+        "IP-KEY-02",
+        field + "." + entry.path,
+        "`"
+          + entry.key
+          + "` is not a key of "
+          + owner
+          + ", which has no `id`, so the identifier is missing from the e-invoice.",
+        hint: "Give the identifier as `(scheme: .., id: ..)`.",
+      ))
+    } else if entry.einvoice {
+      out.push(error(
+        "IP-KEY-02",
+        field + "." + entry.path,
+        "`"
+          + entry.key
+          + "` is not a key of "
+          + owner
+          + ". It looks like `"
+          + entry.like
+          + "`, so its value is missing from the e-invoice.",
+        hint: if entry.hint != none { entry.hint } else {
+          "Rename it to `" + entry.like + "`."
+        },
+      ))
+    } else {
+      out.push(warning(
+        "IP-KEY-01",
+        field + "." + entry.path,
+        "`"
+          + entry.key
+          + "` is not a key of "
+          + owner
+          + ", so its value is not written into the e-invoice.",
+        hint: if entry.hint != none { entry.hint } else if entry.like != none {
+          "Did you mean `" + entry.like + "`?"
+        } else { "Check the spelling of the key." },
+      ))
+    }
+  }
+  out
+}
+
 #let check-parties(model) = {
   let profile = model.profile
   let seller = model.seller
@@ -446,6 +501,12 @@
       "The buyer name (BT-44) is missing.",
       hint: "Set `name` on the recipient.",
     ))
+  }
+
+  out += _check-input-keys(seller, "sender", "sender")
+  out += _check-input-keys(buyer, "recipient", "recipient")
+  if ship-to != none {
+    out += _check-input-keys(ship-to, "delivery-address", "delivery address")
   }
 
   // The seller country (BT-40) is written in every profile, the other

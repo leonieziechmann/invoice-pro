@@ -264,6 +264,281 @@
   )
 }
 
+// --- Keys of the party dictionaries ------------------------------------------
+
+// The keys of `sender`, `recipient` and `delivery-address` besides the address:
+// `true` if the e-invoice reads the key, `false` if only the printed invoice
+// uses it.
+#let _address-keys = (
+  name: true,
+  address: true,
+  street: true,
+  city: true,
+  country: true,
+  region: true,
+  extra: false,
+)
+
+/// The keys each party knows, by role: the seller (`sender`), the buyer
+/// (`recipient`) and the ship-to party (`delivery-address`). `true` marks the
+/// keys the e-invoice reads, `false` those only the printed invoice uses.
+#let party-keys = (
+  seller: _address-keys
+    + (
+      id: true,
+      global-id: true,
+      vat-id: true,
+      tax-nr: true,
+      electronic-address: true,
+      contact: true,
+      contact-name: true,
+      phone: true,
+      email: true,
+    ),
+  buyer: _address-keys
+    + (
+      id: true,
+      global-id: true,
+      vat-id: true,
+      electronic-address: true,
+      contact: true,
+      email: true,
+      buyer-reference: true,
+      leitweg-id: true,
+      order-nr: true,
+      po-nr: true,
+      contract-nr: true,
+      delivery-note-nr: true,
+      delivery-address: true,
+      tax-nr: false,
+      contact-name: false,
+      phone: false,
+      customer-nr: false,
+      customer-id: false,
+      order-date: false,
+      project: false,
+      quote-nr: false,
+    ),
+  ship-to: _address-keys + (id: true, location-id: true, global-id: true),
+)
+
+// The keys of a party's `contact`.
+#let _contact-keys = (name: true, phone: true, email: true)
+
+// The keys of an identifier given as a dictionary (`id`, `global-id`,
+// `location-id`, `electronic-address`).
+#let _identifier-keys = (scheme: true, id: true)
+
+// Keys the normalization of a party adds (see `normalize-party`); they are
+// not part of the input.
+#let _derived-keys = (
+  name-inline: true,
+  address-inline: true,
+  city-inline: true,
+  address-lines: true,
+  country-explicit: true,
+  city-name: true,
+  post-code: true,
+  state: true,
+)
+
+#let _post-code-hint = "Write the post code into `city`, e.g. `city: \"10115 Berlin\"` or `city: (name: \"Berlin\", post-code: \"10115\")`."
+
+// Other names of party keys, as normalized by `_normalize-key`: the key they
+// stand for, or the key and a hint where renaming alone does not fit.
+#let _key-aliases = (
+  vat: "vat-id",
+  vatid: "vat-id",
+  vat-nr: "vat-id",
+  vat-no: "vat-id",
+  vat-number: "vat-id",
+  ust-id: "vat-id",
+  ustid: "vat-id",
+  ust-idnr: "vat-id",
+  ust-id-nr: "vat-id",
+  tva: "vat-id",
+  iva: "vat-id",
+  btw: "vat-id",
+  mwst: "vat-id",
+  mwst-nr: "vat-id",
+  taxnr: "tax-nr",
+  tax-no: "tax-nr",
+  tax-number: "tax-nr",
+  tax-id: (
+    "tax-nr",
+    "Rename it to `tax-nr` for the national tax number, or to `vat-id` for the VAT identification number.",
+  ),
+  steuernummer: "tax-nr",
+  steuer-nr: "tax-nr",
+  st-nr: "tax-nr",
+  stnr: "tax-nr",
+  mail: "email",
+  e-mail: "email",
+  email-address: "email",
+  tel: "phone",
+  telephone: "phone",
+  telefon: "phone",
+  phone-number: "phone",
+  endpoint: "electronic-address",
+  endpoint-id: "electronic-address",
+  peppol-id: "electronic-address",
+  gln: (
+    "global-id",
+    "Pass the GLN as `global-id: (scheme: \"0088\", id: ..)`.",
+  ),
+  leitweg: "leitweg-id",
+  strasse: "street",
+  straße: "street",
+  ort: "city",
+  zip: ("city", _post-code-hint),
+  zip-code: ("city", _post-code-hint),
+  postcode: ("city", _post-code-hint),
+  postal-code: ("city", _post-code-hint),
+  post-code: ("city", _post-code-hint),
+  plz: ("city", _post-code-hint),
+  city-name: ("city", _post-code-hint),
+  land: "country",
+  country-code: "country",
+)
+
+// Patterns for unknown keys, compiled once on first use: unknown keys are rare.
+#let _key-patterns() = (
+  camel-case: regex("([a-z0-9])([A-Z])"),
+  separators: regex("[\\s_.-]+"),
+  numbered: regex("[0-9]$"),
+)
+
+// A key in lower case with `-` between its words: "vatId", "vat_id" and
+// "VAT-ID" all become "vat-id".
+#let _normalize-key(key) = {
+  let patterns = _key-patterns()
+  let key = key.replace(patterns.camel-case, m => (
+    m.captures.at(0) + "-" + m.captures.at(1)
+  ))
+  lower(key).replace(patterns.separators, "-").trim("-")
+}
+
+// The optimal string alignment distance of `a` and `b` (edits and swaps of
+// neighboring characters), or `limit + 1` as soon as it exceeds `limit`.
+#let _edit-distance(a, b, limit) = {
+  let a = a.clusters()
+  let b = b.clusters()
+  if calc.abs(a.len() - b.len()) > limit { return limit + 1 }
+  let before = none
+  let previous = range(b.len() + 1)
+  for i in range(1, a.len() + 1) {
+    let current = (i,)
+    let lowest = i
+    for j in range(1, b.len() + 1) {
+      let cost = if a.at(i - 1) == b.at(j - 1) { 0 } else { 1 }
+      let value = calc.min(
+        previous.at(j) + 1,
+        current.at(j - 1) + 1,
+        previous.at(j - 1) + cost,
+      )
+      if (
+        i > 1
+          and j > 1
+          and a.at(i - 1) == b.at(j - 2)
+          and a.at(i - 2) == b.at(j - 1)
+      ) {
+        value = calc.min(value, before.at(j - 2) + 1)
+      }
+      current.push(value)
+      lowest = calc.min(lowest, value)
+    }
+    if lowest > limit { return limit + 1 }
+    before = previous
+    previous = current
+  }
+  calc.min(previous.last(), limit + 1)
+}
+
+// The known key a misspelled `key` most likely stands for: within an edit
+// distance of 1 for keys of up to 4 characters and of 2 for longer ones,
+// preferring keys the e-invoice reads.
+#let _closest-key(key, known) = {
+  let best = none
+  let best-distance = none
+  for (candidate, einvoice) in known.pairs() {
+    let limit = if candidate.len() <= 4 { 1 } else { 2 }
+    let distance = _edit-distance(key, candidate, limit)
+    if distance > limit { continue }
+    if (
+      best == none
+        or distance < best-distance
+        or (distance == best-distance and einvoice and not known.at(best))
+    ) {
+      best = candidate
+      best-distance = distance
+    }
+  }
+  best
+}
+
+// An input key a party does not know: the known key it looks like (`like`),
+// whether the e-invoice reads that key, and a hint where renaming alone does
+// not fit. A key ending in a number (e.g. "email2") is taken as deliberate.
+#let _unknown-key(key, known, path: none) = {
+  let normalized = _normalize-key(key)
+  let like = none
+  let hint = none
+  if normalized in _key-aliases {
+    let alias = _key-aliases.at(normalized)
+    if type(alias) == str { like = alias } else { (like, hint) = alias }
+  } else if normalized in known {
+    like = normalized
+  } else if normalized.match(_key-patterns().numbered) == none {
+    like = _closest-key(normalized, known)
+  }
+  if like != none and like not in known {
+    like = none
+    hint = none
+  }
+  (
+    key: key,
+    path: if path == none { key } else { path + "." + key },
+    within: path,
+    like: like,
+    einvoice: like != none and known.at(like),
+    hint: hint,
+  )
+}
+
+// Whether an input value states nothing: the keys of such values are ignored.
+#let _is-unset(value) = value in (none, auto, "", [], ())
+
+// The keys of a party dictionary, of its `contact` and of its identifiers that
+// the role does not know (see `party-keys`), each described by `_unknown-key`.
+#let _input-keys(party, role) = {
+  let known = party-keys.at(role)
+  let result = ()
+  for (key, value) in party.pairs() {
+    if key in known or key in _derived-keys or _is-unset(value) { continue }
+    result.push(_unknown-key(key, known))
+  }
+  let contact = party.at("contact", default: none)
+  if "contact" in known and type(contact) == dictionary {
+    for (key, value) in contact.pairs() {
+      if key in _contact-keys or _is-unset(value) { continue }
+      result.push(_unknown-key(key, _contact-keys, path: "contact"))
+    }
+  }
+  // An identifier dictionary without `id` is left out, so any other key of it
+  // loses the identifier.
+  for key in ("id", "global-id", "location-id", "electronic-address") {
+    let value = party.at(key, default: none)
+    if key not in known or type(value) != dictionary { continue }
+    let lost = _is-unset(value.at("id", default: none))
+    for (inner, inner-value) in value.pairs() {
+      if inner in _identifier-keys or _is-unset(inner-value) { continue }
+      let entry = _unknown-key(inner, _identifier-keys, path: key)
+      result.push(entry + (einvoice: entry.einvoice or lost))
+    }
+  }
+  result
+}
+
 // --- Parties -------------------------------------------------------------------
 
 #let _address-model(party) = {
@@ -294,7 +569,8 @@
 /// A seller, buyer or ship-to party (`role`: `"seller"`, `"buyer"` or
 /// `"ship-to"`). `vat-id` is the VAT identifier the party states;
 /// `use-vat-id: false` keeps it out of the XML (BR-O-02), but not out of the
-/// electronic address.
+/// electronic address. With a `role`, the keys of the party dictionary are
+/// checked against those the role knows (`input-keys`).
 ///
 /// -> dictionary
 #let party-model(party, role: none, use-vat-id: true) = {
@@ -315,6 +591,7 @@
       address: _address-model(party),
       electronic-address: get-electronic-address(party),
       contact: contact-model(party),
+      input-keys: if role == none { () } else { _input-keys(party, role) },
     )
       + _party-ids(party, id-keys)
   )
@@ -339,6 +616,7 @@
   id-keys: (),
   global-id-keys: (),
   address: address,
+  input-keys: (),
   from-buyer: true,
 )
 

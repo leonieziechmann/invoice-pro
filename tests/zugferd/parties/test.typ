@@ -1,6 +1,6 @@
 // The parties of the e-invoice: electronic addresses, identifiers, VAT
-// identifiers, countries and post codes, as the data model normalizes them and
-// the validator checks them.
+// identifiers, countries, post codes and the keys of the party dictionaries,
+// as the data model normalizes them and the validator checks them.
 
 #import "/src/lib.typ": *
 #import "/src/logic/country.typ": normalize-party
@@ -157,7 +157,74 @@
   )
 }
 
-// --- 5. Validation of the parties ---
+// --- 5. Keys of the party dictionaries ---
+#{
+  let keys(role, ..fields) = {
+    party-model(fields.named(), role: role)
+      .input-keys
+      .map(entry => (
+        entry.path,
+        entry.like,
+        entry.einvoice,
+      ))
+  }
+  // Known keys, and unset values of unknown ones, are fine
+  assert.eq(keys("seller", name: "A", vat-id: "DE1", website: none), ())
+  assert.eq(keys("buyer", name: "A", customer-nr: "K-1", project: "P"), ())
+
+  // Misspellings and other names of keys the e-invoice reads
+  for key in ("vatId", "vat_id", "VAT-ID", "ustid", "USt-IdNr", "vat.id") {
+    assert.eq(
+      keys("seller", ..((key): "DE123456789")),
+      ((key, "vat-id", true),),
+      message: key,
+    )
+  }
+  assert.eq(keys("seller", taxnr: "1"), (("taxnr", "tax-nr", true),))
+  assert.eq(keys("seller", e-mail: "a@b.de"), (("e-mail", "email", true),))
+  assert.eq(keys("seller", adress: "Street 1"), (("adress", "address", true),))
+  assert.eq(keys("seller", cty: "Berlin"), (("cty", "city", true),))
+  assert.eq(keys("buyer", leitweg: "04011000-1234512345-06"), (
+    ("leitweg", "leitweg-id", true),
+  ))
+  assert.eq(keys("buyer", buyer_reference: "PO-1"), (
+    ("buyer_reference", "buyer-reference", true),
+  ))
+  // A post code belongs in `city`
+  let zip = party-model((zip: "10115"), role: "seller").input-keys.first()
+  assert.eq((zip.like, zip.einvoice), ("city", true))
+  assert(zip.hint.contains("city: (name: \"Berlin\", post-code: \"10115\")"))
+  // Keys of `contact`
+  assert.eq(keys("seller", contact: (name: "A", mail: "a@b.de")), (
+    ("contact.mail", "email", true),
+  ))
+  // Keys of identifiers: without `id`, the identifier would be lost
+  assert.eq(keys("seller", global-id: (scheme: "0088", value: "400")), (
+    ("global-id.value", none, true),
+  ))
+  assert.eq(keys("buyer", electronic-address: (schema: "EM", id: "a@b.de")), (
+    ("electronic-address.schema", "scheme", true),
+  ))
+  assert.eq(keys("seller", global-id: (scheme: "0088", id: "1", note: "x")), (
+    ("global-id.note", none, false),
+  ))
+
+  // Keys only the printed invoice uses, and unknown keys
+  assert.eq(keys("buyer", customer_nr: "K-1"), (
+    ("customer_nr", "customer-nr", false),
+  ))
+  assert.eq(keys("seller", website: "example.de", email2: "a@b.de"), (
+    ("website", none, false),
+    ("email2", none, false),
+  ))
+  // The delivery address takes no VAT identifier or contact
+  assert.eq(keys("ship-to", vat-id: "DE123456789", email: "a@b.de"), (
+    ("vat-id", none, false),
+    ("email", none, false),
+  ))
+}
+
+// --- 6. Validation of the parties ---
 #let rules(model, level: "error") = (
   validate(model).filter(d => d.level == level).map(d => d.rule).sorted()
 )
@@ -266,6 +333,25 @@
   m.seller.address.city = "Berlin 10115"
   assert.eq(rules(m), ("BR-DE-4", "IP-ADDR-01"))
   assert(find(m, "BR-DE-4").hint.contains("format of the country"))
+
+  // Keys: misspelled keys the e-invoice reads are errors, other unknown keys
+  // warnings
+  let m = base
+  m.seller.input-keys = party-model((vatId: "DE1"), role: "seller").input-keys
+  m.buyer.input-keys = party-model((website: "x"), role: "buyer").input-keys
+  assert.eq(rules(m), ("IP-KEY-02",))
+  assert.eq(rules(m, level: "warning"), ("IP-KEY-01",))
+  let typo = find(m, "IP-KEY-02")
+  assert.eq(typo.field, "sender.vatId")
+  assert.eq(typo.hint, "Rename it to `vat-id`.")
+  let m = base
+  m.seller.input-keys = party-model(
+    (global-id: (scheme: "0088", value: "4000001123452")),
+    role: "seller",
+  ).input-keys
+  assert.eq(rules(m), ("IP-KEY-02",))
+  assert.eq(find(m, "IP-KEY-02").field, "sender.global-id.value")
+  assert(find(m, "IP-KEY-02").message.contains("has no `id`"))
 
   // BR-CO-26 for an invoice not subject to VAT: the VAT ID is no way out
   let m = base

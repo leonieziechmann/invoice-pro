@@ -156,3 +156,12 @@
     assert.eq(rules(result), ("IP-ADDR-01", "IP-COUNTRY-01"))
   },
 )
+
+// 6. Misspelled keys are errors, unknown ones warnings
+#e-invoice(
+  sender: seller + (vatId: "DE123456789", website: "seller.de"),
+  result => {
+    assert.eq(rules(result), ("IP-KEY-02",))
+    assert.eq(rules(result, level: "warning"), ("IP-KEY-01",))
+  },
+)
