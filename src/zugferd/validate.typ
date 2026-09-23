@@ -560,6 +560,16 @@
         hint: "Set `tax` on the item, e.g. `tax.vat(19%)`.",
       ))
     }
+    // The price refers to a positive quantity; `item` and `bundle` stop on
+    // any other already.
+    if line.base-quantity <= _zero {
+      out.push(error(
+        "PEPPOL-EN16931-R121",
+        field,
+        "The price base quantity (BT-149) must be greater than 0.",
+        hint: "Set `base-quantity` to the quantity the price refers to, e.g. 100 for a price per 100 pieces.",
+      ))
+    }
   }
   out
 }

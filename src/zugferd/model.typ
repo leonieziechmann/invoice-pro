@@ -435,7 +435,14 @@
 }
 
 // An invoice line (BG-25) with net amounts.
-#let line-model(item, index, inclusive: false, price-digits: 4) = {
+// With gross prices, `round-price` rounds the net price as the invoice
+// rounds unit prices (the `money-fine` rounding of the locale).
+#let line-model(
+  item,
+  index,
+  inclusive: false,
+  round-price: price => calc.round(price, digits: 4),
+) = {
   let tax = item.at("tax", default: (:))
   if type(tax) != dictionary { tax = (:) }
   let rate = to-ratio(tax.at("rate", default: 0))
@@ -444,7 +451,7 @@
   let base-quantity = to-decimal(item.at("base-quantity", default: 1))
   let price = to-decimal(item.at("price", default: 0))
   if inclusive {
-    price = calc.round(price / (1 + rate), digits: price-digits)
+    price = round-price(price / (1 + rate))
   }
   // BR-27: the item net price must not be negative, the quantity carries the
   // sign of a credited line instead.
@@ -570,12 +577,24 @@
     default: ctx.at("tax-mode", default: "exclusive"),
   )
   let inclusive = tax-mode == "inclusive"
-  let price-digits = (
+  // Net prices of gross prices are rounded like every unit price of the
+  // invoice: with the fine money rounding of the locale, so a locale that
+  // keeps 6 decimals keeps them in the XML as well.
+  let round-price = (
     ctx
       .at("locale", default: (:))
-      .at("currency", default: (:))
-      .at("decimals-fine", default: 4)
+      .at("normalize", default: (:))
+      .at("money-fine", default: none)
   )
+  if type(round-price) != function {
+    let digits = (
+      ctx
+        .at("locale", default: (:))
+        .at("currency", default: (:))
+        .at("decimals-fine", default: 4)
+    )
+    round-price = price => calc.round(price, digits: digits)
+  }
 
   // BR-O-02: an invoice not subject to VAT carries no VAT identifiers. MINIMUM
   // has no VAT breakdown; there the seller VAT ID is needed for BR-CO-26.
@@ -606,7 +625,7 @@
       item,
       i,
       inclusive: inclusive,
-      price-digits: price-digits,
+      round-price: round-price,
     ))
   let allowance-charges = document-allowance-charges(
     item-data.at("discounts", default: ()),
