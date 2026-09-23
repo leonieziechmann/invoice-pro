@@ -8,7 +8,8 @@ commit before an optimization) and `--head`, and compares
     excerpts may show other line numbers when the change moved code),
   * the PDF, byte for byte,
   * if the PDFs differ: the attachments (name, AFRelationship, description,
-    MIME type and content, so the e-invoice XML) and the text of the pages,
+    MIME type and content, so the e-invoice XML) and the text of the pages;
+    Typst writes the AFRelationship only with `--pdf-standard a-3b`,
   * if neither checkout can export a PDF (e.g. a test with several e-invoices,
     whose attachments share a name): the attachments as `typst query` sees
     them (path, relationship, MIME type, description and content).
@@ -79,6 +80,8 @@ def _variant(root, document, mode):
 
 def _typst(args, root, *command):
     extra = ["--creation-timestamp", str(args.timestamp)]
+    if command[0] == "compile" and args.pdf_standard:
+        extra += ["--pdf-standard", args.pdf_standard]
     process = subprocess.run(
         [args.typst, command[0], "--root", ".", *extra, *command[1:]],
         cwd=root,
@@ -152,7 +155,7 @@ def _compare_pdfs(base_path, head_path):
     try:
         base_files = _attachments(base_path)
         head_files = _attachments(head_path)
-        if [f[4] for f in base_files] != [f[4] for f in head_files]:
+        if sorted(f[4] for f in base_files) != sorted(f[4] for f in head_files):
             differences.append("attached data differs")
         elif base_files != head_files:
             differences.append(
@@ -194,8 +197,16 @@ def compare(args, document, out_dir, index):
     elif base_code != 0 and head_code != 0:
         base_files = _queried_attachments(args, args.base, document, index)
         head_files = _queried_attachments(args, args.head, document, index)
-        if base_files != head_files:
-            differences.append("queried attachments differ")
+        if base_files is None or head_files is None:
+            if base_files != head_files:
+                differences.append("attachments can be queried in one checkout only")
+        elif sorted(f[4] for f in base_files) != sorted(f[4] for f in head_files):
+            differences.append("queried attachment data differs")
+        elif base_files != head_files:
+            differences.append(
+                "queried attachment metadata differs: "
+                f"{[f[:4] for f in base_files]} -> {[f[:4] for f in head_files]}"
+            )
         elif base_files is not None:
             notes.append(f"{len(base_files)} queried attachments identical")
 
@@ -229,6 +240,11 @@ def main(argv=None):
         type=int,
         default=315532800,
         help="creation timestamp for both compiles (default: 315532800)",
+    )
+    parser.add_argument(
+        "--pdf-standard",
+        help="PDF standard of the compiles, e.g. a-3b (the AFRelationship of "
+        "attachments is only written for PDF/A-3)",
     )
     parser.add_argument("--typst", default="typst", help="typst executable")
     parser.add_argument("--jobs", type=int, default=1, help="parallel compiles")

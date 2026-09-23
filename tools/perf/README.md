@@ -68,7 +68,7 @@ tools/perf/compare_outputs.py --base /tmp/base --head . --mode report --mode ign
   tests/integration/zugferd-basic/test.typ tools/perf/out/bench/b-50-zf.typ
 ```
 
-`--from-file` reads the documents from a file, one per line. Documents that import the published package (`@preview/invoice-pro:<version>`, e.g. the template) resolve it through the package path, not through the checkout: compare a copy that imports `/src/lib.typ` instead. Tests that use tytanic's `catch` do not compile with plain `typst` and can only be compared by their error message.
+`--from-file` reads the documents from a file, one per line. With `--pdf-standard a-3b`, the PDFs carry the AFRelationship of their attachments, so that it is compared as well. A document that cannot be exported as a PDF (e.g. a test with several e-invoices, whose attachments share a name) is compared by the attachments `typst query` lists. Documents that import the published package (`@preview/invoice-pro:<version>`, e.g. the template) resolve it through the package path, not through the checkout: compare a copy that imports `/src/lib.typ` instead. Tests that use tytanic's `catch` do not compile with plain `typst` and can only be compared by their error message.
 
 ## Keeping the e-invoice path cheap
 
