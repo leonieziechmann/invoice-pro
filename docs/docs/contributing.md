@@ -99,7 +99,7 @@ The current architecture relies on the following optimized packages:
 
 - `letter-pro` for the DIN layout.
 - `sepay` for EPC-QR-Code generation.
-- `ibanator` for IBAN formatting.
+- `ibanator` (through `sepay`) for the IBAN check of the EPC-QR-Code.
 - `loom` for reactive document rendering.
 
 :::info
