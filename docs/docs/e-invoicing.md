@@ -92,11 +92,11 @@ Problems come in two levels:
 
 The `zugferd-errors` parameter of `invoice` decides what happens with the problems:
 
-| Value               | Behavior                                                                                                                                                                                     |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"panic"` (default) | Errors stop the compilation with the list shown above (including any warnings). An invoice with warnings only compiles.                                                                      |
-| `"report"`          | Nothing stops the compilation. Errors and warnings are listed in a box at the top of the invoice, which is handy while filling in the data in the preview. The XML is embedded nevertheless. |
-| `"ignore"`          | The XML is embedded without any check result. Use this only if you validate the XML yourself.                                                                                                |
+| Value               | Behavior                                                                                                                                                                                                                                                                                                                           |
+| :------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"panic"` (default) | Errors stop the compilation with the list shown above (including any warnings). An invoice with warnings only compiles.                                                                                                                                                                                                            |
+| `"report"`          | Errors and warnings are listed in a box at the top of the invoice instead of stopping the compilation, which is handy while filling in the data in the preview. The XML is embedded nevertheless. If the theme shows no report, errors stop the compilation as with `"panic"` (see [Custom Report Layout](#custom-report-layout)). |
+| `"ignore"`          | The XML is embedded without any check result. Use this only if you validate the XML yourself.                                                                                                                                                                                                                                      |
 
 A missing or invalid IBAN in [`bank-details`](./api-reference/components.md#bank-details) makes the printed invoice wrong as well, so it stops the compilation with a message naming the IBAN, also with `"ignore"`. With `"report"`, it is marked in the bank details instead, and a placeholder takes the place of the EPC-QR code.
 
