@@ -32,12 +32,28 @@
   /// Designations for document types
   document: (
     invoice: "Invoice",
+    // Page label of the page-number part.
+    // -> (int, int) => content
+    page: (current, total) => [Page #current of #total],
+    // Note at the foot of a page whose content continues.
+    // -> (int) => content
+    continued-on: page => [Continued on page #page],
   ),
 
   /// Address-related designations
   address: (
     recipient: "Bill To",
     sender: "From",
+  ),
+
+  /// Section headings a theme may print (PROVISIONAL group, 0.5.x): labels of page
+  /// sections. The recipient block reuses `address.recipient`, due dates
+  /// `reference.due-date`.
+  sections: (
+    details: "Invoice details",
+    payment: "Payment",
+    bank-details: "Bank details",
+    how-to-pay: "How to pay",
   ),
 
   /// Designations for reference numbers and metadata
@@ -69,6 +85,8 @@
   /// Column headers and labels for the line-items table
   line-items: (
     position: "Item",
+    item-id: "Item No.",
+    unit: "Unit",
     description: "Description",
     quantity: "Qty",
     unit-price: "Unit Price",
@@ -176,6 +194,7 @@
   /// Greetings and signature area
   signature: (
     closing: "Sincerely,",
+    thanks: "Thank you for your business.",
   ),
 
   /// Standard legal texts that depend on the language
@@ -192,5 +211,108 @@
     city-missing: "City is missing!",
     ambiguous-tax: "Ambiguous 0% tax rate detected.",
     invalid-tax: "Invalid tax rate detected: ",
+  ),
+
+  /// Feedback of `invoice(validation: "draft")`: inline markers where required
+  /// data is missing, a page badge, a watermark and the validation report page.
+  validation: (
+    /// Inline marker at the spot where required data is missing (real, tagged text).
+    /// -> (content | str) => content
+    marker: field => [‹missing: #field›],
+    /// Problem text of a missing field in the report.
+    /// -> (content | str) => content
+    missing: field => [*Missing:* #field],
+    /// Marker in place of a required part that rendered nothing.
+    /// -> (str) => content
+    part-empty: name => [‹#raw(name) rendered nothing›],
+    /// Page badge.
+    /// -> (int) => str
+    badge: n => (
+      "DRAFT · " + str(n) + if n == 1 { " problem" } else { " problems" }
+    ),
+    /// Watermark word.
+    /// -> str
+    watermark: "DRAFT",
+    /// Badge suffix when the e-invoice XML was withheld.
+    /// -> str
+    e-invoice-short: "no e-invoice",
+    /// Heading of the report page.
+    /// -> str
+    report-title: "Validation report",
+    /// First paragraph of the report.
+    /// -> (int) => content
+    report-intro: n => [This document is *not ready to send*: invoice-pro found #n #if n == 1 [problem] else [problems]. The markers ‹…› show where data is missing. This page, the badge and the markers disappear as soon as everything is complete.],
+    /// How to enforce completeness.
+    /// -> content
+    report-strict: [With `validation: "strict"` (or `--input invoice-pro-validation=strict`) the compilation stops on any problem instead. Use it for sending and in CI.],
+    /// Notice when the e-invoice XML was withheld.
+    /// -> (str) => content
+    e-invoice-withheld: profile => [*The e-invoice (factur-x.xml, profile #profile) was not embedded*, because required data is missing. An incomplete data set would be processed automatically by the recipient's system.],
+    /// Report column headers.
+    /// -> str
+    number: "No.",
+    problem: "Problem",
+    reference: "Legal basis",
+    fix: "Fix",
+    /// Joins alternative fixes.
+    /// -> str
+    fix-or: "or",
+    /// Issue class labels.
+    /// -> dictionary
+    classes: (
+      data: "Required data",
+      e-invoice: "E-invoice",
+      theme: "Theme",
+      lint: "Check",
+    ),
+    /// Labels of the checked fields.
+    /// -> dictionary
+    fields: (
+      invoice-number: "invoice number",
+      sender-name: "supplier name",
+      sender-address: "supplier address",
+      sender-tax-id: "supplier VAT ID or tax number",
+      recipient-name: "recipient name",
+      recipient-address: "recipient address",
+      recipient-vat-id: "recipient VAT ID",
+      line-items: "line items",
+      buyer-electronic-address: "buyer electronic address",
+      seller-electronic-address: "seller electronic address",
+      buyer-reference: "buyer reference / Leitweg-ID",
+      seller-contact-name: "seller contact name",
+      seller-contact-phone: "seller contact phone",
+      seller-contact-email: "seller contact email",
+    ),
+    /// Report texts of the theme and lint issues (and of data issues that are
+    /// not a missing field), keyed by the issue's `key`; each a function of the
+    /// issue's args. Identifiers stay code spans. A key a locale leaves out
+    /// falls back to the English developer message.
+    /// -> dictionary
+    issues: (
+      iban: a => [The IBAN #raw(a.iban) is not valid (ISO 13616 check digits).],
+      part-empty: a => [The part #raw(a.part) rendered nothing, but it carries legally required output.],
+      part-none: a => [The part #raw(a.part) carries legally required output and cannot be `none`; wrap it or replace its renderer instead.],
+      role: a => [The layout #raw(a.layout) must place #a.parts.map(raw).join[ or ] in #if a.exactly [exactly one] else [at least one] #if a.tagged [tagged area (first page or flow)] else [area drawn on page 1] (found: #a.found). It carries legally required output: #a.why. Restyle it by replacing its renderer, but keep it placed.],
+      overprint: a => [The area #raw(a.area) is fixed on following pages (#raw("pages: \"" + a.pages + "\"")) and would overprint the body there; use `pages: "first"` or move it into the margins.],
+      window: a => [The area #raw(a.area) overlaps the address window area #raw(a.window); move or shrink it, envelope windows must stay clear.],
+      qr-bill-paper: a => [The layout #raw(a.layout) hosts `qr-bill`, which needs A4 portrait paper (SIX QR-bill: 210 × 105 mm payment part).],
+      envelope: a => [The envelope #raw(a.envelope) does not take the folded sheet: packet #a.packet-w × #a.packet-h mm, envelope #a.envelope-w × #a.envelope-h mm. Check the paper, `marks.fold` or the envelope's `fold`.],
+      fine-size: a => [The token `sizes.fine` (#raw(a.size)) must be an absolute length of at least 6 pt (DIN 5008 minimum for the return address and the legal footer).],
+      logo-alt: a => [The logo image needs alt text, e.g. `image("logo.svg", alt: "ACME GmbH")`. PDF/UA-1 requires it; it is always checked, because a document cannot see `--pdf-standard`.],
+      cmyk: a => [#raw(a.path) is a CMYK colour. Typst cannot embed a CMYK output profile, so PDF/A-3 (ZUGFeRD) rejects it; use `rgb()` or `oklch()`.],
+      pdf-image-stationery: a => [The stationery for #raw(a.page) embeds a PDF image. PDF/A and PDF/UA exports cannot embed PDF images (Typst limitation); convert the letterhead to SVG.],
+      pdf-image-logo: a => [The logo is a PDF image. PDF/A and PDF/UA exports cannot embed PDF images (Typst limitation); use SVG or PNG.],
+      contrast: a => [#if a.bg-name == none [The colour pair #raw(a.fg-name)] else [#raw(a.fg-name) on #raw(a.bg-name)] (#a.fg on #a.bg) has a contrast of #a.ratio:1, below `checks.min-contrast` #a.min:1.],
+      footer-fit: a => [The footer is #a.need mm tall, but the bottom margin leaves only #a.avail mm between `footer-descent` and the #a.clearance mm `footer-clearance`. Use the computed margin, raise `margin.bottom` or shorten the footer.],
+      identity: a => [The invoice #if a.what == "number" [number] else [date] (#a.shown) does not appear in the first-page content; the area hosting `title` must render #raw(if a.what == "number" { "view.document.number" } else { "view.document.date.text" }).],
+    ),
+    /// What each required role carries (the `role` issue text).
+    /// -> dictionary
+    roles: (
+      title: "document identity: invoice number and date",
+      recipient: "recipient name and address",
+      supplier: "supplier name and address",
+      tax-id: "supplier VAT ID or tax number",
+    ),
   ),
 )

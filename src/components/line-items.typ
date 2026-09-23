@@ -4,6 +4,7 @@
 #import "../logic/tree.typ": resolve-tree
 #import "../utils/coercion.typ"
 #import "../utils/types.typ"
+#import "../theming/parts/body.typ": call-part
 #import "../data/tax.typ" as m-tax
 
 /// The root container for all invoice items, bundles, and modifiers.
@@ -29,7 +30,7 @@
   /// Wether to show the total block below the line items.
   /// -> auto | bool
   show-total: auto,
-  /// Whether to show the information notices about information that all items have.
+  /// Whether to show the notes about information that all items have.
   /// -> auto | bool
   show-information: auto,
 
@@ -127,10 +128,6 @@
           ensure("time", (..) => panic("locale::format::time is not provided"))
         })
       })
-
-      nest("theme", {
-        ensure("line-items", (..) => [Line Items])
-      })
     }),
     measure: (ctx, children) => {
       let modifier-applicator = loom.query.find-signal(
@@ -222,6 +219,7 @@
           f-item.insert("kind", "item")
           f-item.insert("pos", entry.pos)
           f-item.insert("level", entry.level)
+          f-item.insert("style", entry.at("style", default: none))
           f-item
         } else if entry.kind == "group-header" {
           (
@@ -233,6 +231,7 @@
               [#entry.description]
             } else { none },
             has-description: entry.description != none,
+            style: entry.at("style", default: none),
           )
         } else if entry.kind == "group-footer" {
           (
@@ -242,6 +241,7 @@
             name: [#entry.name],
             subtotal: (format.currency)(entry.subtotal),
             raw-subtotal: entry.subtotal,
+            style: entry.at("style", default: none),
           )
         }
       })
@@ -461,6 +461,150 @@
         ..item-information,
       )
 
+      // --- view.totals: the totals ROW MODEL (view v2) --------------------------
+      // Rows in the legal order of the tax mode; every renderer (built-in or
+      // replaced) consumes the same rows, so no part re-derives the order or the
+      // 0 % filter. Row: (kind, label, value: (value, text), emphasis, rate,
+      // name, marker, payable). `label` is complete (name, date, tax marker
+      // included) and carries no trailing colon; `name` is the modifier's or
+      // prepayment's own name (none for the fixed rows).
+      let strings = ctx.locale.strings
+      let is-exclusive = ctx.tax-mode == "exclusive"
+      let blank(x) = x == none or x == "" or x == []
+      let money(v) = (value: v, text: [#(format.currency)(v)])
+      let row(
+        kind,
+        label,
+        value,
+        emphasis: none,
+        rate: none,
+        name: none,
+        marker: none,
+      ) = (
+        kind: kind,
+        label: label,
+        value: value,
+        emphasis: emphasis,
+        rate: rate,
+        name: name,
+        marker: marker,
+        payable: false,
+      )
+      let modifier-row(kind, m) = {
+        let sign = if kind == "discount" { "−" } else { "+" }
+        let name = if blank(m.name) { none } else { [#m.name] }
+        let label = if m.label == none {
+          if name == none { [] } else { name }
+        } else if name == none { [#m.label] } else [#m.label: #name]
+        let abs = calc.abs(m.absolute)
+        row(
+          kind,
+          label,
+          (
+            value: if kind == "discount" { -abs } else { abs },
+            text: [#sign #(format.currency)(abs)],
+          ),
+          rate: if m.type == "relative" [#sign #(format.percent)(calc.abs(
+              m.display,
+            ))],
+          name: name,
+        )
+      }
+      // a 0 % rate carries no tax amount; its legal basis is stated by `notes`
+      let is-zero-rate(r) = if type(r) == ratio { r == 0% } else if (
+        type(r) in (int, float, decimal)
+      ) { float(r) == 0 } else { false }
+
+      let total-rows = ()
+      let modifiers = modifier-applicator.modifier
+      let has-modifiers = (
+        modifiers.discounts.len() + modifiers.surcharges.len() > 0
+      )
+      if has-modifiers {
+        let sub = if is-exclusive { tax-applicator.unmodified-net-total } else {
+          tax-applicator.unmodified-gross-total
+        }
+        total-rows.push(row(
+          "subtotal",
+          [#strings.summary.sum (#if is-exclusive { strings.line-items.net } else { strings.line-items.gross })],
+          money(sub),
+        ))
+        for d in modifiers.discounts {
+          total-rows.push(modifier-row("discount", d))
+        }
+        for s in modifiers.surcharges {
+          total-rows.push(modifier-row("surcharge", s))
+        }
+      }
+      let tax-rows = formated-taxes
+        .filter(tx => not is-zero-rate(tx.raw-rate))
+        .map(tx => {
+          let prefix = if is-exclusive { strings.summary.excluding } else {
+            strings.summary.including
+          }
+          let sup = if tx.marker != none { super[#tx.marker] } else { [] }
+          row(
+            "tax",
+            [#prefix #strings.summary.vat-tax #tx.rate (#tx.category)#sup],
+            money(tx.raw-amount),
+            rate: tx.rate,
+            marker: tx.marker,
+          )
+        })
+      let total-row = row(
+        "total",
+        [#strings.summary.total],
+        money(tax-applicator.gross-total),
+        emphasis: "total",
+      )
+      if is-exclusive {
+        total-rows.push(row(
+          "net-total",
+          [#strings.line-items.total #strings.line-items.net],
+          money(tax-applicator.net-total),
+          emphasis: "strong",
+        ))
+        total-rows += tax-rows
+        total-rows.push(total-row)
+      } else {
+        total-rows.push(total-row)
+        total-rows += tax-rows
+      }
+      for p in normalized-prepayments {
+        let name = if blank(p.name) { none } else { [#p.name] }
+        let date = if blank(p.date) { none } else if type(p.date) == datetime {
+          (format.date)(p.date)
+        } else { p.date }
+        let base = if p.label == none { name } else if name == none {
+          [#p.label]
+        } else [#p.label: #name]
+        let label = if date == none { base } else if (
+          base == none
+        ) [(#date)] else [#base (#date)]
+        total-rows.push(row(
+          "prepayment",
+          if label == none { [] } else { label },
+          (value: -p.amount, text: [− #(format.currency)(p.amount)]),
+          name: name,
+        ))
+      }
+      if normalized-prepayments.len() > 0 {
+        total-rows.push(row(
+          "amount-due",
+          [#strings.summary.amount-due],
+          money(due-total),
+          emphasis: "total",
+        ))
+      }
+      // the last row is what the recipient pays: the total, or the amount due after prepayments
+      let payable-index = (
+        total-rows.len()
+          - 1
+          - total-rows.rev().position(r => r.kind in ("total", "amount-due"))
+      )
+      total-rows.at(payable-index).payable = true
+      let payable = total-rows.at(payable-index)
+
       let view = (
         items: formated-items,
         entries: formated-entries,
@@ -473,6 +617,8 @@
         layout-information: layout-information,
         tax-mode: ctx.tax-mode,
         tax-exempt-small-biz: ctx.tax-exempt-small-biz,
+        // v2 (0.5.0, provisional): the totals row model; `payable` = the row the recipient pays
+        totals: (rows: total-rows, payable: payable),
       )
 
       let public = (
@@ -501,7 +647,19 @@
 
       return (public, view)
     },
-    draw: (ctx, _, view, body) => (ctx.theme.line-items)(ctx, view, body),
+    draw: (ctx, _, view, body) => {
+      call-part(ctx, "line-items", view)
+      // CORE decides whether legal notes are required (planned to move into measure)
+      // and appends the `notes` part OUTSIDE the replaceable composite.
+      let required = (
+        view.tax-exempt-small-biz
+          or view.taxes.any(t => (
+            t.at("grounds", default: none) not in (none, "", [])
+          ))
+      )
+      call-part(ctx, "notes", view + (required: required), required: required)
+      body
+    },
     (
       modifier-applicator,
       tax-applicator,

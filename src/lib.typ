@@ -1,7 +1,8 @@
 #import "invoice.typ": invoice
 
 #import "locale/locale.typ"
-#import "themes/themes.typ"
+#import "public/theme.typ"
+#import "theming/scope.typ": themed
 
 #import "components/line-items.typ": line-items
 #import "components/item.typ": item
@@ -11,7 +12,7 @@
 #import "components/group.typ": group
 
 #import "components/bank-details.typ": bank-details
-#import "components/payment-goal.typ": payment-goal
+#import "components/payment-terms.typ": payment-terms
 #import "components/signature.typ": signature
 #import "components/dynamic.typ": dynamic
 

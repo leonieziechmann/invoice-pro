@@ -1,5 +1,8 @@
 #import "../loom-wrapper.typ": loom, managed-motif
 #import "../utils/types.typ"
+#import "../theming/parts/body.typ": call-part
+#import "@preview/sepay:0.1.1": epc-qr-code
+#import "@preview/ibanator:0.1.0"
 #import "../utils/coercion.typ"
 #import "../logic/payment-reference.typ": resolve-remittance
 
@@ -51,7 +54,8 @@
   /// -> auto
   account-holder-text: auto,
 
-  /// Configuration for a payment QR code (e.g., EPC-QR).
+  /// Configuration for a payment QR code (e.g., EPC-QR): `display` (bool) and
+  /// `size` (length, at least 20mm), which overrides the theme's QR size.
   /// -> dictionary
   qr-code: (:),
 ) = {
@@ -101,12 +105,6 @@
       put("reference", remittance.reference)
       put("text", remittance.text)
 
-      nest("theme", {
-        ensure("bank-details", (..) => panic(
-          "theme::bank-details is not provided",
-        ))
-      })
-
       nest("global", {
         nest("total", {
           ensure("gross", 0)
@@ -123,13 +121,30 @@
         ),
 
         qr-code: (
-          size: qr-code.at("size", default: 5em),
+          size: qr-code.at("size", default: auto),
           display: qr-code.at("display", default: true),
         ),
 
         reference: ctx.reference,
         text: ctx.text,
         show-reference: show-reference,
+        // v2: IBAN as (value: normalised, text: grouped in fours), and the one
+        // string the payer must quote (structured reference or unstructured text)
+        // `valid`: ISO 13616 check (ibanator); an invalid IBAN is a data issue
+        // (root), never a panic in a renderer, and gets no QR code
+        iban: {
+          let v = upper(iban.replace(regex("\s"), ""))
+          (
+            value: v,
+            text: range(0, v.len(), step: 4)
+              .map(i => v.slice(i, calc.min(v.len(), i + 4)))
+              .join("\u{00A0}", default: ""),
+            valid: v == "" or ibanator.lib.check_iban(bytes(v)).at(0) == 1,
+          )
+        },
+        payment-reference: if ctx.text != none { ctx.text } else {
+          ctx.reference
+        },
         payment-amount: if payment-amount == auto {
           ctx.global.total.at("due", default: ctx.global.total.gross)
         } else {
@@ -137,9 +152,48 @@
         },
       )
 
+      // CORE builds the EPC-QR payload (EUR only, amount >= 0.10, text vs reference).
+      // The part may only choose placement/size (a size given here wins); size is
+      // clamped to >= 20 mm and the code is always black on white.
+      let cur = ctx.locale.currency.code
+      data.qr = if (
+        cur != "EUR" or not data.qr-code.display or not data.iban.valid
+      ) { none } else {
+        let payload = (
+          (
+            bic: bic,
+            amount: if float(data.payment-amount) >= 0.1 {
+              float(data.payment-amount)
+            },
+          )
+            + if ctx.text != none { (text: ctx.text) } else if ctx.reference
+              != none { (reference: ctx.reference) }
+        )
+        let holder = ctx.sender.name
+        let fixed = data.qr-code.size
+        let code(s) = {
+          let s = calc.max(s, 20mm)
+          box(fill: white, inset: 1mm, epc-qr-code(
+            holder,
+            iban,
+            ..payload,
+            width: s,
+            height: s,
+          ))
+        }
+        size => {
+          let size = if fixed == auto { size } else { fixed }
+          // an em size needs the font size, so only it is resolved in context
+          if size.em == 0 { code(size.abs) } else {
+            context code(size.to-absolute())
+          }
+        }
+      }
+
       // Expose IBAN/BIC/reference as a public signal so root can embed them in ZUGFeRD XML.
       let public = (
         iban: iban,
+        iban-valid: data.iban.valid,
         bic: bic,
         reference: ctx.reference,
         text: ctx.text,
@@ -148,7 +202,7 @@
 
       (public, data)
     },
-    draw: (ctx, _, view, ..) => (ctx.theme.bank-details)(ctx, view),
+    draw: (ctx, _, view, ..) => call-part(ctx, "bank-details", view),
     none,
   )
 }

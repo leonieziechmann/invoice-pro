@@ -15,6 +15,7 @@
   /// Starting counter for this level.
   /// -> int
   start-counter: 1,
+  style: none,
 ) = {
   let entries = ()
   let counter = start-counter
@@ -28,6 +29,7 @@
         node,
         prefix: prefix,
         start-counter: counter,
+        style: style,
       )
       entries += sub-result.entries
       counter = sub-result.next-counter
@@ -48,12 +50,14 @@
     if kind == "group" {
       let current-pos = (..prefix, str(counter)).join(".")
       let group-data = node.signal
+      let group-style = group-data.at("style", default: none)
 
       let child-nodes = group-data.at("children", default: ())
       let child-result = resolve-tree-nodes(
         child-nodes,
         prefix: (..prefix, str(counter)),
         start-counter: 1,
+        style: group-style,
       )
 
       let show-subtotal = group-data.at("show-subtotal", default: true)
@@ -69,6 +73,7 @@
         level: prefix.len() + 1,
         name: group-data.name,
         description: group-data.description,
+        style: group-style,
       ))
 
       entries += child-result.entries
@@ -80,6 +85,7 @@
           level: prefix.len() + 1,
           name: group-data.name,
           subtotal: group-subtotal,
+          style: group-style,
         ))
       }
 
@@ -106,6 +112,7 @@
           pos: current-pos,
           level: prefix.len(),
           raw: item-signal,
+          style: style,
         ))
         counter += 1
       }

@@ -2,7 +2,11 @@
 #import "components/root.typ": root
 #import "data/tax.typ"
 #import "utils/types.typ"
-#import "themes/themes.typ"
+#import "public/theme.typ" as theme-ns
+#import "theming/build.typ": schema as theme-schema
+#import "theming/access.typ": seal
+#import "validation/issue.typ": resolve-level
+#import "validation/data.typ": check-data
 
 #import "locale/locale.typ"
 #import "locale/lang/base.typ": base-language
@@ -16,9 +20,14 @@
 ///
 /// -> content
 #let invoice(
-  /// The visual theme to apply to the invoice.
+  /// The theme: a lazy theme such as `theme.classic`, customised with
+  /// `.with(..patches, layout: ..)`. Pass it uncalled (calling it is equivalent).
+  /// Without `layout:`, the preset picks its page master from the sender's
+  /// region (the sender's country, else the locale's region): e.g. DIN 5008
+  /// form A in Germany, SN 010130 in Switzerland, US Letter #10 in the US
+  /// (`theme.layout.for-region`). An explicit `layout:` always wins.
   /// -> function
-  theme: themes.DIN-5008(),
+  theme: theme-ns.classic,
   /// The locale settings for language and number formatting.
   /// -> function
   locale: locale.de-de,
@@ -99,11 +108,35 @@
   /// -> none | "minimum" | "basic-wl" | "basic" | "en16931"
   zugferd: none,
 
+  /// What happens when legally required data or output is missing, or a
+  /// theme check fails:
+  /// - `"draft"`: the document renders, and every problem is shown in it: an
+  ///   inline marker where data is missing (‹fehlt: Rechnungsnummer›), a badge
+  ///   and a watermark on each page, and a report page with the legal basis of
+  ///   each problem. A ZUGFeRD XML with missing data is withheld. A complete
+  ///   document renders exactly as under `"strict"`.
+  /// - `"strict"`: the compilation stops and lists every problem. Use it for
+  ///   sending and in CI.
+  /// - `none`: no checks; the document renders what it was given. Off means
+  ///   off: with `zugferd` set, the XML is attached even when required data is
+  ///   missing, so an incomplete e-invoice can leave the building. Use `none`
+  ///   for thumbnails and tests, never for sending.
+  /// Misuse (unknown keys, wrong types, unknown parts, ..) always panics.
+  /// `--input invoice-pro-validation=strict|draft|none` overrides this value.
+  /// -> none | "draft" | "strict"
+  validation: "draft",
+
   /// The content of the invoice, typically containing line-items and other components.
   /// -> content
   body,
 ) = {
-  types.require(theme, "invoice::theme", function)
+  if type(theme) != function {
+    panic(
+      "variable `invoice::theme` must be of function (a lazy theme such as `theme.classic`), found "
+        + str(type(theme))
+        + ". For a brand file write `theme.classic.with(theme.custom.from-data(toml(\"brand.toml\")))`.",
+    )
+  }
   types.require(locale, "invoice::locale", function)
 
   types.require(sender, "invoice::sender", dictionary)
@@ -177,7 +210,7 @@
   )
 
   /** Input Calculations **/
-  let eval-theme = theme()
+  let validation-level = resolve-level(validation)
   let eval-locale = locale(base-language, base-region)
 
   let default-region = eval-locale.meta.region
@@ -210,6 +243,27 @@
     default-region,
     recipient-country-code: resolved-recipient-country.code,
   )
+  // The theme environment. `region` is the SENDER's region (its country, else the
+  // locale's region): presets pick their default layout from it (envelopes and
+  // paper belong to the sender; theme.layout.for-region).
+  let eval-theme = theme(base: theme-schema, env: (
+    kind: "invoice",
+    lang: eval-locale.strings.meta.lang,
+    region: lower(str(normalized-sender.country.at(
+      "code",
+      default: default-region,
+    ))),
+    e-invoice: zugferd,
+  ))
+  if (
+    type(eval-theme) != dictionary or "__invoice-pro-theme__" not in eval-theme
+  ) {
+    panic(
+      "variable `invoice::theme` must be a lazy theme such as `theme.classic`; the given function returned "
+        + str(type(eval-theme)),
+    )
+  }
+
   let normalized-recipient = normalize-party(
     recipient,
     default-region,
@@ -287,8 +341,27 @@
     document-references = references.pairs()
   }
 
+  // Compliance and lint findings known before layout: the theme's and the
+  // document data's. Root adds the measured ones and applies the level.
+  let issues = if validation-level == none { () } else {
+    (
+      eval-theme.issues
+        + check-data(
+          "invoice",
+          "input",
+          (
+            invoice-nr: invoice-nr,
+            sender: normalized-sender,
+            recipient: normalized-recipient,
+          ),
+          region: lower(str(eval-locale.meta.region)),
+        )
+    )
+  }
+
   let inputs = (
-    theme: eval-theme,
+    theme: seal(eval-theme),
+    validation: (level: validation-level, issues: issues),
     locale: eval-locale,
     format: eval-locale.at("format", default: (:)),
 
@@ -298,6 +371,7 @@
 
     invoice-date: date,
     subject: document-subject,
+    subject-text: subject,
     references: document-references,
     invoice-nr: invoice-nr,
 

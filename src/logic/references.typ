@@ -309,14 +309,14 @@
     } else { label }
     let val = if value == auto {
       let d = ctx.at("due-date", default: none)
-      if d == none and "payment-goal" in ctx and ctx.payment-goal != none {
-        if ctx.payment-goal.at("date", default: none) != none {
-          d = ctx.payment-goal.date
+      if d == none and "payment-terms" in ctx and ctx.payment-terms != none {
+        if ctx.payment-terms.at("date", default: none) != none {
+          d = ctx.payment-terms.date
         } else if (
-          ctx.payment-goal.at("days", default: none) != none
+          ctx.payment-terms.at("days", default: none) != none
             and type(ctx.invoice-date) == datetime
         ) {
-          d = ctx.invoice-date + duration(days: ctx.payment-goal.days)
+          d = ctx.invoice-date + duration(days: ctx.payment-terms.days)
         }
       }
       if type(d) == datetime {

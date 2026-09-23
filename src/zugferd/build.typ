@@ -601,17 +601,17 @@
   summation
 }
 
-// Emits the SpecifiedTradePaymentTerms block from a `payment-goal` signal
-// (see `components/payment-goal.typ`), if any data is available.
-#let build-payment-terms(payment-goal, invoice-date) = {
-  if payment-goal == none {
+// Emits the SpecifiedTradePaymentTerms block from a `payment-terms` signal
+// (see `components/payment-terms.typ`), if any data is available.
+#let build-payment-terms(terms, invoice-date) = {
+  if terms == none {
     return none
   }
 
-  let due-date = if type(payment-goal.date) == datetime {
-    payment-goal.date
-  } else if payment-goal.days != none {
-    invoice-date + duration(days: payment-goal.days)
+  let due-date = if type(terms.date) == datetime {
+    terms.date
+  } else if terms.days != none {
+    invoice-date + duration(days: terms.days)
   } else { none }
 
   if due-date != none {
@@ -625,8 +625,8 @@
     )
   }
 
-  if payment-goal.date != none {
-    let description = to-string(payment-goal.date)
+  if terms.date != none {
+    let description = to-string(terms.date)
     if description != "" {
       return ("ram:Description": description)
     }
@@ -663,13 +663,32 @@
   }
 }
 
-/// Generates a ZUGFeRD 2.x / Factur-X 1.0 CrossIndustryInvoice XML document
-/// from the fully-computed invoice context.
-///
-/// The XML is returned as `bytes` suitable for embedding via `pdf.attach()`.
-///
-/// -> bytes
-#let build-zugferd-xml(ctx, item-data, payment-goal) = {
+#let seller-contact-of(sender) = {
+  let contact = sender.at("contact", default: none)
+  if contact != none {
+    contact
+  } else {
+    let contact-name = sender.at("contact-name", default: none)
+    let phone = sender.at("phone", default: none)
+    let email = sender.at("email", default: none)
+    if contact-name != none or phone != none or email != none {
+      (name: contact-name, phone: phone, email: email)
+    } else {
+      none
+    }
+  }
+}
+
+#let buyer-reference-of(recipient) = recipient.at(
+  "buyer-reference",
+  default: recipient.at(
+    "leitweg-id",
+    default: none,
+  ),
+)
+
+/// The effective profile (`en16931` between two German parties is XRechnung).
+#let effective-profile(ctx) = {
   let profile = ctx.zugferd
   if (
     profile == "en16931"
@@ -678,6 +697,112 @@
   ) {
     profile = "xrechnung"
   }
+  profile
+}
+
+/// Mandatory e-invoice data of the selected profile (class "e-invoice").
+/// Returns issues; the validation level decides whether they panic (strict),
+/// withhold the attachment (draft) or are not checked at all (none: the XML
+/// is attached as built).
+///
+/// -> array
+#let e-invoice-issues(ctx, item-data) = {
+  import "../validation/issue.typ": issue
+  if ctx.zugferd == none { return () }
+  let profile = effective-profile(ctx)
+  // name the profile the user asked for: en16931 between two German parties is
+  // checked (and written) as XRechnung, which the message says
+  let shown = if profile == ctx.zugferd { profile } else {
+    ctx.zugferd + "' applied as '" + profile // -> (profile 'en16931' applied as 'xrechnung')
+  }
+  let is-outside-scope = item-data.taxes.values().any(t => t.category == "O")
+  let out = ()
+  let _blank(v) = v == none or v == ""
+  if profile in ("en16931", "xrechnung") {
+    if (
+      get-electronic-address(ctx.recipient, is-outside-scope: is-outside-scope)
+        == none
+    ) {
+      out.push(issue(
+        "e-invoice/buyer-address",
+        "e-invoice",
+        "e-invoicing (profile '"
+          + shown
+          + "') requires a buyer electronic address (BT-49). Set 'electronic-address', 'vat-id', or 'email' on the recipient.",
+        ref: "EN 16931 BT-49",
+        fix: "recipient: (email: \"..\")",
+        field: "buyer-electronic-address",
+      ))
+    }
+    if (
+      get-electronic-address(ctx.sender, is-outside-scope: is-outside-scope)
+        == none
+    ) {
+      out.push(issue(
+        "e-invoice/seller-address",
+        "e-invoice",
+        "e-invoicing (profile '"
+          + shown
+          + "') requires a seller electronic address (BT-34). Set 'electronic-address', 'vat-id', or 'email' on the sender.",
+        ref: "EN 16931 BT-34",
+        fix: "sender: (email: \"..\")",
+        field: "seller-electronic-address",
+      ))
+    }
+  }
+  if profile == "xrechnung" {
+    if _blank(buyer-reference-of(ctx.recipient)) {
+      out.push(issue(
+        "e-invoice/buyer-reference",
+        "e-invoice",
+        "e-invoicing (profile '"
+          + shown
+          + "') requires a buyer reference (BT-10). Set 'buyer-reference' or 'leitweg-id' on the recipient.",
+        ref: "EN 16931 BT-10; XRechnung BR-DE-15",
+        fix: "recipient: (leitweg-id: \"..\")",
+        field: "buyer-reference",
+      ))
+    }
+    let c = seller-contact-of(ctx.sender)
+    let c = if c == none { (:) } else { c }
+    for (key, bt, what) in (
+      ("name", "BT-41", "name"),
+      ("phone", "BT-42", "phone number"),
+      ("email", "BT-43", "email address"),
+    ) {
+      if _blank(c.at(key, default: none)) {
+        out.push(issue(
+          "e-invoice/seller-contact-" + key,
+          "e-invoice",
+          "e-invoicing (profile '"
+            + shown
+            + "') requires a seller contact "
+            + what
+            + " ("
+            + bt
+            + "). Set 'contact."
+            + key
+            + "' or '"
+            + (if key == "name" { "contact-name" } else { key })
+            + "' on the sender.",
+          ref: "EN 16931 " + bt + " (BG-6); XRechnung BR-DE-5..7",
+          fix: "sender: (contact: (name: .., phone: .., email: ..))",
+          field: "seller-contact-" + key,
+        ))
+      }
+    }
+  }
+  out
+}
+
+/// Generates a ZUGFeRD 2.x / Factur-X 1.0 CrossIndustryInvoice XML document
+/// from the fully-computed invoice context.
+///
+/// The XML is returned as `bytes` suitable for embedding via `pdf.attach()`.
+///
+/// -> bytes
+#let build-zugferd-xml(ctx, item-data, terms) = {
+  let profile = effective-profile(ctx)
   let currency = ctx.locale.currency.code
   let country = ctx.sender.country.code
 
@@ -790,7 +915,7 @@
     )
   }
 
-  let payment-terms = build-payment-terms(payment-goal, ctx.invoice-date)
+  let payment-terms = build-payment-terms(terms, ctx.invoice-date)
   if include-settlement-details and payment-terms != none {
     trade-settlement.insert("ram:SpecifiedTradePaymentTerms", payment-terms)
   }
@@ -833,75 +958,8 @@
     is-outside-scope: is-outside-scope,
   )
 
-  let seller-contact = {
-    let contact = ctx.sender.at("contact", default: none)
-    if contact != none {
-      contact
-    } else {
-      let contact-name = ctx.sender.at("contact-name", default: none)
-      let phone = ctx.sender.at("phone", default: none)
-      let email = ctx.sender.at("email", default: none)
-      if contact-name != none or phone != none or email != none {
-        (name: contact-name, phone: phone, email: email)
-      } else {
-        none
-      }
-    }
-  }
-
-  let buyer-ref = ctx.recipient.at("buyer-reference", default: ctx.recipient.at(
-    "leitweg-id",
-    default: none,
-  ))
-
-  // Mandatory field validations for e-invoicing profiles
-  if profile in ("en16931", "xrechnung") {
-    if buyer-eas == none {
-      panic(
-        "e-invoicing (profile '"
-          + profile
-          + "') requires a buyer electronic address (BT-49). Set 'electronic-address', 'vat-id', or 'email' on the recipient.",
-      )
-    }
-    if seller-eas == none {
-      panic(
-        "e-invoicing (profile '"
-          + profile
-          + "') requires a seller electronic address (BT-34). Set 'electronic-address', 'vat-id', or 'email' on the sender.",
-      )
-    }
-  }
-
-  if profile == "xrechnung" {
-    if buyer-ref == none or buyer-ref == "" {
-      panic(
-        "e-invoicing (profile 'xrechnung') requires a buyer reference (BT-10). Set 'buyer-reference' or 'leitweg-id' on the recipient.",
-      )
-    }
-    if seller-contact == none {
-      panic(
-        "e-invoicing (profile 'xrechnung') requires seller contact information (BG-6). Set 'contact' (with name, phone, and email) or 'contact-name', 'phone', and 'email' on the sender.",
-      )
-    }
-    let contact-name = seller-contact.at("name", default: none)
-    let contact-phone = seller-contact.at("phone", default: none)
-    let contact-email = seller-contact.at("email", default: none)
-    if contact-name == none or contact-name == "" {
-      panic(
-        "e-invoicing (profile 'xrechnung') requires a seller contact name (BT-41). Set 'contact.name' or 'contact-name' on the sender.",
-      )
-    }
-    if contact-phone == none or contact-phone == "" {
-      panic(
-        "e-invoicing (profile 'xrechnung') requires a seller contact phone number (BT-42). Set 'contact.phone' or 'phone' on the sender.",
-      )
-    }
-    if contact-email == none or contact-email == "" {
-      panic(
-        "e-invoicing (profile 'xrechnung') requires a seller contact email address (BT-43). Set 'contact.email' or 'email' on the sender.",
-      )
-    }
-  }
+  let seller-contact = seller-contact-of(ctx.sender)
+  let buyer-ref = buyer-reference-of(ctx.recipient)
 
   // MINIMUM has no seller identifier (BT-29), so only the seller VAT
   // identifier (BT-31) can satisfy BR-CO-26.

@@ -1,6 +1,6 @@
 #import "../../utils/format.typ"
 
-#let render-payment-goal(ctx, view) = {
+#let render-payment-terms(ctx, view) = {
   let pay-str = ctx.locale.strings.payment
   let format = ctx.locale.format
 
@@ -17,15 +17,9 @@
     pay-str.deadline-soon
   }
 
-  // With prepayments, `view.total` is the remaining amount due, not the total.
-  let sentence = if view.has-prepayments {
+  // after prepayments the sentence names the amount due, not the total
+  let sentence = if view.at("amount-kind", default: "total") == "amount-due" {
     pay-str.text-due
-  } else {
-    pay-str.text
-  }
-
-  sentence(
-    (format.currency)(view.total),
-    deadline,
-  )
+  } else { pay-str.text }
+  sentence((format.currency)(view.total), deadline)
 }

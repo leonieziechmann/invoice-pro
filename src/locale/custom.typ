@@ -14,13 +14,45 @@
 // LANGUAGE OVERRIDES (string.*)
 // -----------------------------------------------------------------------------
 
-/// Customizes the document type designations.
+/// Customizes the document type designations and page labels.
 /// - invoice (auto, str): e.g., "Invoice", "Rechnung", "Proforma"
+/// - page (auto, fn): page label of the page-number part: (current, total) => content,
+///   e.g. `(c, t) => [#c / #t]`
+/// - continued-on (auto, fn): note on a page whose content continues: (page) => content
 /// -> dictionary
-#let document(invoice: auto) = (
+#let document(invoice: auto, page: auto, continued-on: auto) = (
   {
-    let payload = _clean-auto((invoice: invoice))
+    let payload = _clean-auto((
+      invoice: invoice,
+      page: page,
+      continued-on: continued-on,
+    ))
     return (strings: (document: payload))
+  },
+)
+
+/// Customizes the section headings a theme may print (PROVISIONAL group).
+/// Themes read them as `ctx.locale.strings.sections.*`; a look never hard-codes
+/// its own labels, so every look speaks all five languages and follows these.
+/// - details (auto, str): e.g., "Invoice details", "Rechnungsdetails"
+/// - payment (auto, str): e.g., "Payment", "Zahlung"
+/// - bank-details (auto, str): e.g., "Bank details", "Bankverbindung"
+/// - how-to-pay (auto, str): e.g., "How to pay", "So bezahlen Sie"
+/// -> dictionary
+#let sections(
+  details: auto,
+  payment: auto,
+  bank-details: auto,
+  how-to-pay: auto,
+) = (
+  {
+    let payload = _clean-auto((
+      details: details,
+      payment: payment,
+      bank-details: bank-details,
+      how-to-pay: how-to-pay,
+    ))
+    return (strings: (sections: payload))
   },
 )
 
@@ -114,6 +146,8 @@
 /// Customizes the headers and labels used in the invoice line-items table.
 ///
 /// - position (auto, str): e.g., "Pos", "Item", "No."
+/// - item-id (auto, str): the seller's article number column, e.g., "Item No.", "Art.-Nr."
+/// - unit (auto, str): unit column, e.g., "Unit", "Einheit"
 /// - description (auto, str): e.g., "Description", "Beschreibung"
 /// - quantity (auto, str): e.g., "Qty", "Menge"
 /// - unit-price (auto, str): e.g., "Unit Price", "Einzelpreis"
@@ -128,6 +162,8 @@
 /// -> dictionary
 #let line-items(
   position: auto,
+  item-id: auto,
+  unit: auto,
   description: auto,
   quantity: auto,
   unit-price: auto,
@@ -143,6 +179,8 @@
   {
     let payload = _clean-auto((
       position: position,
+      item-id: item-id,
+      unit: unit,
       description: description,
       quantity: quantity,
       unit-price: unit-price,
@@ -166,6 +204,8 @@
 /// - total (auto, str): e.g., "Total", "Gesamtbetrag"
 /// - including (auto, str): e.g., "incl.", "inkl."
 /// - excluding (auto, str): e.g., "excl.", "zzgl."
+/// - prepayment (auto, str): e.g., "Prepayment", "Anzahlung"
+/// - amount-due (auto, str): e.g., "Amount Due", "Fälliger Betrag"
 /// -> dictionary
 #let summary(
   sum: auto,
@@ -173,6 +213,8 @@
   total: auto,
   including: auto,
   excluding: auto,
+  prepayment: auto,
+  amount-due: auto,
 ) = (
   {
     let payload = _clean-auto((
@@ -181,6 +223,8 @@
       total: total,
       including: including,
       excluding: excluding,
+      prepayment: prepayment,
+      amount-due: amount-due,
     ))
     return (strings: (summary: payload))
   },
@@ -235,7 +279,7 @@
 )
 
 /// Customizes the payment instructions and deadline texts.
-/// - text (auto, fn): Function generating the main sentence: (sum, currency, deadline) => content
+/// - text (auto, fn): Function generating the main sentence: (sum, deadline) => content
 /// - text-due (auto, fn): Main sentence when prepayments reduce the payable amount: (sum, deadline) => content
 /// - deadline-date (auto, fn): Function formatting a fixed date: (date) => str
 /// - deadline-days (auto, fn): Function formatting relative days: (days) => str
@@ -262,10 +306,11 @@
 
 /// Customizes the signature and closing area.
 /// - closing (auto, str): e.g., "Sincerely,", "Mit freundlichen Grüßen"
+/// - thanks (auto, str): closing thanks a theme may print, e.g., "Thank you for your business."
 /// -> dictionary
-#let signature(closing: auto) = (
+#let signature(closing: auto, thanks: auto) = (
   {
-    let payload = _clean-auto((closing: closing))
+    let payload = _clean-auto((closing: closing, thanks: thanks))
     return (strings: (signature: payload))
   },
 )

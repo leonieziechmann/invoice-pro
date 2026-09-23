@@ -76,15 +76,15 @@
         } else if key == "due-date" {
           val = ctx.at("due-date", default: none)
           if (
-            val == none and "payment-goal" in ctx and ctx.payment-goal != none
+            val == none and "payment-terms" in ctx and ctx.payment-terms != none
           ) {
-            if ctx.payment-goal.at("date", default: none) != none {
-              val = ctx.payment-goal.date
+            if ctx.payment-terms.at("date", default: none) != none {
+              val = ctx.payment-terms.date
             } else if (
-              ctx.payment-goal.at("days", default: none) != none
+              ctx.payment-terms.at("days", default: none) != none
                 and type(ctx.at("invoice-date", default: none)) == datetime
             ) {
-              val = ctx.invoice-date + duration(days: ctx.payment-goal.days)
+              val = ctx.invoice-date + duration(days: ctx.payment-terms.days)
             }
           }
         } else if key == "customer-nr" or key == "customer-id" {
