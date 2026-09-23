@@ -172,19 +172,23 @@
         update("name", x => [#x])
         // The description, followed by the note and the country of origin of
         // the item (`item(note: .., origin: ..)`), each on a line of its own.
-        let details = ()
-        for (value, label) in (
-          (item.description, none),
-          (item.at("note", default: none), none),
-          (item.at("origin", default: none), origin-label),
-        ) {
-          if value == none { continue }
-          details.push(if label == none { [#value] } else [#label: #value])
+        let note = item.at("note", default: none)
+        let origin = item.at("origin", default: none)
+        if note == none and origin == none {
+          put("has-description", item.description != none)
+          update("description", x => [#x])
+        } else {
+          let details = ()
+          if item.description != none { details.push([#item.description]) }
+          if note != none { details.push([#note]) }
+          if origin != none {
+            details.push(if origin-label == none { [#origin] } else {
+              [#origin-label: #origin]
+            })
+          }
+          put("has-description", true)
+          put("description", details.join(linebreak()))
         }
-        put("has-description", details.len() > 0)
-        put("description", if details.len() > 0 {
-          details.join(linebreak())
-        } else { [] })
 
         put("has-date", item.date != none)
         update("date", format.date)

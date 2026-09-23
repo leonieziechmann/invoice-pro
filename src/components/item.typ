@@ -166,16 +166,18 @@
 
   types.require(item-id, "item::item-id", none, auto, str, dictionary)
   types.require(reference, "item::reference", none, auto, str)
-  types.require(note, "item::note", none, auto, types.text-like)
-  types.require(
-    origin,
-    "item::origin",
-    none,
-    auto,
-    types.text-like,
-    dictionary,
-    function,
-  )
+  // Checked only if given, as most items have neither.
+  if note != auto { types.require(note, "item::note", none, types.text-like) }
+  if origin != auto {
+    types.require(
+      origin,
+      "item::origin",
+      none,
+      types.text-like,
+      dictionary,
+      function,
+    )
+  }
 
   types.require(
     modifier,
@@ -255,8 +257,10 @@
 
       derive("item-id", item-id)
       derive("reference", reference)
-      derive("note", note)
-      derive("origin", origin)
+      // Set only if given, so that items without them carry no extra keys
+      // (`calculate-item-data` reads them with a default).
+      if note != auto { put("note", note) }
+      if origin != auto { put("origin", origin) }
 
       derive("modifier", evaluate-modifier(ctx, modifier), default: ())
       update("modifier", evaluate-modifier.with(ctx))

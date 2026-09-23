@@ -400,21 +400,13 @@
     theme: eval-theme,
     locale: eval-locale,
     format: eval-locale.at("format", default: (:)),
-    // The invoice's own `currency` (`auto` for the locale's), which
-    // `eval-locale` already invoices in.
-    currency: currency,
 
     sender: normalized-sender,
     recipient: normalized-recipient,
     delivery-address: normalized-delivery-address,
 
     invoice-date: date,
-    service-period: service-period,
     subject: document-subject,
-    // The title of the document, the subject without the invoice number.
-    title: subject,
-    // The resolved `document-type`, see `resolve-document-type`.
-    document-type: document,
     references: document-references,
     invoice-nr: invoice-nr,
 
@@ -426,11 +418,8 @@
     quote-nr: quote-nr,
     delivery-note-nr: delivery-note-nr,
     preceding-invoice-nr: preceding-invoice-nr,
-    preceding-invoice-date: preceding-invoice-date,
     due-date: due-date,
     payment-reference: payment-reference,
-    // `(text: .., subject-code: ..)` each, see `normalize-notes`.
-    notes: normalize-notes(notes),
 
     tax: document-tax,
     tax-mode: tax-mode,
@@ -439,6 +428,24 @@
     zugferd: zugferd,
     zugferd-errors: zugferd-errors,
   )
+  // Document data most invoices leave out joins the context only if it is
+  // given: the context reaches every component and call, and each value it
+  // carries costs time on long invoices. It is read with a default.
+  for (key, value) in (
+    // The invoice's own `currency`, which `eval-locale` already invoices in.
+    currency: currency,
+    service-period: service-period,
+    // The title of the document (the subject without the invoice number),
+    // which the e-invoice compares with the document type.
+    title: if zugferd != none { subject },
+    // The resolved `document-type`, see `resolve-document-type`.
+    document-type: if document-type != auto { document },
+    preceding-invoice-date: preceding-invoice-date,
+    // `(text: .., subject-code: ..)` each, see `normalize-notes`.
+    notes: normalize-notes(notes),
+  ) {
+    if value not in (none, auto, ()) { inputs.insert(key, value) }
+  }
 
   /** Data Calculations **/
   let weaved-body = weave(

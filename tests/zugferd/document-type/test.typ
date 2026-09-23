@@ -101,11 +101,19 @@
   (locale.de-de, "396", "Rechnungskorrektur"),
 ) {
   title-test(locale: locale, document-type: type, ctx => {
-    assert.eq(ctx.title, title)
     assert.eq(ctx.subject, title + " 2026-17")
     []
   })
 }
+
+// The e-invoice gets the title without the invoice number
+#model-test(document-type: "credit-note", model => {
+  assert.eq(model.invoice.title, "Rechnungskorrektur")
+})[
+  #line-items[#item([Bonus], price: 500)]
+  #payment-goal(days: 14)
+  #bank
+]
 
 // An explicit subject is kept, whatever the document type
 #title-test(
