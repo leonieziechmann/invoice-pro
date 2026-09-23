@@ -35,6 +35,7 @@
   "storno": "credit-note",
   "credit note": "credit-note",
   "credit memo": "credit-note",
+  "credit invoice": "credit-note",
   "creditnote": "credit-note",
   "avoir": "credit-note",
   "facture d avoir": "credit-note",

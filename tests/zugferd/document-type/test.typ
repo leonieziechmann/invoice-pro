@@ -51,6 +51,7 @@
   assert.eq(kind("GUTSCHRIFT Nr. 17"), "credit-note-or-self-billed")
   assert.eq(kind("Rechnungskorrektur"), "credit-note")
   assert.eq(kind("Credit Note"), "credit-note")
+  assert.eq(kind("Credit invoice 17"), "credit-note")
   assert.eq(kind("Facture d’avoir"), "credit-note")
   assert.eq(kind("Nota di credito"), "credit-note")
   assert.eq(kind("Korrigierte Rechnung"), "corrected")
