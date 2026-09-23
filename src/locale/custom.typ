@@ -1,3 +1,8 @@
+// Every function below returns its patch as an array of one dictionary, so
+// that several of them in one code block join into a list of patches (two
+// dictionaries would be merged, and the second `strings` would replace the
+// first). `build-locale` applies the patches in their order.
+
 /// Internal helper to remove unconfigured (`auto`) arguments.
 /// This guarantees that we only patch fields the user explicitly defined,
 /// preventing base translations from being overwritten by `auto`.
@@ -16,22 +21,22 @@
 
 /// Customizes the document type designations.
 /// - invoice (auto, str): e.g., "Invoice", "Rechnung", "Proforma"
-/// -> dictionary
+/// -> array
 #let document(invoice: auto) = (
   {
     let payload = _clean-auto((invoice: invoice))
-    return (strings: (document: payload))
+    (strings: (document: payload))
   },
 )
 
 /// Customizes the address-related labels.
 /// - recipient (auto, str): e.g., "Bill To", "Empfänger"
 /// - sender (auto, str): e.g., "From", "Absender"
-/// -> dictionary
+/// -> array
 #let address(recipient: auto, sender: auto) = (
   {
     let payload = _clean-auto((recipient: recipient, sender: sender))
-    return (strings: (address: payload))
+    (strings: (address: payload))
   },
 )
 
@@ -57,7 +62,7 @@
 /// - contact-person (auto, str): e.g., "Contact Person", "Ansprechpartner:in"
 /// - contact-phone (auto, str): e.g., "Phone", "Telefon"
 /// - contact-email (auto, str): e.g., "Email", "E-Mail"
-/// -> dictionary
+/// -> array
 #let reference(
   tax-number: auto,
   invoice-number: auto,
@@ -107,7 +112,7 @@
       contact-phone: contact-phone,
       contact-email: contact-email,
     ))
-    return (strings: (reference: payload))
+    (strings: (reference: payload))
   },
 )
 
@@ -127,7 +132,7 @@
 /// - subtotal (auto, str): e.g., "Subtotal", "Zwischensumme"
 /// - conjunction (auto, str): joins the last two item names of an automatic
 ///   bundle description, e.g., "and", "und"
-/// -> dictionary
+/// -> array
 #let line-items(
   position: auto,
   description: auto,
@@ -160,7 +165,7 @@
       conjunction: conjunction,
     ))
 
-    return (strings: (line-items: payload))
+    (strings: (line-items: payload))
   },
 )
 
@@ -170,7 +175,7 @@
 /// - total (auto, str): e.g., "Total", "Gesamtbetrag"
 /// - including (auto, str): e.g., "incl.", "inkl."
 /// - excluding (auto, str): e.g., "excl.", "zzgl."
-/// -> dictionary
+/// -> array
 #let summary(
   sum: auto,
   vat-tax: auto,
@@ -186,7 +191,7 @@
       including: including,
       excluding: excluding,
     ))
-    return (strings: (summary: payload))
+    (strings: (summary: payload))
   },
 )
 
@@ -208,7 +213,7 @@
       quantity: quantity,
       date: date,
     ))
-    return (strings: (global-info: payload))
+    (strings: (global-info: payload))
   },
 )
 
@@ -218,7 +223,7 @@
 /// - iban (auto, str): e.g., "IBAN"
 /// - bic (auto, str): e.g., "BIC"
 /// - reference (auto, str): e.g., "Reference", "Verwendungszweck"
-/// -> dictionary
+/// -> array
 #let bank-details(
   account-holder: auto,
   bank: auto,
@@ -234,7 +239,7 @@
       bic: bic,
       reference: reference,
     ))
-    return (strings: (bank-details: payload))
+    (strings: (bank-details: payload))
   },
 )
 
@@ -244,7 +249,7 @@
 /// - deadline-date (auto, fn): Function formatting a fixed date: (date) => str
 /// - deadline-days (auto, fn): Function formatting relative days: (days) => str
 /// - deadline-soon (auto, str): Text for immediate payment: e.g., "upon receipt"
-/// -> dictionary
+/// -> array
 #let payment(
   text: auto,
   text-due: auto,
@@ -260,27 +265,27 @@
       deadline-days: deadline-days,
       deadline-soon: deadline-soon,
     ))
-    return (strings: (payment: payload))
+    (strings: (payment: payload))
   },
 )
 
 /// Customizes the signature and closing area.
 /// - closing (auto, str): e.g., "Sincerely,", "Mit freundlichen Grüßen"
-/// -> dictionary
+/// -> array
 #let signature(closing: auto) = (
   {
     let payload = _clean-auto((closing: closing))
-    return (strings: (signature: payload))
+    (strings: (signature: payload))
   },
 )
 
 /// Customizes standard legal texts.
 /// - vat-exemption (auto, str): Legal text for small business tax exemptions.
-/// -> dictionary
+/// -> array
 #let legal(vat-exemption: auto) = (
   {
     let payload = _clean-auto((vat-exemption: vat-exemption))
-    return (strings: (legal: payload))
+    (strings: (legal: payload))
   },
 )
 
@@ -305,7 +310,7 @@
       ambiguous-tax: ambiguous-tax,
       invalid-tax: invalid-tax,
     ))
-    return (strings: (errors: payload))
+    (strings: (errors: payload))
   },
 )
 
@@ -320,7 +325,7 @@
 /// -> (number) => number
 /// - infer-tax (auto, fn): Function that maps a raw rate to a tax object.
 /// -> (number) => tax
-/// -> dictionary
+/// -> array
 #let normalize(
   money: auto,
   money-fine: auto,
@@ -332,7 +337,7 @@
       money-fine: money-fine,
       infer-tax: infer-tax,
     ))
-    return (region: (normalize: payload))
+    (region: (normalize: payload))
   },
 )
 
@@ -344,7 +349,7 @@
 /// - currency-fine (auto, fn): -> (number) => str
 /// - date (auto, fn): -> (datetime | array) => str
 /// - time (auto, fn): -> (datetime) => str
-/// -> dictionary
+/// -> array
 #let format(
   percent: auto,
   number: auto,
@@ -362,7 +367,7 @@
       date: date,
       time: time,
     ))
-    return (region: (format: payload))
+    (region: (format: payload))
   },
 )
 
@@ -370,7 +375,7 @@
 /// Useful for overriding default rates or providing custom exemption grounds.
 /// - default-vat (auto, tax): Standard VAT tax object.
 /// - small-enterprise-special-scheme (auto, tax): Tax object for small business exemptions.
-/// -> dictionary
+/// -> array
 #let tax(
   default-vat: auto,
   small-enterprise-special-scheme: auto,
@@ -380,6 +385,6 @@
       default-vat: default-vat,
       small-enterprise-special-scheme: small-enterprise-special-scheme,
     ))
-    return (region: (tax: payload))
+    (region: (tax: payload))
   },
 )
