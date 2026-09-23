@@ -38,10 +38,10 @@ tests/
 │
 └── zugferd/               # Unit tests of the e-invoice (ZUGFeRD) pipeline
     ├── xml/               # Plain text, number formatting, XML serialization
+    ├── codelists/         # Construction of the code lists
     ├── model/             # E-invoice data model built from an invoice
     ├── validate/          # Business rule checks (diagnostics)
-    ├── report/            # Error message, "report" (draft attachment) and "ignore" modes
-    ├── codelists/         # Construction of the code lists
+    ├── report/            # Error message, "report" and "ignore" modes
     └── country-codes/     # Country code list, EAS scheme of VAT IDs
 ```
 
