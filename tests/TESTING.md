@@ -563,10 +563,10 @@ A new e-invoice test document that must be valid goes into `scripts/validate-all
 
 where the time in e-invoice code is every trace event of a file in `src/zugferd/` that is not nested in another one (the module import and `process-zugferd`).
 
-| Level  | Condition                                                                                                                                  | Effect                                    |
-| :----- | :----------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------- |
-| red    | share above 25 % at any size, above 15 % at 50 or 300 lines; nightly: e-invoice time at 1000 lines more than 4 times the time at 300 lines | the job fails                             |
-| yellow | share above 15 % at 5 lines; module import above 12 ms; serializer above 0.5 ms per line                                                   | a warning; `--yellow-fails` for a release |
+| Level  | Condition                                                                                                                                     | Effect                                    |
+| :----- | :-------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------- |
+| red    | share above 25 % at any size, above 15 % at 50 or 300 lines; nightly: `process-zugferd` at 1000 lines more than 4 times the time at 300 lines | the job fails                             |
+| yellow | share above 15 % at 5 lines; module import above 12 ms; serializer above 0.5 ms per line                                                      | a warning; `--yellow-fails` for a release |
 
 `--plain-limit-ms 0.5` turns a plain invoice that spends time in e-invoice code into a red result; it becomes part of the CI job once the e-invoice modules are only loaded when `zugferd` is set. The benchmark generator and the trace aggregation are those of the performance tools in `tools/perf/` when they are present.
 

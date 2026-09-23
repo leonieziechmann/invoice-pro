@@ -20,6 +20,7 @@ def row(lines, share, import_ms=5.0, serializer_ms=None, plain_einvoice_ms=0.0):
         "zf_total_ms": plain * (1 + share / 100),
         "einvoice_ms": plain * share / 100,
         "import_ms": import_ms,
+        "process_ms": plain * share / 100 - import_ms,
         "serializer_ms": serializer_ms,
         "plain_einvoice_ms": plain_einvoice_ms,
         "share_pct": share,
@@ -52,9 +53,19 @@ class Thresholds(unittest.TestCase):
 
     def test_linearity(self):
         rows = [row(300, 10.0), row(1000, 10.0)]
-        rows[1]["einvoice_ms"] = rows[0]["einvoice_ms"] * 4.5
+        rows[1]["process_ms"] = rows[0]["process_ms"] * 4.5
         red, _ = gate.verdict(rows, None, False)
         self.assertTrue(any("1000 / 300" in m for m in red))
+        # The import (the same at every size) does not hide a loss of linearity.
+        rows = [row(300, 10.0, import_ms=500.0), row(1000, 10.0, import_ms=500.0)]
+        rows[0]["process_ms"], rows[1]["process_ms"] = 100.0, 450.0
+        rows[0]["einvoice_ms"], rows[1]["einvoice_ms"] = 600.0, 950.0  # ratio 1.6 with the import
+        red, _ = gate.verdict(rows, None, False)
+        self.assertTrue(any("1000 / 300" in m for m in red))
+
+    def test_missing_measurements_are_noted(self):
+        self.assertEqual(gate.notes([row(50, 10.0, serializer_ms=20.0)]), [])
+        self.assertEqual(len(gate.notes([row(50, 10.0)])), 1)
 
 
 class Trace(unittest.TestCase):

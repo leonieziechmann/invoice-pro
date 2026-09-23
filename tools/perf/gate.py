@@ -17,7 +17,8 @@ times by far more, so the gate is based on traces (concept, section 6.5).
 
 Thresholds (concept 6.5)
   RED     share > 25 % at any size; share > 15 % at 50 or 300 lines;
-          nightly: e-invoice time (1000 lines) / (300 lines) > 4 (linearity);
+          nightly: time of process-zugferd (the e-invoice time without the
+          module import) at 1000 lines / at 300 lines > 4 (linearity);
           --plain-limit-ms: a plain invoice spends more than this in
           e-invoice code (the modules must only load when `zugferd` is set)
   YELLOW  share > 15 % at 5 lines (blocks a release, not a PR; --yellow-fails
@@ -71,7 +72,7 @@ except ImportError:
     city: "80331 München",
     country: country.de,
     tax-nr: "143/123/45678",
-    vat-id: "DE123456789",
+    vat-id: "DE123456788",
     contact: (name: "Max Mustermann", phone: "+49 89 1234567", email: "max@consultinggroup.de"),
   ),
   recipient: (
@@ -79,7 +80,7 @@ except ImportError:
     address: "Industrial Road 1",
     city: (name: "Stuttgart", post-code: "70173"),
     country: country.de,
-    vat-id: "DE987654321",
+    vat-id: "DE987654328",
     buyer-reference: "DE123456789-12345-12",
   ),
   invoice-nr: "INV-2026-102",
@@ -94,7 +95,8 @@ except ImportError:
 """
 
     def bench_render(kind, lines, zugferd):
-        """Basic benchmark (kind "b"): one VAT rate, net prices."""
+        """Basic benchmark (kind "b"): one VAT rate, net prices. The VAT
+        identifiers have valid check digits, so that the e-invoice is valid."""
         assert kind == "b", "the built-in benchmark has only the basic kind"
         items = "".join(
             f"  #item([Position {i} with a longer description text], quantity: {i % 7 + 1}, "
@@ -183,12 +185,14 @@ def measure(sizes, runs, typst, out_dir):
     for _ in range(runs):  # round-robin, so that load drifts hit all alike
         for n, variant, path in documents:
             result = compile_traced(typst, path, out_dir)
+            found = result["inclusive"].get(serializer) if serializer else None
             samples[(n, variant)].append(
                 {
                     "total": result["total"] / 1000,
                     "einvoice": result["einvoice"] / 1000,
                     "import": result["einvoice_import"] / 1000,
-                    "serializer": result["inclusive"].get(serializer, 0.0) / 1000 if serializer else None,
+                    "process": (result["einvoice"] - result["einvoice_import"]) / 1000,
+                    "serializer": found / 1000 if found is not None else None,
                 }
             )
     rows = []
@@ -205,6 +209,7 @@ def measure(sizes, runs, typst, out_dir):
             "zf_total_ms": med(zf, "total"),
             "einvoice_ms": med(zf, "einvoice"),
             "import_ms": med(zf, "import"),
+            "process_ms": med(zf, "process"),
             "serializer_ms": med(zf, "serializer"),
             "plain_einvoice_ms": med(plain, "einvoice"),
         }
@@ -243,10 +248,22 @@ def verdict(rows, plain_limit_ms, yellow_fails):
             )
     by_size = {row["lines"]: row for row in rows}
     if 300 in by_size and 1000 in by_size:
-        ratio = by_size[1000]["einvoice_ms"] / by_size[300]["einvoice_ms"]
+        # The module import costs the same at every size; linearity is about
+        # the work per line (concept 6.5: process-zugferd).
+        ratio = by_size[1000]["process_ms"] / by_size[300]["process_ms"]
         if ratio > LINEARITY_MAX:
-            red.append(f"e-invoice time 1000 / 300 lines = {ratio:.2f} > {LINEARITY_MAX:g}: the path grows faster than linearly")
+            red.append(f"process-zugferd 1000 / 300 lines = {ratio:.2f} > {LINEARITY_MAX:g}: "
+                       "the path grows faster than linearly")
     return red, yellow
+
+
+def notes(rows):
+    """Measurements the gate could not take (so that no budget is skipped
+    silently)."""
+    if any(row["serializer_ms"] is None for row in rows):
+        return ["the serializer (`dict-to-xml` in src/zugferd/xml.typ) was not found in the trace: "
+                "its budget per line is not checked; update `function_key` in tools/perf/gate.py"]
+    return []
 
 
 def table(rows):
@@ -294,7 +311,7 @@ def main(argv=None):
         "share = time in e-invoice code of the zf compile / total time of the plain compile "
         f"(red > {RED_ANY:g} % at any size or > {RED_LARGE:g} % at 50/300 lines, yellow > {YELLOW_SMALL:g} % at 5 lines)",
     ]
-    text += [f"RED: {m}" for m in red] + [f"YELLOW: {m}" for m in yellow]
+    text += [f"RED: {m}" for m in red] + [f"YELLOW: {m}" for m in yellow] + [f"NOTE: {m}" for m in notes(rows)]
     print("\n".join(text))
     if os.environ.get("GITHUB_ACTIONS"):
         for m in red:
@@ -306,7 +323,7 @@ def main(argv=None):
         with open(summary, "a", encoding="utf-8") as f:
             f.write("## E-invoice performance gate\n\n" + "\n".join(text) + "\n")
     if args.json:
-        Path(args.json).write_text(json.dumps({"status": status, "red": red, "yellow": yellow, "rows": rows}, indent=2))
+        Path(args.json).write_text(json.dumps({"status": status, "red": red, "yellow": yellow, "notes": notes(rows), "rows": rows}, indent=2))
     return 1 if red else 0
 
 
