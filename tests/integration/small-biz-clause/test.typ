@@ -1,9 +1,14 @@
 // Small-business legal clause in the global info block
 //
-// Bug: with `tax-exempt-small-biz: true`, a locale whose language matches its
-// region (e.g. `de-de`, or `test-locale` with `base`/`base`) printed no legal
-// notice at all when the region's `small-enterprise-special-scheme` had no
-// `grounds`. It must fall back to the translated `legal.vat-exemption` text.
+// Bugs:
+// - With `tax-exempt-small-biz: true`, a locale whose language matches its
+//   region (e.g. `de-de`, or `test-locale` with `base`/`base`) printed no
+//   legal notice at all when the region's `small-enterprise-special-scheme`
+//   had no `grounds`. It must fall back to the translated
+//   `legal.vat-exemption` text.
+// - The German `legal.vat-exemption` cited the German § 19 UStG, so German
+//   invoices of other regions (e.g. `de-at`) printed it in front of their own
+//   legal grounds.
 
 #import "/src/lib.typ": *
 #import "/src/themes/components/line-items/global-info.typ": render-global-info
@@ -103,5 +108,21 @@
 )[
   #line-items[
     #item([Small Biz Item], price: 100.00)
+  ]
+]
+
+// 5. de-at (lang != region): the German clause in front of the Austrian
+//    grounds names no German law (it used to read "Gemäß § 19 UStG ...")
+#clause-invoice(
+  "de-at",
+  locale: locale.de-at,
+  _ => (
+    "Aufgrund der Kleinunternehmerregelung wird keine Umsatzsteuer berechnet."
+      + " (Umsatzsteuerfrei aufgrund der Kleinunternehmerregelung gem."
+      + " § 6 Abs. 1 Z 27 UStG.)"
+  ),
+)[
+  #line-items[
+    #item([Kleinunternehmer-Leistung], price: 100.00)
   ]
 ]
