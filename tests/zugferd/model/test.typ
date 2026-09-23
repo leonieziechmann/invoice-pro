@@ -173,14 +173,22 @@
 )[#line-items[#item([A], price: 1)]]
 
 // Not subject to VAT: no VAT identifiers (BR-O-02); the tax number identifies
-// the seller (BT-29)
+// the seller (BT-29). The electronic addresses are still derived from the VAT
+// IDs, which BR-O-02 does not cover.
 #model-test(tax: tax.outside-scope(), model => {
   assert.eq(model.outside-scope, true)
   assert.eq(model.seller.vat-id, none)
   assert.eq(model.seller.stated-vat-id, "DE123456789")
   assert.eq(model.buyer.vat-id, none)
   assert.eq(model.seller.id, "123/456/78901")
-  assert.eq(model.buyer.electronic-address, none)
+  assert.eq(model.seller.electronic-address, (
+    scheme: "9930",
+    id: "DE123456789",
+  ))
+  assert.eq(model.buyer.electronic-address, (
+    scheme: "9957",
+    id: "FR99123456789",
+  ))
 })[#line-items[#item([A], price: 1)]]
 
 // --- 5. Intra-community supply: deliver to the buyer's country ---
@@ -265,14 +273,11 @@
     scheme: "EM",
     id: "a@b.us",
   ))
-  // Not subject to VAT: the VAT ID is not used (BR-O-02)
-  assert.eq(
-    get-electronic-address(
-      (vat-id: "DE123456789", email: "a@b.de"),
-      is-outside-scope: true,
-    ),
-    (scheme: "EM", id: "a@b.de"),
-  )
+  // The VAT ID comes before the email
+  assert.eq(address(vat-id: "DE123456789", email: "a@b.de"), (
+    scheme: "9930",
+    id: "DE123456789",
+  ))
   assert.eq(address(vat-id: "DE123456789"), (
     scheme: "9930",
     id: "DE123456789",

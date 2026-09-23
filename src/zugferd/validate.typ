@@ -13,10 +13,13 @@
 //   )
 //
 // Errors make the XML invalid; warnings point out data that is valid but most
-// likely not intended.
+// likely not intended. Rules whose id starts with "IP-" are rules of
+// invoice-pro itself: where the official rules accept the XML, but the invoice
+// would still be wrong (e.g. required by law, or a value would be lost).
 
 #import "codelists.typ"
 #import "xml.typ": fmt-number
+#import "model.typ": vat-eas-codes, vat-id-prefix
 
 #let _zero = decimal("0")
 
@@ -142,28 +145,52 @@
   ()
 }
 
-#let _check-electronic-address(address, required, rule, field, term) = {
+// `rules`: the rule for a missing address and the rule for a missing scheme.
+#let _check-electronic-address(party, required, rules, field, term) = {
+  let (missing-rule, scheme-rule) = rules
+  let address = party.electronic-address
   if address == none or address.id == none {
     if required == none { return () }
     let make = if required == "error" { error } else { warning }
-    return (
-      make(
-        rule,
-        field,
-        "The " + term + " is missing.",
-        hint: "Set `electronic-address`, `vat-id` or `email` on the "
+    // Name only the inputs that can still provide the address.
+    let vat-id = party.at("stated-vat-id", default: none)
+    let hint = if vat-id == none {
+      "Set `electronic-address`, `vat-id` or `email` on the " + field + "."
+    } else {
+      let prefix = vat-id-prefix(vat-id)
+      let reason = if prefix != none and prefix not in vat-eas-codes {
+        (
+          " (there is no electronic address scheme for its prefix "
+            + _quoted(prefix)
+            + ")"
+        )
+      } else { "" }
+      (
+        "No electronic address can be derived from the VAT identifier "
+          + _quoted(vat-id)
+          + reason
+          + ". Set `electronic-address` or `email` on the "
           + field
-          + ".",
-      ),
+          + "."
+      )
+    }
+    return (
+      make(missing-rule, field, "The " + term + " is missing.", hint: hint),
     )
   }
   if address.scheme == none {
     return (
       error(
-        "BR-CL-25",
+        scheme-rule,
         field + ".electronic-address",
-        "The " + term + " has no scheme.",
-        hint: "Pass a dictionary such as `(scheme: \"EM\", id: \"invoice@example.com\")`.",
+        "The "
+          + term
+          + " "
+          + _quoted(address.id)
+          + " has no scheme identifier.",
+        hint: "Give the address with its scheme, e.g. `electronic-address: (scheme: \"0088\", id: "
+          + _quoted(address.id)
+          + ")` for a GLN, or give an email address.",
       ),
     )
   }
@@ -184,14 +211,21 @@
   ()
 }
 
-#let _check-global-id(party, field) = {
+// The input key a party identifier came from (see `id-keys` and
+// `global-id-keys` of the model), for the field of a diagnostic.
+#let _id-key(party, slot) = {
+  party.at(slot + "-keys", default: ()).first(default: slot)
+}
+
+// `rule`: BR-CL-10 for the seller and buyer, BR-CL-26 for the ship-to party.
+#let _check-global-id(party, rule, field) = {
   let global-id = party.at("global-id", default: none)
   if global-id == none or global-id.scheme == none { return () }
   if global-id.scheme not in codelists.icd {
     return (
       error(
-        "BR-CL-10",
-        field + ".global-id",
+        rule,
+        field + "." + _id-key(party, "global-id"),
         "The scheme "
           + _quoted(global-id.scheme)
           + " of the global identifier is not an ISO/IEC 6523 code.",
@@ -202,10 +236,97 @@
   ()
 }
 
+// Two different values for one identifier of a party, of which only one can
+// be written: a `global-id` without scheme next to `id`, a `location-id` next
+// to `id` of the delivery address, or two identifiers with scheme.
+#let _check-identifiers(party, field, term) = {
+  let out = ()
+  let id-keys = party.at("id-keys", default: ())
+  if id-keys.len() > 1 {
+    let (first, second, ..) = id-keys
+    out.push(error(
+      "IP-ID-02",
+      field + "." + second,
+      if second == "global-id" {
+        (
+          "The global identifier of the "
+            + term
+            + " has no scheme, so it would be a second identifier next to `"
+            + first
+            + "`, and only one can be written."
+        )
+      } else {
+        (
+          "`"
+            + first
+            + "` and `"
+            + second
+            + "` give two different identifiers of the "
+            + term
+            + ", and only one can be written."
+        )
+      },
+      hint: if second == "global-id" {
+        "Give the ISO/IEC 6523 scheme of the global identifier, e.g. `global-id: (scheme: \"0088\", id: ..)` for a GLN."
+      } else { "`location-id` is another name of `id`: keep one of them." },
+    ))
+  }
+  let global-id-keys = party.at("global-id-keys", default: ())
+  if global-id-keys.len() > 1 {
+    out.push(error(
+      "IP-ID-02",
+      field + "." + global-id-keys.at(1),
+      "`"
+        + global-id-keys.at(0)
+        + "` and `"
+        + global-id-keys.at(1)
+        + "` both give an identifier with scheme of the "
+        + term
+        + ", and only one can be written.",
+      hint: "Keep one of them, or give `id` without scheme.",
+    ))
+  }
+  out
+}
+
+// The buyer (BT-46) and the deliver-to location (BT-71) have one identifier:
+// either `ram:ID` or `ram:GlobalID` (CII-SR-450, CII-SR-449).
+#let _check-single-identifier(party, rule, field, term) = {
+  if (
+    party.at("id", default: none) == none
+      or party.at("global-id", default: none) == none
+  ) { return () }
+  let id-key = _id-key(party, "id")
+  let global-id-key = _id-key(party, "global-id")
+  (
+    error(
+      rule,
+      field,
+      "The "
+        + term
+        + " can be stated only once, but `"
+        + id-key
+        + "` and `"
+        + global-id-key
+        + "` give one each.",
+      hint: "Keep either `"
+        + id-key
+        + "` or `"
+        + global-id-key
+        + "` on the "
+        + field
+        + ".",
+    ),
+  )
+}
+
 #let _check-vat-id-prefix(vat-id, field) = {
   if vat-id == none { return () }
-  let prefix = vat-id.slice(0, calc.min(2, vat-id.len()))
-  if prefix in codelists.countries or prefix in ("EL", "1A", "AN") {
+  let prefix = vat-id-prefix(vat-id)
+  if (
+    prefix != none
+      and (prefix in codelists.countries or prefix in ("EL", "1A", "AN"))
+  ) {
     return ()
   }
   (
@@ -224,6 +345,7 @@
   let profile = model.profile
   let seller = model.seller
   let buyer = model.buyer
+  let ship-to = model.ship-to
   let out = ()
 
   if seller.name == none {
@@ -243,6 +365,8 @@
     ))
   }
 
+  // The seller country (BT-40) is written in every profile, the other
+  // addresses from BASIC WL on.
   out += _check-country(
     seller.address.country,
     "BR-09",
@@ -256,9 +380,9 @@
       "recipient.country",
       "buyer country code (BT-55)",
     )
-    if model.ship-to != none {
+    if ship-to != none {
       out += _check-country(
-        model.ship-to.address.country,
+        ship-to.address.country,
         "BR-57",
         "delivery-address.country",
         "deliver-to country code (BT-80)",
@@ -288,17 +412,38 @@
       "BR-CO-26",
       "sender",
       "The seller cannot be identified: neither a seller identifier (BT-29) nor a VAT identifier (BT-31) is given.",
-      hint: if model.outside-scope and seller.stated-vat-id != none {
-        "An invoice not subject to VAT leaves out the VAT identifier (BR-O-02). Set `tax-nr` or `id` on the sender."
+      hint: if model.outside-scope {
+        "An invoice not subject to VAT (O) states no VAT identifier (BR-O-02). Set `tax-nr` or `id` on the sender."
       } else { "Set `vat-id`, `tax-nr` or `id` on the sender." },
     ))
   }
 
+  // Party identifiers (BT-29, BT-46) from BASIC WL on; the ship-to party
+  // (BT-71) with the delivery information.
   if profile.party-ids {
-    out += _check-global-id(seller, "sender")
-    out += _check-global-id(buyer, "recipient")
-    if model.ship-to != none {
-      out += _check-global-id(model.ship-to, "delivery-address")
+    out += _check-identifiers(seller, "sender", "seller")
+    out += _check-identifiers(buyer, "recipient", "buyer")
+    out += _check-global-id(seller, "BR-CL-10", "sender")
+    out += _check-global-id(buyer, "BR-CL-10", "recipient")
+    if profile.en16931 {
+      out += _check-single-identifier(
+        buyer,
+        "CII-SR-450",
+        "recipient",
+        "buyer identifier (BT-46)",
+      )
+    }
+  }
+  if profile.addresses and ship-to != none {
+    out += _check-identifiers(ship-to, "delivery-address", "delivery address")
+    out += _check-global-id(ship-to, "BR-CL-26", "delivery-address")
+    if profile.en16931 {
+      out += _check-single-identifier(
+        ship-to,
+        "CII-SR-449",
+        "delivery-address",
+        "deliver-to location identifier (BT-71)",
+      )
     }
   }
 
@@ -308,16 +453,16 @@
       profile.id == "en16931"
     ) { "warning" } else { none }
     out += _check-electronic-address(
-      seller.electronic-address,
+      seller,
       required,
-      "PEPPOL-EN16931-R020",
+      ("PEPPOL-EN16931-R020", "BR-62"),
       "sender",
       "seller electronic address (BT-34)",
     )
     out += _check-electronic-address(
-      buyer.electronic-address,
+      buyer,
       required,
-      "PEPPOL-EN16931-R010",
+      ("PEPPOL-EN16931-R010", "BR-63"),
       "recipient",
       "buyer electronic address (BT-49)",
     )
@@ -379,7 +524,7 @@
     for (party, field, city-rule, code-rule, term) in (
       (seller, "sender", "BR-DE-3", "BR-DE-4", "seller"),
       (buyer, "recipient", "BR-DE-8", "BR-DE-9", "buyer"),
-      (model.ship-to, "delivery-address", "BR-DE-10", "BR-DE-11", "deliver-to"),
+      (ship-to, "delivery-address", "BR-DE-10", "BR-DE-11", "deliver-to"),
     ) {
       if party == none { continue }
       if party.address.city == none {

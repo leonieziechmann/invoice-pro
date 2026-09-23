@@ -98,7 +98,7 @@
   m.seller.electronic-address = (scheme: "XX", id: "1")
   m.buyer.electronic-address = (scheme: none, id: "1")
   m.seller.global-id = (scheme: "12", id: "1")
-  assert.eq(rules(m), ("BR-CL-10", "BR-CL-25", "BR-CL-25"))
+  assert.eq(rules(m), ("BR-63", "BR-CL-10", "BR-CL-25"))
 
   // XRechnung: seller contact, addresses and buyer reference
   let m = base
