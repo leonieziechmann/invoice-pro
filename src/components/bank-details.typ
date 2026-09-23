@@ -1,7 +1,9 @@
 #import "../loom-wrapper.typ": loom, managed-motif
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
+#import "../utils/bic.typ": normalize-bic
 #import "../utils/iban.typ": format-iban, iban-valid, normalize-iban
+#import "../logic/epc.typ"
 #import "../logic/payment-reference.typ": resolve-remittance
 
 // With an e-invoice and `zugferd-errors: "report"`, problems are shown in the
@@ -159,31 +161,65 @@
         if not _is-missing(inline) { holder = inline }
       }
 
+      let electronic-bic = normalize-bic(bic)
+      let amount = if payment-amount == auto {
+        ctx.global.total.at("due", default: ctx.global.total.gross)
+      } else {
+        payment-amount
+      }
+
+      // The EPC-QR code is only generated when it is shown. SEPA credit
+      // transfers are in euro, so it is shown for invoices in EUR only.
+      let qr-display = qr-code.at("display", default: true)
+      let currency = ctx.locale.at("currency", default: (:))
+      let epc-code = if (
+        qr-display and currency.at("code", default: none) == "EUR"
+      ) {
+        epc.qr-code(
+          holder,
+          electronic-iban,
+          bic: electronic-bic,
+          reference: ctx.reference,
+          text: ctx.text,
+          amount: amount,
+        )
+      } else {
+        (payload: none, problems: ())
+      }
+
+      // The view of the theme layout (`theme.bank-details`), with every value
+      // ready to print, so the layout only draws (see "Data for Custom
+      // Layouts" in docs/docs/api-reference/theme.md):
+      // - `sender`: `name` (the account holder), `bank`, `iban` and `bic` in
+      //   electronic format (`""` if not given) and `iban-valid`, which is
+      //   only `false` with `report-problems`.
+      // - `qr-code`: `size` and `display` as given, and the EPC-QR code as
+      //   its `payload` (see `epc.qr-code`; `none` if no code is generated)
+      //   or the `problems` that prevent it (only with `report-problems`,
+      //   otherwise `draw` stops; the layout shows a placeholder).
+      // - `reference` or `text` (the resolved payment reference),
+      //   `show-reference`, `report-problems` and `payment-amount`.
       let data = (
         sender: (
           name: holder,
           bank: bank,
           iban: electronic-iban,
           iban-valid: valid-iban,
-          bic: bic,
+          bic: electronic-bic,
         ),
 
         qr-code: (
           size: qr-code.at("size", default: 5em),
-          display: qr-code.at("display", default: true),
+          display: qr-display,
+          payload: epc-code.payload,
+          problems: epc-code.problems,
         ),
 
         reference: ctx.reference,
         text: ctx.text,
         show-reference: show-reference,
-        // Whether the theme shows problems (e.g. an IBAN the EPC-QR code
-        // cannot carry) in the document instead of stopping the compilation.
         report-problems: report-problems,
-        payment-amount: if payment-amount == auto {
-          ctx.global.total.at("due", default: ctx.global.total.gross)
-        } else {
-          payment-amount
-        },
+        payment-amount: amount,
       )
 
       // Expose IBAN/BIC/reference as a public signal so root can embed them in ZUGFeRD XML.
@@ -197,7 +233,22 @@
 
       (public, data)
     },
-    draw: (ctx, _, view, ..) => (ctx.theme.bank-details)(ctx, view),
+    draw: (ctx, _, view, ..) => {
+      // An EPC-QR code that cannot be generated stops the compilation, unless
+      // an e-invoice reports its problems in the document, where the theme
+      // shows a placeholder naming them. It stops when the bank details are
+      // drawn, where the layout used to stop, so that the errors of other
+      // components keep their order.
+      let problems = view.qr-code.problems
+      if problems.len() > 0 and not view.report-problems {
+        panic(
+          "bank-details: the EPC-QR code cannot be generated: "
+            + problems.map(problem => problem.message).join("; ")
+            + ". Hide it with `qr-code: (display: false)` on `bank-details` if it is not needed.",
+        )
+      }
+      (ctx.theme.bank-details)(ctx, view)
+    },
     none,
   )
 }
