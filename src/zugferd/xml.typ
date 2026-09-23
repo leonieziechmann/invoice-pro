@@ -6,12 +6,19 @@
   "[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x{FFFE}\\x{FFFF}]",
 )
 
+// Characters `xml-escape` has to change: the markup characters and the
+// characters of `_invalid-chars`. Most values contain none of them.
+#let _needs-escape = regex(
+  "[&<>\"'\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x{FFFE}\\x{FFFF}]",
+)
+
 // Escape a value for safe embedding in XML text/attribute content.
 #let xml-escape(s) = {
-  let value = if type(s) == str { s.replace(_invalid-chars, "") } else {
-    plain-text(s)
-  }
+  let value = if type(s) == str { s } else { plain-text(s) }
+  // One scan instead of six replacements for the common case.
+  if not value.contains(_needs-escape) { return value }
   value
+    .replace(_invalid-chars, "")
     .replace("&", "&amp;")
     .replace("<", "&lt;")
     .replace(">", "&gt;")
@@ -55,68 +62,67 @@
   date.display("[year][month][day]")
 } else { none }
 
+// Serializes the element `tag` with the value `body`, see `dict-to-xml`.
+//
+// This runs once per element of the document, so it avoids everything that
+// costs per call: Typst memoizes every closure call and hashes its arguments,
+// which made the former `.pairs().map(..).filter(..)` chains, and the wrapper
+// dictionary built for each child, re-hash a subtree several times per level.
+// Plain `for` loops and one call per element keep the serializer linear in
+// the size of the document. The recursion follows the nesting of the elements
+// (about ten levels), so it stays far below Typst's call depth limit, and it
+// needs no `while` loop, which Typst stops after 10 000 iterations.
+#let _element(tag, body) = {
+  if body == none { return "" }
+  if type(body) == array {
+    let out = ""
+    for item in body { out += _element(tag, item) }
+    return out
+  }
+  if type(body) == dictionary {
+    let attrs = ""
+    let children = ""
+    for (key, value) in body {
+      if key.starts-with("@") {
+        if value != none {
+          attrs += " " + key.slice(1) + "=\"" + xml-escape(value) + "\""
+        }
+      } else if key == "" {
+        // The text of an element with attributes.
+        if type(value) == dictionary {
+          for (k, v) in value { children += _element(k, v) }
+        } else if value != none {
+          children += xml-escape(value)
+        }
+      } else {
+        children += _element(key, value)
+      }
+    }
+    // An identifier or code without its value would be invalid.
+    if "" in body and children.trim() == "" { return "" }
+    return if children == "" {
+      "<" + tag + attrs + " />"
+    } else {
+      "<" + tag + attrs + ">" + children + "</" + tag + ">"
+    }
+  }
+  let value = xml-escape(body)
+  if value.trim() == "" { return "" }
+  "<" + tag + ">" + value + "</" + tag + ">"
+}
+
 // Serialize a Typst dictionary/value to XML format.
 //
 // Keys starting with `@` become attributes and the key `""` holds the text of
 // an element with attributes. `none` values and elements without text are left
 // out, so optional data can be passed through unchecked; dictionaries without
 // any children are kept as empty elements (e.g. an empty
-// `ram:ApplicableHeaderTradeDelivery`, which the schema requires).
+// `ram:ApplicableHeaderTradeDelivery`, which the schema requires). An array
+// repeats its element once per item.
 #let dict-to-xml(data) = {
-  if data == none {
-    return ""
-  }
-  if type(data) != dictionary {
-    return xml-escape(data)
-  }
-
-  data
-    .pairs()
-    .map(((tag, body)) => {
-      if body == none {
-        return ""
-      }
-
-      if type(body) == array {
-        return body.map(item => dict-to-xml(((tag): item))).join(default: "")
-      }
-
-      if type(body) == dictionary {
-        let attrs = body
-          .pairs()
-          .filter(((k, v)) => k.starts-with("@") and v != none)
-          .map(((k, v)) => " " + k.slice(1) + "=\"" + xml-escape(v) + "\"")
-          .join(default: "")
-
-        let children = body
-          .pairs()
-          .filter(((k, _)) => not k.starts-with("@"))
-          .map(((k, v)) => {
-            if k == "" {
-              dict-to-xml(v)
-            } else {
-              dict-to-xml(((k): v))
-            }
-          })
-          .join(default: "")
-
-        // An identifier or code without its value would be invalid.
-        if "" in body and children.trim() == "" {
-          return ""
-        }
-
-        return if children == "" {
-          "<" + tag + attrs + " />"
-        } else {
-          "<" + tag + attrs + ">" + children + "</" + tag + ">"
-        }
-      }
-
-      let value = xml-escape(body)
-      if value.trim() == "" {
-        return ""
-      }
-      return "<" + tag + ">" + value + "</" + tag + ">"
-    })
-    .join(default: "")
+  if data == none { return "" }
+  if type(data) != dictionary { return xml-escape(data) }
+  let out = ""
+  for (tag, body) in data { out += _element(tag, body) }
+  out
 }
