@@ -257,7 +257,8 @@ Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the 
 - Reverse Charge: `tax.reverse-charge()` (maps to category **AE**). Requires the VAT identifier of the buyer.
 - Intra-community Supply: `tax.intra-community()` (maps to category **K**). Requires the VAT identifiers of both parties. Without a `delivery-address`, the buyer's country is stated as deliver-to country; a `delivery-address` without its own `country` is in the buyer's country as well.
 - Export: `tax.export()` (maps to category **G**). Requires the seller VAT identifier.
-- Outside Scope / Small Business: `tax.outside-scope()` and `tax-exempt-small-biz: true` (map to category **O**). An invoice not subject to VAT carries no VAT identifiers, so the seller is identified by `tax-nr` or `id`. Items of category `O` cannot be mixed with other categories on one invoice.
+- Outside Scope: `tax.outside-scope()` (maps to category **O**). An invoice not subject to VAT carries no VAT identifiers, so the seller is identified by `tax-nr` or `id`. Items of category `O` cannot be mixed with other categories on one invoice.
+- Small Business: `tax-exempt-small-biz: true` uses the small business scheme of the locale's region, category **E** in Germany, Austria, France and Spain and **O** in Italy and Switzerland (see [Small Business Exemption](#small-business-exemption)).
 
 EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `M`. The special constructors in `tax.special` that map to other categories (e.g. `lower-rate`, the margin schemes or split payment `B`) cannot be used for e-invoices.
 
@@ -268,6 +269,30 @@ Where EN 16931 requires an exemption reason (`AE`, `K`, `G`, `O`), the standard 
 Document level discounts and surcharges (BG-20, BG-21) belong to a VAT category as well. An absolute amount is split over the categories of the items (see [VAT categories of modifiers](./api-reference/line-items/index.md#vat-categories-of-document-and-bundle-modifiers)); pin it to one with `tax`, e.g. `surcharge([Shipping], amount: 4.90, tax: tax.vat(19%))`.
 
 Avoid using raw percentages (e.g., `19%`) directly on items if you need strict validation, as using the `tax` module functions guarantees the category codes are assigned correctly.
+
+#### Small Business Exemption
+
+With `tax-exempt-small-biz: true`, all items and pinned modifiers use the small business scheme of the locale's region. Its legal note is printed below the line items, and the XML states the same text as exemption reason (BT-120):
+
+| Region | Category | Legal note (printed and BT-120)                                                                  |
+| :----- | :------- | :----------------------------------------------------------------------------------------------- |
+| DE     | `E`      | Umsatzsteuerfrei aufgrund der Kleinunternehmerregelung gemäß § 19 Abs. 1 UStG.                   |
+| AT     | `E`      | Umsatzsteuerfrei aufgrund der Kleinunternehmerregelung gem. § 6 Abs. 1 Z 27 UStG.                |
+| FR     | `E`      | TVA non applicable, art. 293 B du CGI.                                                           |
+| ES     | `E`      | Exento de IVA según el régimen especial de franquicia para pequeñas empresas.                    |
+| IT     | `O`      | Operazione in franchigia da IVA ai sensi dell'art. 1, commi da 54 a 89, della Legge n. 190/2014. |
+| CH     | `O`      | Nicht MWST-pflichtig / Non soumis à la TVA / Non assoggettato all'IVA                            |
+
+If the language of the invoice differs from the region (e.g. `locale.en-de`), a translated note comes first and the legal note follows in parentheses.
+
+- **Exempt (`E`), in Germany, Austria, France and Spain:** the law exempts the turnover of small businesses. In Germany, § 19 Abs. 1 UStG declares it tax exempt ("steuerfrei") since 2025 (Jahressteuergesetz 2024), and the invoice must note that the small business exemption applies (§ 34a UStDV). An exempt invoice needs the seller's VAT identifier or tax number (BR-E-02): set `tax-nr` (e.g. the Steuernummer) or `vat-id` on the sender. Both are written to the XML, and the buyer's electronic address is derived from its VAT identifier as on any other invoice. A French micro-entrepreneur without an intra-community VAT number states the SIREN as `tax-nr`.
+- **Not subject to VAT (`O`), in Italy and Switzerland:** supplies under the Italian _regime forfettario_ are not subject to VAT, and Swiss businesses below the turnover threshold are not liable for VAT. As with `tax.outside-scope()`, the XML carries no VAT identifiers (BR-O-02), and the seller is identified by `tax-nr` or `id`.
+
+:::warning Breaking change of the XML
+Earlier versions wrote the small business exemption of every region as category `O` ("not subject to VAT") and left out the VAT identifiers. Invoices with `tax-exempt-small-biz: true` in the regions DE, AT, FR and ES are now written as category `E` and keep the VAT identifiers of seller and buyer, and the German note follows the wording of the amended § 19 UStG. A sender with neither `tax-nr` nor `vat-id` (only an `id`) is now reported as BR-E-02. German-language invoices of other regions (e.g. `locale.de-at`) no longer cite the German § 19 UStG in front of the region's note.
+:::
+
+To state another note or category, override the scheme of the region, e.g. `locale: locale.de-de.with(locale.custom.tax(small-enterprise-special-scheme: tax.exempt(grounds: "...")))`.
 
 ### 4. Gross Prices
 

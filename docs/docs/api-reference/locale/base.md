@@ -159,9 +159,9 @@ Greetings and the sign-off area.
 
 Standard legal notices.
 
-| Key             | Type  | Description                                                                 |
-| :-------------- | :---- | :-------------------------------------------------------------------------- |
-| `vat-exemption` | `str` | The legal notice for small business exemptions or zero-rated tax scenarios. |
+| Key             | Type  | Description                                                                                                                                                                                                            |
+| :-------------- | :---- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vat-exemption` | `str` | The small business note in the invoice language. It is printed in front of the region's legal note when the language differs from the region, and alone when the region's scheme has no `grounds`, so it names no law. |
 
 ### `errors`
 
@@ -231,10 +231,10 @@ Functions responsible for converting data types into localized strings.
 
 Contains default standard tax objects utilized by the region.
 
-| Key                               | Type  | Description                                                                  |
-| :-------------------------------- | :---- | :--------------------------------------------------------------------------- |
-| `default-vat`                     | `tax` | The standard VAT/Sales Tax rate applied when no specific rate is provided.   |
-| `small-enterprise-special-scheme` | `tax` | The legal tax object used for small businesses or special exemption schemes. |
+| Key                               | Type  | Description                                                                                                                                                                                                                                                                                                            |
+| :-------------------------------- | :---- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default-vat`                     | `tax` | The standard VAT/Sales Tax rate applied when no specific rate is provided.                                                                                                                                                                                                                                             |
+| `small-enterprise-special-scheme` | `tax` | The tax of small businesses (`tax-exempt-small-biz: true`). Its `grounds` are the printed legal note and the exemption reason (BT-120) of the e-invoice. Use `tax.exempt(grounds: ..)` (category E) where the law exempts small businesses and `tax.outside-scope(grounds: ..)` (O) where they are not liable for VAT. |
 
 ---
 

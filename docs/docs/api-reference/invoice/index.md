@@ -124,7 +124,7 @@ By default (when `tax` is set to `auto`), the system fetches the standard VAT/GS
 If you run a small business that is exempt from charging VAT (e.g., the _Kleinunternehmerregelung_ in Germany), you can simply set `tax-exempt-small-biz: true`.
 
 :::note
-If you enable the small business exemption, the system automatically applies the correct legal tax code and 0% rate for your region. Therefore, you should leave the `tax` parameter set to `auto`. If you manually set a custom `tax` rate while `tax-exempt-small-biz` is `true`, the compiler will throw an error to prevent conflicting configurations.
+If you enable the small business exemption, the system automatically applies the correct legal tax code, legal note and 0% rate for your region (for e-invoices: category E in Germany, Austria, France and Spain, O in Italy and Switzerland, see [Small Business Exemption](../../e-invoicing.md#small-business-exemption)). Therefore, you should leave the `tax` parameter set to `auto`. If you manually set a custom `tax` rate while `tax-exempt-small-biz` is `true`, the compiler will throw an error to prevent conflicting configurations.
 :::
 
 _See the [Tax Module API Reference](../tax.md) for a detailed breakdown of all available tax codes and margin schemes._
