@@ -625,24 +625,25 @@ nix run .#check-pr
 
 Every non-trivial code block in `docs/docs/` must be registered here. When adding a new code section to the documentation, add it to this list and create a corresponding test under `tests/docs/` if possible. If no test is created yet, mark the entry as **⚠️ not implemented**.
 
-| Source file                      | Code ID            | Description                                                  | Test directory                  | Status             |
-| :------------------------------- | :----------------- | :----------------------------------------------------------- | :------------------------------ | :----------------- |
-| `intro.md`                       | `quick-glance`     | Full invoice with items, discount, and bank details          | `docs/intro-minimal/`           | ✅                 |
-| `getting-started.md`             | `first-invoice`    | Minimal invoice with items and tax configuration             | `docs/getting-started-minimal/` | ✅                 |
-| `api-reference/index.md`         | `blueprint`        | Architectural blueprint with items, payment, bank, signature | `docs/api-index-blueprint/`     | ✅                 |
-| `api-reference/invoice.md`       | `minimal-config`   | Minimal valid configuration example                          | `docs/api-invoice-minimal/`     | ✅                 |
-| `api-reference/components.md`    | `apply-bulk-tax`   | Apply block wrapping items with shared tax rate              | `docs/api-components-apply/`    | ✅                 |
-| `api-reference/theme.md`         | `din5008-example`  | DIN-5008 theme with custom parameters                        | `docs/api-theme-din5008/`       | ✅                 |
-| `api-reference/theme.md`         | `blank-example`    | Blank theme with native Typst page setup                     | `docs/api-theme-blank/`         | ✅                 |
-| `e-invoicing.md`                 | `custom-report`    | Theme `zugferd-report` function for a custom problem list    | `docs/e-invoicing-report/`      | ✅                 |
-| `e-invoicing.md`                 | `complete-example` | Complete ZUGFeRD-compliant invoice                           | `docs/e-invoicing-complete/`    | ✅                 |
-| `api-reference/locale/index.md`  | `locale-customize` | Locale customization with `locale.custom` overrides          | —                               | ⚠️ not implemented |
-| `api-reference/locale/index.md`  | `currency-format`  | Custom currency formatting override                          | —                               | ⚠️ not implemented |
-| `api-reference/locale/custom.md` | `pl-language`      | Polish language dictionary definition                        | —                               | ⚠️ not implemented |
-| `api-reference/locale/custom.md` | `pl-region`        | Polish region builder function                               | —                               | ⚠️ not implemented |
-| `api-reference/locale/custom.md` | `pl-factory`       | Building locale with `build-locale` factory                  | —                               | ⚠️ not implemented |
-| `api-reference/locale/custom.md` | `pl-usage`         | Using the custom locale in a document                        | —                               | ⚠️ not implemented |
-| `api-reference/locale/base.md`   | `schema-override`  | Schema inspection and partial override example               | —                               | ⚠️ not implemented |
+| Source file                            | Code ID                | Description                                                             | Test directory                   | Status             |
+| :------------------------------------- | :--------------------- | :---------------------------------------------------------------------- | :------------------------------- | :----------------- |
+| `intro.md`                             | `quick-glance`         | Full invoice with items, discount, and bank details                     | `docs/intro-minimal/`            | ✅                 |
+| `getting-started.md`                   | `first-invoice`        | Minimal invoice with items and tax configuration                        | `docs/getting-started-minimal/`  | ✅                 |
+| `api-reference/index.md`               | `blueprint`            | Architectural blueprint with items, payment, bank, signature            | `docs/api-index-blueprint/`      | ✅                 |
+| `api-reference/invoice.md`             | `minimal-config`       | Minimal valid configuration example                                     | `docs/api-invoice-minimal/`      | ✅                 |
+| `api-reference/components.md`          | `apply-bulk-tax`       | Apply block wrapping items with shared tax rate                         | `docs/api-components-apply/`     | ✅                 |
+| `api-reference/theme.md`               | `din5008-example`      | DIN-5008 theme with custom parameters                                   | `docs/api-theme-din5008/`        | ✅                 |
+| `api-reference/theme.md`               | `blank-example`        | Blank theme with native Typst page setup                                | `docs/api-theme-blank/`          | ✅                 |
+| `e-invoicing.md`                       | `custom-report`        | Theme `zugferd-report` function for a custom problem list               | `docs/e-invoicing-report/`       | ✅                 |
+| `e-invoicing.md`                       | `complete-example`     | Complete ZUGFeRD-compliant invoice                                      | `docs/e-invoicing-complete/`     | ✅                 |
+| `api-reference/invoice/identifiers.md` | `printing-identifiers` | Register number as legal registration identifier and printed in `extra` | `docs/api-identifiers-printing/` | ✅                 |
+| `api-reference/locale/index.md`        | `locale-customize`     | Locale customization with `locale.custom` overrides                     | —                                | ⚠️ not implemented |
+| `api-reference/locale/index.md`        | `currency-format`      | Custom currency formatting override                                     | —                                | ⚠️ not implemented |
+| `api-reference/locale/custom.md`       | `pl-language`          | Polish language dictionary definition                                   | —                                | ⚠️ not implemented |
+| `api-reference/locale/custom.md`       | `pl-region`            | Polish region builder function                                          | —                                | ⚠️ not implemented |
+| `api-reference/locale/custom.md`       | `pl-factory`           | Building locale with `build-locale` factory                             | —                                | ⚠️ not implemented |
+| `api-reference/locale/custom.md`       | `pl-usage`             | Using the custom locale in a document                                   | —                                | ⚠️ not implemented |
+| `api-reference/locale/base.md`         | `schema-override`      | Schema inspection and partial override example                          | —                                | ⚠️ not implemented |
 
 ---
 

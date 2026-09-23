@@ -98,10 +98,13 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | :-------------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `IP-COUNTRY-01` | error   | A party without `country` whose VAT identifier was issued by another country: the country of the locale would be written (e.g. "DE" for the Austrian VAT ID "ATU12345678"). Set `country` on the party, also for a foreign VAT registration.                                       |
 | `IP-ADDR-01`    | error   | A city line with a number of three or more digits, but no post code in the format of the party's country (e.g. "1012 Amsterdam" instead of "1012 AB Amsterdam"): the post code would be missing, and the number would be written into the city name.                               |
+| `IP-ID-01`      | error   | An identifier of the [`id` module](./api-reference/invoice/identifiers.md) whose format or check digit is wrong, e.g. a SIRET with a typo. `id.custom(..)` takes an identifier unchecked.                                                                                          |
 | `IP-ID-02`      | error   | Two values for one party identifier, of which only one can be written: a `global-id` without scheme next to `id`, a `location-id` next to `id` of the delivery address, or two identifiers with scheme.                                                                            |
-| `IP-KEY-01`     | warning | A key of `sender`, `recipient` or `delivery-address` that `invoice-pro` does not know: its value is not written into the e-invoice.                                                                                                                                                |
-| `IP-KEY-02`     | error   | A misspelled key the e-invoice reads, or another name of it (e.g. `vatId`, `vat_id`, `ustid`, `uid`, `e-mail` or `zip`): its value would be missing without notice.                                                                                                                |
-| `IP-VAT-226`    | error   | BASIC WL: an intra-community supply (`K`) or a cross-border reverse charge (`AE`) without the buyer VAT identifier, which Art. 226 No. 4 of the VAT Directive requires on the invoice. BASIC WL has no invoice lines, so the official rules (`BR-IC-02`, `BR-AE-02`) do not apply. |
+| `IP-ID-03`      | error   | An identifier given for a field it does not belong to: a Leitweg-ID as party identifier or legal registration identifier, another identifier as `leitweg-id`, a GLN or D-U-N-S number as `legal-id`, or a register number as `id`.                                                 |
+| `IP-KEY-01`     | warning | A key of `sender`, `recipient`, `delivery-address`, `sender.tax-representative` or `payee` that `invoice-pro` does not know: its value is not written into the e-invoice.                                                                                                          |
+| `IP-KEY-02`     | error   | A misspelled key the e-invoice reads, or another name of it (e.g. `vatId`, `vat_id`, `ustid`, `uid`, `e-mail`, `siret` or `zip`): its value would be missing without notice.                                                                                                       |
+| `IP-PROFILE-01` | warning | An input the profile cannot state, e.g. the buyer trading name (BT-45) in `"basic"` or a `payee` in `"minimum"`: it is not written into the e-invoice. The hint names the lowest profile that states it.                                                                           |
+| `IP-VAT-226`    | error   | An intra-community supply (`K`) or a cross-border reverse charge (`AE`) without the buyer VAT identifier (Art. 226 No. 4 VAT Directive), which the official rules miss: in BASIC WL (no invoice lines) and with a buyer `legal-id`; a tax representative without address (No. 15). |
 | `IP-VAT-138`    | warning | An intra-community supply (`K`) to a buyer whose VAT identifier was not issued by an EU member state (or "XI" for Northern Ireland).                                                                                                                                               |
 | `IP-TAX-01`     | error   | `tax: none` in an e-invoice: the items would be declared as zero rated (`Z`). Use `tax.zero()`, `tax.exempt(grounds: ..)`, `tax.outside-scope()` or `tax-exempt-small-biz`.                                                                                                        |
 | `IP-PRINT-02`   | error   | Amounts printed in another currency than the invoice currency (BT-5), e.g. a custom locale that prints "zł" while the XML states EUR.                                                                                                                                              |
@@ -176,16 +179,16 @@ Both the `sender` and `recipient` dictionaries must include:
     ```
 - **Tax Identifiers:**
   - The **sender** should include a `tax-nr` (national tax number) and/or `vat-id` (value-added tax identifier, written with its country prefix, e.g. `"DE123456789"`; spaces and invisible characters, such as the zero width spaces of copied text, are removed).
-  - The **recipient** (buyer) should include a `vat-id` if applicable. Reverse charge (`AE`) and intra-community supplies (`K`) require it. In `"basic-wl"`, which has no invoice lines, `invoice-pro` requires it for `K` and a cross-border `AE` by law (`IP-VAT-226`), but not for a domestic reverse charge such as § 13b UStG.
-  - The `"minimum"` profile identifies the seller only by its VAT identifier (BT-31), so the **sender** must have a `vat-id` there. Senders with only a `tax-nr` need `"basic-wl"` or higher.
+  - The **recipient** (buyer) should include a `vat-id` if applicable. Intra-community supplies (`K`) require it. Reverse charge (`AE`) requires it or, for a buyer without VAT identifier (e.g. a domestic reverse charge under § 13b UStG), the buyer's `legal-id` (BT-47, see below). A cross-border reverse charge needs the VAT identifier by law (Art. 226 No. 4 of the VAT Directive), which the legal registration identifier does not replace (`IP-VAT-226`). In `"basic-wl"`, which has no invoice lines, `invoice-pro` requires it for `K` and a cross-border `AE` by law (`IP-VAT-226`), but not for a domestic reverse charge.
+  - The `"minimum"` profile identifies the seller by its VAT identifier (BT-31) or its legal registration identifier (BT-30), so the **sender** needs a `vat-id` or a `legal-id` there, e.g. a French micro-entrepreneur without VAT identifier its SIRET (`legal-id: id.siret(..)`). Senders identified by a `tax-nr` or `id` only need `"basic-wl"` or higher.
 
-- **Seller Identifier (BT-29):** The buyer must be able to identify the seller (BR-CO-26), by the VAT identifier or a seller identifier. Without a VAT identifier, the `tax-nr` is used as seller identifier. If you have neither, or want to state a different identifier (e.g. your supplier number at the customer, or a company registration number), set `id` on the sender; it does not assert a tax registration. A globally registered identifier (e.g. a GLN) can be given with its ISO/IEC 6523 scheme:
+- **Seller Identifier (BT-29):** The buyer must be able to identify the seller (BR-CO-26), by the VAT identifier, the legal registration identifier or a seller identifier. Without any of them, the `tax-nr` is used as seller identifier. To state a different identifier, e.g. your supplier number at the customer, set `id` on the sender; it does not assert a tax registration. A globally registered identifier (e.g. a GLN) can be given with its ISO/IEC 6523 scheme, most easily with the [`id` module](./api-reference/invoice/identifiers.md):
 
   ```typst
   sender: (
     ...
     id: "70025",
-    global-id: (scheme: "0088", id: "4000001123452"), // GLN
+    global-id: id.gln("4000001123452"), // or: (scheme: "0088", id: "4000001123452")
   )
   ```
 
@@ -193,7 +196,24 @@ Both the `sender` and `recipient` dictionaries must include:
 
   The same keys on the `recipient` set the buyer identifier (BT-46), and on the `delivery-address` the deliver-to location identifier (BT-71, `id` or `location-id`). The buyer and the delivery address take only one of them, `id` or `global-id` (CII-SR-450, CII-SR-449, from the `"basic"` profile on).
 
-- **Keys:** A key of `sender`, `recipient` or `delivery-address` that `invoice-pro` does not know is not written into the e-invoice, which is reported as a warning (`IP-KEY-01`). A key that looks like a misspelling or another name of a key the e-invoice reads, such as `vatId`, `vat_id`, `ustid`, `uid` or `e-mail`, stops the e-invoice (`IP-KEY-02`), as its value would be missing without notice. So does a post code key such as `zip` or `plz` while the `city` line has no post code: the post code belongs in `city`. Keys that invoices often carry, such as `fax-nr` or `siret`, are not taken for misspellings. Of the recipient's `contact`, the e-invoice reads only the `email`, from which the electronic address can be derived.
+- **Legal Registration Identifier (BT-30, BT-47):** The number of a party in an official register, e.g. the SIREN or SIRET of a French company, the German Handelsregister number or the Swiss UID, is its `legal-id`, on the `sender` and on the `recipient`. Every profile states it, MINIMUM included. Give it as text, which is stated without a scheme, or with a constructor of the [`id` module](./api-reference/invoice/identifiers.md), which states the ISO/IEC 6523 scheme and checks the check digit:
+
+  | Identifier                | Input                                                             | Stated as                                  |
+  | :------------------------ | :---------------------------------------------------------------- | :----------------------------------------- |
+  | SIREN (France)            | `legal-id: id.siren("123 456 782")`                               | `123456782`, scheme `0002`                 |
+  | SIRET (France)            | `legal-id: id.siret("123 456 782 00010")`                         | `12345678200010`, scheme `0009`            |
+  | UID (Switzerland)         | `legal-id: id.uid-ch("CHE-123.456.788")`                          | `CHE123456788`, scheme `0183`              |
+  | Handelsregister (Germany) | `legal-id: id.register("HRB 4711", court: "Amtsgericht München")` | `Amtsgericht München, HRB 4711`, no scheme |
+  | Another register          | `legal-id: id.custom("0208", "0123456749")`                       | `0123456749`, scheme `0208`                |
+  | GLN (a location, as `id`) | `global-id: id.gln("4000001123452")`                              | `4000001123452`, scheme `0088` (BT-29)     |
+
+  A wrong check digit stops the e-invoice (`IP-ID-01`); `id.custom` takes an identifier unchecked. An identifier given for a field it does not belong to, such as a GLN as `legal-id` or a register number as `id`, stops it as well (`IP-ID-03`). The scheme of a legal registration identifier must be an ISO/IEC 6523 code (`BR-CL-11`).
+
+- **Trading Name and Legal Information (BT-28, BT-45, BT-33):** `trading-name` on the `sender` or `recipient` is the name the party trades under, besides its legal `name`. `legal-info` on the `sender` is additional legal information about the seller, such as its managing directors, its registered office or its share capital (e.g. `"SAS au capital de 10 000 €, RCS Paris 123 456 782"`). The seller's trading name is stated from the `"basic-wl"` profile on, the buyer's trading name and the legal information in `"en16931"` and `"xrechnung"`; a profile that cannot state an input reports it as a warning (`IP-PROFILE-01`).
+
+  The built-in themes print none of these details: where the law requires them on the invoice, print them from the same value, e.g. in `extra` (see [Printing identifiers](./api-reference/invoice/identifiers.md#printing-identifiers)).
+
+- **Keys:** A key of `sender`, `recipient` or `delivery-address` that `invoice-pro` does not know is not written into the e-invoice, which is reported as a warning (`IP-KEY-01`). A key that looks like a misspelling or another name of a key the e-invoice reads, such as `vatId`, `vat_id`, `ustid`, `uid`, `e-mail`, `legal_id`, `siret` or `handelsregister` (the last two stand for `legal-id`), stops the e-invoice (`IP-KEY-02`), as its value would be missing without notice. Earlier versions accepted `siret` and `siren` with a warning, as the e-invoice had no field for them; give them as `legal-id: id.siret(..)` now. So does a post code key such as `zip` or `plz` while the `city` line has no post code: the post code belongs in `city`. Keys that invoices often carry, such as `fax-nr`, are not taken for misspellings.
 
 - **Seller Contact (BG-6):** Under German XRechnung rules, the seller must specify contact details. You can define this under the `contact` key of the `sender` dictionary (containing keys `name`, `phone`, `email`):
 
@@ -210,14 +230,54 @@ Both the `sender` and `recipient` dictionaries must include:
 
   Alternatively, you can define them as direct fields on `sender` (using keys `contact-name`, `phone`, `email`). Missing fields of `contact` fall back to these keys.
 
-- **Buyer Reference / Leitweg-ID (BT-10):** A buyer reference (such as the customer's Leitweg-ID for public sectors) is mandatory under XRechnung. Define this under `buyer-reference` or `leitweg-id` in the `recipient` dictionary:
+- **Buyer Contact (BG-9):** The `contact` of the `recipient` (or its keys `contact-name` and `phone`) is written as the buyer contact in `"en16931"` and `"xrechnung"`, with the same keys as the seller contact. An `email` of the recipient alone is not a contact point: it is where the invoice goes, the electronic address (see below). Earlier versions left the buyer contact out of the e-invoice.
+
+- **Buyer Reference / Leitweg-ID (BT-10):** A buyer reference (such as the customer's Leitweg-ID for public sectors) is mandatory under XRechnung. Define this under `buyer-reference` or `leitweg-id` in the `recipient` dictionary. A Leitweg-ID given with `id.leitweg(..)` is checked for its check digits (`IP-ID-01`), and can be the electronic address of the buyer as well (scheme `0204`):
 
   ```typst
   recipient: (
     ...
     buyer-reference: "DE123456789-12345-12"
+    // or, for a public buyer reached by its Leitweg-ID:
+    // leitweg-id: id.leitweg("04011000-1234512345-06"),
+    // electronic-address: id.leitweg("04011000-1234512345-06"),
   )
   ```
+
+- **Seller Tax Representative (BG-11):** A seller that is registered for VAT through a fiscal representative, e.g. a company from outside the EU, names it as `tax-representative` on the `sender`, with its name, address and VAT identifier:
+
+  ```typst
+  sender: (
+    name: "Alpen Maschinen AG",
+    ...
+    country: country.ch,
+    legal-id: id.uid-ch("CHE-123.456.788"),
+    tax-representative: (
+      name: "Fiskalvertretung Muster GmbH",
+      address: "Steuerweg 3",
+      city: "60311 Frankfurt am Main",
+      country: country.de,
+      vat-id: "DE987654328",
+    ),
+  )
+  ```
+
+  The representative's VAT identifier (BT-63) satisfies the rules that ask for a seller VAT identifier, e.g. for standard rated items (`BR-S-02`) or an intra-community supply (`BR-IC-02`): never give it as the seller's own `vat-id`. It does not identify the seller, so the seller still needs its `id`, `legal-id` or `vat-id` (`BR-CO-26`). The representative needs a name (`BR-18`), a VAT identifier (`BR-56`) and an address, which the law requires on the invoice (`IP-VAT-226`, Art. 226 No. 15 of the VAT Directive). An invoice not subject to VAT (`O`) states no VAT identifiers, so it cannot name a tax representative (`BR-O-02`). The profiles from `"basic-wl"` on state it; the built-in themes do not print it, so state it on the printed invoice as well, e.g. in its text.
+
+- **Payee (BG-10):** When someone other than the seller receives the payment, e.g. a factoring company, name it with `payee` on the invoice (from the `"basic-wl"` profile on):
+
+  ```typst
+  #show: invoice.with(
+    ...
+    payee: (
+      name: "Factoring Bank AG",
+      global-id: id.gln("4000001543212"),                  // or `id`: BT-60
+      legal-id: id.register("HRB 12345", court: "Amtsgericht Frankfurt am Main"), // BT-61
+    ),
+  )
+  ```
+
+  A payee needs its name, which is not the seller's (`BR-17`), and at most one of `id` and `global-id` (`CII-SR-451`). Leave out `payee` when the seller receives the payment itself.
 
 - **Electronic Addresses & EAS Routing (BT-34 / BT-49):** For routing across networks (such as Peppol), both parties need an electronic address. XRechnung requires them; for the other profiles a missing address is reported as a warning (`"en16931"`) or not at all.
   - **Auto-derivation from VAT ID:** If `vat-id` is specified on the party, the system derives the endpoint from it. The Electronic Address Scheme (EAS) is chosen by the country prefix of the VAT ID:
@@ -284,10 +344,10 @@ Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the 
 - Standard VAT/GST: `tax.vat(19%)` (maps to category **S**). Reduced rates are standard rated as well, e.g. `tax.vat(7%)`.
 - Zero Rated: `tax.zero()` (maps to category **Z**).
 - Tax Exempt: `tax.exempt(grounds: ..)` (maps to category **E**). The `grounds` are mandatory for exempt items (BR-E-10).
-- Reverse Charge: `tax.reverse-charge()` (maps to category **AE**). Requires the VAT identifier of the buyer.
+- Reverse Charge: `tax.reverse-charge()` (maps to category **AE**). Requires the VAT identifier of the buyer or, for a domestic reverse charge to a buyer without one (e.g. under § 13b UStG), its legal registration identifier (`legal-id` of the recipient). A cross-border reverse charge requires the VAT identifier (`IP-VAT-226`).
 - Intra-community Supply: `tax.intra-community()` (maps to category **K**). Requires the VAT identifiers of both parties. Without a `delivery-address`, the buyer's country is stated as deliver-to country; a `delivery-address` without its own `country` is in the buyer's country as well. A deliver-to country that is the seller's own country (`BR-IC-12`), or a buyer VAT identifier not issued by an EU member state (`IP-VAT-138`), is reported as a warning.
 - Export: `tax.export()` (maps to category **G**). Requires the seller VAT identifier.
-- Outside Scope / Small Business: `tax.outside-scope()` and `tax-exempt-small-biz: true` (map to category **O**). An invoice not subject to VAT carries no VAT identifiers, so the seller is identified by `tax-nr` or `id`. Items of category `O` cannot be mixed with other categories on one invoice.
+- Outside Scope / Small Business: `tax.outside-scope()` and `tax-exempt-small-biz: true` (map to category **O**). An invoice not subject to VAT carries no VAT identifiers, so the seller is identified by `tax-nr`, `id` or `legal-id`. Items of category `O` cannot be mixed with other categories on one invoice.
 
 EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `M`. The special constructors in `tax.special` that map to other categories (e.g. `lower-rate`, the margin schemes or split payment `B`) cannot be used for e-invoices. Items under a margin scheme are written as exempt with the note the law requires, e.g. `tax.exempt(grounds: "Margin scheme - second-hand goods")` (in Germany "Gebrauchtgegenstände/Sonderregelung"). `tax.special.ceuta-melilla(..)` (`M`) needs a rate above 0%, and items not subject to VAT (`O`) have none.
 
