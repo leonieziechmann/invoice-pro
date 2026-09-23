@@ -689,17 +689,17 @@
   let currency-meta = locale.at("currency", default: (:))
   let currency = compact(currency-meta.at("code", default: none))
   if currency != none { currency = upper(currency) }
-  // How the invoice prints an amount and a unit price, to check that it
-  // prints the currency the XML states (BT-5).
+  // How the invoice prints an amount (`format.currency`) and a unit price
+  // (`format.currency-fine`), to check that it prints the currency the XML
+  // states (BT-5).
   let printed-currency = (
     symbol: text-or-none(currency-meta.at("symbol", default: none)),
-    samples: (),
   )
-  for key in ("currency", "currency-fine") {
+  for (name, key) in (("amount", "currency"), ("price", "currency-fine")) {
     let formatter = locale.at("format", default: (:)).at(key, default: none)
-    if type(formatter) == function {
-      printed-currency.samples.push(plain-text(formatter(decimal("1"))))
-    }
+    printed-currency.insert(name, if type(formatter) == function {
+      plain-text(formatter(decimal("1")))
+    })
   }
 
   let iban = if bank != none { compact(bank.at("iban", default: none)) }

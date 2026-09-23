@@ -61,9 +61,11 @@
 
 // The characters of a printed amount besides its currency: digits,
 // separators, signs and spaces. The samples are plain text, whose spaces and
-// minus signs are ASCII. (ASCII classes: the Unicode classes `\d` and `\s`
-// take a fraction of a millisecond to compile on every compile.)
-#let _amount-characters = regex("[0-9 .,'’+\\-()]")
+// minus signs are ASCII; the typographic apostrophe (a thousands separator)
+// is removed separately. (ASCII only: a class with other characters, or a
+// Unicode class such as `\d` or `\s`, takes a fraction of a millisecond to
+// compile on every compile.)
+#let _amount-characters = regex("[0-9 .,'+\\-()]")
 
 #let check-document(model) = {
   let out = ()
@@ -140,27 +142,34 @@
 
   // IP-PRINT-02: the invoice prints its amounts in the currency the XML
   // states: with its code or the symbol of the locale, and not with "€" for
-  // another currency. A formatter that prints no currency says nothing else.
+  // another currency. Unit prices may be printed in a subunit instead (e.g.
+  // "ct" for energy tariffs), but not with "€" for another currency either.
+  // A formatter that prints no currency says nothing else.
   let printed = model.at("printed-currency", default: none)
   if (
     type(model.currency) == str
       and model.currency in codelists.currencies
-      and printed != none
+      and type(printed) == dictionary
   ) {
-    for sample in printed.samples {
-      let sign = sample.replace(_amount-characters, "")
-      if (
-        sign == ""
-          or not (sample.contains("€") and model.currency != "EUR")
-            and (
-              sample.contains(model.currency)
-                or printed.symbol != none and sample.contains(printed.symbol)
-            )
-      ) { continue }
+    for (kind, sample) in (
+      ("amounts", printed.at("amount", default: none)),
+      ("unit prices", printed.at("price", default: none)),
+    ) {
+      if sample == none { continue }
+      let sign = sample.replace(_amount-characters, "").replace("’", "")
+      if sign == "" { continue }
+      let euro = sample.contains("€") and model.currency != "EUR"
+      let states = (
+        sample.contains(model.currency)
+          or printed.symbol != none and sample.contains(printed.symbol)
+      )
+      if not euro and (states or kind == "unit prices") { continue }
       out.push(error(
         "IP-PRINT-02",
         "locale",
-        "The invoice prints amounts in "
+        "The invoice prints "
+          + kind
+          + " in "
           + _quoted(sign)
           + " (e.g. "
           + _quoted(sample)

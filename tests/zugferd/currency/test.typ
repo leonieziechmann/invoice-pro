@@ -103,23 +103,50 @@
   )
   // Amounts without any currency sign say nothing else
   let m = model
-  m.printed-currency.samples = ("1,00",)
+  m.printed-currency = (symbol: "€", amount: "1,00", price: "1,0000")
   assert.eq(rules(m), ())
-  // The code is as good as the symbol
-  m.printed-currency.samples = ("EUR 1.00",)
+  // The code is as good as the symbol, whatever separates the thousands
+  m.printed-currency.amount = "EUR 1’000.00"
+  assert.eq(rules(m), ())
+  // Unit prices may be printed in a subunit, e.g. energy tariffs in cents
+  m.printed-currency.price = "100 ct"
   assert.eq(rules(m), ())
   // A symbol with a dot
-  m.printed-currency = (symbol: "Bs.", samples: ("1,00 Bs.",))
+  m.printed-currency = (symbol: "Bs.", amount: "1,00 Bs.", price: none)
   m.currency = "VES"
   m.profile = resolve-profile("basic-wl", "FR")
   assert.eq(rules(m), ())
   // "€" is no symbol of another currency, even if the locale says so (a
-  // locale whose code was changed alone)
-  m.printed-currency = (symbol: "€", samples: ("1,00 €",))
+  // locale whose code was changed alone), neither for amounts nor for unit
+  // prices
+  m.printed-currency = (symbol: "€", amount: "1,00 €", price: none)
   m.currency = "USD"
   assert.eq(rules(m), ("IP-PRINT-02",))
+  m.printed-currency = (symbol: "$", amount: "1,00 $", price: "1,00 €")
+  assert.eq(rules(m), ("IP-PRINT-02",))
+  assert.eq(
+    diagnostic(m, "IP-PRINT-02").message,
+    "The invoice prints unit prices in \"€\" (e.g. \"1,00 €\"), but the e-invoice states the currency \"USD\" (BT-5).",
+  )
 })[
   #line-items[#item([Consulting], price: 1000)]
+  #payment-goal(days: 14)
+  #bank
+]
+
+// Unit prices in cents, e.g. of an energy tariff ("32,45 ct"), are no other
+// currency
+#model-test(
+  locale: locale.de-de.with(locale.custom.format(
+    currency-fine: value => str(value * 100).replace(".", ",") + " ct",
+  )),
+  model => {
+    assert.eq(model.printed-currency.amount, "1,00 €")
+    assert.eq(model.printed-currency.price, "100 ct")
+    assert.eq(rules(model), ())
+  },
+)[
+  #line-items[#item([Strom], price: 0.3245, quantity: 1000, unit: "kWh")]
   #payment-goal(days: 14)
   #bank
 ]
@@ -128,7 +155,7 @@
 #model-test(model => {
   let m = model
   m.currency = "VES"
-  m.printed-currency.samples = ()
+  m.printed-currency = (symbol: none, amount: none, price: none)
   assert.eq(rules(m), ("BR-CL-04",))
   assert(diagnostic(m, "BR-CL-04").message.contains("EN 16931 (COMFORT)"))
   // The Factur-X code list of BASIC WL and MINIMUM has them
