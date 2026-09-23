@@ -236,3 +236,52 @@
     #item([Fahrt], price: 100)
   ]
 ]
+
+// --- 6. An item of a bundle is no line of its own ---
+// The bundle is printed and written as one line, which names its items: the
+// note and the country of origin of one of them would be lost silently.
+#for args in (
+  (note: "Seriennummer 4711"),
+  (note: [Geprüft]),
+  (origin: country.it),
+) {
+  // In a bundle, and in a bundle inside a bundle
+  for items in (
+    [#item([Wein], price: 20, ..args)],
+    [#bundle([Süßes])[#item([Pralinen], price: 10, ..args)]],
+  ) {
+    let message = catch(() => invoice(
+      theme: themes.blank,
+      locale: locale.de-de,
+      sender: seller,
+      recipient: buyer-fr,
+    )[
+      #line-items[
+        #bundle([Geschenkkorb])[
+          #items
+          #item([Karte], price: 2)
+        ]
+      ]
+    ])
+    let expected = "item::note and item::origin are not supported on an item inside a `bundle`"
+    assert(
+      message != none and message.contains(expected),
+      message: "Expected `" + expected + "`, got " + repr(message),
+    )
+  }
+}
+// Without them, and outside a bundle, an item is fine
+#invoice(
+  theme: themes.blank,
+  locale: locale.de-de,
+  sender: seller,
+  recipient: buyer-fr,
+)[
+  #line-items[
+    #bundle([Geschenkkorb])[
+      #item([Wein], price: 20, note: none, origin: none)
+      #item([Pralinen], price: 10)
+    ]
+    #item([Versand], price: 5, note: "Paketdienst", origin: country.de)
+  ]
+]
