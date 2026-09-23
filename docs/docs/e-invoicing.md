@@ -367,7 +367,7 @@ Any other code of UNTDID 1001 for invoices and credit notes can be given as text
 
 - A credit note with a negative total would ask the buyer to pay, so it stops the e-invoice (`IP-DOC-03`). An invoice with a negative total is valid, but a credit note is the document for it (`IP-DOC-04`, a warning).
 - As long as an amount is due, the credit note says when or how the buyer gets it (`BR-CO-25`): [`payment-goal`](./api-reference/components.md#payment-goal) prints that the amount is transferred within the given days (and states that date, BT-9), a textual `due-date` (e.g. `due-date: "Der Betrag wird mit Ihrer nächsten Rechnung verrechnet."`) states the terms (BT-20).
-- [`bank-details`](./api-reference/components.md#bank-details) on a credit note are the account the amount is paid to, usually the buyer's: the account holder defaults to the recipient's name, and no EPC-QR code is printed. XRechnung requires payment instructions (BG-16) on credit notes as well (`BR-DE-1`).
+- [`bank-details`](./api-reference/components.md#bank-details) on a credit note are the account the amount is paid to, usually the buyer's: the account holder defaults to the recipient's name, and no EPC-QR code is printed. Do not reuse the bank details of your invoices on a credit note: your own account would be printed with the buyer as its holder and stated as the account the credit is paid into. XRechnung requires payment instructions (BG-16) on credit notes as well (`BR-DE-1`).
 - A document that amends an invoice must refer to it (Art. 219 VAT Directive): set `preceding-invoice-nr` (and `preceding-invoice-date`) to the invoice the credit note refers to. The default `references` print them.
 - In German, a credit note is titled "Rechnungskorrektur": the German VAT law reserves "Gutschrift" for self-billed invoices (§ 14 Abs. 2 Satz 2 UStG). A commercial credit note titled "Gutschrift" is permitted as well; set `subject: "Gutschrift"` together with `document-type: "credit-note"` if you prefer it.
 
@@ -448,7 +448,7 @@ A service period printed as a text of its own, e.g. `references.service-time(val
 
 ### 11. Notes (BT-22)
 
-`notes` on the invoice are texts about the invoice as a whole, e.g. terms of delivery or legal notices. They are printed below the line items, with the exemption notes, and written into the XML as invoice notes (BT-22) with their line breaks, from the `"basic-wl"` profile on (`"minimum"` has none, which is reported as a warning, `IP-PROFILE-01`). A note can carry a subject code of UNTDID 4451 (BT-21, `BR-CL-08`), e.g. `"AAI"` for general information or `"REG"` for regulatory information:
+`notes` on the invoice are texts about the invoice as a whole, e.g. terms of delivery or legal notices. They are printed below the line items, with the exemption notes, and written into the XML as invoice notes (BT-22) with their line breaks, from the `"basic-wl"` profile on (`"minimum"` has none, which is reported as a warning, `IP-PROFILE-01`). Like the exemption notes, they are annotations below the line items, which `line-items(show-information: false)` hides while the XML still states them: keep them shown. A note can carry a subject code of UNTDID 4451 (BT-21, `BR-CL-08`), e.g. `"AAI"` for general information or `"REG"` for regulatory information:
 
 ```typst
 #show: invoice.with(
