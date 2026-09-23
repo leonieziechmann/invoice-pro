@@ -564,13 +564,13 @@
   let address-vertical = format-poly-block(address-raw)
   let address-inline = format-poly-inline(address-raw)
 
-  import "../utils/coercion.typ": to-string
+  // The raw lines; the e-invoice extracts their plain text itself.
   let address-lines = if address-raw == none {
     ()
   } else if type(address-raw) == array {
-    address-raw.map(to-string)
+    address-raw
   } else {
-    (to-string(address-raw),)
+    (address-raw,)
   }
 
   // 4. Format city (handling international country name printing)

@@ -31,19 +31,25 @@ tests/
 │       ├── .gitignore
 │       └── test.typ
 │
-└── line-items/            # Focused unit-style tests for calculations
-    └── totals/
-        ├── .gitignore
-        └── test.typ       # Uses data-test for value assertions
+├── line-items/            # Focused unit-style tests for calculations
+│   └── totals/
+│       ├── .gitignore
+│       └── test.typ       # Uses data-test for value assertions
+│
+└── zugferd/               # Unit tests of the e-invoice (ZUGFeRD) pipeline
+    ├── xml/               # Plain text, number formatting, XML serialization
+    ├── model/             # E-invoice data model built from an invoice
+    ├── validate/          # Business rule checks (diagnostics)
+    └── report/            # Error message, "report" and "ignore" modes
 ```
 
 ### Naming Conventions
 
-| Level                                                 | Purpose                     | Examples                                                                                         |
-| ----------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------ |
-| **Category** (`docs/`, `integration/`, `line-items/`) | Groups tests by intent      | `docs/` = documentation parity, `integration/` = full renders, `line-items/` = calculation logic |
-| **Test case directory**                               | Descriptive kebab-case name | `features-complex`, `totals`, `getting-started-minimal`                                          |
-| **Test file**                                         | Always `test.typ`           | Required by tytanic                                                                              |
+| Level                                                             | Purpose                     | Examples                                                                                                                          |
+| ----------------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Category** (`docs/`, `integration/`, `line-items/`, `zugferd/`) | Groups tests by intent      | `docs/` = documentation parity, `integration/` = full renders, `line-items/` = calculation logic, `zugferd/` = e-invoice pipeline |
+| **Test case directory**                                           | Descriptive kebab-case name | `features-complex`, `totals`, `getting-started-minimal`                                                                           |
+| **Test file**                                                     | Always `test.typ`           | Required by tytanic                                                                                                               |
 
 ### The `.gitignore` Requirement
 
@@ -353,6 +359,8 @@ ZUGFeRD tests verify that generated invoices comply with the **EN 16931** Europe
 2. Extracts the embedded `factur-x.xml` attachment using `pdfdetach` (from `poppler-utils`).
 3. Validates the XML syntax and Schematron business rules (including XRechnung / EN16931 rules) using the **Mustangproject CLI validator** (`mustang-cli`).
 
+Independently of Mustang, `invoice-pro` checks the e-invoice data itself while compiling (`src/zugferd/validate.typ`) and lists every violated rule at once. The tests under `tests/zugferd/` cover these checks; the Mustang validation makes sure that an invoice passing them is valid for the official validator as well.
+
 #### Running Validations
 
 ```bash
@@ -389,6 +397,14 @@ The automated `validate-all-zugferd` suite covers:
 - `tests/integration/zugferd-reverse-charge/test.typ` — Reverse charge mechanism (tax category `AE`).
 - `tests/integration/payment-reference/*/test.typ` — Payment reference resolution (`bank-details` argument > `payment-reference` > `invoice-nr`). Each test also asserts that the printed bank details, EPC-QR payload, reference sign and `info.payment-reference` match BT-83 of the attached `factur-x.xml`.
 - `tests/integration/zugferd-item-ids/test.typ` — Item identifiers (BT-155, BT-156, BT-157) in `ram:SpecifiedTradeProduct`.
+- `tests/integration/zugferd-delivery-address/test.typ` — Separate delivery address (BG-13, `ram:ShipToTradeParty`).
+- `tests/integration/zugferd-inclusive/test.typ` — Gross prices (`tax-mode: "inclusive"`) written as net amounts that add up to the printed totals.
+- `tests/integration/zugferd-precision/test.typ` — Unit prices with four decimals, fractional quantities, a price per base quantity (BT-149) and a credited line.
+- `tests/integration/zugferd-small-biz-modifiers/test.typ` — Small business exemption (category `O`) with item and document level discounts and surcharges.
+- `tests/integration/zugferd-intra-community/test.typ` — Intra-community supply (category `K`) with the deliver-to country taken from the buyer.
+- `tests/integration/zugferd-text/test.typ` — Styled content, smart quotes and XML special characters in names, reasons and references.
+- `tests/integration/zugferd-seller-id/test.typ` — Seller identifier (BT-29) without tax registration (#42).
+- `tests/docs/e-invoicing-complete/test.typ` — Complete example of the e-invoicing documentation.
 - `template/invoice.typ` — Default release invoice template.
 
 #### When to Run ZUGFeRD Validation
@@ -409,6 +425,7 @@ If Mustang reports validation errors:
    pdfdetach -saveall -o /tmp/extracted /tmp/test.pdf
    cat /tmp/extracted/factur-x.xml
    ```
+4. If Mustang rejects an invoice that compiled without errors, `invoice-pro`'s own validation misses a rule: add the check to `src/zugferd/validate.typ` and a case to `tests/zugferd/validate/test.typ`.
 
 ---
 
@@ -437,6 +454,8 @@ Every non-trivial code block in `docs/docs/` must be registered here. When addin
 | `api-reference/components.md`    | `apply-bulk-tax`   | Apply block wrapping items with shared tax rate              | `docs/api-components-apply/`    | ✅                 |
 | `api-reference/theme.md`         | `din5008-example`  | DIN-5008 theme with custom parameters                        | `docs/api-theme-din5008/`       | ✅                 |
 | `api-reference/theme.md`         | `blank-example`    | Blank theme with native Typst page setup                     | `docs/api-theme-blank/`         | ✅                 |
+| `e-invoicing.md`                 | `custom-report`    | Theme `zugferd-report` function for a custom problem list    | `docs/e-invoicing-report/`      | ✅                 |
+| `e-invoicing.md`                 | `complete-example` | Complete ZUGFeRD-compliant invoice                           | `docs/e-invoicing-complete/`    | ✅                 |
 | `api-reference/locale/index.md`  | `locale-customize` | Locale customization with `locale.custom` overrides          | —                               | ⚠️ not implemented |
 | `api-reference/locale/index.md`  | `currency-format`  | Custom currency formatting override                          | —                               | ⚠️ not implemented |
 | `api-reference/locale/custom.md` | `pl-language`      | Polish language dictionary definition                        | —                               | ⚠️ not implemented |
@@ -458,6 +477,7 @@ Every bug reported as a GitHub issue must be registered here. When a bug is fixe
 | [#29](https://github.com/leonieziechmann/invoice-pro/issues/29) | Validate mandatory e-invoicing fields (BT-49, BT-10, BG-6) instead of omitting silently | `issues/issue-29/` | ✅     |
 | [#39](https://github.com/leonieziechmann/invoice-pro/issues/39) | Omit 0% VAT from totals and collapse tax section (e.g. tax-exempt-small-biz)            | `issues/issue-39/` | ✅     |
 | [#41](https://github.com/leonieziechmann/invoice-pro/issues/41) | Always show bold net total in exclusive mode; subtotal only when modifiers apply        | `issues/issue-41/` | ✅     |
+| [#42](https://github.com/leonieziechmann/invoice-pro/issues/42) | ZUGFeRD: set the seller identifier (BT-29) without a tax registration (BT-32)           | `issues/issue-42/` | ✅     |
 
 > _Add entries as bugs are reported._
 

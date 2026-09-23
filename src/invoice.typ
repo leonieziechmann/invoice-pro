@@ -96,8 +96,13 @@
 
   /// ZUGFeRD / Factur-X profile for embedding machine-readable XML into the PDF.
   /// Requires exporting with PDF/A-3 (`typst compile --pdf-standard=a-3b`).
-  /// -> none | "minimum" | "basic-wl" | "basic" | "en16931"
+  /// -> none | "minimum" | "basic-wl" | "basic" | "en16931" | "xrechnung"
   zugferd: none,
+  /// What to do when the e-invoice data violates the rules of the profile.
+  /// `"panic"` stops the compilation with a list of all problems, `"report"`
+  /// lists them in the document instead, and `"ignore"` embeds the XML anyway.
+  /// -> "panic" | "report" | "ignore"
+  zugferd-errors: "panic",
 
   /// The content of the invoice, typically containing line-items and other components.
   /// -> content
@@ -174,6 +179,13 @@
     "basic",
     "en16931",
     "xrechnung",
+  )
+  types.require(
+    zugferd-errors,
+    "invoice::zugferd-errors",
+    "panic",
+    "report",
+    "ignore",
   )
 
   /** Input Calculations **/
@@ -317,6 +329,7 @@
     tax-exempt-small-biz: tax-exempt-small-biz,
 
     zugferd: zugferd,
+    zugferd-errors: zugferd-errors,
   )
 
   /** Data Calculations **/

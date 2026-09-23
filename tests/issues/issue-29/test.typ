@@ -51,21 +51,40 @@
   )
 }
 
-// --- 1. Assert compile-time panics on missing mandatory fields ---
+// The rules of the errors (or warnings) listed in the compiler error, sorted;
+// `()` if the invoice compiles.
+#let reported-rules(level: "error", ..args) = {
+  let message = catch(() => test-e-invoice(..args))
+  if message == none { return () }
+  assert(
+    message.starts-with("assertion failed: The e-invoice"),
+    message: "Unexpected error: " + message,
+  )
+  let (errors, ..warnings) = message.split("\nWarnings:")
+  let section = if level == "error" { errors } else { warnings.join() }
+  if section == none { return () }
+  section
+    .matches(regex("\n  (?:[0-9]+\\.|-) \\[([A-Za-z0-9-]+)\\]"))
+    .map(m => m.captures.first())
+    .sorted()
+}
+
+// --- 1. Assert compile-time errors on missing mandatory fields ---
 #{
-  // (a) Profile en16931 (cross-border DE -> FR): missing buyer electronic address (BT-49)
-  let res-en16931-bt49 = catch(() => test-e-invoice(
-    zugferd: "en16931",
-    recipient-overrides: (country: country.fr),
-  ))
+  // (a) Profile en16931 (cross-border DE -> FR): EN 16931 only recommends the
+  //     buyer electronic address (BT-49), so the invoice compiles
   assert.eq(
-    res-en16931-bt49,
-    "panicked with: \"e-invoicing (profile 'en16931') requires a buyer electronic address (BT-49). Set 'electronic-address', 'vat-id', or 'email' on the recipient.\"",
+    reported-rules(
+      zugferd: "en16931",
+      recipient-overrides: (country: country.fr),
+    ),
+    (),
   )
 
-  // (b) Profile en16931 (cross-border DE -> FR): missing seller electronic address (BT-34)
-  let res-en16931-bt34 = catch(() => test-e-invoice(
-    zugferd: "en16931",
+  // (b) Profile en16931 (cross-border DE -> FR): without VAT ID, tax number and
+  //     email, the seller can neither be identified (BR-CO-26) nor charge VAT
+  //     (BR-S-02); the missing seller electronic address (BT-34) is a warning
+  let seller-without-ids = (
     recipient-overrides: (country: country.fr, email: "buyer@example.fr"),
     sender-overrides: (
       vat-id: none,
@@ -73,86 +92,79 @@
       phone: "+49 89 123456",
       email: none,
     ),
-  ))
+  )
   assert.eq(
-    res-en16931-bt34,
-    "panicked with: \"e-invoicing (profile 'en16931') requires a seller electronic address (BT-34). Set 'electronic-address', 'vat-id', or 'email' on the sender.\"",
+    reported-rules(zugferd: "en16931", ..seller-without-ids),
+    ("BR-CO-26", "BR-S-02"),
+  )
+  assert.eq(
+    reported-rules(level: "warning", zugferd: "en16931", ..seller-without-ids),
+    ("PEPPOL-EN16931-R020",),
   )
 
-  // (c) Profile xrechnung (domestic DE -> DE): missing buyer electronic address (BT-49)
-  let res-xrec-bt49 = catch(() => test-e-invoice(zugferd: "en16931"))
+  // (c) Profile xrechnung (domestic DE -> DE): every missing field is listed at
+  //     once: buyer electronic address (BT-49), buyer reference (BT-10) and
+  //     seller contact (BG-6)
   assert.eq(
-    res-xrec-bt49,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a buyer electronic address (BT-49). Set 'electronic-address', 'vat-id', or 'email' on the recipient.\"",
+    reported-rules(zugferd: "en16931"),
+    ("BR-DE-15", "BR-DE-2", "PEPPOL-EN16931-R010").sorted(),
   )
 
-  // (d) Profile xrechnung: missing buyer reference (BT-10)
-  let res-xrec-bt10 = catch(() => test-e-invoice(
-    zugferd: "en16931",
-    recipient-overrides: (email: "buyer@example.de"),
-  ))
+  // (d) Profile xrechnung: missing buyer reference (BT-10) and seller contact
   assert.eq(
-    res-xrec-bt10,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a buyer reference (BT-10). Set 'buyer-reference' or 'leitweg-id' on the recipient.\"",
+    reported-rules(
+      zugferd: "en16931",
+      recipient-overrides: (email: "buyer@example.de"),
+    ),
+    ("BR-DE-15", "BR-DE-2"),
   )
 
   // (e) Profile xrechnung: missing seller contact group (BG-6)
-  let res-xrec-bg6 = catch(() => test-e-invoice(
-    zugferd: "en16931",
-    recipient-overrides: (
-      email: "buyer@example.de",
-      buyer-reference: "DEI23456789-12345-12",
-    ),
-  ))
   assert.eq(
-    res-xrec-bg6,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires seller contact information (BG-6). Set 'contact' (with name, phone, and email) or 'contact-name', 'phone', and 'email' on the sender.\"",
+    reported-rules(
+      zugferd: "en16931",
+      recipient-overrides: (
+        email: "buyer@example.de",
+        buyer-reference: "DEI23456789-12345-12",
+      ),
+    ),
+    ("BR-DE-2",),
   )
 
   // (f) Profile xrechnung: missing individual seller contact components (BT-41, BT-42, BT-43)
-  let res-xrec-bt41 = catch(() => test-e-invoice(
-    zugferd: "en16931",
-    recipient-overrides: (
-      email: "buyer@example.de",
-      buyer-reference: "DE123456789-12345-12",
-    ),
-    sender-overrides: (
-      contact: (phone: "+49 89 123456", email: "seller@example.de"),
-    ),
-  ))
-  assert.eq(
-    res-xrec-bt41,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller contact name (BT-41). Set 'contact.name' or 'contact-name' on the sender.\"",
+  let recipient = (
+    email: "buyer@example.de",
+    buyer-reference: "DE123456789-12345-12",
   )
-
-  let res-xrec-bt42 = catch(() => test-e-invoice(
-    zugferd: "en16931",
-    recipient-overrides: (
-      email: "buyer@example.de",
-      buyer-reference: "DE123456789-12345-12",
-    ),
-    sender-overrides: (
-      contact: (name: "Max Mustermann", email: "seller@example.de"),
-    ),
-  ))
   assert.eq(
-    res-xrec-bt42,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller contact phone number (BT-42). Set 'contact.phone' or 'phone' on the sender.\"",
+    reported-rules(
+      zugferd: "en16931",
+      recipient-overrides: recipient,
+      sender-overrides: (
+        contact: (phone: "+49 89 123456", email: "seller@example.de"),
+      ),
+    ),
+    ("BR-DE-5",),
   )
-
-  let res-xrec-bt43 = catch(() => test-e-invoice(
-    zugferd: "en16931",
-    recipient-overrides: (
-      email: "buyer@example.de",
-      buyer-reference: "DE123456789-12345-12",
-    ),
-    sender-overrides: (
-      contact: (name: "Max Mustermann", phone: "+49 89 123456"),
-    ),
-  ))
   assert.eq(
-    res-xrec-bt43,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller contact email address (BT-43). Set 'contact.email' or 'email' on the sender.\"",
+    reported-rules(
+      zugferd: "en16931",
+      recipient-overrides: recipient,
+      sender-overrides: (
+        contact: (name: "Max Mustermann", email: "seller@example.de"),
+      ),
+    ),
+    ("BR-DE-6",),
+  )
+  assert.eq(
+    reported-rules(
+      zugferd: "en16931",
+      recipient-overrides: recipient,
+      sender-overrides: (
+        contact: (name: "Max Mustermann", phone: "+49 89 123456"),
+      ),
+    ),
+    ("BR-DE-7",),
   )
 }
 

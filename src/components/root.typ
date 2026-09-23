@@ -1,5 +1,6 @@
 #import "../loom-wrapper.typ": loom, managed-motif
-#import "../zugferd/build.typ": build-zugferd-xml
+#import "../zugferd/zugferd.typ": process-zugferd
+#import "../zugferd/report.typ": format-report, render-zugferd-report
 
 /// The internal root container that wraps the invoice body.
 /// It initializes the global context and provides the base document structure to the theme.
@@ -70,6 +71,7 @@
 
       ensure("theme", "document", (.., body) => body)
       ensure("zugferd", none)
+      ensure("zugferd-errors", "panic")
 
       // Internally Calculated
       nest("global", {
@@ -298,18 +300,38 @@
           )
       )
 
+      let body = body
       if ctx.zugferd != none {
+        let result = process-zugferd(
+          ctx,
+          view.item-data,
+          payment-goal: view.payment-goal,
+          bank: view.bank,
+        )
+        let errors = result.diagnostics.filter(d => d.level == "error")
+        if errors.len() > 0 and ctx.zugferd-errors == "panic" {
+          assert(false, message: format-report(result))
+        }
+
         pdf.attach(
           "/factur-x.xml",
-          build-zugferd-xml(
-            ctx,
-            view.item-data,
-            view.payment-goal,
-          ),
-          relationship: "alternative",
+          result.xml,
+          // MINIMUM and BASIC WL do not replace the visual invoice, so their
+          // XML is attached as data rather than as an alternative of it.
+          relationship: if result.profile.id in ("minimum", "basic-wl") {
+            "data"
+          } else { "alternative" },
           mime-type: "text/xml",
           description: "ZUGFeRD / Factur-X invoice data",
         )
+
+        if ctx.zugferd-errors == "report" and result.diagnostics.len() > 0 {
+          let render-report = ctx.theme.at(
+            "zugferd-report",
+            default: render-zugferd-report,
+          )
+          body = render-report(ctx, result) + body
+        }
       }
 
       (ctx.theme.document)(ctx, body)

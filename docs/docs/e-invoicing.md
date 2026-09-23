@@ -10,7 +10,7 @@ sidebar_position: 3
 ZUGFeRD/Factur-X support in `invoice-pro` is currently **experimental**. Please note the following known limitations:
 
 - **XMP Profile Metadata:** The document's XMP profile does not yet correctly announce the attached `factur-x.xml` file. This can cause some strict validation tools to fail or hang up.
-- **No Self-Validation:** The template code does not validate your final document structure for full regulatory compliance. You **must** verify the generated PDF and XML payload using an external validator (e.g., the [ZUGFeRD Community Validator](https://www.zugferd-community.net/) or other official portals) before using them in production.
+- **Built-in Validation Is Not a Certification:** The template checks your invoice data against the business rules of the selected profile before embedding the XML (see [Validation and Error Reporting](#validation-and-error-reporting)). This catches missing or inconsistent data early, but it does not replace an official validator: verify the generated PDF and XML payload with an external validator (e.g., the [ZUGFeRD Community Validator](https://www.zugferd-community.net/) or other official portals) before using them in production.
 - **Reporting Issues:** If you encounter edge cases, schema validation failures, or formatting issues, please report them by opening an issue on our GitHub repository.
   :::
 
@@ -24,7 +24,7 @@ Under the hood, when you set a ZUGFeRD profile, the template generates a standar
 pdf.attach(
   "/factur-x.xml",
   xml-bytes,
-  relationship: "alternative",
+  relationship: "alternative", // "data" for MINIMUM and BASIC WL
   mime-type: "text/xml",
   description: "ZUGFeRD / Factur-X invoice data",
 )
@@ -67,6 +67,70 @@ If `zugferd` is set to `"en16931"` and both the sender and recipient are located
 
 ---
 
+## Validation and Error Reporting
+
+Before the XML is embedded, `invoice-pro` checks the invoice data against the business rules of EN 16931, the selected Factur-X profile and, for `"xrechnung"`, the German CIUS (rules `BR-DE-*`). The check does not stop at the first problem: it collects **every** violated rule, so you can fix them all in one go.
+
+By default, the compilation fails with the complete list. Each entry names the rule, the input to look at, what is wrong and how to fix it:
+
+```text
+error: assertion failed: The e-invoice (ZUGFeRD / Factur-X, profile XRechnung 3.0) is not valid: 2 errors.
+  1. [BR-DE-15] recipient.buyer-reference: XRechnung requires the buyer reference (BT-10), e.g. the Leitweg-ID.
+     Hint: Set `buyer-reference` (or `leitweg-id`) on the recipient.
+  2. [BR-CO-25] payment-goal: An amount is due, but neither the payment due date (BT-9) nor the payment terms (BT-20) are given.
+     Hint: Add `#payment-goal(days: 14)` or set `due-date` on the invoice.
+XRechnung is used because seller and buyer are located in Germany (`zugferd: "en16931"`).
+Set `zugferd-errors: "report"` on the invoice to list these problems in the document instead.
+```
+
+Problems come in two levels:
+
+- **Errors** make the XML invalid for the profile (e.g. a missing invoice number, an unknown unit code or a VAT breakdown that does not add up).
+- **Warnings** point out data that is valid but most likely not intended (e.g. an IBAN with a wrong check digit, or an EN 16931 invoice without the electronic addresses Peppol expects). Warnings never stop the compilation.
+
+### The `zugferd-errors` Parameter
+
+The `zugferd-errors` parameter of `invoice` decides what happens with the problems:
+
+| Value               | Behavior                                                                                                                                                                                     |
+| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"panic"` (default) | Errors stop the compilation with the list shown above (including any warnings). An invoice with warnings only compiles.                                                                      |
+| `"report"`          | Nothing stops the compilation. Errors and warnings are listed in a box at the top of the invoice, which is handy while filling in the data in the preview. The XML is embedded nevertheless. |
+| `"ignore"`          | The XML is embedded without any check result. Use this only if you validate the XML yourself.                                                                                                |
+
+```typst
+#show: invoice.with(
+  zugferd: "en16931",
+  zugferd-errors: "report", // show the problems in the document while drafting
+  // ...
+)
+```
+
+:::warning
+With `"report"` and `"ignore"`, an invoice with errors still carries its (invalid) XML. Switch back to the default `"panic"` before you send an invoice.
+:::
+
+### Custom Report Layout
+
+In `"report"` mode, the list is rendered by the theme function `zugferd-report`, which receives the context and the check result. The result contains the resolved `profile` (with `id`, `name` and `promoted`) and the `diagnostics`, an array of dictionaries with the keys `level` (`"error"` or `"warning"`), `rule`, `field`, `message` and `hint`:
+
+```typst
+#show: invoice.with(
+  theme: themes.DIN-5008().with(
+    zugferd-report: (ctx, result) => {
+      for d in result.diagnostics [
+        - *#d.rule* (#d.level): #d.message
+      ]
+    },
+  ),
+  zugferd: "en16931",
+  zugferd-errors: "report",
+  // ...
+)
+```
+
+---
+
 ## Data Requirements for Compliance
 
 For the generated XML payload to be valid, your input data must satisfy strict standard requirements:
@@ -86,9 +150,21 @@ Both the `sender` and `recipient` dictionaries must include:
     city: (name: "Berlin", post-code: "10115")
     ```
 - **Tax Identifiers:**
-  - The **sender** should include a `tax-nr` (national tax number) and/or `vat-id` (value-added tax identifier).
-  - The **recipient** (buyer) should include a `vat-id` if applicable.
+  - The **sender** should include a `tax-nr` (national tax number) and/or `vat-id` (value-added tax identifier, written with its country prefix, e.g. `"DE123456789"`; spaces are removed).
+  - The **recipient** (buyer) should include a `vat-id` if applicable. Reverse charge (`AE`) and intra-community supplies (`K`) require it.
   - The `"minimum"` profile identifies the seller only by its VAT identifier (BT-31), so the **sender** must have a `vat-id` there. Senders with only a `tax-nr` need `"basic-wl"` or higher.
+
+- **Seller Identifier (BT-29):** The buyer must be able to identify the seller (BR-CO-26), by the VAT identifier or a seller identifier. Without a VAT identifier, the `tax-nr` is used as seller identifier. If you have neither, or want to state a different identifier (e.g. your supplier number at the customer, or a company registration number), set `id` on the sender; it does not assert a tax registration. A globally registered identifier (e.g. a GLN) can be given with its ISO/IEC 6523 scheme:
+
+  ```typst
+  sender: (
+    ...
+    id: "70025",
+    global-id: (scheme: "0088", id: "4000001123452"), // GLN
+  )
+  ```
+
+  The same keys on the `recipient` set the buyer identifier (BT-46).
 
 - **Seller Contact (BG-6):** Under German XRechnung rules, the seller must specify contact details. You can define this under the `contact` key of the `sender` dictionary (containing keys `name`, `phone`, `email`):
 
@@ -103,7 +179,7 @@ Both the `sender` and `recipient` dictionaries must include:
   )
   ```
 
-  Alternatively, you can define them as direct fields on `sender` (using keys `contact-name`, `phone`, `email`).
+  Alternatively, you can define them as direct fields on `sender` (using keys `contact-name`, `phone`, `email`). Missing fields of `contact` fall back to these keys.
 
 - **Buyer Reference / Leitweg-ID (BT-10):** A buyer reference (such as the customer's Leitweg-ID for public sectors) is mandatory under XRechnung. Define this under `buyer-reference` or `leitweg-id` in the `recipient` dictionary:
 
@@ -114,23 +190,29 @@ Both the `sender` and `recipient` dictionaries must include:
   )
   ```
 
-- **Electronic Addresses & EAS Routing (BT-34 / BT-49):** For routing across networks (such as Peppol), both parties require an electronic address.
-  - **Auto-derivation from VAT ID:** If `vat-id` is specified on the party, the system automatically derives the Endpoint ID and the Electronic Address Scheme (EAS) prefix based on the country code:
-    - Germany (`DE`) -> scheme `9930`
-    - Austria (`AT`) -> scheme `9914`
-    - Switzerland (`CH`) -> scheme `9927`
-    - Belgium (`BE`) -> scheme `9925`
-    - France (`FR`) -> scheme `9918`
-    - Netherlands (`NL`) -> scheme `9944`
-    - UK / United Kingdom (`GB`/`UK`) -> scheme `9932`
-    - Ireland (`IE`) -> scheme `9935`
-    - Italy (`IT`) -> scheme `9906`
-    - Spain (`ES`) -> scheme `9920`
-  - **Manual Override:** You can manually specify a custom electronic address on the party dictionary:
+- **Electronic Addresses & EAS Routing (BT-34 / BT-49):** For routing across networks (such as Peppol), both parties need an electronic address. XRechnung requires them; for the other profiles a missing address is reported as a warning (`"en16931"`) or not at all.
+  - **Auto-derivation from VAT ID:** If `vat-id` is specified on the party, the system derives the endpoint from it. The Electronic Address Scheme (EAS) is chosen by the country prefix of the VAT ID:
+
+    | VAT ID prefix | Scheme | VAT ID prefix | Scheme | VAT ID prefix | Scheme |
+    | :------------ | :----- | :------------ | :----- | :------------ | :----- |
+    | `AT`          | `9914` | `EE`          | `9931` | `LU`          | `9938` |
+    | `BE`          | `9925` | `EL` / `GR`   | `9933` | `LV`          | `9939` |
+    | `BG`          | `9926` | `ES`          | `9920` | `MT`          | `9943` |
+    | `CH`          | `9927` | `FR`          | `9957` | `NL`          | `9944` |
+    | `CY`          | `9928` | `GB`          | `9932` | `PL`          | `9945` |
+    | `CZ`          | `9929` | `HR`          | `9934` | `PT`          | `9946` |
+    | `DE`          | `9930` | `HU`          | `9910` | `RO`          | `9947` |
+    |               |        | `IE`          | `9935` | `SI`          | `9949` |
+    |               |        | `IT`          | `0211` | `SK`          | `9950` |
+    |               |        | `LT`          | `9937` |               |        |
+
+  - **Email Fallback:** Without a VAT ID (or for another country), the email address (`contact.email` or `email`) is used with the scheme `EM`.
+  - **Manual Override:** You can manually specify a custom electronic address on the party dictionary. A plain email address is accepted as well:
     ```typst
     sender: (
       ...
       electronic-address: (scheme: "0088", id: "4000001123452") // GLN Example
+      // or: electronic-address: "invoices@example.com"
     )
     ```
 
@@ -146,20 +228,38 @@ ZUGFeRD requires line-item units to comply with the **UN/ECE Recommendation 20**
   ```typst
   unit: (display: "Piece", code: "C62")
   ```
-- **Automatic Mapping:** As a fallback, common unit strings (such as `"h"`, `"hrs"`, `"Std."` for hours, or `"days"`, `"Tag"` for days) are automatically mapped to their official codes.
+- **Automatic Mapping:** As a fallback, a string that is exactly a unit code (e.g. `"H87"`) is used as is, and common unit strings (such as `"h"`, `"hrs"`, `"Std."` for hours, or `"days"`, `"Tag"` for days) are mapped to their official codes. Any other string becomes `C62` ("one").
+
+Unit codes are checked against the UN/ECE Recommendation 20 code list. Prices keep up to six decimals, and a `base-quantity` (e.g. a price per 100 pieces) is written as the price base quantity (BT-149).
 
 ### 3. Tax Category Codes
 
 Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the standard functions from the `tax` module:
 
-- Standard VAT/GST: `tax.vat(19%)` (maps to category **S**).
-- Tax Exempt: `tax.exempt()` (maps to category **E**).
-- Reverse Charge: `tax.reverse-charge()` (maps to category **AE**).
-- Intra-community Supply: `tax.intra-community()` (maps to category **K**).
+- Standard VAT/GST: `tax.vat(19%)` (maps to category **S**). Reduced rates are standard rated as well, e.g. `tax.vat(7%)`.
+- Zero Rated: `tax.zero()` (maps to category **Z**).
+- Tax Exempt: `tax.exempt(grounds: ..)` (maps to category **E**). The `grounds` are mandatory for exempt items (BR-E-10).
+- Reverse Charge: `tax.reverse-charge()` (maps to category **AE**). Requires the VAT identifier of the buyer.
+- Intra-community Supply: `tax.intra-community()` (maps to category **K**). Requires the VAT identifiers of both parties. Without a `delivery-address`, the buyer's country is stated as deliver-to country.
+- Export: `tax.export()` (maps to category **G**). Requires the seller VAT identifier.
+- Outside Scope / Small Business: `tax.outside-scope()` and `tax-exempt-small-biz: true` (map to category **O**). An invoice not subject to VAT carries no VAT identifiers, so the seller is identified by `tax-nr` or `id`. Items of category `O` cannot be mixed with other categories on one invoice.
+
+EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `M`. The special constructors in `tax.special` that map to other categories (e.g. `lower-rate`, the margin schemes or split payment `B`) cannot be used for e-invoices.
+
+Where EN 16931 requires an exemption reason (`AE`, `K`, `G`, `O`), the standard text (e.g. "Reverse charge") is used unless you pass your own `grounds`. For the taxed categories (`S`, `Z`, `L`, `M`), `grounds` are printed on the invoice but left out of the XML, which does not allow them there.
 
 Avoid using raw percentages (e.g., `19%`) directly on items if you need strict validation, as using the `tax` module functions guarantees the category codes are assigned correctly.
 
-### 4. Payment Reference (BT-83)
+### 4. Gross Prices
+
+With `tax-mode: "inclusive"`, the invoice prints gross prices, while the XML states net amounts as EN 16931 requires. Every line and allowance is converted on its own, and rounding differences of a cent are assigned to the largest line of the VAT category, so the XML adds up exactly to the net and gross totals printed on the invoice.
+
+### 5. Payment Terms and Instructions
+
+- **Due Date or Payment Terms (BT-9 / BT-20):** As long as an amount is due, the invoice must state when to pay (BR-CO-25). Add a [`payment-goal`](./api-reference/components.md#payment-goal) (with `days` or a `date`) or set `due-date` on the invoice. A textual `date` or `due-date` (e.g. `[upon receipt]`) is written as payment terms.
+- **Payment Instructions (BG-16):** [`bank-details`](./api-reference/components.md#bank-details) with an `iban` are written as credit transfer (SEPA for EUR invoices). XRechnung requires them (BR-DE-1). IBAN and BIC are written without spaces.
+
+### 6. Payment Reference (BT-83)
 
 The remittance information (`ram:PaymentReference`) always matches the payment reference printed in the [`bank-details`](./api-reference/components.md#bank-details) block and encoded in its EPC-QR code. It is resolved in this order:
 
@@ -169,7 +269,7 @@ The remittance information (`ram:PaymentReference`) always matches the payment r
 
 If `bank-details` explicitly sets `reference: none`, BT-83 is omitted as well.
 
-### 5. Item Identifiers
+### 7. Item Identifiers
 
 Line items can carry article identifiers through the `item-id` parameter:
 
@@ -179,12 +279,18 @@ Line items can carry article identifiers through the `item-id` parameter:
 
 The `"basic"` profile only supports the standard identifier. See [The `item-id` Parameter](./api-reference/line-items/index.md#the-item-id-parameter-and-zugferd) for details.
 
+### 8. Document References
+
+`order-nr` (BT-13), `contract-nr` (BT-12), `delivery-note-nr` (BT-16) and `preceding-invoice-nr` (BT-25, e.g. for corrections) are written to the XML where the profile supports them.
+
 ---
 
 ## Hardcoded Details & Limitations
 
 - **Business Process URN (BT-23):** Whenever using the `"en16931"` or `"xrechnung"` profiles, the Business Process context URN is hardcoded to `urn:fdc:peppol.eu:2017:poacc:billing:01:1.0` (standard billing transaction).
-- **EAS Scheme Fallback:** If a party's country code is not in our auto-derivation map and no custom `electronic-address` is specified, the electronic address block is omitted from the XML payload.
+- **EAS Scheme Fallback:** If a party's VAT ID has no known scheme and neither a custom `electronic-address` nor an email address is specified, the electronic address block is omitted from the XML payload.
+- **Invoice Type Code (BT-3):** Invoices are always written with type code `380` (commercial invoice). Credited lines and negative totals are supported, dedicated credit notes (`381`) are not.
+- **Plain Text:** Names, addresses and references given as content are written as their plain text; formatting is dropped.
 
 ---
 
@@ -258,6 +364,8 @@ Here is a full example of a ZUGFeRD-compliant invoice configuration:
     tax: tax.exempt(grounds: "Section 4 No. 21 UStG"),
   )
 ]
+
+#payment-goal(days: 14)
 
 #bank-details(
   bank: "Global Business Bank",

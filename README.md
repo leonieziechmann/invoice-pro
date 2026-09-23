@@ -10,7 +10,7 @@ A professional, compliant, and automated invoice template for [Typst](https://ty
 
 - **Internationalization (i18n) (New in v0.3.0):** Built-in support for English and German out of the box, plus a highly flexible `locale` API to inject custom translations for any language.
 - **DIN 5008 Compliant:** Supports both Form A and Form B layouts natively via the flexible Theming API.
-- **ZUGFeRD e-invoicing (New in v0.4.0):** (Experimental) Embed EN 16931-compliant Factur-X/ZUGFeRD XML metadata into your generated PDF/A-3B invoices for automated digital processing.
+- **ZUGFeRD e-invoicing (New in v0.4.0):** (Experimental) Embed EN 16931-compliant Factur-X/ZUGFeRD XML metadata into your generated PDF/A-3B invoices for automated digital processing. The invoice data is checked against the rules of the selected profile, and all problems are reported at once.
 - **Block-based API:** Clean, scoped, and declarative data structure using `#line-items`, `#item`, `#group`, and `#bundle`—inspired by CeTZ, keeping your document clutter-free.
 - **Automatic Calculations:** Effortlessly handles line items, nested bundles, sub-totals, and calculates taxes automatically.
 - **EPC QR-Code (GiroCode):** Automatically generates a scannable banking QR code for quick and easy payments using banking apps.

@@ -5,7 +5,10 @@
 #show: invoice.with(
   theme: themes.blank,
   locale: test-locale,
+  // The XML is only built to make sure polymorphic names and addresses can be
+  // serialized; the test data is not a complete e-invoice.
   zugferd: "en16931",
+  zugferd-errors: "ignore",
   sender: (
     name: ("My Company Ltd", "Billing Dept"),
     address: ("123 Street Rd", "Suite 100"),

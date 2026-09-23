@@ -83,6 +83,19 @@ No code blocks.
 | `din5008-example` | DIN-5008 theme with custom form, font, and hole-mark | `0.4.2` | `docs/api-theme-din5008/` |       |
 | `blank-example`   | Blank theme with native Typst page setup             | `0.4.2` | `docs/api-theme-blank/`   |       |
 
+### `e-invoicing.md`
+
+| Code ID                 | Description                                            | Version | Test                         | Notes                             |
+| :---------------------- | :----------------------------------------------------- | :------ | :--------------------------- | :-------------------------------- |
+| `attach`                | How the XML is attached with `pdf.attach`              | —       | —                            | Illustration of the internals     |
+| `compile`               | PDF/A-3b compile command                               | —       | —                            | Bash command, not Typst           |
+| `error-output`          | Example of the compiler error listing all problems     | —       | —                            | Compiler output, not Typst        |
+| `zugferd-errors-report` | Enabling `zugferd-errors: "report"`                    | —       | —                            | Snippet (partial), no test needed |
+| `custom-report`         | Theme `zugferd-report` function for a custom list      | —       | `docs/e-invoicing-report/`   |                                   |
+| `party-snippets`        | City, seller identifier, contact, buyer reference, EAS | —       | —                            | Snippets (partial)                |
+| `unit-snippets`         | Unit builder and dictionary units                      | —       | —                            | Snippets (partial)                |
+| `complete-example`      | Complete ZUGFeRD-compliant invoice                     | `0.4.2` | `docs/e-invoicing-complete/` |                                   |
+
 ### `api-reference/locale/index.md`
 
 | Code ID            | Description                                         | Version | Test | Notes                           |

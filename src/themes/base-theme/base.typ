@@ -2,6 +2,7 @@
 #import "bank-details.typ": render-bank-details
 #import "payment-goal.typ": render-payment-goal
 #import "signature.typ": render-signature
+#import "../../zugferd/report.typ": render-zugferd-report
 
 #import "../../loom-wrapper.typ": eval-content
 
@@ -29,6 +30,9 @@
   /// Layout of the signature.
   /// -> (ctx, dictionary) => content
   signature: render-signature,
+  /// Layout of the e-invoice problems listed with `zugferd-errors: "report"`.
+  /// -> (ctx, dictionary) => content
+  zugferd-report: render-zugferd-report,
 ) = {
   (
     document: (ctx, body) => {
@@ -46,5 +50,6 @@
     bank-details: bank-details,
     payment-goal: payment-goal,
     signature: signature,
+    zugferd-report: zugferd-report,
   )
 }

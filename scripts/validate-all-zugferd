@@ -26,6 +26,14 @@ for test in tests/integration/payment-reference/*/test.typ; do
   "$VALIDATE_ZUGFERD" "$test"
 done
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-item-ids/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-delivery-address/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-inclusive/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-precision/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-small-biz-modifiers/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-intra-community/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-text/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-seller-id/test.typ"
+"$VALIDATE_ZUGFERD" "tests/docs/e-invoicing-complete/test.typ"
 "$VALIDATE_ZUGFERD" "template/invoice.typ"
 
 echo ""

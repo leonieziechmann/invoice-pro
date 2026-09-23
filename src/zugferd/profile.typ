@@ -1,0 +1,126 @@
+// Factur-X / ZUGFeRD profiles and the parts of the invoice each one carries.
+//
+// The flags mirror the Factur-X 1.0.07 (ZUGFeRD 2.3) schemas: the builder
+// leaves out whatever a profile's schema does not allow, and the validator
+// only checks what ends up in the XML.
+
+#let _base = (
+  // BT-23: business process, only announced by the EN 16931 based profiles.
+  business-process: none,
+  // BG-25: invoice lines.
+  lines: false,
+  // BG-5, BG-8, BG-15 (postal addresses beyond the seller country), BT-34,
+  // BT-49 (electronic addresses) and the delivery information (BG-13).
+  addresses: false,
+  // BG-16, BG-20, BG-21, BG-23, BT-20, BT-83: payment instructions, document
+  // level allowances and charges, VAT breakdown, payment terms and reference.
+  settlement: false,
+  // BT-29, BT-46: party identifiers (`ram:ID`, `ram:GlobalID`).
+  party-ids: false,
+  // BT-48: buyer VAT identifier.
+  buyer-vat-id: false,
+  // BG-6: seller contact.
+  seller-contact: false,
+  // BT-86: BIC of the payment service provider.
+  bic: false,
+  // BT-155, BT-156: seller and buyer assigned item identifiers.
+  item-ids: false,
+  // BT-154: item description.
+  item-description: false,
+  // BT-12, BT-16, BT-25: contract, despatch advice and preceding invoice.
+  document-references: false,
+  // The EN 16931 business rules (BR-*) apply to the whole document.
+  en16931: false,
+  // The German CIUS XRechnung (BR-DE-*) applies on top of EN 16931.
+  xrechnung: false,
+)
+
+#let profiles = (
+  minimum: _base
+    + (
+      name: "MINIMUM",
+      guideline: "urn:factur-x.eu:1p0:minimum",
+    ),
+  basic-wl: _base
+    + (
+      name: "BASIC WL",
+      guideline: "urn:factur-x.eu:1p0:basicwl",
+      addresses: true,
+      settlement: true,
+      party-ids: true,
+      buyer-vat-id: true,
+      document-references: true,
+    ),
+  // BASIC is a CIUS of EN 16931 and therefore carries the EN 16931 prefix.
+  basic: _base
+    + (
+      name: "BASIC",
+      guideline: "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic",
+      lines: true,
+      addresses: true,
+      settlement: true,
+      party-ids: true,
+      buyer-vat-id: true,
+      document-references: true,
+      en16931: true,
+    ),
+  en16931: _base
+    + (
+      name: "EN 16931 (COMFORT)",
+      guideline: "urn:cen.eu:en16931:2017",
+      business-process: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+      lines: true,
+      addresses: true,
+      settlement: true,
+      party-ids: true,
+      buyer-vat-id: true,
+      seller-contact: true,
+      bic: true,
+      item-ids: true,
+      item-description: true,
+      document-references: true,
+      en16931: true,
+    ),
+  xrechnung: _base
+    + (
+      name: "XRechnung 3.0",
+      guideline: "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0",
+      business-process: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+      lines: true,
+      addresses: true,
+      settlement: true,
+      party-ids: true,
+      buyer-vat-id: true,
+      seller-contact: true,
+      bic: true,
+      item-ids: true,
+      item-description: true,
+      document-references: true,
+      en16931: true,
+      xrechnung: true,
+    ),
+)
+
+// Guideline ID (BT-24) of a profile.
+#let profile-urn(profile) = {
+  profiles.at(profile, default: profiles.en16931).guideline
+}
+
+/// Resolves the profile the XML is written in.
+///
+/// An `"en16931"` invoice between a German seller and a German buyer is
+/// promoted to `"xrechnung"`, the German CIUS of EN 16931.
+///
+/// -> dictionary
+#let resolve-profile(requested, seller-country, buyer-country) = {
+  let promoted = (
+    requested == "en16931" and seller-country == "DE" and buyer-country == "DE"
+  )
+  let id = if promoted { "xrechnung" } else { requested }
+  (
+    id: id,
+    requested: requested,
+    promoted: promoted,
+    ..profiles.at(id, default: profiles.en16931),
+  )
+}
