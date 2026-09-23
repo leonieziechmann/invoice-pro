@@ -330,15 +330,26 @@
             "zugferd-report",
             default: render-zugferd-report,
           )
-          // A theme hides the report with `zugferd-report: none`; whatever
-          // the hook returns is shown as content.
-          if render-report != none {
+          assert(
+            render-report == none or type(render-report) == function,
+            message: "theme::zugferd-report must be `none` or a function `(ctx, result) => content`, got "
+              + repr(render-report),
+          )
+          // Whatever the hook returns is shown as content. A theme without
+          // a report (`zugferd-report: none`, or a hook that returns
+          // nothing) must not hide errors: they stop the compilation as with
+          // "panic", so no invalid e-invoice goes out unnoticed.
+          let report = if render-report != none {
+            render-report(ctx, result)
+          }
+          if report in (none, "", []) {
             assert(
-              type(render-report) == function,
-              message: "theme::zugferd-report must be `none` or a function `(ctx, result) => content`, got "
-                + repr(render-report),
+              errors.len() == 0,
+              message: "The theme shows no e-invoice report (theme::zugferd-report is `none` or returns nothing), so the errors below stop the compilation even with `zugferd-errors: \"report\"`.\n"
+                + format-report(result),
             )
-            body = [#render-report(ctx, result)] + body
+          } else {
+            body = [#report] + body
           }
         }
       }

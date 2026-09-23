@@ -131,7 +131,7 @@ In `"report"` mode, the list is rendered by the theme function `zugferd-report`,
 )
 ```
 
-Whatever the function returns is placed above the invoice body as content (a string or `none` works as well). To hide the list, set `zugferd-report: none` on the theme: the problems are then neither listed nor do they stop the compilation. Any other value is rejected with an error naming `theme::zugferd-report`.
+Whatever the function returns is placed above the invoice body as content (a string works as well). A theme can do without the list with `zugferd-report: none`. Errors must not go unnoticed, though: if the theme shows no report (`none`, or a function that returns `none` or empty content), errors stop the compilation as with `"panic"`, and only warnings are left out. Any other value is rejected with an error naming `theme::zugferd-report`.
 
 ---
 
