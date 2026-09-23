@@ -307,6 +307,35 @@ class Oracles(unittest.TestCase):
         # MINIMUM carries no breakdown, lines or allowances: nothing to compare.
         self.assertEqual(sorted(p.split(":")[0] for p in oracles.check(facts, self.doc, None, "minimum")), ["O-BT5"])
 
+    def test_identifiers(self):
+        cii = CII.replace(
+            "<ram:SellerTradeParty><ram:Name>Muster GmbH</ram:Name></ram:SellerTradeParty>",
+            "<ram:SellerTradeParty><ram:ID>SUP-1</ram:ID><ram:Name>Muster GmbH</ram:Name>"
+            '<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">DE123456788</ram:ID></ram:SpecifiedTaxRegistration>'
+            '<ram:SpecifiedTaxRegistration><ram:ID schemeID="FC">30/123/45678</ram:ID></ram:SpecifiedTaxRegistration>'
+            "</ram:SellerTradeParty>",
+        ).replace(
+            "<ram:BuyerTradeParty><ram:Name>Kunde AG</ram:Name></ram:BuyerTradeParty>",
+            '<ram:BuyerTradeParty><ram:GlobalID schemeID="0088">4000001987658</ram:GlobalID><ram:Name>Kunde AG</ram:Name>'
+            '<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">DE987654328</ram:ID></ram:SpecifiedTaxRegistration>'
+            "</ram:BuyerTradeParty>",
+        )
+        doc = common.parse_xml(cii.encode("utf-8"))
+        facts = {
+            "seller_vat": "DE123456788",
+            "seller_tax_nr": "30/123/45678",
+            "seller_ids": [["", "SUP-1"]],
+            "buyer_vat": "DE987654328",
+            "buyer_ids": [["0088", "4000001987658"]],
+        }
+        self.assertEqual(oracles.check(facts, doc, None, "en16931"), [])
+        # e.g. a tax number written as VAT identifier, a GLN without its scheme
+        wrong = {"seller_tax_nr": "DE123456788", "buyer_vat": "FR61954506077", "buyer_ids": [["", "4000001987658"]]}
+        problems = oracles.check(wrong, doc, None, "en16931")
+        self.assertEqual(sorted(p.split(":")[0] for p in problems), ["O-BT32", "O-BT46", "O-BT48"])
+        # MINIMUM carries no buyer identifiers.
+        self.assertEqual([p.split(":")[0] for p in oracles.check(wrong, doc, None, "minimum")], ["O-BT32"])
+
     def test_printed_amounts_and_reasons(self):
         printed = "Gesamtbetrag: 1.234,50 €\nSteuerfrei nach § 4 Nr. 21\nUStG"
         self.assertEqual(oracles.check({}, self.doc, printed, "en16931"), [])
@@ -343,6 +372,22 @@ class Generator(unittest.TestCase):
         self.assertFalse(gen.allowed(dict(base, tax="ae", ids="taxnr")))  # AE needs the seller VAT ID
         self.assertFalse(gen.allowed(dict(base, profile="xrechnung", payment="nobank+days")))  # BR-DE-1
         self.assertTrue(gen.allowed(dict(base, profile="auto", payment="nobank+days")))  # falls back
+
+    def test_identifier_facts(self):
+        def facts(**features):
+            return gen.render("x", dict(gen.SIMPLE, **features))[1]
+
+        gln = facts(ids="gln")
+        self.assertEqual((gln["seller_vat"], gln["seller_ids"], gln["buyer_ids"]),
+                         ("DE123456788", [["0088", gen.SELLER_GLN]], [["0088", gen.BUYER_GLN]]))
+        both = facts(ids="vat+taxnr")
+        self.assertEqual((both["seller_vat"], both["seller_tax_nr"], both["buyer_vat"]),
+                         ("DE123456788", "30/123/45678", "FR61954506077"))
+        # Category O leaves out every VAT identifier (BR-O-02): nothing to expect.
+        outside = facts(tax="o", route="de-ch", ids="id")
+        self.assertEqual((outside["seller_vat"], outside["buyer_vat"], outside["seller_ids"]),
+                         (None, None, [["", gen.SELLER_ID]]))
+        self.assertIsNone(facts(route="de-us")["buyer_vat"])
 
     def test_resolved_profile(self):
         self.assertEqual(gen.resolved_profile(dict(gen.SIMPLE, profile="en16931", route="de-de")), "en16931")

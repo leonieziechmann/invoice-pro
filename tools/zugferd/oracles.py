@@ -16,7 +16,10 @@ Facts (all optional; an absent fact is not checked):
   currency                 BT-5                                  O-BT5
   seller_name, buyer_name  BT-27, BT-44                          O-BT27, O-BT44
   seller_vat               BT-31                                 O-BT31
+  seller_tax_nr            BT-32                                 O-BT32
   seller_ids               [[scheme, id], ..] in BT-29           O-BT29
+  buyer_vat                BT-48                                 O-BT48
+  buyer_ids                [[scheme, id], ..] in BT-46           O-BT46
   seller_post_code/_city   BT-38, BT-37                          O-BT38, O-BT37
   buyer_post_code/_city_name  BT-53, BT-52                       O-BT53, O-BT52
   seller_country, buyer_country, ship_to_country  BT-40/55/80    O-BT40/55/80
@@ -90,6 +93,14 @@ def _split_bracket(name):
     if not m:
         return name, None
     return m.group(1), dec(m.group(2).replace(",", "."))
+
+
+def _party_ids(doc, party):
+    """[scheme, id] of the identifiers of a party (BT-29, BT-46): scheme ""
+    for a plain ram:ID, the schemeID of a ram:GlobalID."""
+    got = [["", e.text or ""] for e in doc.xpath(party + "/ram:ID", namespaces=NS)]
+    got += [[e.get("schemeID") or "", e.text or ""] for e in doc.xpath(party + "/ram:GlobalID", namespaces=NS)]
+    return got
 
 
 def _allowance_charges(elements):
@@ -175,12 +186,21 @@ def check(facts, doc, pdf_text, profile):
     if facts.get("seller_vat"):
         got = xtext(doc, seller + "/ram:SpecifiedTaxRegistration/ram:ID[@schemeID='VA']")
         check_("O-BT31", got == [facts["seller_vat"]], f"{got} != {facts['seller_vat']!r}")
+    if facts.get("seller_tax_nr"):
+        got = xtext(doc, seller + "/ram:SpecifiedTaxRegistration/ram:ID[@schemeID='FC']")
+        check_("O-BT32", got == [facts["seller_tax_nr"]], f"{got} != {facts['seller_tax_nr']!r}")
+    # MINIMUM has no seller identifier and no buyer identifiers.
     if facts.get("seller_ids") and profile != "minimum":
-        # BT-29: [scheme, id] pairs; scheme "" is a plain ram:ID.
-        got = [["", e.text or ""] for e in doc.xpath(seller + "/ram:ID", namespaces=NS)]
-        got += [[e.get("schemeID") or "", e.text or ""] for e in doc.xpath(seller + "/ram:GlobalID", namespaces=NS)]
+        got = _party_ids(doc, seller)
         for pair in facts["seller_ids"]:
             check_("O-BT29", list(pair) in got, f"seller identifier {pair} not in {got}")
+    if facts.get("buyer_ids") and profile != "minimum":
+        got = _party_ids(doc, buyer)
+        for pair in facts["buyer_ids"]:
+            check_("O-BT46", list(pair) in got, f"buyer identifier {pair} not in {got}")
+    if facts.get("buyer_vat") and profile != "minimum":
+        got = xtext(doc, buyer + "/ram:SpecifiedTaxRegistration/ram:ID[@schemeID='VA']")
+        check_("O-BT48", got == [facts["buyer_vat"]], f"{got} != {facts['buyer_vat']!r}")
     if facts.get("seller_country"):
         got = xtext(doc, seller + "/ram:PostalTradeAddress/ram:CountryID")
         check_("O-BT40", got == [facts["seller_country"]], f"{got} != {facts['seller_country']!r}")

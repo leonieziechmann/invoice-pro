@@ -185,6 +185,10 @@ GROUNDS = {
     "o": "Nicht im Inland steuerbare Leistung",
 }
 CATEGORY = {"ae": "AE", "k": "K", "g": "G", "o": "O"}
+# Identifiers of the "id" and "gln" variants of the `ids` dimension.
+SELLER_ID = "SUP-70025"
+SELLER_GLN = "4000001123452"
+BUYER_GLN = "4000001987658"
 CONSTRUCTOR = {"ae": "reverse-charge", "k": "intra-community", "g": "export", "o": "outside-scope"}
 PERIOD = ("20260801", "20260831")
 ITEM_PERIOD = "(datetime(year: 2026, month: 8, day: 1), datetime(year: 2026, month: 8, day: 31))"
@@ -437,9 +441,9 @@ def render(cid, f, mutation=None, opts=None):
     if ids in ("taxnr", "vat+taxnr"):
         sender.append(f'tax-nr: "{seller["taxnr"]}"')
     if ids == "id":
-        sender.append('id: "SUP-70025"')
+        sender.append(f'id: "{SELLER_ID}"')
     if ids == "gln":
-        sender.append('global-id: (scheme: "0088", id: "4000001123452")')
+        sender.append(f'global-id: (scheme: "0088", id: "{SELLER_GLN}")')
     recipient = [
         f'address: "{buyer["address"]}"',
         f'city: {opts.get("buyer_city", buyer["city"])}',
@@ -454,7 +458,7 @@ def render(cid, f, mutation=None, opts=None):
     if buyer["vat"] and mutation != "no-buyer-vat":
         recipient.append(f'vat-id: "{buyer["vat"]}"')
     if ids == "gln":
-        recipient.append('global-id: (scheme: "0088", id: "4000001987658")')
+        recipient.append(f'global-id: (scheme: "0088", id: "{BUYER_GLN}")')
     header = []
     if f["delivery"] == "addr":
         header.append(
@@ -503,6 +507,9 @@ def render(cid, f, mutation=None, opts=None):
         src.append(f'#bank-details(bank: "Musterbank", iban: "{seller["iban"]}", bic: "{seller["bic"]}")')
     period = list(PERIOD) if f["delivery"] in ("dates-all", "dates-mixed") else None
     k_or_addr = f["delivery"] == "addr" or f["tax"] == "k"
+    # Category O leaves out every VAT identifier (BR-O-02); so does the small
+    # business scheme while it is coded O, so neither is checked there.
+    without_vat_ids = f["tax"] in ("o", "smallbiz")
     facts = {
         "profile": resolved_profile(f),
         "invoice_nr": None if mutation == "no-invoice-nr" else opts.get("expect_invoice_nr", cid),
@@ -511,6 +518,14 @@ def render(cid, f, mutation=None, opts=None):
         "seller_name": opts.get("expect_seller_name", seller["name"]),
         "buyer_name": None if mutation == "no-buyer-name" else opts.get("expect_buyer_name", buyer["name"]),
         "seller_country": opts.get("expect_seller_country", seller["country"].upper()),
+        # Every identifier reaches its business term (BT-29/31/32, BT-46/48).
+        "seller_vat": seller["vat"]
+        if ids in ("vat", "vat+taxnr", "id", "gln") and not without_vat_ids and mutation != "no-seller-vat"
+        else None,
+        "seller_tax_nr": seller["taxnr"] if ids in ("taxnr", "vat+taxnr") else None,
+        "seller_ids": {"id": [["", SELLER_ID]], "gln": [["0088", SELLER_GLN]]}.get(ids),
+        "buyer_vat": buyer["vat"] if buyer["vat"] and not without_vat_ids and mutation != "no-buyer-vat" else None,
+        "buyer_ids": [["0088", BUYER_GLN]] if ids == "gln" else None,
         "buyer_country": opts.get("expect_buyer_country", buyer["country"].upper()),
         "ship_to_country": buyer["country"].upper() if k_or_addr else None,
         "line_names": names,
