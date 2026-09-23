@@ -11,15 +11,20 @@
 // instead of overflowing one.
 
 #import "/src/lib.typ": *
-#import "/src/themes/components/line-items/line-items.typ": (
-  render-line-items as generic-render-line-items,
-)
 #import "/src/themes/components/line-items/table.typ": (
   default-render-description, default-render-modifier, default-render-title,
+  render-table,
 )
 #import "/tests/test-locale.typ": test-locale
 
-#set page(width: 120mm, height: 70mm, margin: 6mm)
+// Small pages that show nothing but the body (every standard area is an empty
+// stub), so the table's offset alone decides where the page breaks fall.
+#let small-pages = (
+  name: "item-page-break",
+  paper: (width: 120mm, height: 70mm),
+  margin: 6mm,
+  areas: (:),
+)
 
 #let plain(name) = if type(name) == str { name } else { name.text }
 
@@ -31,9 +36,14 @@
   part: part,
 )) <item-part>]
 
+// The `items-table` part is the table renderer of the built-in part, called
+// with marker callbacks. No area hosts the parts an invoice requires, so
+// validation is off.
 #let marked-invoice(scenario, body) = invoice(
-  theme: themes.blank.with(
-    line-items: generic-render-line-items.with(
+  theme: theme.plain.with(
+    theme.custom.part("items-table", (ctx, view) => render-table(
+      ctx,
+      view,
       render-title: (ctx, item, layout, styles) => {
         part-marker(scenario, item.name, "title")
         default-render-title(ctx, item, layout, styles)
@@ -54,11 +64,13 @@
         parts.label = [#part-marker(scenario, mod.name, "modifier")#parts.label]
         parts
       },
-    ),
+    )),
+    layout: small-pages,
   ),
   locale: test-locale,
   sender: (name: "Test Sender"),
   recipient: (name: "Test Recipient"),
+  validation: none,
   body,
 )
 
@@ -67,12 +79,13 @@
 
 // 1. Sweep: page breaks fall inside plain, modified, grouped and bundled
 //    items. Without keeping items together, each of A2, A3, G2 and B is split
-//    over a window of about 5mm of offset.
-#let offsets = range(0, 30, step: 2)
+//    over a window of about 5mm of offset. Every invoice starts a new page
+//    (the frame owns `set page`), so the offset is part of its body. A2 and
+//    G2 start the second page from about 27mm of offset on.
+#let offsets = range(0, 40, step: 2)
 #for offset in offsets {
-  pagebreak(weak: true)
-  v(offset * 1mm)
   marked-invoice("sweep-" + str(offset))[
+    #v(offset * 1mm)
     #line-items[
       #item("A1", description: two-lines("A1"), price: 10)
       #item(
@@ -102,7 +115,6 @@
 
 // 2. An item that does not fit below the others but fits on a page of its own
 //    moves to the next page as a whole.
-#pagebreak(weak: true)
 #marked-invoice("tall")[
   #line-items[
     #item("T1", description: two-lines("T1"), price: 10)
@@ -113,7 +125,6 @@
 
 // 3. An item taller than a page cannot be kept on one page; it breaks across
 //    pages instead of overflowing the page.
-#pagebreak(weak: true)
 #marked-invoice("overflow")[
   #line-items[
     #item("O1", description: two-lines("O1"), price: 10)

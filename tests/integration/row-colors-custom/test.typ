@@ -1,12 +1,11 @@
 #import "/src/lib.typ": *
 #import "/tests/test-locale.typ": test-locale
 
-// Custom stripe colors on the DIN-5008 theme
+// Custom stripe colors on the classic theme
 #show: invoice.with(
-  theme: themes.DIN-5008(
-    font: "libertinus serif",
-    color-row-odd: rgb("fef3c7"),
-    color-row-even: rgb("dbeafe"),
+  theme: theme.classic.with(
+    theme.custom.fonts(body: "libertinus serif"),
+    theme.custom.items-table(zebra: (rgb("fef3c7"), rgb("dbeafe"))),
   ),
   locale: test-locale,
   sender: (

@@ -6,7 +6,6 @@
 // `grounds`. It must fall back to the translated `legal.vat-exemption` text.
 
 #import "/src/lib.typ": *
-#import "/src/themes/components/line-items/global-info.typ": render-global-info
 #import "/tests/test-locale.typ": test-locale
 
 /// Flattens rendered content into its plain text.
@@ -20,13 +19,16 @@
   if it == [ ] { " " } else { "" }
 }
 
-/// Invoice whose line-items hook renders the global info block and asserts
-/// that it contains `expected` (a function of the evaluated locale).
+/// Invoice whose `notes` part (the legal notes after the line items) asserts
+/// that the rendered notes contain `expected` (a function of the evaluated
+/// locale) and records that the check ran. The invoices are bare fixtures
+/// (several in one document), so validation is off.
 #let clause-invoice(scenario, locale: test-locale, expected, body) = invoice(
-  theme: themes.blank.with(
-    line-items: (ctx, data, body) => {
+  theme: theme.plain.with(
+    theme.custom.wrap("notes", (ctx, view, inner) => {
       let clause = expected(ctx.locale)
-      let info = plain(render-global-info(ctx, data))
+      let notes = inner(ctx, view)
+      let info = plain(notes)
       assert(
         info.contains(clause),
         message: scenario
@@ -35,11 +37,13 @@
           + ", got "
           + repr(info),
       )
-      body
-    },
+      [#metadata(scenario)<small-biz-clause-checked>]
+      notes
+    }),
   ),
   locale: locale,
   tax-exempt-small-biz: true,
+  validation: none,
   sender: (
     name: "Kleinunternehmer",
     address: "Str 1",
@@ -105,3 +109,17 @@
     #item([Small Biz Item], price: 100.00)
   ]
 ]
+
+// Every scenario above must have run its check.
+#context {
+  let ran = query(<small-biz-clause-checked>).map(m => m.value)
+  let expected = ("test-locale", "de-de without grounds", "de-de", "en-de")
+  assert.eq(
+    ran,
+    expected,
+    message: "checked scenarios: expected "
+      + repr(expected)
+      + ", got "
+      + repr(ran),
+  )
+}

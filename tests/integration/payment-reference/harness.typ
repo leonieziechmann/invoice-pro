@@ -10,29 +10,31 @@
 
 // --- Capturing ---
 
-#let base-theme = themes.DIN-5008(font: "libertinus serif")
+/// Records the resolved reference signs (`view.references`, the normalized
+/// label/value pairs) of the frame part that prints them.
+#let capture-references(ctx, view, inner) = {
+  [#metadata((
+    label: ctx.locale.strings.reference.payment-reference,
+    references: view.references,
+  ))<captured-references>]
+  inner(ctx, view)
+}
 
-/// DIN-5008 theme that additionally records the printed bank details and the
-/// resolved reference signs as metadata.
-#let capturing-theme = () => {
-  let theme = base-theme()
-  let document(ctx, body) = {
-    let captured = metadata((
-      label: ctx.locale.strings.reference.payment-reference,
-      references: ctx.references,
-    ))
-    (theme.document)(ctx, [#body#captured<captured-references>])
-  }
-  let bank-details(ctx, view) = {
-    let printed = (theme.bank-details)(ctx, view)
+/// Classic theme that additionally records the printed bank details and the
+/// resolved reference signs as metadata. The wraps render the default parts.
+#let capturing-theme = theme.classic.with(
+  theme.custom.fonts(body: "libertinus serif"),
+  theme.custom.wrap("bank-details", (ctx, view, inner) => {
+    let printed = inner(ctx, view)
     let captured = metadata((
       label: ctx.locale.strings.bank-details.reference,
       printed: printed,
     ))
     [#captured<captured-bank-details>#printed]
-  }
-  theme + (document: document, bank-details: bank-details)
-}
+  }),
+  theme.custom.wrap("references", capture-references),
+  theme.custom.wrap("reference-list", capture-references),
+)
 
 /// A valid XRechnung / EN 16931 invoice showing the payment reference in the
 /// reference signs.
@@ -69,7 +71,7 @@
     #item([Beratungsleistung], price: 100.00, quantity: 10, unit: "hrs")
   ]
 
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
 ]
 
 #let bank = (
@@ -231,7 +233,14 @@
     }
 
     // Reference signs (`references.payment-reference`)
-    let (label, references) = query(<captured-references>).first().value
+    let captured-references = query(<captured-references>)
+    assert.eq(
+      captured-references.len(),
+      1,
+      message: "Reference signs: expected 1 printed block, got "
+        + str(captured-references.len()),
+    )
+    let (label, references) = captured-references.first().value
     let reference-sign = references.find(((key, _)) => key == label)
     let reference-value = if reference-sign != none {
       plain(reference-sign.at(1))

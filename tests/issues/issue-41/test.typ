@@ -8,33 +8,32 @@
 // subtotal ("Summe (netto)") is only needed when modifiers change it.
 
 #import "/src/lib.typ": *
-#import "/src/themes/components/line-items/line-items.typ": (
-  render-line-items as generic-render-line-items,
-)
-#import "/src/themes/components/line-items/totals.typ"
 #import "/tests/test-locale.typ": test-locale
 
 // Tags each rendered subtotal / net total row so the final layout can be
-// queried for the rows the default totals body actually placed.
+// queried for the rows the default totals renderer actually placed.
 #let row-marker(scenario, row) = [#metadata((
   scenario: scenario,
-  row: row,
+  row: row.kind,
+  emphasis: row.emphasis,
 )) <issue-41-row>]
 
+// The scenarios use minimal invoice data, so they render without validation
+// feedback (`validation: none`): the feedback is not what these checks are about.
+//
+// The rows come from the totals row model (`view.totals.rows`): a wrap of the
+// `totals` part tags the subtotal and net total labels, then hands the rows to
+// the default renderer.
 #let marked-invoice(scenario, tax-mode: "exclusive", body) = invoice(
-  theme: themes.blank.with(
-    line-items: generic-render-line-items.with(
-      render-subtotal: (ctx, value, styles) => {
-        let (label, val) = totals.default-render-subtotal(ctx, value, styles)
-        ([#label#row-marker(scenario, "subtotal")], val)
-      },
-      render-total-net: (ctx, value, styles) => {
-        let (label, val) = totals.default-render-total-net(ctx, value, styles)
-        ([#label#row-marker(scenario, "net-total")], val)
-      },
-    ),
-  ),
+  theme: theme.plain.with(theme.custom.wrap("totals", (ctx, view, inner) => {
+    let tag(r) = r + (label: [#r.label#row-marker(scenario, r)])
+    let rows = view.totals.rows.map(r => {
+      if r.kind in ("subtotal", "net-total") { tag(r) } else { r }
+    })
+    inner(ctx, view + (totals: view.totals + (rows: rows)))
+  })),
   locale: test-locale,
+  validation: none,
   tax-mode: tax-mode,
   sender: (name: "Test Sender"),
   recipient: (name: "Test Recipient"),
@@ -64,11 +63,9 @@
 ]
 
 #context {
+  let placed = query(<issue-41-row>).map(m => m.value)
   let rows(scenario) = (
-    query(<issue-41-row>)
-      .map(m => m.value)
-      .filter(v => v.scenario == scenario)
-      .map(v => v.row)
+    placed.filter(v => v.scenario == scenario).map(v => v.row)
   )
 
   assert.eq(
@@ -88,5 +85,16 @@
     (),
     message: "Inclusive without modifiers: expected (), got "
       + repr(rows("inclusive-plain")),
+  )
+
+  // the net total is the bold row
+  let net-emphasis = (
+    placed.filter(v => v.row == "net-total").map(v => v.emphasis).dedup()
+  )
+  assert.eq(
+    net-emphasis,
+    ("strong",),
+    message: "Net total emphasis: expected (\"strong\",), got "
+      + repr(net-emphasis),
   )
 }

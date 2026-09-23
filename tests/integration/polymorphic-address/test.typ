@@ -3,7 +3,7 @@
 #import "/tests/test-locale.typ": test-locale
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: test-locale,
   zugferd: "en16931",
   sender: (

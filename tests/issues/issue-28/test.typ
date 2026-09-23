@@ -85,9 +85,12 @@
 }
 
 // --- 2. Full invoice rendering test reproducing the issue ---
+// strict: the data must be complete, so the XML builder always runs (draft
+// would withhold the XML on a missing field and skip the builder)
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
+  validation: "strict",
   zugferd: "en16931",
   sender: (
     name: "Seller GmbH",

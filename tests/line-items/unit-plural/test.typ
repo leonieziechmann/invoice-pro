@@ -30,11 +30,13 @@
     .map(_ => expected-at(0))
     .flatten()
 
+  // Two invoices in one document: bare fixtures, so validation is off.
   invoice(
-    theme: themes.blank,
+    theme: theme.plain,
     locale: loc,
     sender: (name: "Test Sender", address: "Street 1", city: "City"),
     recipient: (name: "Test Recipient", address: "Street 2", city: "City"),
+    validation: none,
   )[
     #data-test(test: (ctx, data) => {
       let items = loom.query.find-signal(data, "line-items").item-data.items

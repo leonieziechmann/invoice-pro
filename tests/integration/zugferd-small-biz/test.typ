@@ -1,7 +1,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
+  theme: theme.classic.with(theme.custom.fonts(body: "libertinus serif")),
   locale: locale.de-de,
   zugferd: "en16931",
   tax-exempt-small-biz: true,
@@ -36,7 +36,7 @@
   #item([Produkt], price: 25.00, quantity: 10, unit: "pcs")
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
   bank: "Musterbank",

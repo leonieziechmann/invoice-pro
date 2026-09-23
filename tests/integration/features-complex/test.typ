@@ -1,7 +1,10 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(form: "B", font: "libertinus serif"),
+  theme: theme.classic.with(
+    theme.custom.fonts(body: "libertinus serif"),
+    layout: theme.layout.din-5008-b,
+  ),
   locale: locale.en-de,
   sender: (
     name: "Complex Setup Corp",
@@ -64,7 +67,7 @@
   #surcharge([Express Processing Fee], amount: 250.00)
 ]
 
-#payment-goal(days: 30)
+#payment-terms(days: 30)
 
 #bank-details(
   bank: "Test Bank",

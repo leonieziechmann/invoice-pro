@@ -13,7 +13,7 @@
 #let bundle-date = datetime(year: 2026, month: 7, day: 3)
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: test-locale,
   sender: (name: "Test Sender"),
   recipient: (name: "Test Recipient"),

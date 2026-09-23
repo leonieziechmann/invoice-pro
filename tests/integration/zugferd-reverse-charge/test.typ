@@ -1,7 +1,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.en-de,
   zugferd: "en16931",
   tax: tax.reverse-charge(),
@@ -33,7 +33,7 @@
 #line-items[
   #item([Consulting Services], price: 1000.00, quantity: 1)
 ]
-#payment-goal(days: 30)
+#payment-terms(days: 30)
 #bank-details(
   bank: "Musterbank",
   iban: "DE89370400440532013000",

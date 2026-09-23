@@ -3,16 +3,35 @@
 // Bug: every invoice was set with `text.lang: "de"`, whatever the locale,
 // because the locale factory only stored the language code under
 // `strings.meta.lang` and the root fell back to a hard-coded "de". English and
-// French invoices got German hyphenation, a German PDF language tag, and
-// letter-pro's footer printed "Seite 1 von 2".
+// French invoices got German hyphenation, a German PDF language tag, and the
+// page footer printed "Seite 1 von 2".
 
 #import "/src/lib.typ": *
 #import "/tests/test-locale.typ": test-locale
 
-// letter-pro renders the page label as "Page x of y", or "Seite x von y" when
-// `text.lang` is "de". Tag each rendered label so it can be queried per page.
-#let tag-page-label(it) = [#it#metadata(it.text) <locale-text-lang-footer>]
-#show regex("(Page|Seite) \d+ (of|von) \d+"): tag-page-label
+/// Flattens rendered content into its plain text.
+#let plain(it) = {
+  if it == none { return "" }
+  if type(it) == str { return it }
+  if type(it) != content { return str(it) }
+  if it.has("text") { return it.text }
+  if it.has("children") { return it.children.map(plain).sum(default: "") }
+  if it.has("child") { return plain(it.child) }
+  if it.has("body") { return plain(it.body) }
+  if it == [ ] { " " } else { "" }
+}
+
+// The frame prints the page label with the `page-number` part, from the
+// locale's `strings.document.page`. Tag each rendered label, with the language
+// it is set in, so it can be queried per page.
+#let tag-page-label(ctx, view, inner) = {
+  let label = inner(ctx, view)
+  if label == none { return none }
+  [#label#context [#metadata((
+      text: plain(label),
+      lang: text.lang,
+    ))<locale-text-lang-footer>]]
+}
 
 #let probe(scenario) = context [#metadata((
   scenario: scenario,
@@ -20,10 +39,15 @@
   region: text.region,
 )) <locale-text-lang-probe>]
 
-// Two pages per invoice, so letter-pro prints a page label on each of them.
+// Two pages per invoice, so the frame prints a page label on each of them.
+// Several invoices in one document: bare fixtures, so validation is off.
 #let scenario(name, locale) = invoice(
-  theme: themes.DIN-5008(font: "libertinus serif"),
+  theme: theme.classic.with(
+    theme.custom.fonts(body: "libertinus serif"),
+    theme.custom.wrap("page-number", tag-page-label),
+  ),
   locale: locale,
+  validation: none,
   sender: (name: "Test Sender", address: "Street 1", city: "12345 City"),
   recipient: (name: "Test Recipient", address: "Street 2", city: "54321 City"),
   invoice-nr: "LANG-" + name,
@@ -95,7 +119,8 @@
       .map(m => m.location().page())
     labels.filter(m => m.location().page() in pages).map(m => m.value)
   }
-  let expect-labels(scenario, pattern) = {
+  // Each label is the locale's `strings.document.page`, set in its language.
+  let expect-labels(scenario, pattern, lang) = {
     let found = page-labels(scenario)
     assert.eq(
       found.len(),
@@ -104,20 +129,28 @@
     )
     for label in found {
       assert(
-        label.match(regex("^" + pattern + "$")) != none,
+        label.text.match(regex("^" + pattern + "$")) != none,
         message: scenario
           + ": page label: expected "
           + repr(pattern)
           + ", got "
-          + repr(label),
+          + repr(label.text),
+      )
+      assert.eq(
+        label.lang,
+        lang,
+        message: scenario
+          + ": page label text.lang: expected "
+          + repr(lang)
+          + ", got "
+          + repr(label.lang),
       )
     }
   }
 
   let english = "Page \d+ of \d+"
-  expect-labels("en-de", english)
-  // letter-pro only localizes the label for German.
-  expect-labels("fr-fr", english)
-  expect-labels("de-de", "Seite \d+ von \d+")
-  expect-labels("base", english)
+  expect-labels("en-de", english, "en")
+  expect-labels("fr-fr", "Page \d+ sur \d+", "fr")
+  expect-labels("de-de", "Seite \d+ von \d+", "de")
+  expect-labels("base", english, "en")
 }

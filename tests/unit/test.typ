@@ -177,10 +177,10 @@
 // --- Test items and bundles resolving units via ctx ---
 #import "/tests/data-test.typ": data-test
 #import "/tests/test-locale.typ": test-locale
-#import "/src/lib.typ": bundle, invoice, item, line-items, themes
+#import "/src/lib.typ": bundle, invoice, item, line-items, theme
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: test-locale,
   sender: (name: "Test Sender", address: "Street 1", city: "City"),
   recipient: (name: "Test Recipient", address: "Street 2", city: "City"),
@@ -607,13 +607,13 @@
 
 // --- Test backwards compatibility for 'tax-nr' ---
 #{
-  import "/src/lib.typ": invoice, themes
+  import "/src/lib.typ": invoice, theme
   import "/tests/test-locale.typ": test-locale
 
   // Helper function to test invoice signature behavior
   let test-invoice(..args) = {
     invoice(
-      theme: themes.blank,
+      theme: theme.plain,
       locale: test-locale,
       sender: (name: "Test Sender", address: "Street 1", city: "City"),
       recipient: (name: "Test Recipient", address: "Street 2", city: "City"),
@@ -629,7 +629,7 @@
   // 2. Check mutual exclusion with sender.tax-nr
   let res-conflict = catch(() => {
     invoice(
-      theme: themes.blank,
+      theme: theme.plain,
       locale: test-locale,
       sender: (
         name: "Test Sender",
@@ -825,15 +825,18 @@
 
 // --- Test bank-details BIC visibility ---
 #{
-  import "/src/themes/base-theme/bank-details.typ": render-bank-details
-  import "/src/lib.typ": locale
+  import "/src/lib.typ": bank-details, locale, theme, themed
   import "/src/locale/lang/base.typ": base-language
   import "/src/locale/region/base.typ": base-region
 
+  // The default `bank-details` part reads the resolved theme and the locale.
   let ctx = (
     locale: (locale.de-de)(base-language, base-region),
+    theme: theme.resolve(theme.classic),
   )
 
+  // The view as the component builds it (reference and text resolved into
+  // the one `payment-reference`, the IBAN grouped in fours).
   let base-view = (
     sender: (
       name: "Max Mustermann",
@@ -841,36 +844,57 @@
       iban: "DE75512108001245126199",
       bic: "",
     ),
-    qr-code: (
-      size: 5em,
-      display: true,
+    iban: (
+      value: "DE75512108001245126199",
+      text: "DE75\u{a0}5121\u{a0}0800\u{a0}1245\u{a0}1261\u{a0}99",
+      valid: true,
     ),
+    qr: none,
     reference: "INV-001",
+    text: none,
+    payment-reference: "INV-001",
     show-reference: true,
     payment-amount: 100.0,
   )
 
   // 1. When BIC is empty / omitted, BIC line should not be rendered
-  let res-no-bic = render-bank-details(ctx, base-view)
+  let res-no-bic = theme.parts.bank-details(ctx, base-view)
   let str-no-bic = repr(res-no-bic)
-  assert(not str-no-bic.contains("[BIC]"))
+  assert(not str-no-bic.contains("BIC"))
   assert(not str-no-bic.contains("SOLADEST600"))
 
   // 2. When BIC is provided, BIC line should be rendered
   let view-with-bic = base-view
   view-with-bic.sender.bic = "SOLADEST600"
-  let res-with-bic = render-bank-details(ctx, view-with-bic)
+  let res-with-bic = theme.parts.bank-details(ctx, view-with-bic)
   let str-with-bic = repr(res-with-bic)
-  assert(str-with-bic.contains("[BIC]"))
+  assert(str-with-bic.contains("BIC"))
   assert(str-with-bic.contains("SOLADEST600"))
 
   // 3. When unstructured text is provided instead of reference
   let view-with-text = base-view
   view-with-text.reference = none
   view-with-text.text = "Rechnung 2026-001"
-  let res-with-text = render-bank-details(ctx, view-with-text)
+  view-with-text.payment-reference = "Rechnung 2026-001"
+  let res-with-text = theme.parts.bank-details(ctx, view-with-text)
   let str-with-text = repr(res-with-text)
   assert(str-with-text.contains("Rechnung 2026-001"))
+
+  // 4. The component resolves unstructured text into the payment reference
+  //    that the part prints
+  themed(theme.custom.wrap("bank-details", (ctx, view, inner) => {
+    assert.eq(view.reference, none)
+    assert.eq(view.payment-reference, "Rechnung 2026-001")
+    let out = inner(ctx, view)
+    assert(repr(out).contains("Rechnung 2026-001"))
+    out
+  }))[
+    #bank-details(
+      bank: "Musterbank",
+      iban: "DE75512108001245126199",
+      text: "Rechnung 2026-001",
+    )
+  ]
 }
 
 
@@ -977,10 +1001,12 @@
 
 
 // --- Test ZUGFeRD mandatory field validations (BT-49, BT-10, BG-6, BT-41, BT-42, BT-43, BT-34) ---
+// Missing e-invoice data follows the validation level: `strict` stops the
+// build and lists every missing field (the default "draft" withholds the XML).
 #{
   import "/src/lib.typ": (
-    bank-details, country, invoice, item, line-items, locale, payment-goal, tax,
-    themes,
+    bank-details, country, invoice, item, line-items, locale, payment-terms,
+    tax, theme,
   )
 
   // Repro invoice from bug report (missing BT-49, BT-10, BG-6)
@@ -1003,8 +1029,9 @@
       country: country.de,
     )
     invoice(
-      theme: themes.blank,
+      theme: theme.plain,
       locale: locale.de-de,
+      validation: "strict",
       zugferd: zugferd,
       sender: base-sender + sender-overrides,
       recipient: base-recipient + recipient-overrides,
@@ -1013,7 +1040,7 @@
         #line-items[
           #item([Consulting], price: 100, quantity: 1, tax: tax.vat(19%))
         ]
-        #payment-goal(days: 14)
+        #payment-terms(days: 14)
         #bank-details(
           bank: "Musterbank",
           iban: "DE89370400440532013000",
@@ -1023,33 +1050,63 @@
     )
   }
 
-  // 1. Initial bug repro: missing buyer electronic address (BT-49)
+  // The strict panic as `catch` reports it: one problem keeps its message
+  // verbatim, several are numbered under a header line.
+  let strict-panic(..messages) = {
+    let m = messages.pos()
+    let text = if m.len() == 1 { m.first() } else {
+      (
+        "invoice-pro found "
+          + str(m.len())
+          + " problems (validation: \"strict\"; preview them with validation: \"draft\" or --input invoice-pro-validation=draft):\n"
+          + m
+            .enumerate()
+            .map(((i, x)) => "  " + str(i + 1) + ". " + x)
+            .join("\n")
+      )
+    }
+    "panicked with: " + repr(text)
+  }
+
+  // en16931 between two German parties is checked (and written) as XRechnung.
+  let xrechnung = "e-invoicing (profile 'en16931' applied as 'xrechnung') requires "
+  let msg = (
+    bt49: xrechnung
+      + "a buyer electronic address (BT-49). Set 'electronic-address', 'vat-id', or 'email' on the recipient.",
+    bt34: xrechnung
+      + "a seller electronic address (BT-34). Set 'electronic-address', 'vat-id', or 'email' on the sender.",
+    bt10: xrechnung
+      + "a buyer reference (BT-10). Set 'buyer-reference' or 'leitweg-id' on the recipient.",
+    bt41: xrechnung
+      + "a seller contact name (BT-41). Set 'contact.name' or 'contact-name' on the sender.",
+    bt42: xrechnung
+      + "a seller contact phone number (BT-42). Set 'contact.phone' or 'phone' on the sender.",
+    bt43: xrechnung
+      + "a seller contact email address (BT-43). Set 'contact.email' or 'email' on the sender.",
+  )
+
+  // 1. Initial bug repro: missing buyer electronic address (BT-49), buyer
+  //    reference (BT-10) and seller contact (BG-6), all reported at once
   let res-bt49 = catch(() => test-e-invoice())
   assert.eq(
     res-bt49,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a buyer electronic address (BT-49). Set 'electronic-address', 'vat-id', or 'email' on the recipient.\"",
+    strict-panic(msg.bt49, msg.bt10, msg.bt41, msg.bt42, msg.bt43),
   )
 
-  // 2. Add email to recipient: next missing field is buyer reference (BT-10)
+  // 2. Add email to recipient: buyer reference (BT-10) and seller contact remain
   let res-bt10 = catch(() => test-e-invoice(
     recipient-overrides: (email: "buyer@example.de"),
   ))
-  assert.eq(
-    res-bt10,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a buyer reference (BT-10). Set 'buyer-reference' or 'leitweg-id' on the recipient.\"",
-  )
+  assert.eq(res-bt10, strict-panic(msg.bt10, msg.bt41, msg.bt42, msg.bt43))
 
-  // 3. Add buyer-reference to recipient: next missing field is seller contact (BG-6)
+  // 3. Add buyer-reference to recipient: the seller contact (BG-6) remains
   let res-bg6 = catch(() => test-e-invoice(
     recipient-overrides: (
       email: "buyer@example.de",
       buyer-reference: "DE123456789-12345-12",
     ),
   ))
-  assert.eq(
-    res-bg6,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires seller contact information (BG-6). Set 'contact' (with name, phone, and email) or 'contact-name', 'phone', and 'email' on the sender.\"",
-  )
+  assert.eq(res-bg6, strict-panic(msg.bt41, msg.bt42, msg.bt43))
 
   // 4. Incomplete seller contact (missing name BT-41, phone BT-42, email BT-43)
   let res-bt41 = catch(() => test-e-invoice(
@@ -1061,10 +1118,7 @@
       contact: (phone: "+49 89 123456", email: "seller@example.de"),
     ),
   ))
-  assert.eq(
-    res-bt41,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller contact name (BT-41). Set 'contact.name' or 'contact-name' on the sender.\"",
-  )
+  assert.eq(res-bt41, strict-panic(msg.bt41))
 
   let res-bt42 = catch(() => test-e-invoice(
     recipient-overrides: (
@@ -1075,10 +1129,7 @@
       contact: (name: "Max Mustermann", email: "seller@example.de"),
     ),
   ))
-  assert.eq(
-    res-bt42,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller contact phone number (BT-42). Set 'contact.phone' or 'phone' on the sender.\"",
-  )
+  assert.eq(res-bt42, strict-panic(msg.bt42))
 
   let res-bt43 = catch(() => test-e-invoice(
     recipient-overrides: (
@@ -1089,12 +1140,10 @@
       contact: (name: "Max Mustermann", phone: "+49 89 123456"),
     ),
   ))
-  assert.eq(
-    res-bt43,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller contact email address (BT-43). Set 'contact.email' or 'email' on the sender.\"",
-  )
+  assert.eq(res-bt43, strict-panic(msg.bt43))
 
-  // 5. Missing seller electronic address (BT-34)
+  // 5. Missing seller electronic address (BT-34). Without a VAT ID the sender
+  //    needs its tax number (§ 14 UStG), which is not an electronic address.
   let res-bt34 = catch(() => test-e-invoice(
     recipient-overrides: (
       email: "buyer@example.de",
@@ -1102,6 +1151,7 @@
     ),
     sender-overrides: (
       vat-id: none,
+      tax-nr: "123/456/78901",
       contact: (
         name: "Max Mustermann",
         phone: "+49 89 123456",
@@ -1112,7 +1162,8 @@
   // When sender has contact.email, seller-eas derives from email so it should succeed:
   assert.eq(res-bt34, none)
 
-  // But if sender has no vat-id, no electronic-address, and no email anywhere:
+  // But if sender has no vat-id, no electronic-address, and no email anywhere
+  // (which also leaves the seller contact without its email, BT-43):
   let res-no-seller-eas = catch(() => test-e-invoice(
     recipient-overrides: (
       email: "buyer@example.de",
@@ -1120,15 +1171,13 @@
     ),
     sender-overrides: (
       vat-id: none,
+      tax-nr: "123/456/78901",
       contact-name: "Max Mustermann",
       phone: "+49 89 123456",
       email: none,
     ),
   ))
-  assert.eq(
-    res-no-seller-eas,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller electronic address (BT-34). Set 'electronic-address', 'vat-id', or 'email' on the sender.\"",
-  )
+  assert.eq(res-no-seller-eas, strict-panic(msg.bt34, msg.bt43))
 
   // 6. Complete valid invoice with all mandatory fields satisfied
   let res-valid = catch(() => test-e-invoice(

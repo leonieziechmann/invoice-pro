@@ -1,23 +1,27 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(
-    font: "libertinus serif",
-    footer: [
-      #set text(8pt, fill: rgb("#666666"))
-      #grid(
-        columns: (1fr, 1fr, 1fr),
-        [
-          *#info.sender.name*           #info.sender.address           #info.sender.city
-        ],
-        [
-          *IBAN:* #info.iban           *BIC:* #info.bic
-        ],
-        [
-          *Invoice:* #info.invoice-nr           *Due:* #info.due-date           *Total:* #info.total.gross
-        ],
-      )
-    ],
+  // The footer area replaces the 0.4 `footer:` argument; content cells are
+  // woven, so the `info.*` motifs resolve in the page footer.
+  theme: theme.classic.with(
+    theme.custom.fonts(body: "libertinus serif"),
+    theme.custom.area("footer", arrange: "stack", parts: (
+      [
+        #set text(8pt, fill: rgb("#666666"))
+        #grid(
+          columns: (1fr, 1fr, 1fr),
+          [
+            *#info.sender.name*           #info.sender.address           #info.sender.city
+          ],
+          [
+            *IBAN:* #info.iban           *BIC:* #info.bic
+          ],
+          [
+            *Invoice:* #info.invoice-nr           *Due:* #info.due-date           *Total:* #info.total.gross
+          ],
+        )
+      ],
+    )),
   ),
   locale: locale.en-de,
   sender: (
@@ -45,7 +49,7 @@
   #item([Software Development], price: 150.00, quantity: 10, tax: tax.vat(19%))
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(
   bank: "Global Business Bank",
   iban: "DE75512108001245126199",
