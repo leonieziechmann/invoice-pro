@@ -26,7 +26,8 @@
 ///
 /// -> content
 #let bank-details(
-  /// The name of the account holder. Defaults to the sender's name.
+  /// The name of the account holder. Defaults to the sender's name on one
+  /// line, as in the e-invoice (BT-27).
   /// -> auto | none | string
   name: auto,
 
@@ -34,7 +35,10 @@
   /// -> none | string
   bank: none,
 
-  /// The International Bank Account Number (IBAN).
+  /// The International Bank Account Number (IBAN), with or without spaces.
+  /// Required: a missing or invalid IBAN (structure or check digits) stops
+  /// the compilation, unless an e-invoice reports its problems in the
+  /// document (`zugferd-errors: "report"`).
   /// -> none | string
   iban: none,
 
