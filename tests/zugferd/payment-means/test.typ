@@ -8,6 +8,7 @@
 #import "/src/lib.typ": *
 #import "/src/zugferd/profile.typ": resolve-profile
 #import "/src/zugferd/build.typ": build-xml
+#import "/src/zugferd/validate.typ": validate
 #import "/tests/zugferd/harness.typ": (
   bank, buyer-de, diagnostic, model-test, rules, xml-elements, xml-values,
 )
@@ -298,6 +299,14 @@
 #model-test(..xrechnung, model => {
   assert.eq(rules(model), ("BR-DE-24-b",))
 })[#items #goal #debit #card]
+// BR-DE-23-b and BR-DE-24-b concern the details of a direct debit (BG-19):
+// `paid(method: "direct-debit")` without them is a direct debit without
+// details (BR-DE-25-a) next to the credit transfer
+#model-test(..xrechnung, model => {
+  assert.eq(model.payment.means.map(m => m.type-code), ("58", "59"))
+  assert.eq(rules(model), ("BR-DE-25-a", "IP-PAY-03"))
+  assert.eq(diagnostic(model, "IP-PAY-03").field, "bank-details, paid")
+})[#items #paid(method: "direct-debit") #bank]
 #model-test(..xrechnung, model => {
   assert.eq(rules(model), ("IP-PAY-03",))
 })[#items #goal #card #bank]
@@ -382,10 +391,22 @@
     (),
   )
   assert.eq(rules(model), ())
-  assert.eq(rules(model, level: "warning"), (
-    "IP-PROFILE-01",
-    "IP-PROFILE-01",
+  let warnings = validate(model).filter(d => d.level == "warning")
+  assert.eq(warnings.map(d => (d.rule, d.field)), (
+    ("IP-PROFILE-01", "direct-debit"),
+    ("IP-PROFILE-01", "card-payment"),
   ))
+  // BASIC WL states a direct debit, but a payment card only from EN 16931 on
+  assert(warnings.at(0).message.contains("the direct debit (BG-19)"))
+  assert(
+    warnings.at(0).hint.contains("\"basic-wl\""),
+    message: warnings.at(0).hint,
+  )
+  assert(warnings.at(1).message.contains("the payment card (BG-18)"))
+  assert(
+    warnings.at(1).hint.contains("\"en16931\""),
+    message: warnings.at(1).hint,
+  )
 })[#items #goal #debit #card]
 #model-test(zugferd: "minimum", model => {
   assert.eq(xml-values(model, "ram:DuePayableAmount"), ("0.00",))

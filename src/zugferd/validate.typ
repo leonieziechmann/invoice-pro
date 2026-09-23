@@ -1512,23 +1512,27 @@
   }
 
   // An invoice states one payment means code (BT-81). XRechnung forbids the
-  // details of a direct debit next to a credit transfer (BR-DE-23-b) or a
-  // payment card (BR-DE-24-b); the other combinations are conflicting
+  // details of a direct debit (BG-19: the mandate reference, the creditor
+  // identifier or a debited account) next to a credit transfer (BR-DE-23-b)
+  // or a payment card (BR-DE-24-b); the other combinations are conflicting
   // instructions as well, which could make the buyer pay twice.
   let kinds = ()
   let conflicting = ()
+  let debit-details = (
+    payment.at("mandate", default: none) != none
+      or payment.at("creditor-id", default: none) != none
+  )
   for entry in means {
     if entry.kind not in kinds {
       kinds.push(entry.kind)
       conflicting.push(entry)
     }
+    if entry.debtor-iban != none { debit-details = true }
   }
   if kinds.len() > 1 {
-    let rule = if (
-      xrechnung and "direct-debit" in kinds and "transfer" in kinds
-    ) {
+    let rule = if xrechnung and debit-details and "transfer" in kinds {
       "BR-DE-23-b"
-    } else if xrechnung and "direct-debit" in kinds and "card" in kinds {
+    } else if xrechnung and debit-details and "card" in kinds {
       "BR-DE-24-b"
     } else { "IP-PAY-03" }
     let names = conflicting.map(_means-description)
@@ -1699,12 +1703,21 @@
   let profile = model.profile
   let payment = model.payment
   for entry in payment.means {
-    if entry.field in ("direct-debit", "card-payment") {
+    // BASIC WL states a direct debit in full, but a payment card only by its
+    // payment means code: EN 16931 is the lowest profile that states it.
+    if entry.field == "direct-debit" {
       out.push(_payment-not-carried(
         profile,
         entry.field,
-        _means-names.at(entry.kind),
+        "the direct debit (BG-19)",
         "basic-wl",
+      ))
+    } else if entry.field == "card-payment" {
+      out.push(_payment-not-carried(
+        profile,
+        entry.field,
+        "the payment card (BG-18)",
+        "en16931",
       ))
     }
   }
