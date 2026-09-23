@@ -1,5 +1,5 @@
-// Tax inputs: `tax: none`, `tax.new`, hand-built tax dictionaries and the
-// Swiss rates.
+// Tax inputs: `tax: none`, `tax.new`, hand-built tax dictionaries, the
+// Swiss rates and the error for a raw 0%.
 //
 // Bugs:
 // - `tax: none` silently became the zero rated category Z, although "no tax"
@@ -7,10 +7,13 @@
 // - The documented `tax.new` was not exported, and a hand-built dictionary
 //   with a ratio rate (the documented type) crashed.
 // - The Swiss locale accepted the obsolete 2.5% and rejected 3.8%.
+// - The error for a raw 0% recommended `tax.outside-scope()` to small
+//   businesses, without the legal note of the small business scheme.
 //
 // Expected: `tax: none` is still printed as 0%, but marked `implicit` so that
 // e-invoices can reject it; `tax.new` and hand-built dictionaries work like
-// the constructors; `de-ch` knows 8.1%, 2.6% and 3.8%.
+// the constructors; `de-ch` knows 8.1%, 2.6% and 3.8%; a raw 0% names
+// `tax-exempt-small-biz: true` for small businesses.
 
 #import "/src/lib.typ": *
 #import "/tests/data-test.typ": data-test, loom
@@ -138,5 +141,29 @@
   assert(
     message != none and message.contains("8.1%, 2.6%, and 3.8%"),
     message: "Expected an error for 2.5%, got " + repr(message),
+  )
+}
+
+// --- 5. A raw 0% points small businesses to their scheme ---
+// The regions reject a raw 0% and list the constructors to use instead. For
+// small businesses they name `tax-exempt-small-biz: true`, whose scheme states
+// the legal note of the region. They used to recommend `tax.outside-scope()`
+// (DE, AT, FR, IT), which states VAT category O without that note.
+#for (name, region-locale) in (
+  ("de-de", locale.de-de),
+  ("de-at", locale.de-at),
+  ("fr-fr", locale.fr-fr),
+  ("it-it", locale.it-it),
+) {
+  let message = catch(() => check(locale: region-locale, li => none)[
+    #line-items[
+      #item([Service], price: 100, tax: 0%)
+    ]
+  ])
+  assert(
+    message != none and message.contains("`tax-exempt-small-biz: true`"),
+    message: name
+      + ": expected a hint to the small business scheme, got "
+      + repr(message),
   )
 }

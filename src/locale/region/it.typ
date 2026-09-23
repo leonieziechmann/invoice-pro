@@ -20,7 +20,8 @@
           + "`tax.reverse-charge()` -> Reverse Charge (Inversione contabile)\n"
           + "`tax.intra-community()` -> Cessione intracomunitaria\n"
           + "`tax.exempt()` -> Esente IVA (Art. 10 DPR 633/72)\n"
-          + "`tax.outside-scope()` -> Regime forfettario (Art. 1 c. 54-89 L. 190/2014) or fuori campo IVA.",
+          + "`tax-exempt-small-biz: true` -> Regime forfettario (Art. 1 c. 54-89 L. 190/2014)\n"
+          + "`tax.outside-scope()` -> Operazione fuori campo IVA.",
       )
     } else {
       panic(
