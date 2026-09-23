@@ -6,7 +6,6 @@
   "[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x{FFFE}\\x{FFFF}]",
 )
 #let _whitespace = regex("\\s+")
-#let _carriage-return = regex("\\r\\n?")
 // Typst sets a hyphen in front of a digit as minus sign (U+2212) after an
 // expression or styled text, e.g. in `[#{2026}-001]`. The hyphens U+2010 and
 // U+2011 look the same. In plain text, e.g. an identifier, all of them are
@@ -14,10 +13,24 @@
 #let _hyphens = regex("[\\x{2010}\\x{2011}\\x{2212}]")
 // A space or operator in a part of a fraction or root, which then needs
 // parentheses, e.g. "a+b" in "(a+b)/2". Spaces of math are collected as " ".
-// (No Unicode class such as all letters and numbers: compiling one takes up
-// to a millisecond on every compile.)
-#let _compound = regex(
-  "[ +*/=<>\\-\\x{2212}\\x{00B1}\\x{00B7}\\x{00D7}\\x{00F7}\\x{22C5}]",
+// (No regular expression: this module is loaded for every invoice, and a
+// class with characters beyond ASCII takes a third of a millisecond to
+// compile, while math is rare.)
+#let _compound = (
+  " ",
+  "+",
+  "*",
+  "/",
+  "=",
+  "<",
+  ">",
+  "-",
+  "\u{2212}",
+  "\u{00B1}",
+  "\u{00B7}",
+  "\u{00D7}",
+  "\u{00F7}",
+  "\u{22C5}",
 )
 #let _space = [ ].func()
 
@@ -80,8 +93,11 @@
 
 // The text of a part of a fraction or root, in parentheses if it has more
 // than one term, e.g. "(a+b)".
-#let _grouped(text) = if text.match(_compound) == none { text } else {
-  "(" + text + ")"
+#let _grouped(text) = {
+  for character in _compound {
+    if text.contains(character) { return "(" + text + ")" }
+  }
+  text
 }
 
 // Collects the visible text of a value, see `plain-text`. Line and paragraph
@@ -184,7 +200,7 @@
   )
   if not keep-newlines { return text.replace(_whitespace, " ").trim() }
   let lines = ()
-  for line in text.replace(_carriage-return, "\n").split("\n") {
+  for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n") {
     lines.push(line.replace(_whitespace, " ").trim())
   }
   lines.join("\n").trim("\n")

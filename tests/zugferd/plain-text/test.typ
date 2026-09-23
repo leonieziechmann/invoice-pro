@@ -43,6 +43,7 @@
 
   // `keep-newlines` keeps them, trims each line and collapses spaces
   assert.eq(plain-text("a\nb", keep-newlines: true), "a\nb")
+  assert.eq(plain-text("a\r\nb\rc", keep-newlines: true), "a\nb\nc")
   assert.eq(
     plain-text(
       "  Zahlbar   in 30 Tagen. \r\n\t#SKONTO#  \n\n",
