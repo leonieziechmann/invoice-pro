@@ -236,9 +236,9 @@
     draw: (ctx, _, view, ..) => {
       // An EPC-QR code that cannot be generated stops the compilation, unless
       // an e-invoice reports its problems in the document, where the theme
-      // shows a placeholder naming them. It stops when the bank details are
-      // drawn, where the layout used to stop, so that the errors of other
-      // components keep their order.
+      // shows a placeholder naming them. It stops while drawing, not while
+      // measuring, so that the errors of components drawn before the bank
+      // details are reported first.
       let problems = view.qr-code.problems
       if problems.len() > 0 and not view.report-problems {
         panic(
