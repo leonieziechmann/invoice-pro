@@ -281,7 +281,15 @@ With `tax-mode: "inclusive"`, the invoice prints gross prices, while the XML sta
 
 ### 5. Payment Terms and Instructions
 
-- **Due Date or Payment Terms (BT-9 / BT-20):** As long as an amount is due, the invoice must state when to pay (BR-CO-25). Add a [`payment-goal`](./api-reference/components.md#payment-goal) (with `days` or a `date`) or set `due-date` on the invoice. A textual `date` or `due-date` (e.g. `[upon receipt]`) is written as payment terms.
+- **Due Date or Payment Terms (BT-9 / BT-20):** As long as an amount is due, the invoice must state when to pay (BR-CO-25). Add a [`payment-goal`](./api-reference/components.md#payment-goal) (with `days` or a `date`) or set `due-date` on the invoice. A textual `date` or `due-date` (e.g. `[upon receipt]`) is written as payment terms, with its line breaks.
+- **Cash Discount (Skonto):** XRechnung states a cash discount in the payment terms, as a line of its own in the syntax of the KoSIT: `#SKONTO#TAGE=` with the days, `#PROZENT=` with the percent and two decimals, optionally `#BASISBETRAG=` with the amount it applies to, and a closing `#`. In the `"xrechnung"` profile, every line of the payment terms that starts with `#` must follow this syntax, and a line after the last cash discount that contains `#` more than once must end with its last `#` (BR-DE-18). `invoice-pro` adds the line break that XRechnung requires after a closing `#` at the end of the terms:
+
+  ```typst
+  due-date: "Zahlbar innerhalb von 30 Tagen netto.\n#SKONTO#TAGE=14#PROZENT=2.00#",
+  ```
+
+  A cash discount is no [`discount`](./api-reference/line-items/index.md#adjustments-modifier-discount--surcharge): a discount reduces the amounts of the invoice no matter when the buyer pays.
+
 - **Payment Instructions (BG-16):** [`bank-details`](./api-reference/components.md#bank-details) with an `iban` are written as credit transfer (SEPA for EUR invoices). XRechnung requires them (BR-DE-1). IBAN and BIC are written without spaces and in upper case; they are the same values the bank details print and the EPC-QR code carries. A missing or invalid IBAN stops the compilation.
 
 ### 6. Payment Reference (BT-83)

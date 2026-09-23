@@ -295,7 +295,7 @@ Helper Functions `discount(..)` and `surcharge(..)` use the exact same parameter
 | Key           | Type                                   | Description                                                                                                                                                                |
 | :------------ | :------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`        | `str` \| `content`                     | The name/title of the adjustment (e.g., "Student Discount", "Express Shipping").                                                                                           |
-| `label`       | `str` \| `content` \| `auto` \| `none` | Custom label prefix (e.g. "Rabatt", "Nachlass", "Skonto"). If `auto`, resolves to locale default. If `none`, no prefix is displayed.                                       |
+| `label`       | `str` \| `content` \| `auto` \| `none` | Custom label prefix (e.g. "Rabatt", "Nachlass", "Bonus"). If `auto`, resolves to locale default. If `none`, no prefix is displayed.                                        |
 | `amount`      | `ratio` \| `decimal-like` \| `auto`    | If a `ratio` (e.g., `-10%`), it acts as a relative percentage. If a `decimal-like` number (e.g., `15.00`), it acts as an absolute monetary amount.                         |
 | `input-gross` | `bool` \| `auto`                       | For absolute monetary amounts (e.g., `10.00` instead of `10%`), this defines if the entered value already includes tax. Follows standard cascading logic if set to `auto`. |
 | `description` | `str` \| `content` \| `auto` \| `none` | Extra context or conditions for the modifier.                                                                                                                              |
@@ -319,7 +319,7 @@ For absolute monetary amounts (e.g., `10.00` instead of `10%`), the `input-gross
   The subtotal before taxes will be exactly 10.00 units less. The final gross impact will depend on the tax rate.
 - **Custom or Omitted Label:**
   ```typst
-  #discount("Skonto", label: none, amount: 2%) // Renders just "↳ Skonto (-2%)" without prefix
+  #discount("Treuerabatt", label: none, amount: 2%) // Renders just "↳ Treuerabatt (-2%)" without prefix
   #discount("Treueaktion", label: "Sondernachlass", amount: 5%)
   ```
 
