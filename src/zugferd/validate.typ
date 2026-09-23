@@ -271,6 +271,9 @@
       "Set `document-type: \"credit-note\"` (381) for a credit note and enter the credited items with positive prices, "
         + if named.kind == "credit-note-or-self-billed" {
           "`document-type: \"self-billed\"` (389) for a self-billed invoice (which German VAT law calls \"Gutschrift\"), "
+        } else {
+          // "Rechnungskorrektur" and the like also name a corrected invoice.
+          "`document-type: \"corrected\"` (384) for an invoice that replaces the preceding one, "
         }
         + as-invoice,
     )

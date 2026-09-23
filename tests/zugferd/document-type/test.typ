@@ -311,6 +311,12 @@
   assert(
     diagnostic(m, "IP-DOC-01").hint.contains("`document-type: \"corrected\"`"),
   )
+  // "Rechnungskorrektur" names a credit note or a corrected invoice
+  m.invoice.title = "Rechnungskorrektur"
+  let hint = diagnostic(m, "IP-DOC-01").hint
+  assert(hint.contains("`document-type: \"credit-note\"` (381)"))
+  assert(hint.contains("`document-type: \"corrected\"` (384)"))
+  assert(not hint.contains("self-billed"))
   m.invoice.title = "Rechnung zum Angebot 2026-5"
   assert.eq(rules(m), ())
 })[
