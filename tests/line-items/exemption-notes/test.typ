@@ -249,4 +249,32 @@
   // The notes replace the standard tax statement.
   assert.eq(printed-lines(ctx, data), ("* First", "Second"))
   assert.eq(printed-lines(ctx, data + (exemption-notes: ())), ("statement",))
+  // `show-information: false` hides the information about the items, but
+  // not the notes, which the law requires and the e-invoice states.
+  let hidden = data
+  hidden.layout-information.show-global-information = false
+  hidden.exemption-notes.push(note([Invoice note], kind: "note"))
+  assert.eq(printed-lines(ctx, hidden), ("* First", "Second", "Invoice note"))
+  hidden.exemption-notes = ()
+  assert.eq(render-global-info(ctx, hidden), none)
 }
+
+// --- 4. `line-items(show-information: false)` keeps the exemption notes
+// (§ 14 Abs. 4 Satz 1 Nr. 8 and § 14a Abs. 5 UStG) and the notes of the
+// invoice, which the e-invoice states (BT-120, BT-22) ---
+#check(
+  notes: "Lieferung frei Haus.",
+  (notes, lines) => {
+    assert.eq(lines, ("Reverse charge", "Lieferung frei Haus."))
+  },
+)[
+  #line-items(show-information: false)[
+    #item([Beratung], price: 100, tax: tax.vat(19%))
+    #item([Bauleistung], price: 200, tax: tax.reverse-charge())
+  ]
+]
+#check((notes, lines) => assert.eq(lines, ("",)))[
+  #line-items(show-information: false)[
+    #item([Beratung], price: 100, tax: tax.vat(19%))
+  ]
+]

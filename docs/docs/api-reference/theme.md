@@ -137,3 +137,5 @@ The `line-items` layout, `(ctx, data, body) => content`, receives the legal note
 | `body`   | The text of the note.                                                                                                                    |
 
 The VAT lines carry the same markers (`marker` of each entry of `data.taxes`), as do the items of a VAT category with several exemption grounds (`tax.marker` of each entry of `data.items`). With exemption notes, the built-in layout leaves out the standard tax statement (e.g. "All items are excl. 19% Tax.").
+
+`data.exemption-notes` also lists the notes of the invoice (`invoice(notes: ..)`, kind `"note"`) after the exemption notes. The built-in layout prints all of them even when `data.layout-information.show-global-information` is `false` (`line-items(show-information: false)`), which only hides the information about what the items share: the law requires the exemption notes on the invoice, and the e-invoice states them and the notes (BT-120, BT-22). A custom layout should print them as well.

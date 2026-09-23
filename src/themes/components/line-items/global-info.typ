@@ -70,24 +70,32 @@
     global-infos.push([#info-str.date #date])
   }
 
-  // Small business clause and tax exemption grounds, each with the marker of
-  // its VAT line or items, if any.
+  // Small business clause, tax exemption grounds and the notes of the
+  // invoice, each with the marker of its VAT line or items, if any. The law
+  // requires the exemption notes on the invoice (e.g. § 14 Abs. 4 Satz 1
+  // Nr. 8 and § 14a Abs. 5 UStG), and the e-invoice states them and the
+  // notes (BT-120, BT-22), so `show-information: false`, which hides the
+  // information about the items above, does not hide them.
+  let notes = ()
   for note in exemption-notes {
     let marker-str = if note.marker != none {
       super[#note.marker] + [ ]
     } else {
       []
     }
-    global-infos.push([#marker-str#note.body])
+    notes.push([#marker-str#note.body])
   }
 
-  if layout.show-global-information and global-infos.len() > 0 {
+  let lines = if layout.show-global-information {
+    global-infos + notes
+  } else { notes }
+  if lines.len() > 0 {
     pad(
       top: 1em,
       text(
         size: size-small,
         fill: color-desc,
-        global-infos.join([\ ]),
+        lines.join([\ ]),
       ),
     )
   }
