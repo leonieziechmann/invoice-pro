@@ -17,6 +17,7 @@
 
 #import "codelists.typ"
 #import "xml.typ": fmt-number, rate-digits
+#import "../utils/iban.typ": iban-valid
 
 #let _zero = decimal("0")
 
@@ -54,22 +55,6 @@
 
 #let _tax-field(tax) = {
   "tax " + if tax.category != none { tax.category + " " } + _percent(tax.rate)
-}
-
-// ISO 7064 MOD 97-10 check of an IBAN (without whitespace).
-#let _iban-valid(iban) = {
-  if iban.match(regex("^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$")) == none {
-    return false
-  }
-  let remainder = 0
-  for char in (iban.slice(4) + iban.slice(0, 4)).clusters() {
-    if char.match(regex("^[0-9]$")) != none {
-      remainder = calc.rem(remainder * 10 + int(char), 97)
-    } else {
-      remainder = calc.rem(remainder * 100 + str.to-unicode(char) - 55, 97)
-    }
-  }
-  remainder == 1
 }
 
 // --- Document -------------------------------------------------------------
@@ -187,6 +172,13 @@
   }
   out
 }
+
+// XRechnung 3.0 (XRechnung-CII-validation.xslt): BT-42 has at least three
+// digits (XR-TELEPHONE-REGEX), and BT-43 matches XR-EMAIL-REGEX.
+#let _digit = regex("[0-9]")
+#let _xr-email = regex(
+  "^[a-zA-Z0-9!#$%&\"*+/=?^_`{|}~-]+(\\.[a-zA-Z0-9!#$%&\"*+/=?^_`{|}~-]+)*@([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$",
+)
 
 // --- Parties --------------------------------------------------------------
 
@@ -430,26 +422,27 @@
         }
       }
       if (
-        contact.phone != none
-          and contact.phone.matches(regex("[0-9]")).len() < 3
+        contact.phone != none and contact.phone.matches(_digit).len() < 3
       ) {
-        out.push(warning(
+        // BR-DE-27 and BR-DE-28 are warnings for the KoSIT validator, but
+        // Mustang rejects the invoice: invoice-pro treats them as errors.
+        out.push(error(
           "BR-DE-27",
           "sender.contact.phone",
-          "The seller contact phone number (BT-42) should contain at least three digits.",
+          "The seller contact phone number (BT-42) "
+            + _quoted(contact.phone)
+            + " has fewer than three digits.",
+          hint: "Write the phone number with its digits, e.g. \"+49 89 1234567\".",
         ))
       }
-      if (
-        contact.email != none
-          and contact.email.match(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"))
-            == none
-      ) {
-        out.push(warning(
+      if contact.email != none and contact.email.match(_xr-email) == none {
+        out.push(error(
           "BR-DE-28",
           "sender.contact.email",
           "The seller contact email address (BT-43) "
             + _quoted(contact.email)
-            + " does not look like an email address.",
+            + " is not an email address XRechnung accepts.",
+          hint: "Write one \"@\" between the name and a domain of ASCII letters, digits, hyphens and dots, and a domain with umlauts in punycode, e.g. \"info@xn--mller-bau-q9a.de\" for \"info@müller-bau.de\".",
         ))
       }
     }
@@ -976,7 +969,7 @@
         hint: "Add `#bank-details(iban: ..)` with the account to pay to.",
       ))
     }
-  } else if not _iban-valid(payment.means.iban) {
+  } else if not iban-valid(payment.means.iban) {
     out.push(warning(
       "BR-DE-19",
       "bank-details.iban",

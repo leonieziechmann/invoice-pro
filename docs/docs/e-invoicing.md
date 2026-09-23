@@ -86,7 +86,11 @@ Set `zugferd-errors: "report"` on the invoice to list these problems in the docu
 Problems come in two levels:
 
 - **Errors** make the XML invalid for the profile (e.g. a missing invoice number, an unknown unit code or a VAT breakdown that does not add up).
-- **Warnings** point out data that is valid but most likely not intended (e.g. a contact phone number with fewer than three digits, or an EN 16931 invoice without the electronic addresses Peppol expects). Warnings never stop the compilation.
+- **Warnings** point out data that is valid but most likely not intended (e.g. an EN 16931 invoice without the electronic addresses Peppol expects, or a unit code that is also a common abbreviation of another unit). Warnings never stop the compilation.
+
+`invoice-pro` is stricter than the KoSIT validator in one respect: XRechnung only warns when the seller's contact phone number (BT-42) has fewer than three digits (BR-DE-27) or the contact email (BT-43) does not match the XRechnung email syntax (BR-DE-28), but other validators such as Mustang reject the invoice. Both are errors in `invoice-pro`. The email syntax allows ASCII only: write a domain with umlauts in punycode, e.g. `info@xn--mller-bau-q9a.de` for `info@müller-bau.de`.
+
+Rules that start with `IP-` are checks of `invoice-pro` itself. They catch invoices that the official validators accept but that state something else than the printed invoice, or that the law does not allow, e.g. `IP-TAX-01` (`tax: none` in an e-invoice), `IP-PRINT-02` (amounts printed in another currency than the invoice currency), `IP-DEC-01` (a VAT rate with more than 4 decimals) or `IP-VAT-226` (a missing buyer VAT identifier in `"basic-wl"`).
 
 ### The `zugferd-errors` Parameter
 
