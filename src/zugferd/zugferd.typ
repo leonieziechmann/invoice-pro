@@ -10,12 +10,20 @@
 
 // The errors that kept a better candidate profile out of reach and that the
 // chosen profile does not report itself, as warnings of the chosen profile.
+// A problem the chosen profile reports under a rule of its own (e.g. two
+// payment means: `BR-DE-23-b` in XRechnung, `IP-PAY-03` in EN 16931) has the
+// same field and message, and is not listed twice either.
 #let _skipped-warnings(skipped, diagnostics) = {
   let reported = diagnostics.map(d => (d.rule, d.field))
+  let problems = diagnostics.map(d => (d.field, d.message))
   let warnings = ()
   for candidate in skipped {
     for d in candidate.diagnostics {
-      if d.level == "error" and (d.rule, d.field) not in reported {
+      if (
+        d.level == "error"
+          and (d.rule, d.field) not in reported
+          and (d.field, d.message) not in problems
+      ) {
         reported.push((d.rule, d.field))
         warnings.push(
           d

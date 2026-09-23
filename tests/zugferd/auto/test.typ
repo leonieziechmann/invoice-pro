@@ -5,6 +5,7 @@
 #import "/src/lib.typ": *
 #import "/src/zugferd/zugferd.typ": process-zugferd
 #import "/tests/data-test.typ": data-test, loom
+#import "/tests/zugferd/harness.typ": payment-means
 
 #let seller = (
   name: "Seller GmbH",
@@ -126,4 +127,40 @@
     )
     assert.eq(result.diagnostics, ())
   },
+)
+
+// 6. A problem that XRechnung reports under a rule of its own is listed once:
+//    bank details next to a direct debit are two payment means (BR-DE-23-b in
+//    XRechnung, IP-PAY-03 in EN 16931)
+#invoice(
+  theme: themes.blank,
+  locale: locale.de-de,
+  zugferd: auto,
+  zugferd-errors: "ignore",
+  sender: seller,
+  recipient: buyer,
+  invoice-nr: "2026-01",
+  date: datetime(year: 2026, month: 9, day: 1),
+  data-test(test: (ctx, data) => {
+    let signal(kind) = loom.query.find-signal(data, kind)
+    let result = process-zugferd(
+      ctx,
+      signal("line-items").item-data,
+      payment-goal: signal("payment-goal"),
+      bank: signal("bank-details"),
+      payment-means: payment-means(data),
+    )
+    assert.eq(result.profile.id, "en16931")
+    assert.eq(rules(result, "error"), ("IP-PAY-03",))
+    assert.eq(rules(result, "warning"), ())
+  })[
+    #line-items[#item([Consulting], price: 100, tax: tax.vat(19%))]
+    #payment-goal(days: 14)
+    #direct-debit(
+      mandate: "M-2026-017",
+      creditor-id: "DE98ZZZ09999999999",
+      debtor-iban: "DE02120300000000202051",
+    )
+    #bank-details(bank: "Musterbank", iban: "DE89370400440532013000")
+  ],
 )
