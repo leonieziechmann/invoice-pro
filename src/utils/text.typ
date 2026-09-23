@@ -1,10 +1,17 @@
 // Plain text of values that may be content: for the e-invoice XML, the PDF
 // metadata, the EPC-QR payload and anything else that needs a string.
 
-// Characters XML 1.0 does not allow in a document, not even escaped.
-#let _invalid-chars = regex(
-  "[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x{FFFE}\\x{FFFF}]",
-)
+/// The characters XML 1.0 does not allow in a document, not even escaped, as
+/// the content of a character class: the one definition of them, which the
+/// serializer of the e-invoice combines with the markup characters.
+///
+/// -> str
+#let invalid-xml-class = "\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x{FFFE}\\x{FFFF}"
+
+/// A pattern of the characters of `invalid-xml-class`.
+///
+/// -> regex
+#let invalid-xml-chars = regex("[" + invalid-xml-class + "]")
 #let _whitespace = regex("\\s+")
 // Typst sets a hyphen in front of a digit as minus sign (U+2212) after an
 // expression or styled text, e.g. in `[#{2026}-001]`. The hyphens U+2010 and
@@ -195,7 +202,7 @@
 #let plain-text(it, keep-newlines: false) = {
   let text = (
     _collect-text(it, if keep-newlines { "\n" } else { " " })
-      .replace(_invalid-chars, "")
+      .replace(invalid-xml-chars, "")
       .replace(_hyphens, "-")
   )
   if not keep-newlines { return text.replace(_whitespace, " ").trim() }

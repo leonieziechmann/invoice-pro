@@ -2,25 +2,23 @@
 #import loom.matcher as _matcher
 #import "display-matcher.typ"
 
+/// Stops the compilation unless `value` matches one of `types` (loom
+/// matchers). Every component checks its arguments with it, so the message
+/// is only built when the check fails: rendering the pattern and the value
+/// costs more than the check itself.
 #let require(value, value-name, ..types) = {
-  import loom.matcher: *
-
-  let pattern = choice(..types)
-  let pattern-str = display-matcher.display(pattern)
-
-  let message = (
-    "variable `"
-      + value-name
-      + "`("
-      + repr(value)
-      + ") must be of "
-      + pattern-str
-  )
-
-  assert(
-    match(value, pattern),
-    message: message,
-  )
+  let pattern = _matcher.choice(..types)
+  if not _matcher.match(value, pattern) {
+    assert(
+      false,
+      message: "variable `"
+        + value-name
+        + "`("
+        + repr(value)
+        + ") must be of "
+        + display-matcher.display(pattern),
+    )
+  }
 }
 
 // --- Primitive Unions ---

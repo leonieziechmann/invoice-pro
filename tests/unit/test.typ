@@ -1245,3 +1245,36 @@
   // 6. Empty dictionary returns none
   assert.eq(de-res((:), 1), none)
 }
+
+// --- Argument checks and identifiers of the utilities ---
+#import "/src/utils/types.typ"
+#import "/src/utils/iban.typ": iban-valid, mod97
+#import "/src/utils/creditor-id.typ": creditor-id-valid
+#{
+  // `types.require` builds its message only when the check fails, and the
+  // message is the same as before
+  types.require(5, "unit::value", none, int)
+  types.require([content], "unit::value", str, content)
+  assert.eq(
+    catch(() => types.require(5, "unit::value", none, str)),
+    "assertion failed: variable `unit::value`(5) must be of none | str",
+  )
+  assert.eq(
+    catch(() => types.require("x", "unit::mode", "inclusive", "exclusive")),
+    "assertion failed: variable `unit::mode`(\"x\") must be of \"inclusive\" | \"exclusive\"",
+  )
+
+  // ISO 7064 MOD 97-10 by code point: digits and letters A to Z
+  assert.eq(mod97("123456"), calc.rem(123456, 97))
+  assert.eq(mod97("A"), 10)
+  assert.eq(mod97("Z9"), calc.rem(359, 97))
+  assert(iban-valid("DE89370400440532013000"))
+  assert(iban-valid("GB82WEST12345698765432"))
+  assert(iban-valid("NL91ABNA0417164300"))
+  assert(iban-valid("FR1420041010050500013M02606"))
+  assert(not iban-valid("DE89370400440532013001"))
+  assert(not iban-valid("GB82WEST1234569876543Z"))
+  assert(not iban-valid("de89370400440532013000"))
+  assert(creditor-id-valid("DE98ZZZ09999999999"))
+  assert(not creditor-id-valid("DE99ZZZ09999999999"))
+}
