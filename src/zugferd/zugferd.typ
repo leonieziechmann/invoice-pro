@@ -41,12 +41,19 @@
 /// the caller decides whether to stop, report or ignore them.
 ///
 /// -> dictionary
-#let process-zugferd(ctx, item-data, payment-goal: none, bank: none) = {
+#let process-zugferd(
+  ctx,
+  item-data,
+  payment-goal: none,
+  bank: none,
+  payment-means: none,
+) = {
   let model = build-model(
     ctx,
     item-data,
     payment-goal: payment-goal,
     bank: bank,
+    payment-means: payment-means,
   )
   let diagnostics = validate(model)
 

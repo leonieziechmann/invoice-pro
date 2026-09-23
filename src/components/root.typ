@@ -1,4 +1,5 @@
 #import "../loom-wrapper.typ": loom, managed-motif
+#import "../logic/payment-means.typ": resolve as resolve-payment-means
 
 /// The internal root container that wraps the invoice body.
 /// It initializes the global context and provides the base document structure to the theme.
@@ -99,13 +100,11 @@
       )
       let line-items = all-line-itmes.first(default: (:))
 
-      let bank-signal = loom
-        .query
-        .collect-signals(
-          children,
-          kind: "bank-details",
-        )
-        .first(default: none)
+      let bank-signals = loom.query.collect-signals(
+        children,
+        kind: "bank-details",
+      )
+      let bank-signal = bank-signals.first(default: none)
 
       let all-payment-goals = loom.query.collect-signals(
         children,
@@ -116,6 +115,30 @@
         message: "There can only be one `payment-goal` element in the document!",
       )
       let payment-goal-signal = all-payment-goals.first(default: none)
+
+      // The payment means: each bank details are an account of a credit
+      // transfer; a direct debit, a payment card and `paid` occur once.
+      let payment-means-signals = (:)
+      for kind in ("direct-debit", "card-payment", "paid") {
+        let signals = loom.query.collect-signals(children, kind: kind)
+        assert(
+          signals.len() <= 1,
+          message: "There can only be one `"
+            + kind
+            + "` element in the document!",
+        )
+        payment-means-signals.insert(kind, signals.first(default: none))
+      }
+      assert(
+        payment-means-signals.paid == none or payment-goal-signal == none,
+        message: "An invoice that is `paid` has no `payment-goal`: nothing is left to pay. Remove the `payment-goal`.",
+      )
+      let payment-means = resolve-payment-means(
+        bank-signals,
+        payment-means-signals.direct-debit,
+        payment-means-signals.card-payment,
+        payment-means-signals.paid,
+      )
 
       let item-data = loom.mutator.batch(
         line-items.at("item-data", default: (:)),
@@ -138,12 +161,14 @@
         total: line-items.at("total", default: (:)),
         formated-total: line-items.at("formated-total", default: (:)),
         bank: bank-signal,
+        payment-means: payment-means,
       )
 
       let view = (
         item-data: item-data,
         payment-goal: payment-goal-signal,
         bank: bank-signal,
+        payment-means: payment-means,
         total: line-items.at("total", default: (:)),
         formated-total: line-items.at("formated-total", default: (:)),
       )
@@ -311,6 +336,7 @@
           view.item-data,
           payment-goal: view.payment-goal,
           bank: view.bank,
+          payment-means: view.payment-means,
         )
         let errors = result.diagnostics.filter(d => d.level == "error")
         if errors.len() > 0 and ctx.zugferd-errors == "panic" {

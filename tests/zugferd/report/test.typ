@@ -113,7 +113,8 @@
   #line-items[#item([Consulting], price: 100)]
 ]
 
-// --- 4. "report" without errors: a warning only (the IBAN) ---
+// --- 4. "report" without errors: a warning only (a key the e-invoice does
+// not read) ---
 #invoice(
   ..incomplete,
   theme: themes.blank.with(zugferd-report: (ctx, result) => [#metadata(
@@ -121,10 +122,11 @@
   )<warned-rules>]),
   zugferd-errors: "report",
   invoice-nr: "RE-2026-001",
+  sender: incomplete.sender + (fax-nr: "+49 89 1234568"),
 )[
   #line-items[#item([Consulting], price: 100)]
   #payment-goal(days: 14)
-  #bank-details(iban: "DE00370400440532013000")
+  #bank-details(iban: "DE89370400440532013000")
 ]
 
 #context {
@@ -134,7 +136,7 @@
   )
   assert.eq(
     query(<warned-rules>).map(it => it.value),
-    ((("warning", "BR-DE-19"),),),
+    ((("warning", "IP-KEY-01"),),),
   )
 
   // With errors, "report" attaches the XML only as a draft, under another

@@ -8,7 +8,8 @@
 
 // An e-invoice with errors: the invoice number (BR-02) and the payment terms
 // (BR-CO-25) are missing. With `warnings-only`, they are given and the only
-// problem is a warning: the IBAN has wrong check digits (BR-DE-19).
+// problem is a warning: the sender has a key the e-invoice does not read
+// (IP-KEY-01).
 #let test-invoice(theme, warnings-only: false) = invoice(
   theme: theme,
   locale: locale.de-de,
@@ -19,6 +20,7 @@
     address: "Street 1",
     city: "80339 München",
     vat-id: "DE123456789",
+    ..if warnings-only { (fax-nr: "+49 89 1234568") },
   ),
   recipient: (
     name: "Buyer SAS",
@@ -33,7 +35,7 @@
   #line-items[#item([Consulting], price: 100)]
   #if warnings-only {
     payment-goal(days: 14)
-    bank-details(iban: "DE00370400440532013000")
+    bank-details(iban: "DE89370400440532013000")
   }
 ]
 
@@ -96,8 +98,8 @@
   // Warnings alone do not stop the compilation: `none` hides them, like a
   // hook that returns `none`
   assert(not hidden.contains("E-invoice"), message: hidden)
-  assert(not hidden.contains("BR-DE-19"), message: hidden)
-  assert(not empty.contains("BR-DE-19"), message: empty)
+  assert(not hidden.contains("IP-KEY-01"), message: hidden)
+  assert(not empty.contains("IP-KEY-01"), message: empty)
 
   // Other values are shown as they would be in markup
   assert(
@@ -109,6 +111,6 @@
   // The default report
   assert(default.contains("[BR-02]"), message: default)
   assert(default.contains("[BR-CO-25]"), message: default)
-  assert(warnings.contains("[BR-DE-19]"), message: warnings)
+  assert(warnings.contains("[IP-KEY-01]"), message: warnings)
   assert(not warnings.contains("[BR-02]"), message: warnings)
 }

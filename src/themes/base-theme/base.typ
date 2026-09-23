@@ -1,5 +1,6 @@
 #import "line-items.typ": *
 #import "bank-details.typ": render-bank-details
+#import "payment-means.typ": render-payment-means
 #import "payment-goal.typ": render-payment-goal
 #import "signature.typ": render-signature
 
@@ -31,6 +32,10 @@
   /// Layout of the bank-details the customer should send the payment to.
   /// -> (ctx, dictionary) => content
   bank-details: render-bank-details,
+  /// Layout of the other payment means: a direct debit, a payment card, a
+  /// paid invoice.
+  /// -> (ctx, dictionary) => content
+  payment-means: render-payment-means,
   /// Layout of the payment-goal. Time until payment is due.
   /// -> (ctx, dictionary) => content
   payment-goal: render-payment-goal,
@@ -58,6 +63,7 @@
     footer: footer,
     line-items: line-items,
     bank-details: bank-details,
+    payment-means: payment-means,
     payment-goal: payment-goal,
     signature: signature,
     zugferd-report: zugferd-report,

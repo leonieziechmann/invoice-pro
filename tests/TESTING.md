@@ -421,6 +421,10 @@ The automated `validate-all-zugferd` suite covers:
 - `tests/integration/zugferd-seller-id/test.typ` — Seller identifier (BT-29) without tax registration (#42).
 - `tests/integration/zugferd-auto/test.typ` — `zugferd: auto` between German parties with complete data, written as XRechnung.
 - `tests/integration/zugferd-parties/test.typ` — Party data from imported or copied text in an XRechnung not subject to VAT (category `O`): an empty electronic address and a VAT ID with a zero width space, electronic addresses derived from the VAT IDs, a buyer name of two lines and a delivery address identified by a GLN given as `id`.
+- `tests/integration/zugferd-direct-debit/test.typ` — XRechnung collected by SEPA direct debit (BT-81 = 59) with mandate reference (BT-89), creditor identifier (BT-90) and debited account (BT-91).
+- `tests/integration/zugferd-card-payment/test.typ` — EN 16931 invoice paid by credit card (BT-81 = 54, BG-18): paid amount (BT-113) equal to the total, nothing due.
+- `tests/integration/zugferd-paid-cash/test.typ` — XRechnung paid in cash (BT-81 = 10), with the printed payment sentence as payment terms (BT-20).
+- `tests/integration/zugferd-cash-discount/test.typ` — XRechnung with two cash discounts in the Skonto syntax of the KoSIT (BT-20, BR-DE-18), one with a base amount, and an account name (BT-85).
 - `tests/docs/e-invoicing-complete/test.typ` — Complete example of the e-invoicing documentation.
 - `template/invoice.typ` — Default release invoice template.
 

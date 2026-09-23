@@ -10,7 +10,7 @@
 )
 #import "model.typ": (
   build-model, determine-delivery-dates, first-of, get-electronic-address,
-  map-unit-code, text-or-none,
+  map-unit-code, profile-terms, text-or-none,
 )
 #import "profile.typ": profile-urn, profiles
 
@@ -316,20 +316,38 @@
   )
 }
 
-// Emits the payment means block (BG-16)
+// Emits one payment means (BG-16), with the details of its kind: the payment
+// card (BG-18), the debited account of a direct debit (BT-91) or the account
+// of a credit transfer (BG-17). The profiles below EN 16931 have no card, no
+// account name and no BIC.
 #let build-payment-means(means, profile) = {
-  if means == none {
-    return none
+  let entry = ("ram:TypeCode": means.type-code)
+  let card = means.at("card", default: none)
+  if profile.at("payment-card", default: false) and card != none {
+    entry.insert("ram:ApplicableTradeSettlementFinancialCard", (
+      "ram:ID": card.id,
+      "ram:CardholderName": card.holder,
+    ))
   }
-  let entry = (
-    "ram:TypeCode": means.type-code,
-    "ram:PayeePartyCreditorFinancialAccount": (
-      "ram:IBANID": means.iban,
-    ),
-  )
-  if profile.bic and means.bic != none {
+  let debtor-iban = means.at("debtor-iban", default: none)
+  if debtor-iban != none {
+    entry.insert("ram:PayerPartyDebtorFinancialAccount", (
+      "ram:IBANID": debtor-iban,
+    ))
+  }
+  let iban = means.at("iban", default: none)
+  if iban != none {
+    let account = ("ram:IBANID": iban)
+    let account-name = means.at("account-name", default: none)
+    if profile.at("account-name", default: false) and account-name != none {
+      account.insert("ram:AccountName", account-name)
+    }
+    entry.insert("ram:PayeePartyCreditorFinancialAccount", account)
+  }
+  let bic = means.at("bic", default: none)
+  if profile.bic and iban != none and bic != none {
     entry.insert("ram:PayeeSpecifiedCreditorFinancialInstitution", (
-      "ram:BICID": means.bic,
+      "ram:BICID": bic,
     ))
   }
   entry
@@ -352,15 +370,19 @@
   })
 }
 
-// Emits the SpecifiedTradePaymentTerms block (BT-9, BT-20), if any data is
-// available.
-#let build-payment-terms(payment) = {
+// Emits the SpecifiedTradePaymentTerms block (BT-20, BT-9, BT-89), if any
+// data is available.
+#let build-payment-terms(payment, profile) = {
   let terms = (:)
-  if payment.terms != none {
-    terms.insert("ram:Description", payment.terms)
+  let description = profile-terms(payment, profile)
+  if description != none {
+    terms.insert("ram:Description", description)
   }
   if payment.due-date != none {
     terms.insert("ram:DueDateDateTime", _date(payment.due-date))
+  }
+  if payment.at("mandate", default: none) != none {
+    terms.insert("ram:DirectDebitMandateID", payment.mandate)
   }
   if terms.len() == 0 { none } else { terms }
 }
@@ -450,15 +472,21 @@
 
   let trade-settlement = (:)
   if profile.settlement {
+    // BT-90: the creditor identifier of a direct debit.
+    trade-settlement.insert(
+      "ram:CreditorReferenceID",
+      payment.at("creditor-id", default: none),
+    )
     // BT-83: same value as printed in the bank details and the EPC-QR code.
     trade-settlement.insert("ram:PaymentReference", payment.reference)
   }
   trade-settlement.insert("ram:InvoiceCurrencyCode", model.currency)
   if profile.settlement {
-    trade-settlement.insert(
-      "ram:SpecifiedTradeSettlementPaymentMeans",
-      build-payment-means(payment.means, profile),
-    )
+    let means = ()
+    for entry in payment.means {
+      means.push(build-payment-means(entry, profile))
+    }
+    trade-settlement.insert("ram:SpecifiedTradeSettlementPaymentMeans", means)
     let applicable-taxes = build-applicable-trade-tax(model.taxes)
     if applicable-taxes != () {
       trade-settlement.insert("ram:ApplicableTradeTax", applicable-taxes)
@@ -481,7 +509,7 @@
     }
     trade-settlement.insert(
       "ram:SpecifiedTradePaymentTerms",
-      build-payment-terms(payment),
+      build-payment-terms(payment, profile),
     )
   }
   trade-settlement.insert(
@@ -531,15 +559,26 @@
 /// The XML is returned as `bytes` suitable for embedding via `pdf.attach()`.
 ///
 /// -> bytes
-#let build-zugferd-xml(ctx, item-data, payment-goal, bank: auto) = {
-  let bank = if bank == auto {
-    ctx.at("global", default: (:)).at("bank", default: none)
-  } else { bank }
+#let build-zugferd-xml(
+  ctx,
+  item-data,
+  payment-goal,
+  bank: auto,
+  payment-means: auto,
+) = {
+  let global = ctx.at("global", default: (:))
+  let bank = if bank == auto { global.at("bank", default: none) } else {
+    bank
+  }
+  let payment-means = if payment-means == auto {
+    global.at("payment-means", default: none)
+  } else { payment-means }
   let model = build-model(
     ctx,
     item-data,
     payment-goal: payment-goal,
     bank: bank,
+    payment-means: payment-means,
   )
   bytes(build-xml(model))
 }

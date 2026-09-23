@@ -11,6 +11,7 @@
 #import "components/group.typ": group
 
 #import "components/bank-details.typ": bank-details
+#import "components/payment-means.typ": card-payment, direct-debit, paid
 #import "components/payment-goal.typ": payment-goal
 #import "components/signature.typ": signature
 #import "components/dynamic.typ": dynamic

@@ -20,6 +20,7 @@
   eas: codelists.eas,
   icd: codelists.icd,
   vat-categories: codelists.vat-categories,
+  payment-means: codelists.payment-means,
 ) {
   assert.eq(type(list), dictionary, message: name)
   assert("" not in list, message: name + " contains an empty code")
@@ -41,4 +42,13 @@
   assert("S" in codelists.vat-categories)
   assert("de" not in codelists.countries)
   assert("C6" not in codelists.units)
+  // UNTDID 4461 as EN 16931 accepts it (BR-CL-16): 84 codes, 71 to 73 and
+  // 79 to 90 are not among them
+  assert.eq(codelists.payment-means.len(), 84)
+  for code in ("1", "10", "30", "48", "49", "54", "55", "58", "59", "ZZZ") {
+    assert(code in codelists.payment-means, message: code)
+  }
+  for code in ("0", "058", "71", "79", "90", "99", "zzz") {
+    assert(code not in codelists.payment-means, message: code)
+  }
 }

@@ -23,6 +23,11 @@
   seller-contact: false,
   // BT-86: BIC of the payment service provider.
   bic: false,
+  // BT-85: name of the payment account.
+  account-name: false,
+  // BG-18: payment card (BT-87, BT-88). The profiles without it state only
+  // the payment means code of a card payment (BT-81).
+  payment-card: false,
   // BT-155, BT-156: seller and buyer assigned item identifiers.
   item-ids: false,
   // BT-154: item description.
@@ -76,6 +81,8 @@
       buyer-vat-id: true,
       seller-contact: true,
       bic: true,
+      account-name: true,
+      payment-card: true,
       item-ids: true,
       item-description: true,
       document-references: true,
@@ -93,6 +100,8 @@
       buyer-vat-id: true,
       seller-contact: true,
       bic: true,
+      account-name: true,
+      payment-card: true,
       item-ids: true,
       item-description: true,
       document-references: true,

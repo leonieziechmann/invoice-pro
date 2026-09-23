@@ -30,9 +30,11 @@
     import locale.custom: *
 
     payment(deadline-soon: "umgehend")
+    payment-means(cash: "Bar")
     format(currency: value => str(value) + " EUR")
   }))
   assert.eq(built.strings.payment.deadline-soon, "umgehend")
+  assert.eq(built.strings.payment-means.cash, "Bar")
   assert.eq((built.format.currency)(2), "2 EUR")
   // Later overrides of the same group win, key by key
   let later = build(locale.de-de.with({

@@ -35,6 +35,10 @@ done
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-seller-id/test.typ"
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-auto/test.typ"
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-parties/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-direct-debit/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-card-payment/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-paid-cash/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-cash-discount/test.typ"
 "$VALIDATE_ZUGFERD" "tests/docs/e-invoicing-complete/test.typ"
 "$VALIDATE_ZUGFERD" "template/invoice.typ"
 

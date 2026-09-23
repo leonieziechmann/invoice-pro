@@ -243,9 +243,70 @@
   },
 )
 
+/// Customizes the texts of the payment means `direct-debit`, `card-payment`
+/// and `paid`.
+/// - method (auto, str): label of the payment method, e.g., "Payment method"
+/// - transfer, direct-debit, sepa-direct-debit, card, credit-card,
+///   debit-card, cash, cheque, online (auto, str): names of the payment
+///   methods, e.g., "SEPA direct debit", "Barzahlung"
+/// - mandate, creditor-id, debtor-iban, card-number, card-holder (auto,
+///   str): labels of the details of a direct debit and a payment card
+/// - paid (auto, fn): sentence of a paid invoice: (sum, date) => content,
+///   `date` is `none` if not given
+/// - paid-due (auto, fn): `paid` after prepayments: (sum, date) => content
+/// -> array
+#let payment-means(
+  method: auto,
+  transfer: auto,
+  direct-debit: auto,
+  sepa-direct-debit: auto,
+  card: auto,
+  credit-card: auto,
+  debit-card: auto,
+  cash: auto,
+  cheque: auto,
+  online: auto,
+  mandate: auto,
+  creditor-id: auto,
+  debtor-iban: auto,
+  card-number: auto,
+  card-holder: auto,
+  paid: auto,
+  paid-due: auto,
+) = (
+  {
+    let payload = _clean-auto((
+      method: method,
+      transfer: transfer,
+      direct-debit: direct-debit,
+      sepa-direct-debit: sepa-direct-debit,
+      card: card,
+      credit-card: credit-card,
+      debit-card: debit-card,
+      cash: cash,
+      cheque: cheque,
+      online: online,
+      mandate: mandate,
+      creditor-id: creditor-id,
+      debtor-iban: debtor-iban,
+      card-number: card-number,
+      card-holder: card-holder,
+      paid: paid,
+      paid-due: paid-due,
+    ))
+    (strings: (payment-means: payload))
+  },
+)
+
 /// Customizes the payment instructions and deadline texts.
 /// - text (auto, fn): Function generating the main sentence: (sum, currency, deadline) => content
 /// - text-due (auto, fn): Main sentence when prepayments reduce the payable amount: (sum, deadline) => content
+/// - text-direct-debit, text-direct-debit-due (auto, fn): `text` and
+///   `text-due` of an amount collected by `direct-debit`: (sum, deadline) => content
+/// - text-card, text-card-due (auto, fn): `text` and `text-due` of an amount
+///   charged to a `card-payment`: (sum, deadline) => content
+/// - cash-discount (auto, fn): Note of a cash discount of the payment goal:
+///   (percent, deadline, basis) => content, `basis` is `none` if not given
 /// - deadline-date (auto, fn): Function formatting a fixed date: (date) => str
 /// - deadline-days (auto, fn): Function formatting relative days: (days) => str
 /// - deadline-soon (auto, str): Text for immediate payment: e.g., "upon receipt"
@@ -253,6 +314,11 @@
 #let payment(
   text: auto,
   text-due: auto,
+  text-direct-debit: auto,
+  text-direct-debit-due: auto,
+  text-card: auto,
+  text-card-due: auto,
+  cash-discount: auto,
   deadline-date: auto,
   deadline-days: auto,
   deadline-soon: auto,
@@ -261,6 +327,11 @@
     let payload = _clean-auto((
       text: text,
       text-due: text-due,
+      text-direct-debit: text-direct-debit,
+      text-direct-debit-due: text-direct-debit-due,
+      text-card: text-card,
+      text-card-due: text-card-due,
+      cash-discount: cash-discount,
       deadline-date: deadline-date,
       deadline-days: deadline-days,
       deadline-soon: deadline-soon,
