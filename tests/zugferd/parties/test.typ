@@ -190,10 +190,14 @@
   assert.eq(keys("buyer", buyer_reference: "PO-1"), (
     ("buyer_reference", "buyer-reference", true),
   ))
-  // A post code belongs in `city`
+  // A post code belongs in `city`; next to a city line with a post code, the
+  // key loses nothing
   let zip = party-model((zip: "10115"), role: "seller").input-keys.first()
   assert.eq((zip.like, zip.einvoice), ("city", true))
   assert(zip.hint.contains("city: (name: \"Berlin\", post-code: \"10115\")"))
+  assert.eq(keys("seller", zip: "10115", post-code: "10115"), (
+    ("zip", "city", false),
+  ))
   // Keys of `contact`
   assert.eq(keys("seller", contact: (name: "A", mail: "a@b.de")), (
     ("contact.mail", "email", true),

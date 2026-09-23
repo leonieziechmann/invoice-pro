@@ -512,10 +512,15 @@
 // the role does not know (see `party-keys`), each described by `_unknown-key`.
 #let _input-keys(party, role) = {
   let known = party-keys.at(role)
+  // A key standing for the city or post code loses nothing next to a city
+  // line whose post code was recognized.
+  let has-post-code = text-or-none(_field(party, "post-code")) != none
   let result = ()
   for (key, value) in party.pairs() {
     if key in known or key in _derived-keys or _is-unset(value) { continue }
-    result.push(_unknown-key(key, known))
+    let entry = _unknown-key(key, known)
+    if entry.like == "city" and has-post-code { entry.einvoice = false }
+    result.push(entry)
   }
   let contact = party.at("contact", default: none)
   if "contact" in known and type(contact) == dictionary {

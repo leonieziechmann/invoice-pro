@@ -187,7 +187,7 @@ Both the `sender` and `recipient` dictionaries must include:
 
   The same keys on the `recipient` set the buyer identifier (BT-46), and on the `delivery-address` the deliver-to location identifier (BT-71, `id` or `location-id`). The buyer and the delivery address take only one of them, `id` or `global-id` (CII-SR-450, CII-SR-449, from the `"basic"` profile on).
 
-- **Keys:** A key of `sender`, `recipient` or `delivery-address` that `invoice-pro` does not know is not written into the e-invoice, which is reported as a warning (`IP-KEY-01`). A key that looks like a misspelling of a key the e-invoice reads, such as `vatId`, `vat_id`, `ustid`, `e-mail` or `zip` (the post code belongs in `city`), stops the e-invoice (`IP-KEY-02`), as its value would be missing without notice.
+- **Keys:** A key of `sender`, `recipient` or `delivery-address` that `invoice-pro` does not know is not written into the e-invoice, which is reported as a warning (`IP-KEY-01`). A key that looks like a misspelling of a key the e-invoice reads, such as `vatId`, `vat_id`, `ustid` or `e-mail`, stops the e-invoice (`IP-KEY-02`), as its value would be missing without notice. So does a post code key such as `zip` or `plz` while the `city` line has no post code: the post code belongs in `city`.
 
 - **Seller Contact (BG-6):** Under German XRechnung rules, the seller must specify contact details. You can define this under the `contact` key of the `sender` dictionary (containing keys `name`, `phone`, `email`):
 
