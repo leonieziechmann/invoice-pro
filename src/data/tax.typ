@@ -349,14 +349,16 @@
 
 // The note of the language strings (`tax-exemption`) for a VAT category that
 // needs an exemption reason (BR-AE-10, BR-IC-10, BR-G-10, BR-O-10) when its
-// items give no grounds, or `none` for the other categories.
+// items give no grounds, or `none` for the other categories (and without a
+// category).
 #let default-grounds(category, strings) = {
+  if type(category) != str { return none }
   let key = (
     AE: "reverse-charge",
     K: "intra-community",
     G: "export",
     O: "outside-scope",
-  ).at(str(category), default: none)
+  ).at(category, default: none)
   if key == none { return none }
   strings.at("tax-exemption", default: (:)).at(key, default: none)
 }

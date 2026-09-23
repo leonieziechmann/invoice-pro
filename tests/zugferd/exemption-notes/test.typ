@@ -4,7 +4,7 @@
 // items, and the e-invoice writes the same text as exemption reason (BT-120).
 
 #import "/src/lib.typ": *
-#import "/src/zugferd/model.typ": build-model
+#import "/src/zugferd/model.typ": build-model, exemption-reason
 #import "/tests/data-test.typ": data-test, loom
 #import "/tests/test-locale.typ": test-locale
 #import "/tests/zugferd/harness.typ": buyer-fr, seller
@@ -94,3 +94,10 @@
     assert.eq(reasons, (note,))
   },
 )[#line-items[#item([A], price: 1000)]]
+
+// --- 4. Without a category there is no note to state ---
+#{
+  let strings = (tax-exemption: (outside-scope: "Nicht steuerbar"))
+  assert.eq(exemption-reason("O", none, strings: strings), "Nicht steuerbar")
+  assert.eq(exemption-reason(none, none, strings: strings), none)
+}

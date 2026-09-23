@@ -712,10 +712,11 @@
     ))
   }
 
-  // The number of VAT groups per category and rate as the XML states them.
+  // The number of VAT groups per category and rate as the XML states them
+  // (`_tax-field` names both, also for a group without category).
   let stated-groups = (:)
   for tax in model.taxes {
-    let group = str(tax.category) + " " + _percent(tax.rate)
+    let group = _tax-field(tax)
     stated-groups.insert(group, stated-groups.at(group, default: 0) + 1)
   }
 
@@ -728,7 +729,6 @@
     // rate of another VAT group.
     let percent = tax.rate * 100
     if calc.round(percent, digits: rate-digits) != percent {
-      let group = str(category) + " " + _percent(tax.rate)
       out.push(error(
         "IP-DEC-01",
         field,
@@ -738,8 +738,11 @@
           + str(rate-digits)
           + " decimals, so the e-invoice would state it as "
           + _percent(tax.rate)
-          + if stated-groups.at(group) > 1 {
-            ", the rate of another VAT group of category " + str(category)
+          + if stated-groups.at(field) > 1 {
+            (
+              ", the rate of another VAT group"
+                + if category != none { " of category " + category }
+            )
           }
           + ".",
         hint: "Round the rate to at most "

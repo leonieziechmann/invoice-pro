@@ -219,3 +219,21 @@
   #payment-goal(days: 14)
   #bank
 ]
+
+// --- 8. A VAT group without category is an error of its own; the other
+// checks still run instead of stopping the compilation ---
+#model-test(model => {
+  let m = model
+  m.taxes.at(0).category = none
+  assert.eq(rules(m), ("BR-CL-18",))
+  m.taxes.at(0).rate = decimal("0.1912345")
+  assert.eq(rules(m), ("BR-CL-18", "IP-DEC-01"))
+  assert.eq(
+    diagnostic(m, "IP-DEC-01").message,
+    "The VAT rate 19.12345% has more than 4 decimals, so the e-invoice would state it as 19.1235%.",
+  )
+})[
+  #line-items[#item([A], price: 100)]
+  #payment-goal(days: 14)
+  #bank
+]
