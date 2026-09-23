@@ -285,6 +285,23 @@
   m.buyer.electronic-address = (scheme: none, id: "4000001123452")
   assert.eq(rules(m), ("BR-62", "BR-63"))
   assert.eq(find(m, "BR-63").field, "recipient.electronic-address")
+  assert(
+    find(m, "BR-63")
+      .hint
+      .contains(
+        "(scheme: \"0088\", id: \"4000001123452\")` for a GLN",
+      ),
+  )
+  // A Peppol participant identifier names its scheme in front
+  m.buyer.electronic-address = (
+    scheme: none,
+    id: "iso6523-actorid-upis::9930:DE987654321",
+  )
+  let hint = find(m, "BR-63").hint
+  assert(
+    hint.contains("(scheme: \"9930\", id: \"DE987654321\")`,"),
+    message: hint,
+  )
   m.buyer.electronic-address = (scheme: "XX", id: "1")
   assert.eq(rules(m), ("BR-62", "BR-CL-25"))
 

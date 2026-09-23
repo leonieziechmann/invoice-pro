@@ -270,6 +270,16 @@
     )
   }
   if address.scheme == none {
+    // A Peppol participant identifier such as "0088:4000001123452" (also
+    // with the prefix "iso6523-actorid-upis::") carries its scheme in front
+    // of the identifier.
+    let (scheme, id) = ("0088", address.id)
+    let parts = address.id.split(":")
+    if (
+      parts.len() >= 2 and parts.at(-2) in codelists.eas and parts.last() != ""
+    ) {
+      (scheme, id) = (parts.at(-2), parts.last())
+    }
     return (
       error(
         scheme-rule,
@@ -279,9 +289,13 @@
           + " "
           + _quoted(address.id)
           + " has no scheme identifier.",
-        hint: "Give the address with its scheme, e.g. `electronic-address: (scheme: \"0088\", id: "
-          + _quoted(address.id)
-          + ")` for a GLN, or give an email address.",
+        hint: "Give the address with its scheme, e.g. `electronic-address: (scheme: "
+          + _quoted(scheme)
+          + ", id: "
+          + _quoted(id)
+          + ")`"
+          + if scheme == "0088" and id == address.id { " for a GLN" }
+          + ", or give an email address.",
       ),
     )
   }
