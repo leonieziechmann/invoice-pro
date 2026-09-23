@@ -494,7 +494,9 @@
           + ", so its value is not written into the e-invoice.",
         hint: if entry.hint != none { entry.hint } else if entry.like != none {
           "Did you mean `" + entry.like + "`?"
-        } else { "Check the spelling of the key." },
+        } else {
+          "Check the spelling of the key, or keep it if only the printed invoice uses it (e.g. through `info.dynamic`)."
+        },
       ))
     }
   }

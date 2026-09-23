@@ -406,6 +406,8 @@
   let typo = find(m, "IP-KEY-02")
   assert.eq(typo.field, "sender.vatId")
   assert.eq(typo.hint, "Rename it to `vat-id`.")
+  // A key only the printed invoice uses can stay
+  assert(find(m, "IP-KEY-01").hint.contains("only the printed invoice"))
   let m = base
   m.seller.input-keys = party-model(
     (global-id: (scheme: "0088", value: "4000001123452")),
