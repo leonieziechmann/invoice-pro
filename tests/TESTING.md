@@ -41,7 +41,9 @@ tests/
     ├── model/             # E-invoice data model built from an invoice
     ├── validate/          # Business rule checks (diagnostics)
     ├── report/            # Error message, "report" and "ignore" modes
-    └── country-codes/     # Country code list, EAS scheme of VAT IDs
+    ├── country-codes/     # Country code list, EAS scheme of VAT IDs
+    └── golden/            # Golden XML of the e-invoice test documents (no tests,
+                           # see "E-invoice Conformance and Performance (CI)")
 ```
 
 ### Naming Conventions
@@ -440,7 +442,142 @@ If Mustang reports validation errors:
 
 ---
 
-### 3. Full Pipeline Precheck
+### 3. E-invoice Conformance and Performance (CI)
+
+The Mustang validation above checks two dozen hand-written documents. The CI adds a proof layer on top: it runs invoice-pro against the official validators on some 400 generated and regression invoices, keeps the XML of the test documents under review, checks that compiling is reproducible and watches the compile time of the e-invoice path. The tools live in `tools/` and are not part of the package.
+
+| Check                  | What it shows                                                                                  | Command                             | CI job                                     |
+| :--------------------- | :--------------------------------------------------------------------------------------------- | :---------------------------------- | :----------------------------------------- |
+| Conformance corpus     | invoice-pro's verdict equals the official one, and the XML says what the input and the PDF say | `nix run .#zugferd-corpus`          | `corpus` in `zugferd-validation.yaml`      |
+| Golden XML             | the XML of every e-invoice test document is unchanged, or changed on purpose                   | `nix run .#zugferd-golden`          | `golden` in `zugferd-validation.yaml`      |
+| Reproducibility        | two compilations of a document give bit-identical PDFs (same Typst and package version)        | (part of `zugferd-golden`)          | `golden`                                   |
+| Performance gate       | the e-invoice path stays within its budget                                                     | `nix run .#perf-gate`               | `performance` in `zugferd-validation.yaml` |
+| Documentation examples | every complete example in `docs/docs/` compiles                                                | `check-docs-examples`               | `tests.yaml`                               |
+| Nightly                | larger corpus with random invoices outside the legal constraints; 1000-line linearity          | `--population nightly`, `--nightly` | scheduled run of `zugferd-validation.yaml` |
+
+#### Running Without Nix
+
+The scripts take their tools from environment variables, and their generated files go to `build/` (ignored by git):
+
+| Variable                                 | Needed by      | Default                                                                                                                             |
+| :--------------------------------------- | :------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
+| `TYPST_BIN`                              | all            | `typst`                                                                                                                             |
+| `PYTHON`                                 | all            | `python3`; Python 3.11 or newer, with the packages `lxml` and `pypdf` for the corpus and the golden XML                             |
+| `MUSTANG_JAR`                            | corpus         | none: `Mustang-CLI-2.14.0.jar` from the [Mustang releases](https://github.com/ZUGFeRD/mustangproject/releases)                      |
+| `JAVA_BIN`, `JAVAC_BIN` (or `JAVA_HOME`) | corpus         | `java`, `javac`: a JDK, because the batch validator `tools/zugferd/java/MustangBatch.java` is compiled against the jar on first use |
+| `ZUGFERD_BUILD_DIR`                      | corpus, golden | `build/zugferd`; must be inside the repository (the cases import `/src/lib.typ`)                                                    |
+
+```bash
+export MUSTANG_JAR=~/Downloads/Mustang-CLI-2.14.0.jar
+./scripts/zugferd-corpus                        # generate and check the PR population
+./scripts/zugferd-corpus --only 'rg-*'          # only the regression cases
+./scripts/zugferd-corpus --population nightly   # the nightly population
+./scripts/zugferd-golden                        # golden XML and reproducibility
+./scripts/perf-gate                             # performance gate
+```
+
+#### The Conformance Corpus
+
+`tools/zugferd/corpus/gen.py` writes the generated invoices and their `manifest.json` to `build/zugferd/corpus/`; `tools/zugferd/corpus/regression/` holds the committed regression cases. `tools/zugferd/run.py` then handles every case in four steps:
+
+1. **Typst, once per case.** The cases use `zugferd-errors: "report"` and the harness theme `tools/zugferd/harness.typ`, which attaches invoice-pro's diagnostics to the PDF as `invoice-pro-diagnostics.json`. One compilation yields the XML, invoice-pro's verdict and the printed text.
+2. **XSD** of the profile with lxml. The Factur-X 1.0.07 XSDs are read from the Mustang jar.
+3. **Mustang 2.14** (EN 16931, Factur-X and XRechnung Schematron) in a single JVM for the whole run, validating while Typst still compiles. The XRechnung Schematron reports its rules (BR-DE-\*, PEPPOL-\*) with message type 27: as errors for an XRechnung, as notices for the other profiles. The runner counts every error, whatever its type.
+4. **Verdict:** the class (table below), the expectation of the case, the semantic oracles and the metamorphic relations between twin cases.
+
+| Population    | Cases                                                                                                                                                                                                                                                                  | Expectation                                                                                                                        |
+| :------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
+| `legal`       | every allowed pair of values of 11 dimensions (profile, seller and buyer country, tax scenario, tax mode, modifiers, amounts, identifiers, payment, delivery, number of lines, theme), plus a seeded random sample; `gen.py` `allowed()` keeps them legal and complete | `AGREE_VALID`, all oracles green                                                                                                   |
+| `mutation`    | a legal invoice with one required input removed                                                                                                                                                                                                                        | `AGREE_INVALID`, and invoice-pro names the rule                                                                                    |
+| `metamorphic` | twins: bundle quantity 1 against 2, reversed lines, another profile, another currency                                                                                                                                                                                  | the bundle amounts double, the totals stay equal                                                                                   |
+| `adversarial` | unusual but valid input: content instead of strings, invisible characters, a post code as number, countries as text, XML special characters, long names                                                                                                                | no crash, no lost or altered data                                                                                                  |
+| `regression`  | minimal reproductions of audit findings and issues, `tools/zugferd/corpus/regression/*.typ`                                                                                                                                                                            | as stated in their header                                                                                                          |
+| `random`      | nightly only: random invoices without the legal constraints                                                                                                                                                                                                            | invoice-pro and the official validators agree, or invoice-pro applies one of its own rules or stops with a message about the input |
+
+| Class            | Meaning                                                                                                 |
+| :--------------- | :------------------------------------------------------------------------------------------------------ |
+| `AGREE_VALID`    | no invoice-pro error, and the XML is officially valid                                                   |
+| `AGREE_INVALID`  | invoice-pro reports errors and the XML is officially invalid; the rules match                           |
+| `WRONG_RULE_ID`  | both reject the invoice, but invoice-pro names none of the official rules                               |
+| `FALSE_NEGATIVE` | no invoice-pro error, but the XML is officially invalid: silently invalid output                        |
+| `FALSE_POSITIVE` | invoice-pro reports errors, but the XML is officially valid                                             |
+| `STRICTER`       | only invoice-pro's own rules (`IP-*`, e.g. legal requirements the profile lacks) reject a valid invoice |
+| `GUARD_ONLY`     | only the XML guard objects (diagnostics with `source: "guard"`): a registry rule is missing             |
+| `CRASH`          | the compilation failed                                                                                  |
+| `INPUT_ERROR`    | the compilation stopped with the message the case expects (a deliberate input check)                    |
+| `NO_XML`         | no e-invoice XML was attached                                                                           |
+
+The oracles compare the XML with the facts the generator put into the invoice (`O-BT1` invoice number, `O-BT3` document type, `O-BT5` currency, `O-BT27`/`O-BT44` party names, `O-BT29`/`O-BT31` seller identifiers, `O-BT37`/`O-BT38`/`O-BT52`/`O-BT53` city and post code, `O-BT40`/`O-BT55`/`O-BT80` countries, `O-BG23` VAT categories and rates, `O-BT120` exemption reasons, `O-BG20/21` and `O-BG27/28` allowances and charges with their amounts, `O-BG14` invoicing period, `O-BT9` due date, `O-BT84` IBAN, `O-BT130` units, `O-BT153` item names) and with the printed PDF (`O-PDF-BT112`/`O-PDF-BT115` totals, `O-PDF-BT120` exemption reasons). `O-META-*` are the relations between twins.
+
+**Hard gates.** The job fails when a case does not meet its expectation; on the legal population this means any class other than `AGREE_VALID`, so in particular any `FALSE_NEGATIVE`, `FALSE_POSITIVE`, `CRASH` or `GUARD_ONLY`. The only exceptions are the failure signatures listed in `tools/zugferd/known-issues.toml` (see below). The job also fails when a listed signature no longer occurs.
+
+#### Regression Cases
+
+A regression case is a small invoice in `tools/zugferd/corpus/regression/` that imports `_base.typ` (shared parties and the harness setup) and states its expectation in its first lines:
+
+```typ
+// expect: AGREE_INVALID BR-AG-05
+// finding: tax-ipsi-zero-rate-false-negative
+// facts: {"currency": "EUR"}
+```
+
+- `expect:` the class, or `AGREE` (`AGREE_VALID`, `AGREE_INVALID`, `STRICTER` or `INPUT_ERROR`) or `REJECTED` (invoice-pro reports an error, whatever the official verdict), followed by the rules invoice-pro must report.
+- `error:` for `INPUT_ERROR`, a part of the expected message.
+- `finding:` the audit finding or GitHub issue the case reproduces.
+- `facts:` a JSON object with values the XML must carry (the keys of `tools/zugferd/oracles.py`, e.g. `currency`, `units`, `breakdown`, `seller_ids`).
+
+The case describes the correct behavior, also while it still fails; the failure is then a known issue until the fix lands.
+
+#### Known Issues and Triage
+
+A failing case has a signature such as `FALSE_NEGATIVE missing=BR-AG-05 ours=- official=BR-AG-05` (class, rules invoice-pro did not report, invoice-pro's errors, the official rules, the failed oracles). `tools/zugferd/known-issues.toml` lists the signatures of known bugs, each with the audit finding or issue that is being fixed; `cases` narrows an entry to the cases it covers. A listed signature does not fail the run; a new one does. When a fix makes a listed signature disappear, the run fails with `XPASS` until the entry is removed, so the list can only shrink. `--strict` ignores the list.
+
+When the corpus fails:
+
+1. Read the `NEW FAILURES` block: each signature shows the affected cases, an example file, the official messages and invoice-pro's diagnostics. `build/zugferd/results.json` holds every detail, `build/zugferd/out/<case>.xml` the XML and `build/zugferd/out/<case>.pdf` the PDF.
+2. Re-run a single case: `./scripts/zugferd-corpus --only pw042` (or `python3 tools/zugferd/run.py build/zugferd/corpus --only pw042`).
+3. Shrink a generated case to its essence: `python3 tools/zugferd/minimize.py pw042` resets every feature to its simplest value while the signature stays the same and writes `build/zugferd/min/pw042.typ`.
+4. Decide what it is:
+   - a bug in invoice-pro: fix it, and keep the minimal case as a regression case with the correct expectation;
+   - a bug of the generator, an oracle or a constraint in `allowed()`: fix the tool (they stay small on purpose, so that they can be reviewed);
+   - a known finding that is being worked on: add the signature to `known-issues.toml` with the finding id. Never add an entry to make a new class of failure disappear.
+
+#### Golden XML and Reproducibility
+
+`tools/zugferd/golden.py` takes the documents of `scripts/validate-all-zugferd` (one list for both checks), compiles each twice with a fixed creation timestamp and requires bit-identical PDFs: the same Typst and package version produce the same document, PDF and XML. It then compares the attached XML, pretty-printed, with `tests/zugferd/golden/<document>.xml` and shows a diff when they differ. Documents that import the published package (the template) are compiled against the checkout.
+
+An intended change of the XML updates the golden files in the same commit, which explains the change; a change users notice is also documented in `docs/docs/e-invoicing.md`:
+
+```bash
+./scripts/zugferd-golden --update        # or: nix run .#zugferd-golden -- --update
+git diff tests/zugferd/golden            # review the change
+```
+
+A new e-invoice test document that must be valid goes into `scripts/validate-all-zugferd` (and the list above); `--update` then creates its golden file.
+
+#### Performance Gate
+
+`tools/perf/gate.py` compiles benchmark invoices with 5, 50 and 300 lines, each with and without e-invoice (German parties, `zugferd: auto`, DIN 5008 theme), five times each with `typst compile --timings`, and takes the medians of
+
+`share = time in e-invoice code (compile with e-invoice) / total time (compile without)`,
+
+where the time in e-invoice code is every trace event of a file in `src/zugferd/` that is not nested in another one (the module import and `process-zugferd`).
+
+| Level  | Condition                                                                                                                                  | Effect                                    |
+| :----- | :----------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------- |
+| red    | share above 25 % at any size, above 15 % at 50 or 300 lines; nightly: e-invoice time at 1000 lines more than 4 times the time at 300 lines | the job fails                             |
+| yellow | share above 15 % at 5 lines; module import above 12 ms; serializer above 0.5 ms per line                                                   | a warning; `--yellow-fails` for a release |
+
+`--plain-limit-ms 0.5` turns a plain invoice that spends time in e-invoice code into a red result; it becomes part of the CI job once the e-invoice modules are only loaded when `zugferd` is set. The benchmark generator and the trace aggregation are those of the performance tools in `tools/perf/` when they are present.
+
+#### Not Covered Yet
+
+- **KoSIT validator:** the official reference for XRechnung is not part of the CI yet. TODO: add KoSIT 1.5.0 with the pinned XRechnung configuration to the corpus runner (a second verdict next to Mustang, and the class `OFFICIAL_DISAGREE` when they differ); it differs from Mustang on BR-DE-27/BR-DE-28, which invoice-pro treats as errors like Mustang.
+- **Rule coverage gate:** the check that every official rule id of a profile is covered by a rule, by construction or by a generated table follows with the rule registry.
+
+---
+
+### 4. Full Pipeline Precheck
 
 Run all checks (linting, tytanic tests, docs build, and ZUGFeRD validations) in one command:
 
