@@ -1305,14 +1305,18 @@
       if terms != none { terms-input = "payment-goal" }
     }
     // Without days or a date, the payment goal prints that the amount is due
-    // at once ("sofort nach Erhalt"), which are the payment terms.
+    // at once ("sofort nach Erhalt"), which are the payment terms. On a
+    // document whose sender pays (a credit note or a self-billed invoice),
+    // it prints that the sender pays at once ("umgehend") instead.
     if terms == none and due-date == none and goal-date == none {
-      terms = payment-terms(
-        locale
-          .at("strings", default: (:))
-          .at("payment", default: (:))
-          .at("deadline-soon", default: none),
+      let strings = (
+        locale.at("strings", default: (:)).at("payment", default: (:))
       )
+      let soon = strings.at("deadline-soon", default: none)
+      if document.sender-pays {
+        soon = strings.at("deadline-soon-credit", default: soon)
+      }
+      terms = payment-terms(soon)
       if terms != none { terms-input = "payment-goal" }
     }
   }

@@ -193,6 +193,29 @@
   #bank-details(iban: "DE75512108001245126199")
 ]
 
+// The e-invoice states the payment terms the payment goal prints (BT-20):
+// on a credit note or a self-billed invoice paid at once, that the sender
+// transfers the amount promptly, not that it is due on receipt
+#let paid-at-once = [
+  #line-items[#item([Bonus], price: 500, tax: tax.vat(19%))]
+  #payment-goal()
+  #bank
+]
+#model-test(document-type: "credit-note", model => {
+  assert.eq(model.payment.terms, "umgehend")
+  assert.eq(xml-values(model, "ram:Description"), ("umgehend",))
+})[#paid-at-once]
+#model-test(
+  locale: locale.en-de,
+  document-type: "self-billed",
+  sender: buyer-fr,
+  recipient: seller,
+  model => assert.eq(model.payment.terms, "promptly"),
+)[#paid-at-once]
+#model-test(model => {
+  assert.eq(model.payment.terms, "sofort nach Erhalt")
+})[#paid-at-once]
+
 // An invoice keeps its sentence, the sender as account holder and the
 // EPC-QR code; an explicit holder or QR setting is kept on a credit note.
 #invoice(
