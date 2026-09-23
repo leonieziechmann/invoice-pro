@@ -150,6 +150,9 @@
       </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
       <ram:InvoiceReferencedDocument>
         <ram:IssuerAssignedID>R-2026-11</ram:IssuerAssignedID>
+        <ram:FormattedIssueDateTime>
+          <qdt:DateTimeString format="102">20260803</qdt:DateTimeString>
+        </ram:FormattedIssueDateTime>
       </ram:InvoiceReferencedDocument>
     </ram:ApplicableHeaderTradeSettlement>
   </rsm:SupplyChainTradeTransaction>

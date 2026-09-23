@@ -1285,6 +1285,8 @@
         ctx.at("preceding-invoice-nr", default: none),
         ctx.at("original-invoice-nr", default: none),
       )),
+      // BT-26, a `datetime` or `none`.
+      preceding-invoice-date: ctx.at("preceding-invoice-date", default: none),
     ),
     seller: seller,
     buyer: buyer,

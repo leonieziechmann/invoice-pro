@@ -1,5 +1,6 @@
 // A credit note (381) between German parties, written as XRechnung: positive
-// amounts, the preceding invoice it credits, the amount refunded within 14
+// amounts, the preceding invoice it credits (number and date, BT-25 and
+// BT-26), the amount refunded within 14
 // days to the buyer's account (BG-16, required by XRechnung on credit notes
 // as well). Validated by validate-all-zugferd.
 
@@ -35,9 +36,11 @@
   invoice-nr: "RK-2026-17",
   date: datetime(year: 2026, month: 9, day: 1),
   preceding-invoice-nr: "R-2026-11",
+  preceding-invoice-date: datetime(year: 2026, month: 8, day: 3),
   references: (
     references.invoice-nr(),
     references.preceding-invoice-nr(),
+    references.preceding-invoice-date(),
     references.invoice-date(),
   ),
 )

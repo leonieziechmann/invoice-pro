@@ -493,9 +493,15 @@
     ),
   )
   if profile.document-references and invoice.preceding-invoice-nr != none {
-    trade-settlement.insert("ram:InvoiceReferencedDocument", (
-      "ram:IssuerAssignedID": invoice.preceding-invoice-nr,
-    ))
+    let reference = ("ram:IssuerAssignedID": invoice.preceding-invoice-nr)
+    // BT-26: the date of the preceding invoice.
+    let date = invoice.at("preceding-invoice-date", default: none)
+    if type(date) == datetime {
+      reference.insert("ram:FormattedIssueDateTime", (
+        "qdt:DateTimeString": ("@format": "102", "": fmt-date(date)),
+      ))
+    }
+    trade-settlement.insert("ram:InvoiceReferencedDocument", reference)
   }
 
   let transaction = (:)

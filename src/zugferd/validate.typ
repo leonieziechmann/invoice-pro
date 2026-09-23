@@ -301,6 +301,36 @@
     ))
   }
 
+  // The preceding invoice reference (BG-3), from BASIC WL on: its number
+  // (BT-25) is required (BR-55), and a corrected invoice replaces the
+  // invoice it names. A document that amends an invoice must refer to it
+  // (Art. 219 of the VAT Directive), which XRechnung checks as BR-DE-26.
+  // XRechnung only warns about BR-DE-26, but validators such as Mustang
+  // reject the invoice.
+  if model.profile.document-references {
+    let number = invoice.at("preceding-invoice-nr", default: none)
+    if (
+      number == none
+        and invoice.at("preceding-invoice-date", default: none) != none
+    ) {
+      out.push(error(
+        "BR-55",
+        "preceding-invoice-nr",
+        "The date of the preceding invoice (BT-26) is given, but not its number (BT-25), which a preceding invoice reference must have.",
+        hint: "Set `preceding-invoice-nr` on the invoice.",
+      ))
+    } else if number == none and code == "384" {
+      out.push(error(
+        if model.profile.xrechnung { "BR-DE-26" } else { "IP-DOC-02" },
+        "preceding-invoice-nr",
+        "A corrected invoice (BT-3 = "
+          + code
+          + ") replaces a preceding invoice, but it names none (BG-3).",
+        hint: "Set `preceding-invoice-nr` (and `preceding-invoice-date`) to the invoice it corrects.",
+      ))
+    }
+  }
+
   // A credit note states the credited amounts as positive amounts: a
   // negative credit note asks the buyer to pay (IP-DOC-03). An invoice with
   // a negative total is valid, but a credit note is the document for it.

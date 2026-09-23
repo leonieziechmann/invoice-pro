@@ -187,6 +187,7 @@
         public-references.delivery-note-nr,
         public-references.delivery-address,
         public-references.preceding-invoice-nr,
+        public-references.preceding-invoice-date,
         public-references.due-date,
         public-references.payment-reference,
         public-references.contact-person,

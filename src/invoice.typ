@@ -86,6 +86,10 @@
   /// Preceding invoice number (for credit notes / corrections).
   /// -> none | string | content
   preceding-invoice-nr: none,
+  /// The date of the preceding invoice (BT-26 of the e-invoice), next to
+  /// `preceding-invoice-nr`.
+  /// -> none | datetime
+  preceding-invoice-date: none,
   /// Explicit due date for payment.
   /// -> none | datetime | string | content
   due-date: none,
@@ -177,6 +181,12 @@
     none,
     str,
     content,
+  )
+  types.require(
+    preceding-invoice-date,
+    "invoice::preceding-invoice-date",
+    none,
+    datetime,
   )
   types.require(due-date, "invoice::due-date", none, datetime, str, content)
   types.require(
@@ -370,6 +380,7 @@
     quote-nr: quote-nr,
     delivery-note-nr: delivery-note-nr,
     preceding-invoice-nr: preceding-invoice-nr,
+    preceding-invoice-date: preceding-invoice-date,
     due-date: due-date,
     payment-reference: payment-reference,
 

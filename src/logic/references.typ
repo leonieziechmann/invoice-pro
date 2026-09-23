@@ -299,6 +299,19 @@
   }
 }
 
+#let preceding-invoice-date(label: auto, value: auto) = {
+  ctx => {
+    let title = if label == auto {
+      ctx.locale.strings.reference.preceding-invoice-date
+    } else { label }
+    let val = if value == auto {
+      ctx.at("preceding-invoice-date", default: none)
+    } else { value }
+    if type(val) == datetime { val = (ctx.locale.format.date)(val) }
+    (title, val)
+  }
+}
+
 #let due-date(label: auto, value: auto) = {
   ctx => {
     let title = if label == auto {
