@@ -86,6 +86,13 @@
   types.require(body, "bundle::body", none, content)
   require-positive-base-quantity(base-quantity, "bundle")
 
+  let bundle-quantity = if quantity == auto { decimal("1") } else {
+    coercion.to-decimal(quantity)
+  }
+  let bundle-base-quantity = if base-quantity == auto { decimal("1") } else {
+    coercion.to-decimal(base-quantity)
+  }
+
   compute-motif(
     name: "bundle",
     scope: ctx => loom.mutator.batch(ctx, {
@@ -94,18 +101,12 @@
       derive("description", description)
       put("bundle-description", ctx.at("description", default: description))
 
+      // A nested bundle does not inherit the quantities of the enclosing one:
+      // its quantity is the number of it in one unit of the enclosing bundle.
       remove("quantity")
-      derive(
-        "bundle-quantity",
-        coercion.to-decimal(quantity),
-        default: decimal("1"),
-      )
+      put("bundle-quantity", bundle-quantity)
       remove("base-quantity")
-      derive(
-        "bundle-base-quantity",
-        coercion.to-decimal(base-quantity),
-        default: decimal("1"),
-      )
+      put("bundle-base-quantity", bundle-base-quantity)
       // Without an own unit, use the unresolved unit a `group` or `apply`
       // cascades. The resolved unit is kept under `bundle-unit`, so "unit"
       // still carries that cascaded input to the bundled items.
@@ -117,9 +118,7 @@
         m-unit.resolve(
           unit-input,
           ctx.locale,
-          quantity: if quantity != auto { coercion.to-decimal(quantity) } else {
-            ctx.at("bundle-quantity", default: decimal("1"))
-          },
+          quantity: bundle-quantity,
           default: m-unit.pcs,
         ),
       )

@@ -14,27 +14,34 @@
   bracket-surcharges,
 ) = {
   let to-dec = coercion.to-decimal
-  let to-ratio = coercion.to-ratio
   let norm-money = ctx.locale.normalize.money
   let norm-money-fine = ctx.locale.normalize.money-fine
-
-  let is-net-based = ctx.tax-mode == "exclusive"
 
   let quantity = ctx.bundle-quantity
   let base-quantity = ctx.bundle-base-quantity
   require-positive-base-quantity(base-quantity, "bundle")
   let quantity-modifier = quantity / base-quantity
 
-  let discount-sum = bracket-discounts
-    .map(d => d.absolute)
-    .sum(default: decimal("0"))
-  let surcharge-sum = bracket-surcharges
-    .map(d => d.absolute)
-    .sum(default: decimal("0"))
-
+  // The items of a bundle make up one unit (per base quantity) of it.
   let base-price = norm-money-fine(group.total)
   let base-total = norm-money(base-price * quantity-modifier)
-  let modified-total = base-total + discount-sum + surcharge-sum
+
+  // The bundle's own modifiers were computed on one unit. Like on an item, a
+  // percentage applies to the whole line (every unit of the bundle), while an
+  // absolute amount applies once per line.
+  let scale(modifier) = {
+    if modifier.type == "relative" {
+      modifier.absolute = norm-money(base-total * modifier.display)
+    }
+    modifier
+  }
+  let discounts = bracket-discounts.map(scale)
+  let surcharges = bracket-surcharges.map(scale)
+
+  let modifier-sum = (discounts + surcharges)
+    .map(d => d.absolute)
+    .sum(default: decimal("0"))
+  let modified-total = base-total + modifier-sum
 
   let virtual-item-name = name
   if has-multiple-brackets {
@@ -53,8 +60,8 @@
     description: description,
     date: date,
 
-    quantity: to-dec(ctx.bundle-quantity),
-    base-quantity: to-dec(ctx.bundle-base-quantity),
+    quantity: to-dec(quantity),
+    base-quantity: to-dec(base-quantity),
     unit: ctx.bundle-unit,
     unit-singular: ctx.bundle-unit-singular,
 
@@ -63,8 +70,8 @@
     unmodified-total: base-total,
     tax: group.tax,
 
-    discounts: bracket-discounts,
-    surcharge: bracket-surcharges,
+    discounts: discounts,
+    surcharge: surcharges,
 
     item-id: coercion.to-item-id(ctx.item-id),
     reference: ctx.reference,
@@ -100,15 +107,54 @@
     .to-dict()
 }
 
+// The frames a bundle consumes: its items (including the virtual items of
+// nested bundles) and its modifiers.
+#let _consumed-kinds = ("item", "modifier", "modifier-applicator")
+
+// Removes the consumed frames from `frames` at any depth, the way
+// `loom.query.collect` finds the items. A nested bundle is dropped together
+// with its virtual items: the enclosing bundle already contains them, so they
+// must not be listed (and counted) a second time.
+#let strip-consumed(frames) = {
+  let result = ()
+  for frame in frames {
+    if not loom.frame.is-frame(frame) {
+      result.push(frame)
+      continue
+    }
+    if frame.kind in _consumed-kinds { continue }
+
+    let signal = frame.signal
+    if loom.frame.is-frame(signal) or type(signal) == array {
+      let inner = strip-consumed(
+        if type(signal) == array { signal } else { (signal,) },
+      )
+      // A container of nothing but consumed frames, such as a nested bundle.
+      if inner.len() == 0 { continue }
+      frame.signal = if type(signal) == array { inner } else { inner.first() }
+    } else if type(signal) == dictionary and "children" in signal {
+      let children = signal.children
+      if loom.frame.is-frame(children) { children = (children,) }
+      if type(children) == array {
+        frame.signal.children = strip-consumed(children)
+      }
+    }
+    result.push(frame)
+  }
+  result
+}
+
 #let calculate-bundle(ctx, children, name) = {
+  let layout-children = strip-consumed(children)
+
   // 1. Get Items
   let mod-applicator = loom.query.find-signal(children, "modifier-applicator")
-  if mod-applicator == none { return children }
+  if mod-applicator == none { return layout-children }
 
   let bundlable-signals = mod-applicator.items
   // The VAT groups of the items, plus those the modifiers are pinned to.
   let tax-groups = mod-applicator.tax-groups
-  if tax-groups.groups.len() == 0 { return children }
+  if tax-groups.groups.len() == 0 { return layout-children }
 
   // 2. Tax Mode & Modifier Values
   let discounts = mod-applicator.tax-split.discounts
@@ -163,11 +209,6 @@
         bracket-surcharges,
       )
     })
-
-  let layout-children = children.filter(c => (
-    c.at("kind", default: none)
-      not in ("item", "modifier", "modifier-applicator")
-  ))
 
   return layout-children + generated-items
 }

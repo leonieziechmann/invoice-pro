@@ -151,8 +151,8 @@ Groups multiple items together as a virtual single item while automatically aggr
 | --------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `name`          | `str` \| `content`                                                   | The name of the bundle.                                                                                                          |
 | `description`   | `str` \| `content` \| `auto` \| `none`                               | If set to `auto`, it automatically generates a comma-separated list of all child item names.                                     |
-| `quantity`      | `number` \| `auto`                                                   | The quantity of the bundle itself.                                                                                               |
-| `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g).                                                                   |
+| `quantity`      | `number` \| `auto`                                                   | The quantity of the bundle itself (defaults to 1). A nested bundle does not inherit it.                                          |
+| `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g). Must be greater than 0.                                           |
 | `unit`          | `str` \| `content` \| `dictionary` \| `function` \| `auto` \| `none` | The unit of measurement for the bundle. Accepts the same dictionary form, function, or string as `item` for ZUGFeRD compliance.  |
 | `item-id`       | `str` \| `dictionary` \| `auto` \| `none`                            | Article identifiers of the bundle for the ZUGFeRD XML. Same forms as on `item`. See [above](#the-item-id-parameter-and-zugferd). |
 | `date`          | `datetime` \| `array` \| `auto` \| `none`                            | If set to `auto`, calculates the date range based on the earliest and latest dates of the items inside the bundle.               |
@@ -170,6 +170,24 @@ If you place items with varying tax rates (e.g., mixing 19% and 7% items) or dif
 **Why this matters:**
 This automatic splitting ensures that your invoice remains legally compliant. Total amounts, sub-totals, and any modifiers applied to the bundle (such as a 10% bundle-wide discount) are proportionally distributed and calculated correctly across the different tax rates without any manual intervention required from you.
 :::
+
+### Quantities and Modifiers of a Bundle
+
+The items of a bundle make up **one unit** of it (per `base-quantity`); the bundle's line is that unit price times its `quantity`. Modifiers inside a bundle behave like the modifiers of an item:
+
+- A **percentage** applies to the whole line, i.e. to every unit: 2 packages of 100.00 with `discount(.., amount: 10%)` are billed 200.00 − 20.00 = 180.00.
+- An **absolute amount** applies **once per line**, whatever the quantity: 2 packages of 100.00 with `discount(.., amount: 5)` are billed 195.00. For an amount per package, put the modifier on the items or multiply it yourself.
+
+A bundle can contain other bundles. A nested bundle is part of the enclosing bundle's line only (it is not listed on its own), and its `quantity` is the number of it in **one** enclosing bundle:
+
+```typst
+#bundle([Office kit], quantity: 3)[      // 3 × (2 × 100.00 − 10%) = 540.00
+  #bundle([Chair set], quantity: 2)[
+    #item([Chair], price: 100.00)
+    #discount([Set discount], amount: 10%)
+  ]
+]
+```
 
 ---
 
