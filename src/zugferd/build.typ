@@ -439,6 +439,15 @@
       "ram:IssuerAssignedID": invoice.contract-nr,
     ))
   }
+  // BT-11: the project reference is its identifier; the name the syntax
+  // requires as well is the same text.
+  let project = invoice.at("project", default: none)
+  if profile.procuring-project and project != none {
+    header-agreement.insert("ram:SpecifiedProcuringProject", (
+      "ram:ID": project,
+      "ram:Name": project,
+    ))
+  }
 
   let header-delivery = (:)
   if profile.addresses {

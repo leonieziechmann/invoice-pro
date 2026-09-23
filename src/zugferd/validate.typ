@@ -366,8 +366,8 @@
 // --- Document data --------------------------------------------------------
 
 /// Checks the data of the document besides its type: the notes (BT-21,
-/// BT-22), and that the service period the invoice prints is the one the XML
-/// states (IP-PERIOD-01).
+/// BT-22), the project reference (BT-11), and that the service period the
+/// invoice prints is the one the XML states (IP-PERIOD-01).
 ///
 /// -> array
 #let check-document-data(model) = {
@@ -385,6 +385,20 @@
         + profile.name
         + " profile has no invoice notes (BT-22), so `notes` are printed, but not written into the e-invoice.",
       hint: "Use the \"basic-wl\" profile or a richer one to state them.",
+    ))
+  }
+  // The project reference (BT-11) exists in EN 16931 and XRechnung only.
+  if (
+    model.invoice.at("project", default: none) != none
+      and not profile.procuring-project
+  ) {
+    out.push(warning(
+      "IP-PROFILE-01",
+      "project",
+      "The "
+        + profile.name
+        + " profile has no project reference (BT-11), so `project` is not written into the e-invoice.",
+      hint: "Use the \"en16931\" or \"xrechnung\" profile to state it.",
     ))
   }
   if profile.notes {

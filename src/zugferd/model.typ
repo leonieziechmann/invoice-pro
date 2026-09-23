@@ -1334,6 +1334,8 @@
       preceding-invoice-date: ctx.at("preceding-invoice-date", default: none),
       // BT-22 and BT-21: `(content: .., subject-code: ..)` each.
       notes: _notes(ctx.at("notes", default: ())),
+      // BT-11: the project reference.
+      project: text-or-none(ctx.at("project", default: none)),
     ),
     seller: seller,
     buyer: buyer,

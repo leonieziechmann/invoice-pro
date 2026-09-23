@@ -31,6 +31,8 @@
   document-references: false,
   // BT-21, BT-22: invoice notes.
   notes: false,
+  // BT-11: project reference.
+  procuring-project: false,
   // The EN 16931 business rules (BR-*) apply to the whole document.
   en16931: false,
   // The German CIUS XRechnung (BR-DE-*) applies on top of EN 16931.
@@ -82,6 +84,7 @@
       bic: true,
       item-ids: true,
       item-description: true,
+      procuring-project: true,
       document-references: true,
       notes: true,
       en16931: true,
@@ -100,6 +103,7 @@
       bic: true,
       item-ids: true,
       item-description: true,
+      procuring-project: true,
       document-references: true,
       notes: true,
       en16931: true,
