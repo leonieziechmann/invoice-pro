@@ -85,8 +85,22 @@ Set `zugferd-errors: "report"` on the invoice to list these problems in the docu
 
 Problems come in two levels:
 
-- **Errors** make the XML invalid for the profile (e.g. a missing invoice number, an unknown unit code or a VAT breakdown that does not add up).
-- **Warnings** point out data that is valid but most likely not intended (e.g. a contact phone number with fewer than three digits, or an EN 16931 invoice without the electronic addresses Peppol expects). Warnings never stop the compilation.
+- **Errors** make the XML invalid for the profile (e.g. a missing invoice number, an unknown unit code or a VAT breakdown that does not add up), or the invoice wrong in a way the official validators cannot see (see below).
+- **Warnings** point out data that is valid but most likely not intended (e.g. an EN 16931 invoice without the electronic addresses Peppol expects, or a key of a party that `invoice-pro` does not know). Warnings never stop the compilation.
+
+For XRechnung, the seller contact phone number must contain at least three digits (`BR-DE-27`), and the email address must match the pattern of the XRechnung Schematron (`BR-DE-28`, e.g. an internationalized domain in punycode). XRechnung only warns about these two rules, and the KoSIT validator accepts such an invoice, but other validators, such as Mustang, reject it. `invoice-pro` therefore reports them as errors.
+
+Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice-pro` checks some rules of its own, whose ids start with `IP-`. Here it is stricter than the official validators: they accept the XML, but a value the invoice states would be lost or wrong, or the law requires more than the profile checks.
+
+| Rule            | Level   | Checks                                                                                                                                                                                                                                                                             |
+| :-------------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IP-COUNTRY-01` | error   | A party without `country` whose VAT identifier was issued by another country: the country of the locale would be written (e.g. "DE" for the Austrian VAT ID "ATU12345678"). Set `country` on the party, also for a foreign VAT registration.                                       |
+| `IP-ADDR-01`    | error   | A city line with a number of three or more digits that is not a post code of the party's country (e.g. "1012 Amsterdam" instead of "1012 AB Amsterdam"): the post code would be missing, and the number would be written into the city name.                                       |
+| `IP-ID-02`      | error   | Two values for one party identifier, of which only one can be written: a `global-id` without scheme next to `id`, a `location-id` next to `id` of the delivery address, or two identifiers with scheme.                                                                            |
+| `IP-KEY-01`     | warning | A key of `sender`, `recipient` or `delivery-address` that `invoice-pro` does not know: its value is not written into the e-invoice.                                                                                                                                                |
+| `IP-KEY-02`     | error   | A misspelled key the e-invoice reads (e.g. `vatId`, `vat_id`, `ustid`, `e-mail` or `zip`): its value would be missing without notice.                                                                                                                                              |
+| `IP-VAT-226`    | error   | BASIC WL: an intra-community supply (`K`) or a cross-border reverse charge (`AE`) without the buyer VAT identifier, which Art. 226 No. 4 of the VAT Directive requires on the invoice. BASIC WL has no invoice lines, so the official rules (`BR-IC-02`, `BR-AE-02`) do not apply. |
+| `IP-VAT-138`    | warning | An intra-community supply (`K`) to a buyer whose VAT identifier was not issued by an EU member state (or "XI" for Northern Ireland).                                                                                                                                               |
 
 ### The `zugferd-errors` Parameter
 
@@ -143,19 +157,20 @@ For the generated XML payload to be valid, your input data must satisfy strict s
 
 Both the `sender` and `recipient` dictionaries must include:
 
-- **Country:** A country of the `country` module (e.g., `country.de`, `country.fr`, `country.us`), an ISO 3166-1 alpha-2 code (e.g., `"FR"`) or a country created with `country.custom(code: "NO", name: "Norge")`. Without `country`, the party is in the country of the locale region, and a `delivery-address` is in the recipient's country. See the [Country API](./api-reference/invoice/country.md) documentation for details.
+- **Name:** A `name` given as several lines is written as one name (BT-27, BT-44), its lines joined with `, ` as in the inline sender line: `("Kunde GmbH", "z. Hd. Frau Müller")` becomes `Kunde GmbH, z. Hd. Frau Müller`. Put a line that is not part of the name, such as an attention line, into `address` instead.
+- **Country:** A country of the `country` module (e.g., `country.de`, `country.fr`, `country.us`), an ISO 3166-1 alpha-2 code (e.g., `"FR"`) or a country created with `country.custom(code: "NO", name: "Norge")`. Without `country`, the party is in the country of the locale region, and a `delivery-address` is in the recipient's country. If the VAT identifier of a party without `country` was issued by another country, the default is most likely wrong, and the e-invoice stops with `IP-COUNTRY-01`; an explicit `country` settles it, also for a foreign VAT registration. See the [Country API](./api-reference/invoice/country.md) documentation for details.
 - **Address:** ZUGFeRD supports up to three distinct address lines (`ram:LineOne`, `ram:LineTwo`, and `ram:LineThree`). You can specify the address in any of the following polymorphic forms, which are fully supported:
   - **A single string or content:** Maps entirely to `ram:LineOne` (e.g., `"123 Main St"`).
   - **An array of strings or content:** Maps sequentially to the three lines. If there are more than three elements in the array, the remaining elements are joined automatically into `ram:LineThree` using a comma separator (e.g., `("123 Main St", "Suite 100", "4th Floor", "Room 402")` maps to `"123 Main St"`, `"Suite 100"`, and `"4th Floor, Room 402"` respectively).
 - **City and Postal Code:** Must be fully specified. To ensure correct splitting for XML generation, you can provide this in one of two ways:
-  - **As a String (Parsed Automatically):** Pass the city and postal code as a single string (e.g., `"10115 Berlin"`, `"1012 AB Amsterdam"`) or as content (e.g., `[#plz #ort]`). The post code is recognized in the format of the party's `country` (see [Predefined Countries](./api-reference/invoice/country.md#predefined-countries)). A post code of another format is not taken apart, so check the `country` of the party.
+  - **As a String (Parsed Automatically):** Pass the city and postal code as a single string (e.g., `"10115 Berlin"`, `"1012 AB Amsterdam"`) or as content (e.g., `[#plz #ort]`). The post code is recognized in the format of the party's `country` (see [Predefined Countries](./api-reference/invoice/country.md#predefined-countries)). A post code of another format is not taken apart, so check the `country` of the party: a city line with a number of three or more digits and no recognized post code stops the e-invoice (`IP-ADDR-01`), as the post code would be missing from the XML. District numbers such as `"Praha 1"` or `"Dublin 2"` are fine.
   - **As a Dictionary (Explicit Definition):** Alternatively, explicitly define the name and post-code using a dictionary to prevent any parsing ambiguity. The post code must be a string, so that leading zeros are kept:
     ```typst
     city: (name: "Berlin", post-code: "10115")
     ```
 - **Tax Identifiers:**
-  - The **sender** should include a `tax-nr` (national tax number) and/or `vat-id` (value-added tax identifier, written with its country prefix, e.g. `"DE123456789"`; spaces are removed).
-  - The **recipient** (buyer) should include a `vat-id` if applicable. Reverse charge (`AE`) and intra-community supplies (`K`) require it.
+  - The **sender** should include a `tax-nr` (national tax number) and/or `vat-id` (value-added tax identifier, written with its country prefix, e.g. `"DE123456789"`; spaces and invisible characters, such as the zero width spaces of copied text, are removed).
+  - The **recipient** (buyer) should include a `vat-id` if applicable. Reverse charge (`AE`) and intra-community supplies (`K`) require it. In `"basic-wl"`, which has no invoice lines, `invoice-pro` requires it for `K` and a cross-border `AE` by law (`IP-VAT-226`), but not for a domestic reverse charge such as § 13b UStG.
   - The `"minimum"` profile identifies the seller only by its VAT identifier (BT-31), so the **sender** must have a `vat-id` there. Senders with only a `tax-nr` need `"basic-wl"` or higher.
 
 - **Seller Identifier (BT-29):** The buyer must be able to identify the seller (BR-CO-26), by the VAT identifier or a seller identifier. Without a VAT identifier, the `tax-nr` is used as seller identifier. If you have neither, or want to state a different identifier (e.g. your supplier number at the customer, or a company registration number), set `id` on the sender; it does not assert a tax registration. A globally registered identifier (e.g. a GLN) can be given with its ISO/IEC 6523 scheme:
@@ -168,7 +183,11 @@ Both the `sender` and `recipient` dictionaries must include:
   )
   ```
 
-  The same keys on the `recipient` set the buyer identifier (BT-46).
+  `id` accepts a scheme as well (`id: (scheme: "0088", id: ..)` is the same as `global-id`), and a `global-id` without scheme is an ordinary identifier. Only one identifier without scheme and one with scheme can be written, so a `global-id` without scheme next to `id` stops the e-invoice (`IP-ID-02`) instead of being dropped.
+
+  The same keys on the `recipient` set the buyer identifier (BT-46), and on the `delivery-address` the deliver-to location identifier (BT-71, `id` or `location-id`). The buyer and the delivery address take only one of them, `id` or `global-id` (CII-SR-450, CII-SR-449, from the `"basic"` profile on).
+
+- **Keys:** A key of `sender`, `recipient` or `delivery-address` that `invoice-pro` does not know is not written into the e-invoice, which is reported as a warning (`IP-KEY-01`). A key that looks like a misspelling of a key the e-invoice reads, such as `vatId`, `vat_id`, `ustid`, `e-mail` or `zip` (the post code belongs in `city`), stops the e-invoice (`IP-KEY-02`), as its value would be missing without notice.
 
 - **Seller Contact (BG-6):** Under German XRechnung rules, the seller must specify contact details. You can define this under the `contact` key of the `sender` dictionary (containing keys `name`, `phone`, `email`):
 
@@ -199,18 +218,20 @@ Both the `sender` and `recipient` dictionaries must include:
 
     | VAT ID prefix | Scheme | VAT ID prefix | Scheme | VAT ID prefix | Scheme |
     | :------------ | :----- | :------------ | :----- | :------------ | :----- |
-    | `AT`          | `9914` | `EE`          | `9931` | `LU`          | `9938` |
-    | `BE`          | `9925` | `EL` / `GR`   | `9933` | `LV`          | `9939` |
-    | `BG`          | `9926` | `ES`          | `9920` | `MT`          | `9943` |
+    | `AT`          | `9914` | `EL` / `GR`   | `9933` | `LU`          | `9938` |
+    | `BE`          | `9925` | `ES`          | `9920` | `LV`          | `9939` |
+    | `BG`          | `9926` | `FI`          | `0213` | `MT`          | `9943` |
     | `CH`          | `9927` | `FR`          | `9957` | `NL`          | `9944` |
     | `CY`          | `9928` | `GB`          | `9932` | `PL`          | `9945` |
     | `CZ`          | `9929` | `HR`          | `9934` | `PT`          | `9946` |
     | `DE`          | `9930` | `HU`          | `9910` | `RO`          | `9947` |
-    |               |        | `IE`          | `9935` | `SI`          | `9949` |
+    | `EE`          | `9931` | `IE`          | `9935` | `SI`          | `9949` |
     |               |        | `IT`          | `0211` | `SK`          | `9950` |
     |               |        | `LT`          | `9937` |               |        |
 
-  - **Email Fallback:** Without a VAT ID, or with a VAT ID whose prefix is not in the table (e.g. a Danish `DK` VAT ID), the email address (`contact.email` or `email`) is used with the scheme `EM`. The scheme always follows the VAT ID prefix, never the country of the address.
+    The endpoint is derived from the VAT ID on invoices not subject to VAT (category `O`) as well: they leave out the VAT identifiers themselves (BR-O-02), but the electronic address is no VAT identifier.
+
+  - **Email Fallback:** Without a VAT ID, or with a VAT ID whose prefix is not in the table (e.g. a Danish `DK` or Swedish `SE` VAT ID, for which the EAS code list has no scheme), the email address (`contact.email` or `email`) is used with the scheme `EM`. The scheme always follows the VAT ID prefix, never the country of the address.
   - **Manual Override:** You can manually specify a custom electronic address on the party dictionary. A plain email address is accepted as well:
     ```typst
     sender: (
@@ -219,6 +240,7 @@ Both the `sender` and `recipient` dictionaries must include:
       // or: electronic-address: "invoices@example.com"
     )
     ```
+    An address without identifier, such as `""` (e.g. an empty field of imported data), `auto` or a dictionary without `id`, counts as not given: the address is derived as described above. An address without scheme must be an email address; any other identifier needs its scheme, otherwise the e-invoice stops (BR-62 for the sender, BR-63 for the recipient).
 
 ### 2. Standardized Unit Codes
 
@@ -255,7 +277,7 @@ Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the 
 - Zero Rated: `tax.zero()` (maps to category **Z**).
 - Tax Exempt: `tax.exempt(grounds: ..)` (maps to category **E**). The `grounds` are mandatory for exempt items (BR-E-10).
 - Reverse Charge: `tax.reverse-charge()` (maps to category **AE**). Requires the VAT identifier of the buyer.
-- Intra-community Supply: `tax.intra-community()` (maps to category **K**). Requires the VAT identifiers of both parties. Without a `delivery-address`, the buyer's country is stated as deliver-to country; a `delivery-address` without its own `country` is in the buyer's country as well.
+- Intra-community Supply: `tax.intra-community()` (maps to category **K**). Requires the VAT identifiers of both parties. Without a `delivery-address`, the buyer's country is stated as deliver-to country; a `delivery-address` without its own `country` is in the buyer's country as well. A deliver-to country that is the seller's own country (`BR-IC-12`), or a buyer VAT identifier not issued by an EU member state (`IP-VAT-138`), is reported as a warning.
 - Export: `tax.export()` (maps to category **G**). Requires the seller VAT identifier.
 - Outside Scope / Small Business: `tax.outside-scope()` and `tax-exempt-small-biz: true` (map to category **O**). An invoice not subject to VAT carries no VAT identifiers, so the seller is identified by `tax-nr` or `id`. Items of category `O` cannot be mixed with other categories on one invoice.
 
