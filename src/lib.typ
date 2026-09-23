@@ -20,6 +20,7 @@
 #import "public/tax/tax.typ"
 #import "public/helper.typ": *
 #import "public/country.typ"
+#import "public/id.typ"
 #import "public/unit.typ"
 #import "public/references.typ"
 #import "public/info.typ" as info
