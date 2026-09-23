@@ -408,18 +408,17 @@
         ),
       ))
     }
-    for (label, value) in (
-      (labels.preceding-invoice-number, preceding-invoice-nr),
-      (
+    if preceding-invoice-nr not in (none, "", []) {
+      document-references.push((
+        labels.preceding-invoice-number,
+        preceding-invoice-nr,
+      ))
+    }
+    if preceding-invoice-date != none {
+      document-references.push((
         labels.preceding-invoice-date,
-        if preceding-invoice-date != none {
-          (eval-locale.format.date)(preceding-invoice-date)
-        },
-      ),
-    ) {
-      if value not in (none, "", []) {
-        document-references.push((label, value))
-      }
+        (eval-locale.format.date)(preceding-invoice-date),
+      ))
     }
   } else if type(references) == function {
     document-references = references
