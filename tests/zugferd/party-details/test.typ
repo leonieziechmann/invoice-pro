@@ -315,6 +315,48 @@
     m.tax-representative = representative()
     assert(rule not in rules(m), message: category)
   }
+  // A seller without VAT identifier of its own, e.g. from Switzerland,
+  // dispatches the goods of an intra-community supply from the member state
+  // of its representative (BR-IC-12), and no hint takes the representative's
+  // VAT identifier for the seller's `vat-id`
+  let m = base
+  m.taxes.at(0).category = "K"
+  m.taxes.at(0).rate = decimal("0")
+  m.taxes.at(0).amount = decimal("0")
+  m.lines.at(0).category = "K"
+  m.seller.vat-id = none
+  m.seller.stated-vat-id = none
+  m.seller.address.country = "CH"
+  m.tax-representative = representative()
+  m.ship-to = party-model(
+    normalize-party(
+      (
+        name: "Lager",
+        address: "Hafenweg 1",
+        city: "60311 Frankfurt am Main",
+        country: country.de,
+      ),
+      "de",
+    ),
+    role: "ship-to",
+    use-vat-id: false,
+  )
+  let dispatch = diagnostic(m, "BR-IC-12")
+  assert.ne(dispatch, none)
+  assert(
+    dispatch.message.contains("seller's tax representative \"DE\""),
+    message: dispatch.message,
+  )
+  m.seller.electronic-address = none
+  let address = diagnostic(m, "PEPPOL-EN16931-R020")
+  assert(
+    address.hint.contains("not the one of its tax representative"),
+    message: address.hint,
+  )
+  let minimum = with-profile(m, "minimum")
+  let co26 = diagnostic(minimum, "BR-CO-26").hint
+  assert(co26.contains("tax representative"), message: co26)
+  assert(not co26.contains("`vat-id`"), message: co26)
   // What BG-11 must state: name (BR-18), VAT ID (BR-56, BR-CO-09), country
   // (BR-20) and the address the law requires (Art. 226 No. 15)
   let m = base

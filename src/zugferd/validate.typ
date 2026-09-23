@@ -314,7 +314,16 @@
 }
 
 // `rules`: the rule for a missing address and the rule for a missing scheme.
-#let _check-electronic-address(party, required, rules, field, term) = {
+// `represented`: the party is a seller with a tax representative, whose VAT
+// identifier is not the seller's `vat-id` (nor its address).
+#let _check-electronic-address(
+  party,
+  required,
+  rules,
+  field,
+  term,
+  represented: false,
+) = {
   let (missing-rule, scheme-rule) = rules
   let address = party.electronic-address
   if address == none or address.id == none {
@@ -322,7 +331,13 @@
     let make = if required == "error" { error } else { warning }
     // Name only the inputs that can still provide the address.
     let vat-id = party.at("stated-vat-id", default: none)
-    let hint = if vat-id == none {
+    let hint = if vat-id == none and represented {
+      (
+        "Set `electronic-address`, `vat-id` (the seller's own VAT identifier, not the one of its tax representative) or `email` on the "
+          + field
+          + "."
+      )
+    } else if vat-id == none {
       "Set `electronic-address`, `vat-id` or `email` on the " + field + "."
     } else {
       let prefix = vat-id-prefix(vat-id)
@@ -1025,7 +1040,19 @@
   let out = ()
   let seller = model.seller
   let home = vat-id-country(seller.at("stated-vat-id", default: seller.vat-id))
-  if home == none { home = seller.address.country }
+  // A seller without VAT identifier of its own that is registered for VAT
+  // through a tax representative dispatches the goods from the member state
+  // of the representative's VAT identifier (BT-63).
+  let representative = model.at("tax-representative", default: none)
+  let whose = "the seller's own country "
+  if home == none and representative != none {
+    home = vat-id-country(representative.vat-id)
+    whose = "the country of the seller's tax representative "
+  }
+  if home == none {
+    home = seller.address.country
+    whose = "the seller's own country "
+  }
   if (
     model.ship-to != none
       and home != none
@@ -1034,7 +1061,8 @@
     out.push(warning(
       "BR-IC-12",
       "delivery-address.country",
-      "The intra-community supply (K) states the seller's own country "
+      "The intra-community supply (K) states "
+        + whose
         + _quoted(home)
         + " as the deliver-to country (BT-80), but the goods must be dispatched to another member state.",
       hint: "Set `country` on the delivery address or the recipient to the member state the goods are delivered to.",
@@ -1135,6 +1163,7 @@
   // BR-CO-26: the buyer must be able to identify the seller. The VAT
   // identifier of a tax representative (BT-63) does not identify the seller.
   let seller-legal-id = seller.at("legal-id", default: none)
+  let represented = model.at("tax-representative", default: none) != none
   if profile.id == "minimum" {
     // MINIMUM states neither `ram:ID` nor `ram:GlobalID` of the seller.
     if seller.vat-id == none and seller-legal-id == none {
@@ -1142,7 +1171,11 @@
         "BR-CO-26",
         "sender",
         "The MINIMUM profile identifies the seller by its VAT identifier (BT-31) or its legal registration identifier (BT-30), and both are missing.",
-        hint: "Set `vat-id` or `legal-id` on the sender, e.g. `legal-id: id.siret(\"..\")` or `legal-id: id.register(\"HRB ..\", court: \"Amtsgericht ..\")`. A seller identified by `tax-nr` or `id` needs the \"basic-wl\" profile or higher.",
+        hint: if represented {
+          "The VAT identifier of the tax representative does not identify the seller. Set `legal-id` on the sender, e.g. the seller's registration number in its own country. A seller identified by `id` needs the \"basic-wl\" profile or higher."
+        } else {
+          "Set `vat-id` or `legal-id` on the sender, e.g. `legal-id: id.siret(\"..\")` or `legal-id: id.register(\"HRB ..\", court: \"Amtsgericht ..\")`. A seller identified by `tax-nr` or `id` needs the \"basic-wl\" profile or higher."
+        },
       ))
     }
   } else if (
@@ -1155,7 +1188,7 @@
       "BR-CO-26",
       "sender",
       "The seller cannot be identified: neither a seller identifier (BT-29), a legal registration identifier (BT-30) nor a VAT identifier (BT-31) is given.",
-      hint: if model.at("tax-representative", default: none) != none {
+      hint: if represented {
         "The VAT identifier of the tax representative does not identify the seller. Set `id` or `legal-id` on the sender, e.g. the seller's registration number in its own country."
       } else if model.outside-scope {
         "An invoice not subject to VAT (O) states no VAT identifier (BR-O-02). Set `tax-nr`, `id` or `legal-id` on the sender."
@@ -1245,6 +1278,7 @@
       ("PEPPOL-EN16931-R020", "BR-62"),
       "sender",
       "seller electronic address (BT-34)",
+      represented: represented,
     )
     out += _check-electronic-address(
       buyer,

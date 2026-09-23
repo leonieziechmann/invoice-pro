@@ -277,7 +277,7 @@ Both the `sender` and `recipient` dictionaries must include:
   )
   ```
 
-  A payee needs its name, which is not the seller's (`BR-17`), and at most one of `id` and `global-id` (`CII-SR-451`). Leave out `payee` when the seller receives the payment itself.
+  A payee needs its name, which is not the seller's (`BR-17`), and at most one of `id` and `global-id` (`CII-SR-451`). Leave out `payee` when the seller receives the payment itself. The built-in themes do not print the payee: name it on the printed invoice as well, e.g. as the account holder of the bank details (`bank-details(name: "Factoring Bank AG", ..)`), whom the EPC-QR code names as the beneficiary. Without `name`, the bank details print the seller as the account holder.
 
 - **Electronic Addresses & EAS Routing (BT-34 / BT-49):** For routing across networks (such as Peppol), both parties need an electronic address. XRechnung requires them; for the other profiles a missing address is reported as a warning (`"en16931"`) or not at all.
   - **Auto-derivation from VAT ID:** If `vat-id` is specified on the party, the system derives the endpoint from it. The Electronic Address Scheme (EAS) is chosen by the country prefix of the VAT ID:
@@ -345,7 +345,7 @@ Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the 
 - Zero Rated: `tax.zero()` (maps to category **Z**).
 - Tax Exempt: `tax.exempt(grounds: ..)` (maps to category **E**). The `grounds` are mandatory for exempt items (BR-E-10).
 - Reverse Charge: `tax.reverse-charge()` (maps to category **AE**). Requires the VAT identifier of the buyer or, for a domestic reverse charge to a buyer without one (e.g. under § 13b UStG), its legal registration identifier (`legal-id` of the recipient). A cross-border reverse charge requires the VAT identifier (`IP-VAT-226`).
-- Intra-community Supply: `tax.intra-community()` (maps to category **K**). Requires the VAT identifiers of both parties. Without a `delivery-address`, the buyer's country is stated as deliver-to country; a `delivery-address` without its own `country` is in the buyer's country as well. A deliver-to country that is the seller's own country (`BR-IC-12`), or a buyer VAT identifier not issued by an EU member state (`IP-VAT-138`), is reported as a warning.
+- Intra-community Supply: `tax.intra-community()` (maps to category **K**). Requires the VAT identifiers of both parties. Without a `delivery-address`, the buyer's country is stated as deliver-to country; a `delivery-address` without its own `country` is in the buyer's country as well. A deliver-to country that is the seller's own country, or for a seller without VAT identifier of its own the country of its tax representative (`BR-IC-12`), or a buyer VAT identifier not issued by an EU member state (`IP-VAT-138`), is reported as a warning.
 - Export: `tax.export()` (maps to category **G**). Requires the seller VAT identifier.
 - Outside Scope / Small Business: `tax.outside-scope()` and `tax-exempt-small-biz: true` (map to category **O**). An invoice not subject to VAT carries no VAT identifiers, so the seller is identified by `tax-nr`, `id` or `legal-id`. Items of category `O` cannot be mixed with other categories on one invoice.
 
