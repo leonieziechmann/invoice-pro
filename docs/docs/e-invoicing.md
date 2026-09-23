@@ -246,7 +246,9 @@ Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the 
 
 EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `M`. The special constructors in `tax.special` that map to other categories (e.g. `lower-rate`, the margin schemes or split payment `B`) cannot be used for e-invoices.
 
-Where EN 16931 requires an exemption reason (`AE`, `K`, `G`, `O`), the standard text (e.g. "Reverse charge") is used unless you pass your own `grounds`. For the taxed categories (`S`, `Z`, `L`, `M`), `grounds` are printed on the invoice but left out of the XML, which does not allow them there.
+Where EN 16931 requires an exemption reason (`AE`, `K`, `G`, `O`), the standard text (e.g. "Reverse charge") is used unless you pass your own `grounds`. For the taxed categories (`S`, `Z`, `L`, `M`), `grounds` are printed on the invoice but left out of the XML, which does not allow them there. If the items of one category have different `grounds`, each of them is printed, and the XML joins them with `; ` into the one exemption reason (BT-120) of the category.
+
+`tax: none` on the invoice is not a tax category: the items are printed with 0%, but an e-invoice must say why no VAT is charged, so choose one of the functions above instead.
 
 Avoid using raw percentages (e.g., `19%`) directly on items if you need strict validation, as using the `tax` module functions guarantees the category codes are assigned correctly.
 

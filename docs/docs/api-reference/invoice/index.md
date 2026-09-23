@@ -119,6 +119,8 @@ _See the [Theme API Reference](../theme.md) for more details._
 
 By default (when `tax` is set to `auto`), the system fetches the standard VAT/GST rate from your selected `locale` region. However, you can explicitly override this default at the document root by providing a simple percentage (e.g., `19%`) or using a specialized code from the `tax` module (e.g., `tax.vat(21%)`).
 
+`tax: none` defines no tax at all: items without their own `tax` are printed with 0%, but without a tax category that says why no VAT is charged. Use it for simple documents only; for e-invoices, choose the category with the `tax` module (see [No Tax](../tax.md#no-tax-tax-none)).
+
 If you run a small business that is exempt from charging VAT (e.g., the _Kleinunternehmerregelung_ in Germany), you can simply set `tax-exempt-small-biz: true`.
 
 :::note

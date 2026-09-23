@@ -1,5 +1,5 @@
 #import "../utils/coercion.typ"
-
+#import "../data/tax.typ" as m-tax
 
 #let calculate-item-data(ctx, name) = {
   let to-dec = coercion.to-decimal
@@ -83,7 +83,9 @@
   let final-tax = (
     rate: ctx.tax.rate,
     category: ctx.tax.category,
-    grounds: ctx.tax.grounds,
+    grounds: ctx.tax.at("grounds", default: none),
+    // No tax was set anywhere (`tax: none`), see `tax.implicit-zero`.
+    ..if m-tax.is-implicit(ctx.tax) { (implicit: true) },
   )
 
   // 6. Return Data

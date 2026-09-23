@@ -91,7 +91,9 @@
 
       put("input-gross", resolved-input-gross)
 
-      derive("tax", tax, default: m-tax.zero())
+      // Without a tax from anywhere (`tax: none` on the invoice), the items
+      // are zero rated, marked as implicit (see `tax.implicit-zero`).
+      derive("tax", tax, default: m-tax.implicit-zero())
       derive("tax-mode", tax-mode, default: "exclusive")
       ensure("tax-exempt-small-biz", false)
 
@@ -151,6 +153,36 @@
         [#(x.display)]
       } else { [#x] }
 
+      // One marker per distinct exemption ground, in the order of the VAT
+      // groups. It links the notes below the line items to the VAT line of
+      // their category and, if a category has items exempt for different
+      // reasons, to each of these items.
+      let grounds-of-tax(tax) = tax.at(
+        "grounds-list",
+        default: m-tax.grounds-of(tax),
+      )
+      let marker-symbols = ("*", "**", "***", "****")
+      let grounds-keys = ()
+      for tax in tax-applicator.taxes.values() {
+        for grounds in grounds-of-tax(tax) {
+          let key = m-tax.grounds-key(grounds)
+          if key not in grounds-keys { grounds-keys.push(key) }
+        }
+      }
+      let grounds-marker(grounds) = {
+        let idx = grounds-keys.position(k => k == m-tax.grounds-key(grounds))
+        if idx == none { none } else if idx < marker-symbols.len() {
+          marker-symbols.at(idx)
+        } else { "*" + str(idx + 1) }
+      }
+      // The marker of an item's own grounds, if its category has several.
+      let item-grounds-marker(tax) = {
+        let group = tax-applicator.taxes.at(m-tax.to-tax-key(tax), default: (:))
+        if grounds-of-tax(group).len() < 2 { return none }
+        let markers = m-tax.grounds-of(tax).map(grounds-marker)
+        if markers.len() == 0 { none } else { markers.join(",") }
+      }
+
       let format-item(item) = loom.mutator.batch(item, {
         import loom.mutator: *
 
@@ -174,6 +206,7 @@
         update("tax", x => (
           rate: (format.percent)(x.rate),
           category: x.category,
+          marker: item-grounds-marker(x),
         ))
 
         put("has-discounts", item.discounts.len() >= 1)
@@ -248,42 +281,31 @@
 
       let formated-items = formated-entries.filter(e => e.kind == "item")
 
-      let unique-grounds = tax-applicator
-        .taxes
-        .values()
-        .map(t => t.at("grounds", default: none))
-        .filter(g => g != none and g != "" and g != [])
-        .dedup()
-
-      let marker-symbols = ("*", "**", "***", "****")
-
       let formated-taxes = tax-applicator
         .taxes
         .pairs()
         .map(((key, tax)) => {
           let formated-rate = (format.percent)(tax.rate)
           let formated-value = (format.currency)(tax.absolute)
-          let grounds = tax.at("grounds", default: none)
-          let marker = if grounds != none and grounds != "" and grounds != [] {
-            let idx = unique-grounds.position(g => g == grounds)
-            if idx != none and idx < marker-symbols.len() {
-              marker-symbols.at(idx)
-            } else if idx != none {
-              "*" + str(idx + 1)
-            } else {
-              none
-            }
-          } else {
-            none
-          }
+          let grounds-list = grounds-of-tax(tax)
+          let grounds-markers = grounds-list.map(grounds-marker)
           (
             rate: [#formated-rate],
             raw-rate: tax.rate,
             raw-amount: tax.absolute,
             category: [#tax.category],
             amount: [#formated-value],
-            grounds: grounds,
-            marker: marker,
+            // Every distinct exemption ground of the category, joined ...
+            grounds: tax.at("grounds", default: none),
+            // ... and one by one with their markers, for the notes below the
+            // line items.
+            grounds-list: grounds-list,
+            grounds-markers: grounds-markers,
+            // With several grounds, each item is marked with its own.
+            itemized-grounds: grounds-list.len() > 1,
+            marker: if grounds-markers.len() == 0 { none } else {
+              grounds-markers.join(",")
+            },
           )
         })
 

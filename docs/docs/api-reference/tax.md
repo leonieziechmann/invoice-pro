@@ -17,6 +17,8 @@ These are the most common tax categories, available directly from the main `tax`
 :::info
 The `grounds` parameter:
 All tax functions accept an optional `grounds` parameter (a string). This is used to provide the legal justification for the tax application. **Providing a `grounds` text is highly recommended (and often legally required) for any 0% tax rate or exemption.**
+
+Items of one tax category may have different grounds (e.g., a medical treatment exempt under § 4 Nr. 14 UStG and a seminar exempt under § 4 Nr. 21 UStG). Every distinct ground is printed below the line items; if a category has several, each item is marked with the ground that applies to it. The e-invoice carries one exemption reason per category (BT-120), so the distinct grounds are joined with `; ` there.
 :::
 
 | Function                         | Code   | Description                                                                                              |
@@ -82,7 +84,7 @@ You can access these via `tax.special.<function-name>`.
 
 ## Custom Tax Categories (`tax.new`)
 
-If you encounter a specific requirement that is not covered by the standard library functions above, you can define a custom tax category using the internal `tax.new` function.
+If you encounter a specific requirement that is not covered by the standard library functions above, you can define a custom tax category using the `tax.new` function.
 
 :::warning
 Only use this if you know exactly which UNTDID 5305 tax category code your accounting software or e-invoicing standard expects.
@@ -107,3 +109,11 @@ Only use this if you know exactly which UNTDID 5305 tax category code your accou
   grounds: "Exempt based on local regulation paragraph 42."
 )
 ```
+
+A plain dictionary with the same keys (e.g., `(rate: 19%, category: "S", label: "vat", grounds: none)`) is accepted wherever a tax is expected and is normalized like `tax.new`.
+
+---
+
+## No Tax (`tax: none`)
+
+Setting `tax: none` on the [invoice](./invoice/index.md#tax--tax-exempt-small-biz) means that no tax is defined at all. The printed invoice treats the items as 0%, but "no tax" does not say _why_ no VAT is charged, so the items are marked as having an **implicit** tax. An e-invoice must declare the actual category: state it with a function of the `tax` module instead (e.g., `tax.exempt(grounds: ..)`, `tax.outside-scope()`, `tax.zero()` or `tax-exempt-small-biz: true`).

@@ -145,31 +145,13 @@
         default: ctx.at("tax-mode", default: "exclusive") == "inclusive",
       )
       ensure("tax-mode", "exclusive")
-      update("tax", t => if type(t) != ratio { t } else {
-        let infer-tax = ctx
-          .at("locale", default: (:))
-          .at("normalize", default: (:))
-          .at("infer-tax", default: (..) => panic(
-            "item::tax can not be of type `ratio`.",
-          ))
-        infer-tax(t)
-      })
+      // Without a tax from anywhere (`tax: none` on the invoice), the items
+      // are zero rated, marked as implicit (see `tax.implicit-zero`).
+      update("tax", t => m-tax.resolve(ctx, t, "bundle"))
       derive(
         "tax",
-        {
-          if type(tax) == ratio {
-            let infer-tax = ctx
-              .at("locale", default: (:))
-              .at("normalize", default: (:))
-              .at("infer-tax", default: (..) => panic(
-                "item::tax can not be of type `ratio`.",
-              ))
-            infer-tax(tax)
-          } else {
-            m-tax.to-tax(tax)
-          }
-        },
-        default: m-tax.zero(),
+        m-tax.resolve(ctx, tax, "bundle"),
+        default: m-tax.implicit-zero(),
       )
 
       derive("item-id", item-id)
