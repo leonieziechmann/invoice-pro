@@ -16,7 +16,7 @@
 // likely not intended.
 
 #import "codelists.typ"
-#import "xml.typ": fmt-number
+#import "xml.typ": fmt-number, rate-digits
 
 #let _zero = decimal("0")
 
@@ -42,7 +42,10 @@
 
 #let _sum(values) = values.fold(_zero, (total, value) => total + value)
 
-#let _percent(rate) = fmt-number(rate * 100, min-digits: 0) + "%"
+// A rate in percent as the XML states it, e.g. "19%" or "9.975%".
+#let _percent(rate) = (
+  fmt-number(rate * 100, min-digits: 0, max-digits: rate-digits) + "%"
+)
 
 // Human readable reference to an invoice line, e.g. `item 2 (Consulting)`.
 #let _line-field(line) = {
@@ -514,9 +517,42 @@
     .filter(category => category != none)
     .dedup()
 
+  // The number of VAT groups per category and rate as the XML states them.
+  let stated-groups = (:)
+  for tax in model.taxes {
+    let group = str(tax.category) + " " + _percent(tax.rate)
+    stated-groups.insert(group, stated-groups.at(group, default: 0) + 1)
+  }
+
   for tax in model.taxes {
     let field = _tax-field(tax)
     let category = tax.category
+
+    // IP-DEC-01: the XML states a rate with up to `rate-digits` decimals, so
+    // a rate with more would be written as another rate, possibly as the
+    // rate of another VAT group.
+    let percent = tax.rate * 100
+    if calc.round(percent, digits: rate-digits) != percent {
+      let group = str(category) + " " + _percent(tax.rate)
+      out.push(error(
+        "IP-DEC-01",
+        field,
+        "The VAT rate "
+          + fmt-number(percent, min-digits: 0, max-digits: 28)
+          + "% has more than "
+          + str(rate-digits)
+          + " decimals, so the e-invoice would state it as "
+          + _percent(tax.rate)
+          + if stated-groups.at(group) > 1 {
+            ", the rate of another VAT group of category " + str(category)
+          }
+          + ".",
+        hint: "Round the rate to at most "
+          + str(rate-digits)
+          + " decimals, e.g. `tax.vat(8.125%)`.",
+      ))
+    }
+
     if category == none or category not in codelists.vat-categories {
       let default-hint = "Use a constructor of the `tax` module such as `tax.vat(..)`, `tax.zero()` or `tax.exempt(..)`."
       out.push(error(
@@ -711,6 +747,29 @@
           + ").",
         hint: bug-hint,
       ))
+    }
+    // BR-CO-17: the VAT amount is the taxable amount times the rate the XML
+    // states, within the tolerance of 1 the validators allow (the amounts of
+    // gross prices are rounded differently). Categories not subject to VAT
+    // (O) and rates the XML cannot state (IP-DEC-01) are checked elsewhere.
+    for tax in model.taxes {
+      let percent = calc.round(tax.rate * 100, digits: rate-digits)
+      if tax.category == "O" or percent != tax.rate * 100 { continue }
+      let expected = calc.round(tax.basis * percent / 100, digits: 2)
+      if calc.abs(tax.amount - expected) > 1 {
+        out.push(error(
+          "BR-CO-17",
+          _tax-field(tax),
+          "The VAT amount "
+            + str(tax.amount)
+            + " is not the taxable amount "
+            + str(tax.basis)
+            + " times the rate ("
+            + str(expected)
+            + ").",
+          hint: bug-hint,
+        ))
+      }
     }
   }
   if model.profile.lines {

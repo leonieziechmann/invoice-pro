@@ -152,7 +152,12 @@
   // --- VAT ---
   let tax(category, rate: 0, reason: none) = (
     base.taxes.first()
-      + (category: category, rate: decimal(rate), reason: reason)
+      + (
+        category: category,
+        rate: decimal(rate),
+        reason: reason,
+        amount: calc.round(base.taxes.first().basis * decimal(rate), digits: 2),
+      )
   )
   let with-tax(model, ..taxes) = {
     let model = model
