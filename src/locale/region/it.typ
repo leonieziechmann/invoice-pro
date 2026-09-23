@@ -46,7 +46,9 @@
     tax: (
       default-vat: tax.vat(22%),
 
-      // Exemption for small enterprises (Regime forfettario)
+      // Regime forfettario: the supplies are not subject to VAT ("non
+      // soggette", nature N2.2 of the FatturaPA), so the e-invoice states VAT
+      // category O with this note as exemption reason (BT-120).
       small-enterprise-special-scheme: tax.outside-scope(
         grounds: "Operazione in franchigia da IVA ai sensi dell'art. 1, commi da 54 a 89, della Legge n. 190/2014.",
       ),

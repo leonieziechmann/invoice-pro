@@ -67,6 +67,9 @@
 
     tax: (
       default-vat: tax.vat(8.1%),
+      // Small businesses below the turnover threshold are not liable for VAT
+      // (Art. 10 Abs. 2 MWSTG), so the e-invoice states VAT category O with
+      // this note as exemption reason (BT-120).
       small-enterprise-special-scheme: tax.outside-scope(
         grounds: "Nicht MWST-pflichtig / Non soumis à la TVA / Non assoggettato all'IVA",
       ),
