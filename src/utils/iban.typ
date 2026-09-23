@@ -3,12 +3,18 @@
 
 #import "text.typ": plain-text
 
+// The patterns are compiled once: compiling a regex costs far more than
+// matching it, and `iban-valid` tests every character of an IBAN.
+#let _whitespace = regex("\\s")
+#let _iban-format = regex("^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$")
+#let _digit = regex("^[0-9]$")
+
 /// The electronic format of an IBAN: its plain text without whitespace, in
 /// upper case. The printed IBAN, the EPC-QR code and the e-invoice (BT-84)
 /// all derive from it. `none` becomes `""`.
 ///
 /// -> str
-#let normalize-iban(iban) = upper(plain-text(iban).replace(regex("\\s"), ""))
+#let normalize-iban(iban) = upper(plain-text(iban).replace(_whitespace, ""))
 
 /// Whether an IBAN in electronic format (see `normalize-iban`) has the
 /// structure of an IBAN (country code, check digits, up to 30 alphanumeric
@@ -17,12 +23,12 @@
 /// -> bool
 #let iban-valid(iban) = {
   if type(iban) != str { return false }
-  if iban.match(regex("^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$")) == none {
+  if iban.match(_iban-format) == none {
     return false
   }
   let remainder = 0
   for char in (iban.slice(4) + iban.slice(0, 4)).clusters() {
-    if char.match(regex("^[0-9]$")) != none {
+    if char.match(_digit) != none {
       remainder = calc.rem(remainder * 10 + int(char), 97)
     } else {
       remainder = calc.rem(remainder * 100 + str.to-unicode(char) - 55, 97)
