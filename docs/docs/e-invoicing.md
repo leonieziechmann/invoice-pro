@@ -230,7 +230,7 @@ Both the `sender` and `recipient` dictionaries must include:
 
   Alternatively, you can define them as direct fields on `sender` (using keys `contact-name`, `phone`, `email`). Missing fields of `contact` fall back to these keys.
 
-- **Buyer Contact (BG-9):** The `contact` of the `recipient` (or its keys `contact-name` and `phone`) is written as the buyer contact in `"en16931"` and `"xrechnung"`, with the same keys as the seller contact. An `email` of the recipient alone is not a contact point: it is where the invoice goes, the electronic address (see below). Earlier versions left the buyer contact out of the e-invoice.
+- **Buyer Contact (BG-9):** The `contact` of the `recipient` (or its keys `contact-name` and `phone`) is written as the buyer contact in `"en16931"` and `"xrechnung"`, with the same keys as the seller contact. An `email` of the recipient alone is not a contact point: it is where the invoice goes, the electronic address (see below). Earlier versions left the buyer contact out of the e-invoice. The built-in themes do not print it; to show it on the printed invoice, print it from the same value, e.g. in `extra` of the recipient, which the DIN 5008 theme prints in the annotation zone of the address field.
 
 - **Buyer Reference / Leitweg-ID (BT-10):** A buyer reference (such as the customer's Leitweg-ID for public sectors) is mandatory under XRechnung. Define this under `buyer-reference` or `leitweg-id` in the `recipient` dictionary. A Leitweg-ID given with `id.leitweg(..)` is checked for its check digits (`IP-ID-01`), and can be the electronic address of the buyer as well (scheme `0204`):
 
