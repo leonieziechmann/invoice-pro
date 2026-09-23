@@ -33,6 +33,8 @@
   notes: false,
   // BT-11: project reference.
   procuring-project: false,
+  // BT-159: country of origin of an item.
+  item-origin: false,
   // The EN 16931 business rules (BR-*) apply to the whole document.
   en16931: false,
   // The German CIUS XRechnung (BR-DE-*) applies on top of EN 16931.
@@ -85,6 +87,7 @@
       item-ids: true,
       item-description: true,
       procuring-project: true,
+      item-origin: true,
       document-references: true,
       notes: true,
       en16931: true,
@@ -104,6 +107,7 @@
       item-ids: true,
       item-description: true,
       procuring-project: true,
+      item-origin: true,
       document-references: true,
       notes: true,
       en16931: true,

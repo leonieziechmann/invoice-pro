@@ -162,12 +162,29 @@
       // reasons, to each of these items.
       let markers = assign-markers(tax-applicator.taxes)
 
+      // The label of the country of origin of an item.
+      let item-strings = ctx.locale.strings.at("line-items", default: (:))
+      let origin-label = item-strings.at("origin", default: none)
+
       let format-item(item) = loom.mutator.batch(item, {
         import loom.mutator: *
 
         update("name", x => [#x])
-        put("has-description", item.description != none)
-        update("description", x => [#x])
+        // The description, followed by the note and the country of origin of
+        // the item (`item(note: .., origin: ..)`), each on a line of its own.
+        let details = ()
+        for (value, label) in (
+          (item.description, none),
+          (item.at("note", default: none), none),
+          (item.at("origin", default: none), origin-label),
+        ) {
+          if value == none { continue }
+          details.push(if label == none { [#value] } else [#label: #value])
+        }
+        put("has-description", details.len() > 0)
+        put("description", if details.len() > 0 {
+          details.join(linebreak())
+        } else { [] })
 
         put("has-date", item.date != none)
         update("date", format.date)

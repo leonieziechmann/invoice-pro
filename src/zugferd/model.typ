@@ -982,6 +982,21 @@
   if inclusive { calc.round(amount / (1 + rate), digits: 2) } else { amount }
 }
 
+// The invoice line period (BG-26) of an item: its date as a period of one
+// day, or its period, as `(start, end)`; `none` without a date.
+#let _line-period(date) = {
+  if type(date) == datetime { return (date, date) }
+  if (
+    type(date) == array
+      and date.len() == 2
+      and type(date.first()) == datetime
+      and type(date.last()) == datetime
+  ) {
+    return (date.first(), date.last())
+  }
+  none
+}
+
 // An invoice line (BG-25) with net amounts.
 // With gross prices, `round-price` rounds the net price as the invoice
 // rounds unit prices (the `money-fine` rounding of the locale). `unit` is the
@@ -1053,6 +1068,16 @@
     implicit: tax.at("implicit", default: false),
     allowances: allowances,
     charges: charges,
+    // BT-127: the note of the item, with its line breaks.
+    note: {
+      let note = item.at("note", default: none)
+      if note != none { note = plain-text(note, keep-newlines: true) }
+      if note == "" { none } else { note }
+    },
+    // BG-26: the date or period of the item as `(start, end)`.
+    period: _line-period(item.at("date", default: none)),
+    // BT-159: the country of origin, an ISO 3166-1 code.
+    origin: item.at("origin", default: none),
   )
 }
 

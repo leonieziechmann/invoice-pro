@@ -120,6 +120,17 @@
   /// -> str | auto | none
   reference: auto, // str optional
 
+  /// A note about the item, printed below its description and written into
+  /// the e-invoice (BT-127).
+  /// -> str | content | auto | none
+  note: auto,
+  /// The country of origin of the item: a country of the `country` module
+  /// (e.g. `country.de`) or an ISO 3166-1 alpha-2 code such as `"DE"`.
+  /// Printed with its code below the description and written into the
+  /// e-invoice (BT-159).
+  /// -> function | dictionary | str | auto | none
+  origin: auto,
+
   /// An array of specific modifiers (discounts or surcharges) applied specifically to this item.
   /// -> array | auto | none
   modifier: auto,
@@ -155,6 +166,16 @@
 
   types.require(item-id, "item::item-id", none, auto, str, dictionary)
   types.require(reference, "item::reference", none, auto, str)
+  types.require(note, "item::note", none, auto, types.text-like)
+  types.require(
+    origin,
+    "item::origin",
+    none,
+    auto,
+    types.text-like,
+    dictionary,
+    function,
+  )
 
   types.require(
     modifier,
@@ -234,6 +255,8 @@
 
       derive("item-id", item-id)
       derive("reference", reference)
+      derive("note", note)
+      derive("origin", origin)
 
       derive("modifier", evaluate-modifier(ctx, modifier), default: ())
       update("modifier", evaluate-modifier.with(ctx))

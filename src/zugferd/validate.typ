@@ -1369,6 +1369,100 @@
   out
 }
 
+/// Checks the period and the country of origin of the lines (BG-26,
+/// BT-159): the order of the dates of a period (BR-30), a date outside the
+/// service period of the invoice (PEPPOL-EN16931-R110 and R111 in XRechnung,
+/// else IP-PERIOD-02) and the country code (BR-CL-15).
+///
+/// -> array
+#let check-line-data(model) = {
+  let profile = model.profile
+  if not profile.lines { return () }
+  let out = ()
+
+  // The service period of the invoice: the delivery date (BT-72) or the
+  // invoicing period (BG-14). The dates of the items can only leave it if
+  // the invoice sets `service-period`.
+  let delivery = model.at("delivery", default: (:))
+  let invoicing-period = delivery.at("period", default: none)
+  let date = delivery.at("date", default: none)
+  let service-period = if invoicing-period != none {
+    invoicing-period
+  } else if (
+    date != none
+  ) { (date, date) }
+  // PEPPOL-EN16931-R110 and R111 of XRechnung compare the lines with BG-14.
+  let peppol = profile.xrechnung and invoicing-period != none
+  let span(period) = {
+    let start = period.first().display("[year]-[month]-[day]")
+    let end = period.last().display("[year]-[month]-[day]")
+    if start == end { start } else { start + " to " + end }
+  }
+
+  let origins = 0
+  for line in model.lines {
+    let field = _line-field(line)
+    let period = line.at("period", default: none)
+    if period != none and period.last() < period.first() {
+      out.push(error(
+        "BR-30",
+        field,
+        "The period of the item (BG-26) ends before it starts: "
+          + span(period)
+          + ".",
+        hint: "Give the `date` of the item as `(start, end)`, the earlier date first.",
+      ))
+    } else if period != none and service-period != none {
+      let rules = ()
+      if period.first() < service-period.first() {
+        rules.push(if peppol { "PEPPOL-EN16931-R110" } else { "IP-PERIOD-02" })
+      }
+      if period.last() > service-period.last() {
+        rules.push(if peppol { "PEPPOL-EN16931-R111" } else { "IP-PERIOD-02" })
+      }
+      for rule in rules.dedup() {
+        out.push((if peppol { error } else { warning })(
+          rule,
+          field,
+          "The date of the item ("
+            + span(period)
+            + ") is outside the service period of the invoice ("
+            + span(service-period)
+            + ").",
+          hint: "Set `service-period` on the invoice to a period that includes the dates of all items, or leave it out: the dates of the items are the service period then.",
+        ))
+      }
+    }
+
+    let origin = line.at("origin", default: none)
+    if origin == none { continue }
+    origins += 1
+    if profile.item-origin and origin not in codelists.countries {
+      out.push(error(
+        "BR-CL-15",
+        field,
+        "The country of origin (BT-159) "
+          + _quoted(origin)
+          + " is not in the ISO 3166-1 code list of EN 16931.",
+        hint: if origin == "EL" { _country-hints.EL } else {
+          "Give `origin` as a country of the `country` module (e.g. `country.de`) or an ISO 3166-1 code such as \"DE\"."
+        },
+      ))
+    }
+  }
+  if origins > 0 and not profile.item-origin {
+    out.push(warning(
+      "IP-PROFILE-01",
+      "item.origin",
+      "The "
+        + profile.name
+        + " profile has no country of origin of an item (BT-159), so `origin` is printed, but not written into the e-invoice.",
+      hint: "Use the \"en16931\" or \"xrechnung\" profile to state it.",
+    ))
+  }
+  out
+}
+
 // --- VAT ------------------------------------------------------------------
 
 // Margin schemes have no category in EN 16931: they are written as exempt
@@ -1992,6 +2086,7 @@
       + check-document-data(model)
       + check-parties(model)
       + check-lines(model)
+      + check-line-data(model)
       + check-taxes(model)
       + check-payment(model)
       + check-consistency(model)

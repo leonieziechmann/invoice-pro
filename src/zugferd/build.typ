@@ -272,6 +272,10 @@
   if profile.item-description and line.description != none {
     product.insert("ram:Description", line.description)
   }
+  let origin = line.at("origin", default: none)
+  if profile.item-origin and origin != none {
+    product.insert("ram:OriginTradeCountry", ("ram:ID": origin))
+  }
 
   // BT-146 is the price of BT-149 units, e.g. a price per 100 pieces.
   let price = ("ram:ChargeAmount": fmt-price(line.price))
@@ -295,6 +299,14 @@
   }
 
   let line-settlement = ("ram:ApplicableTradeTax": applicable-trade-tax)
+  // BG-26: the date or period of the item.
+  let period = line.at("period", default: none)
+  if period != none {
+    line-settlement.insert("ram:BillingSpecifiedPeriod", (
+      "ram:StartDateTime": _date(period.first()),
+      "ram:EndDateTime": _date(period.last()),
+    ))
+  }
   let line-allowance-charges = (
     line.allowances.map(a => build-allowance-charge(false, a.amount, a.reason))
       + line.charges.map(c => build-allowance-charge(true, c.amount, c.reason))
@@ -310,10 +322,15 @@
     ("ram:LineTotalAmount": fmt-amount(line.net)),
   )
 
+  let document-line = ("ram:LineID": line.id)
+  // BT-127: the note of the item.
+  let note = line.at("note", default: none)
+  if note != none {
+    document-line.insert("ram:IncludedNote", ("ram:Content": note))
+  }
+
   (
-    "ram:AssociatedDocumentLineDocument": (
-      "ram:LineID": line.id,
-    ),
+    "ram:AssociatedDocumentLineDocument": document-line,
     "ram:SpecifiedTradeProduct": product,
     "ram:SpecifiedLineTradeAgreement": (
       "ram:NetPriceProductTradePrice": price,

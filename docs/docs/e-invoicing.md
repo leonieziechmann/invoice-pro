@@ -113,6 +113,7 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | `IP-DOC-04`     | warning | An invoice with a negative total: valid, but a credit note (`document-type: "credit-note"`) is the document for a credit.                                                                                                                                                          |
 | `IP-PROFILE-01` | warning | An input the chosen profile cannot state, e.g. `notes` in `"minimum"`: it is printed, but not written into the e-invoice.                                                                                                                                                          |
 | `IP-PERIOD-01`  | warning | A service period printed as a text of its own (e.g. `references.service-time(value: "Juni 2026")`), which the XML cannot state. See [Service Period](#10-service-period-bt-72--bg-14).                                                                                             |
+| `IP-PERIOD-02`  | warning | The date of an item outside the `service-period` of the invoice. XRechnung checks it for an invoicing period (BG-14) as `PEPPOL-EN16931-R110` and `R111`. See [Item Notes, Periods and Country of Origin](#12-item-notes-periods-and-country-of-origin).                           |
 
 ### The `zugferd-errors` Parameter
 
@@ -456,6 +457,78 @@ A service period printed as a text of its own, e.g. `references.service-time(val
     (text: "Es gelten unsere Allgemeinen Geschäftsbedingungen.", subject-code: "AAI"),
   ),
   // ...
+)
+```
+
+### 12. Item Notes, Periods and Country of Origin
+
+Besides its name and description, an [`item`](./api-reference/line-items/index.md#item) can state a note, its date and the country its goods come from. They are printed with the item and written into its invoice line:
+
+| `item` parameter                                                  | Printed                                                             | XML                                                                                  | Profiles                              |
+| :---------------------------------------------------------------- | :------------------------------------------------------------------ | :----------------------------------------------------------------------------------- | :------------------------------------ |
+| `note`, a text                                                    | below the description                                               | invoice line note (BT-127), with its line breaks                                     | `"basic"`, `"en16931"`, `"xrechnung"` |
+| `date`, a `datetime` or a period `(start, end)`                   | as the date of the item                                             | invoice line period (BG-26, BT-134 and BT-135); a single date is a period of one day | `"basic"`, `"en16931"`, `"xrechnung"` |
+| `origin`, a country (`country.it`) or an ISO 3166-1 code (`"IT"`) | below the note, e.g. "Ursprungsland: IT" or "Country of origin: IT" | item country of origin (BT-159)                                                      | `"en16931"`, `"xrechnung"`            |
+
+`"minimum"` and `"basic-wl"` have no invoice lines. `"basic"` has no country of origin: `origin` is only printed there, which is reported as a warning (`IP-PROFILE-01`). A country that is not in the ISO 3166-1 code list of EN 16931 (`BR-CL-15`) and a period that ends before it starts (`BR-30`) stop the e-invoice.
+
+The dates of the items are the service period of the invoice, unless you set `service-period` (see [Service Period](#10-service-period-bt-72--bg-14)). Then the date of every item must lie within it: XRechnung requires this for an invoicing period (`PEPPOL-EN16931-R110` and `R111`, which the KoSIT validator reports as warnings and Mustang as errors, so `invoice-pro` reports an error); in the other profiles, and for a service period of a single day, a date outside it is a warning (`IP-PERIOD-02`).
+
+```typst
+#import "@preview/invoice-pro:0.4.2": *
+
+#show: invoice.with(
+  zugferd: "en16931",
+  sender: (
+    name: "Consulting Group GmbH",
+    address: "Tech Avenue 42",
+    city: "80331 München",
+    country: country.de,
+    vat-id: "DE123456789",
+    contact: (
+      name: "Max Mustermann",
+      phone: "+49 89 1234567",
+      email: "max@consultinggroup.de",
+    ),
+  ),
+  recipient: (
+    name: "Acme Corp",
+    address: "Industrial Road 1",
+    city: "70173 Stuttgart",
+    country: country.de,
+    vat-id: "DE987654321",
+  ),
+  invoice-nr: "INV-2026-118",
+  date: datetime(year: 2026, month: 9, day: 1),
+)
+
+#line-items[
+  #item(
+    [Espresso machine],
+    price: 1290.00,
+    tax: tax.vat(19%),
+    date: datetime(year: 2026, month: 8, day: 3),
+    note: "Serial number 4711-0815",
+    origin: country.it,
+  )
+  #item(
+    [Barista training],
+    quantity: 2,
+    unit: unit.day,
+    price: 450.00,
+    tax: tax.vat(19%),
+    date: (
+      datetime(year: 2026, month: 8, day: 10),
+      datetime(year: 2026, month: 8, day: 11),
+    ),
+  )
+]
+
+#payment-goal(days: 14)
+
+#bank-details(
+  bank: "Acme Bank",
+  iban: "DE89370400440532013000",
 )
 ```
 

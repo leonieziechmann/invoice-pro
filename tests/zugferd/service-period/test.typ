@@ -103,7 +103,10 @@
   assert.eq(model.delivery.date, day(8, 15))
   assert.eq(model.delivery.period, none)
   assert.eq(model.delivery.text, "15.08.2026")
-  assert.eq(xml-elements(model, "ram:BillingSpecifiedPeriod"), ())
+  // Only the dated line has a period (BG-26), the invoice has none (BG-14)
+  assert.eq(xml-elements(model, "ram:BillingSpecifiedPeriod"), (
+    "<ram:BillingSpecifiedPeriod><ram:StartDateTime><udt:DateTimeString format=\"102\">20260815</udt:DateTimeString></ram:StartDateTime><ram:EndDateTime><udt:DateTimeString format=\"102\">20260815</udt:DateTimeString></ram:EndDateTime></ram:BillingSpecifiedPeriod>",
+  ))
   assert.eq(xml-elements(model, "ram:ActualDeliverySupplyChainEvent"), (
     "<ram:ActualDeliverySupplyChainEvent><ram:OccurrenceDateTime><udt:DateTimeString format=\"102\">20260815</udt:DateTimeString></ram:OccurrenceDateTime></ram:ActualDeliverySupplyChainEvent>",
   ))
@@ -128,12 +131,10 @@
 #model-test(date: invoice-date, model => {
   assert.eq(model.delivery.date, none)
   assert.eq(model.delivery.period, (day(7, 1), day(7, 31)))
-  assert.eq(
-    xml-elements(model, "ram:BillingSpecifiedPeriod"),
-    (
-      "<ram:BillingSpecifiedPeriod><ram:StartDateTime><udt:DateTimeString format=\"102\">20260701</udt:DateTimeString></ram:StartDateTime><ram:EndDateTime><udt:DateTimeString format=\"102\">20260731</udt:DateTimeString></ram:EndDateTime></ram:BillingSpecifiedPeriod>",
-    ),
-  )
+  // The period of the line of the item in the group (BG-26), then the
+  // invoicing period (BG-14)
+  let july = "<ram:BillingSpecifiedPeriod><ram:StartDateTime><udt:DateTimeString format=\"102\">20260701</udt:DateTimeString></ram:StartDateTime><ram:EndDateTime><udt:DateTimeString format=\"102\">20260731</udt:DateTimeString></ram:EndDateTime></ram:BillingSpecifiedPeriod>"
+  assert.eq(xml-elements(model, "ram:BillingSpecifiedPeriod"), (july, july))
 })[#grouped]
 
 // No item has a date: the invoice date
