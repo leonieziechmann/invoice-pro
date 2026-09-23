@@ -87,7 +87,7 @@
           <ram:CountryID>DE</ram:CountryID>
         </ram:PostalTradeAddress>
         <ram:URIUniversalCommunication>
-          <ram:URIID schemeID="EM">max@mustermann.de</ram:URIID>
+          <ram:URIID schemeID="9930">DE123456789</ram:URIID>
         </ram:URIUniversalCommunication>
         <ram:SpecifiedTaxRegistration>
           <ram:ID schemeID="FC">123/456/78901</ram:ID>

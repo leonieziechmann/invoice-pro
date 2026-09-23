@@ -142,7 +142,7 @@
       <ram:ApplicableTradeTax>
         <ram:CalculatedAmount>0.00</ram:CalculatedAmount>
         <ram:TypeCode>VAT</ram:TypeCode>
-        <ram:ExemptionReason>Intra-community supply</ram:ExemptionReason>
+        <ram:ExemptionReason>Tax-exempt intra-community supply</ram:ExemptionReason>
         <ram:BasisAmount>5180.00</ram:BasisAmount>
         <ram:CategoryCode>K</ram:CategoryCode>
         <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
