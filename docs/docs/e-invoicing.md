@@ -52,17 +52,18 @@ If you do not specify the `--pdf-standard=a-3b` flag, the compile process may su
 
 You can select a profile by setting the `zugferd` parameter in your root `invoice` config. Choose the profile that best fits your regional and business requirements:
 
-| Profile Value | Profile Name       | Description                                                                                                                         |
-| :------------ | :----------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
-| `none`        | None               | Disables XML generation and attachment (default).                                                                                   |
-| `"minimum"`   | Minimum            | Header-level metadata only (seller, buyer, date, total). Does not include any line items. Primarily used for cross-border invoices. |
-| `"basic-wl"`  | Basic WL           | Header-level metadata plus payment information. No line items are included.                                                         |
-| `"basic"`     | Basic              | Full invoice header and payment information, along with basic line items.                                                           |
-| `"en16931"`   | Comfort / EN 16931 | Fully compliant with the EN 16931 European e-invoicing standard, including detailed line-item details. **Recommended.**             |
-| `"xrechnung"` | XRechnung 3.0      | Identical to `"en16931"` but specifies full compliance with the German XRechnung 3.0 standard (specification identifier).           |
+| Profile Value | Profile Name       | Description                                                                                                                                             |
+| :------------ | :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `none`        | None               | Disables XML generation and attachment (default).                                                                                                       |
+| `auto`        | Automatic          | The richest profile the invoice satisfies: `"xrechnung"` for a buyer in Germany if all XRechnung rules are met, otherwise `"en16931"`. **Recommended.** |
+| `"minimum"`   | Minimum            | Header-level metadata only (seller, buyer, date, total). Does not include any line items. Primarily used for cross-border invoices.                     |
+| `"basic-wl"`  | Basic WL           | Header-level metadata plus payment information. No line items are included.                                                                             |
+| `"basic"`     | Basic              | Full invoice header and payment information, along with basic line items.                                                                               |
+| `"en16931"`   | Comfort / EN 16931 | Fully compliant with the EN 16931 European e-invoicing standard, including detailed line-item details.                                                  |
+| `"xrechnung"` | XRechnung 3.0      | Identical to `"en16931"` but specifies full compliance with the German XRechnung 3.0 standard (specification identifier).                               |
 
 :::info
-If `zugferd` is set to `"en16931"` and both the sender and recipient are located in Germany (`DE`), the system automatically promotes the profile internally to `"xrechnung"` to comply with German national e-invoicing requirements (specification identifier).
+With `zugferd: auto`, `invoice-pro` chooses the richest profile the invoice satisfies. For a buyer in Germany it tries XRechnung 3.0 and uses it if the invoice meets all XRechnung rules (for example, it needs the buyer reference or Leitweg-ID). Otherwise, and for buyers outside Germany, it uses `"en16931"`. The XRechnung rules that were not met are listed as warnings, which `zugferd-errors: "report"` shows, and the report names the chosen profile. An explicit profile is always used as given: `"en16931"` stays EN 16931 between German parties, too. Earlier versions switched it to XRechnung automatically; use `auto` for that now.
 :::
 
 ---
@@ -79,7 +80,6 @@ error: assertion failed: The e-invoice (ZUGFeRD / Factur-X, profile XRechnung 3.
      Hint: Set `buyer-reference` (or `leitweg-id`) on the recipient.
   2. [BR-CO-25] payment-goal: An amount is due, but neither the payment due date (BT-9) nor the payment terms (BT-20) are given.
      Hint: Add `#payment-goal(days: 14)` or set `due-date` on the invoice.
-XRechnung is used because seller and buyer are located in Germany (`zugferd: "en16931"`).
 Set `zugferd-errors: "report"` on the invoice to list these problems in the document instead.
 ```
 
@@ -114,7 +114,7 @@ With `"report"` and `"ignore"`, an invoice with errors still carries its (invali
 
 ### Custom Report Layout
 
-In `"report"` mode, the list is rendered by the theme function `zugferd-report`, which receives the context and the check result. The result contains the resolved `profile` (with `id`, `name` and `promoted`) and the `diagnostics`, an array of dictionaries with the keys `level` (`"error"` or `"warning"`), `rule`, `field`, `message` and `hint`:
+In `"report"` mode, the list is rendered by the theme function `zugferd-report`, which receives the context and the check result. The result contains the resolved `profile` (with `id`, `name`, `automatic` and, for `auto`, the `skipped` profiles) and the `diagnostics`, an array of dictionaries with the keys `level` (`"error"` or `"warning"`), `rule`, `field`, `message` and `hint`:
 
 ```typst
 #show: invoice.with(

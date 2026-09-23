@@ -108,19 +108,28 @@
 
 /// Resolves the profile the XML is written in.
 ///
-/// An `"en16931"` invoice between a German seller and a German buyer is
-/// promoted to `"xrechnung"`, the German CIUS of EN 16931.
+/// An explicit profile is used as given. `auto` lists the candidates, best
+/// first: `"xrechnung"`, the German CIUS of EN 16931, for a buyer in Germany,
+/// then `"en16931"`. `process-zugferd` takes the first candidate the invoice
+/// satisfies.
 ///
 /// -> dictionary
-#let resolve-profile(requested, seller-country, buyer-country) = {
-  let promoted = (
-    requested == "en16931" and seller-country == "DE" and buyer-country == "DE"
-  )
-  let id = if promoted { "xrechnung" } else { requested }
+#let resolve-profile(requested, buyer-country) = {
+  let automatic = requested == auto
+  let candidates = if not automatic { (requested,) } else if (
+    buyer-country == "DE"
+  ) { ("xrechnung", "en16931") } else { ("en16931",) }
   (
-    id: id,
+    id: candidates.first(),
     requested: requested,
-    promoted: promoted,
-    ..profiles.at(id, default: profiles.en16931),
+    automatic: automatic,
+    candidates: candidates,
+    skipped: (),
+    ..profiles.at(candidates.first(), default: profiles.en16931),
   )
 }
+
+/// A resolved profile switched to another of its candidates.
+///
+/// -> dictionary
+#let switch-profile(profile, id) = profile + profiles.at(id) + (id: id)

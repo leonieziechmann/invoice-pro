@@ -6,7 +6,7 @@
 #import "/src/zugferd/model.typ": (
   build-model, get-electronic-address, map-unit-code,
 )
-#import "/src/zugferd/profile.typ": resolve-profile
+#import "/src/zugferd/profile.typ": resolve-profile, switch-profile
 #import "/tests/data-test.typ": data-test, loom
 
 #let seller = (
@@ -295,11 +295,28 @@
 
 // --- 9. Profiles ---
 #{
-  let de-de = resolve-profile("en16931", "DE", "DE")
-  assert.eq((de-de.id, de-de.promoted), ("xrechnung", true))
-  let de-fr = resolve-profile("en16931", "DE", "FR")
-  assert.eq((de-fr.id, de-fr.promoted), ("en16931", false))
-  let explicit = resolve-profile("xrechnung", "DE", "FR")
-  assert.eq((explicit.id, explicit.promoted), ("xrechnung", false))
-  assert.eq(resolve-profile("basic", "DE", "DE").id, "basic")
+  // Explicit profiles are used as given, also between German parties
+  let explicit = resolve-profile("en16931", "DE")
+  assert.eq(
+    (explicit.id, explicit.automatic, explicit.candidates),
+    ("en16931", false, ("en16931",)),
+  )
+  assert.eq(resolve-profile("xrechnung", "FR").id, "xrechnung")
+  assert.eq(resolve-profile("basic", "DE").id, "basic")
+
+  // `auto`: XRechnung first for a buyer in Germany, EN 16931 otherwise
+  let auto-de = resolve-profile(auto, "DE")
+  assert.eq(
+    (auto-de.id, auto-de.automatic, auto-de.candidates),
+    ("xrechnung", true, ("xrechnung", "en16931")),
+  )
+  assert.eq(resolve-profile(auto, "FR").candidates, ("en16931",))
+  assert.eq(resolve-profile(auto, none).candidates, ("en16931",))
+
+  // Switching to the next candidate takes over its flags
+  let switched = switch-profile(auto-de, "en16931")
+  assert.eq(
+    (switched.id, switched.name, switched.xrechnung, switched.automatic),
+    ("en16931", "EN 16931 (COMFORT)", false, true),
+  )
 }

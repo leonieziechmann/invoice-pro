@@ -102,18 +102,18 @@
     ("PEPPOL-EN16931-R020",),
   )
 
-  // (c) Profile xrechnung (domestic DE -> DE): every missing field is listed at
+  // (c) Profile xrechnung (DE -> DE): every missing field is listed at
   //     once: buyer electronic address (BT-49), buyer reference (BT-10) and
   //     seller contact (BG-6)
   assert.eq(
-    reported-rules(zugferd: "en16931"),
+    reported-rules(zugferd: "xrechnung"),
     ("BR-DE-15", "BR-DE-2", "PEPPOL-EN16931-R010").sorted(),
   )
 
   // (d) Profile xrechnung: missing buyer reference (BT-10) and seller contact
   assert.eq(
     reported-rules(
-      zugferd: "en16931",
+      zugferd: "xrechnung",
       recipient-overrides: (email: "buyer@example.de"),
     ),
     ("BR-DE-15", "BR-DE-2"),
@@ -122,7 +122,7 @@
   // (e) Profile xrechnung: missing seller contact group (BG-6)
   assert.eq(
     reported-rules(
-      zugferd: "en16931",
+      zugferd: "xrechnung",
       recipient-overrides: (
         email: "buyer@example.de",
         buyer-reference: "DEI23456789-12345-12",
@@ -138,7 +138,7 @@
   )
   assert.eq(
     reported-rules(
-      zugferd: "en16931",
+      zugferd: "xrechnung",
       recipient-overrides: recipient,
       sender-overrides: (
         contact: (phone: "+49 89 123456", email: "seller@example.de"),
@@ -148,7 +148,7 @@
   )
   assert.eq(
     reported-rules(
-      zugferd: "en16931",
+      zugferd: "xrechnung",
       recipient-overrides: recipient,
       sender-overrides: (
         contact: (name: "Max Mustermann", email: "seller@example.de"),
@@ -158,7 +158,7 @@
   )
   assert.eq(
     reported-rules(
-      zugferd: "en16931",
+      zugferd: "xrechnung",
       recipient-overrides: recipient,
       sender-overrides: (
         contact: (name: "Max Mustermann", phone: "+49 89 123456"),
@@ -166,6 +166,16 @@
     ),
     ("BR-DE-7",),
   )
+}
+
+// --- 1b. Only XRechnung requires these fields ---
+#{
+  // (g) An explicit "en16931" invoice between German parties stays EN 16931,
+  //     which requires none of them
+  assert.eq(reported-rules(zugferd: "en16931"), ())
+
+  // (h) `zugferd: auto` falls back to EN 16931 when they are missing
+  assert.eq(reported-rules(zugferd: auto), ())
 }
 
 // --- 2. Valid full invoice rendering with all mandatory fields satisfied ---

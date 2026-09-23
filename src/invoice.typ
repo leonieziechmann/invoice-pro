@@ -95,7 +95,9 @@
 
   /// ZUGFeRD / Factur-X profile for embedding machine-readable XML into the PDF.
   /// Requires exporting with PDF/A-3 (`typst compile --pdf-standard=a-3b`).
-  /// -> none | "minimum" | "basic-wl" | "basic" | "en16931" | "xrechnung"
+  /// `auto` chooses the richest profile the invoice satisfies: `"xrechnung"`
+  /// for a buyer in Germany, otherwise `"en16931"`.
+  /// -> none | auto | "minimum" | "basic-wl" | "basic" | "en16931" | "xrechnung"
   zugferd: none,
   /// What to do when the e-invoice data violates the rules of the profile.
   /// `"panic"` stops the compilation with a list of all problems, `"report"`
@@ -179,6 +181,7 @@
     zugferd,
     "invoice::zugferd",
     none,
+    auto,
     "minimum",
     "basic-wl",
     "basic",

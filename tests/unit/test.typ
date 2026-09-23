@@ -126,7 +126,7 @@
   // 5. Buyer Trade Party with array address
   let buyer-array = build-buyer-trade-party(
     party(("Street A", "Suite B")),
-    resolve-profile("en16931", "DE", "FR"),
+    resolve-profile("en16931", "FR"),
   )
   assert.eq(
     buyer-array.at("ram:PostalTradeAddress").at("ram:LineOne"),
@@ -242,7 +242,7 @@
   import "/src/zugferd/model.typ": document-allowance-charges, line-model
   import "/src/zugferd/profile.typ": resolve-profile
 
-  let profile = resolve-profile("en16931", "DE", "FR")
+  let profile = resolve-profile("en16931", "FR")
 
   // 1. build-allowance-charge: ActualAmount is always a positive magnitude —
   //    ChargeIndicator alone carries the discount/surcharge sign.
@@ -573,7 +573,7 @@
       ),
       0,
     ),
-    resolve-profile(profile, "DE", "FR"),
+    resolve-profile(profile, "FR"),
   ).at("ram:SpecifiedTradeProduct")
 
   // 2. IDs follow the TradeProduct XSD sequence and precede ram:Name.
@@ -949,7 +949,7 @@
       ),
       use-vat-id: not outside-scope,
     ),
-    resolve-profile("en16931", "DE", "FR"),
+    resolve-profile("en16931", "FR"),
   )
   let registrations(party) = party.at(
     "ram:SpecifiedTaxRegistration",
@@ -1027,11 +1027,11 @@
     themes,
   )
 
-  // Repro invoice from bug report (missing BT-49, BT-10, BG-6)
+  // Repro invoice from bug report (missing BT-49, BT-10, BG-6), as XRechnung
   let test-e-invoice(
     sender-overrides: (:),
     recipient-overrides: (:),
-    zugferd: "en16931",
+    zugferd: "xrechnung",
   ) = {
     let base-sender = (
       name: "Seller GmbH",
@@ -1190,9 +1190,12 @@
   )
 
   // 8. Outside XRechnung, EN 16931 only recommends electronic addresses:
-  //    a cross-border invoice without them compiles
+  //    an invoice without them compiles, domestic or cross-border
+  assert.eq(failed-rules(zugferd: "en16931"), ())
   assert.eq(
-    failed-rules(recipient-overrides: (country: country.fr)),
+    failed-rules(zugferd: "en16931", recipient-overrides: (
+      country: country.fr,
+    )),
     (),
   )
 

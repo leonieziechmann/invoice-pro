@@ -423,7 +423,6 @@
   let recipient = ctx.at("recipient", default: (:))
   let profile = resolve-profile(
     ctx.at("zugferd", default: "en16931"),
-    country-code(sender),
     country-code(recipient),
   )
 

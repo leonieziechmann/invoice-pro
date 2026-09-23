@@ -414,6 +414,7 @@ The automated `validate-all-zugferd` suite covers:
 - `tests/integration/zugferd-intra-community/test.typ` — Intra-community supply (category `K`) with the deliver-to country taken from the buyer.
 - `tests/integration/zugferd-text/test.typ` — Styled content, smart quotes and XML special characters in names, reasons and references.
 - `tests/integration/zugferd-seller-id/test.typ` — Seller identifier (BT-29) without tax registration (#42).
+- `tests/integration/zugferd-auto/test.typ` — `zugferd: auto` between German parties with complete data, written as XRechnung.
 - `tests/docs/e-invoicing-complete/test.typ` — Complete example of the e-invoicing documentation.
 - `template/invoice.typ` — Default release invoice template.
 

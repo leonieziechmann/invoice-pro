@@ -6,12 +6,20 @@
 
 #let _count(n, noun) = str(n) + " " + noun + if n != 1 { "s" }
 
-// Why the profile was chosen, if it is not the requested one.
-#let _profile-note(profile) = if profile.at("promoted", default: false) {
+// How the profile was chosen, for `zugferd: auto`.
+#let _profile-note(profile) = if profile.at("automatic", default: false) {
+  let skipped = profile.at("skipped", default: ())
   (
-    "XRechnung is used because seller and buyer are located in Germany (`zugferd: \""
-      + profile.requested
-      + "\"`)."
+    "Profile chosen by `zugferd: auto`: "
+      + profile.name
+      + "."
+      + if skipped.len() > 0 {
+        (
+          " Not possible: "
+            + skipped.map(candidate => candidate.name).join(", ")
+            + " (see the warnings)."
+        )
+      } else { "" }
   )
 }
 

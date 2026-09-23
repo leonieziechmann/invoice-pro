@@ -73,7 +73,7 @@
   m.seller.id = none
   assert.eq(rules(m), ("BR-CO-26",))
   let m = base
-  m.profile = resolve-profile("minimum", "DE", "DE")
+  m.profile = resolve-profile("minimum", "DE")
   assert.eq(rules(m), ())
   m.seller.vat-id = none
   m.seller.id = "123/456/78901"
@@ -84,14 +84,14 @@
   m.seller.electronic-address = none
   m.buyer.electronic-address = none
   assert.eq(rules(m), ("PEPPOL-EN16931-R010", "PEPPOL-EN16931-R020"))
-  m.profile = resolve-profile("en16931", "DE", "FR")
+  m.profile = resolve-profile("en16931", "FR")
   m.invoice.buyer-reference = none
   assert.eq(rules(m), ())
   assert.eq(
     rules(m, level: "warning"),
     ("PEPPOL-EN16931-R010", "PEPPOL-EN16931-R020"),
   )
-  m.profile = resolve-profile("basic", "DE", "FR")
+  m.profile = resolve-profile("basic", "FR")
   assert.eq(rules(m, level: "warning"), ())
 
   let m = base
@@ -206,7 +206,7 @@
   let m = base
   m.payment.means = none
   assert.eq(rules(m), ("BR-DE-1",))
-  m.profile = resolve-profile("en16931", "DE", "FR")
+  m.profile = resolve-profile("en16931", "FR")
   assert.eq(rules(m), ())
   let m = base
   m.payment.means.iban = "DE00512108001245126199"
@@ -230,7 +230,7 @@
 #show: invoice.with(
   theme: themes.blank,
   locale: locale.de-de,
-  zugferd: "en16931",
+  zugferd: "xrechnung",
   sender: (
     name: "Seller GmbH",
     address: "Street 1",

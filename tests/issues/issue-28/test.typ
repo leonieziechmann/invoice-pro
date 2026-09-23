@@ -21,7 +21,7 @@
 
 // --- 1. Unit assertions on trade party building with outside-scope tax ---
 #{
-  let profile = resolve-profile("en16931", "DE", "US")
+  let profile = resolve-profile("en16931", "US")
   let party(..fields) = normalize-party(
     (name: "Seller GmbH", address: ("Street 1",), city: "80339 München")
       + fields.named(),

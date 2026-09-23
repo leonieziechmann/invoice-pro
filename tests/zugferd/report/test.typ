@@ -3,12 +3,12 @@
 // failing, and the `"ignore"` mode, which embeds the XML anyway.
 
 #import "/src/lib.typ": *
-#import "/src/zugferd/profile.typ": resolve-profile
+#import "/src/zugferd/profile.typ": resolve-profile, switch-profile
 #import "/src/zugferd/report.typ": format-report, render-zugferd-report
 #import "/src/zugferd/validate.typ": error, warning
 
 #let result = (
-  profile: resolve-profile("en16931", "DE", "DE"),
+  profile: resolve-profile("xrechnung", "DE"),
   diagnostics: (
     error(
       "BR-DE-15",
@@ -34,13 +34,45 @@
     "  2. [BR-02] invoice-nr: The invoice number (BT-1) is missing.",
     "Warnings:",
     "  - [BR-DE-27] sender.contact.phone: The seller contact phone number (BT-42) should contain at least three digits.",
-    "XRechnung is used because seller and buyer are located in Germany (`zugferd: \"en16931\"`).",
     "Set `zugferd-errors: \"report\"` on the invoice to list these problems in the document instead.",
   )
   assert.eq(format-report(result).split("\n"), expected)
 
   // The default theme renders the diagnostics as content
   assert.eq(type(render-zugferd-report((:), result)), content)
+}
+
+// --- 1b. With `zugferd: auto`, the report says which profile was chosen ---
+#{
+  let chosen = switch-profile(resolve-profile(auto, "DE"), "en16931")
+  chosen.skipped = ((id: "xrechnung", name: "XRechnung 3.0"),)
+  let report = format-report((
+    profile: chosen,
+    diagnostics: (
+      error("BR-02", "invoice-nr", "The invoice number (BT-1) is missing."),
+    ),
+  ))
+  assert(
+    report.starts-with(
+      "The e-invoice (ZUGFeRD / Factur-X, profile EN 16931 (COMFORT)) is not valid: 1 error.",
+    ),
+  )
+  assert(
+    report.contains(
+      "Profile chosen by `zugferd: auto`: EN 16931 (COMFORT). Not possible: XRechnung 3.0 (see the warnings).",
+    ),
+  )
+
+  // Without a fallback, only the chosen profile is named
+  let direct = format-report((
+    profile: resolve-profile(auto, "FR"),
+    diagnostics: (error("BR-02", "invoice-nr", "missing"),),
+  ))
+  assert(
+    direct.contains(
+      "Profile chosen by `zugferd: auto`: EN 16931 (COMFORT).\n",
+    ),
+  )
 }
 
 // --- 2. "report" hands all diagnostics to the theme instead of failing ---
