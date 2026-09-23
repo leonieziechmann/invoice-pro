@@ -8,6 +8,7 @@
 #import "locale/lang/base.typ": base-language
 #import "locale/region/base.typ": base-region
 #import "logic/country.typ": normalize-party, resolve-party-country
+#import "logic/document-type.typ": document-title, resolve-document-type
 
 /// The main entry point for creating an invoice document.
 /// It orchestrates the theme, localization, and data calculation passes.
@@ -40,9 +41,19 @@
   /// The date of the invoice. Defaults to today.
   /// -> datetime
   date: datetime.today(),
-  /// The subject line of the invoice.
+  /// The subject line of the invoice. If `auto`, the title of the
+  /// `document-type` in the language of the locale, e.g. "Rechnung".
   /// -> string | content
   subject: auto,
+  /// The type of the document (BT-3 of the e-invoice): `"invoice"` (380),
+  /// `"credit-note"` (381, amounts credited to the buyer, stated as positive
+  /// amounts), `"corrected"` (384, replaces `preceding-invoice-nr`),
+  /// `"prepayment"` (386), `"self-billed"` (389, issued by the buyer: the
+  /// sender is the buyer and the recipient the seller), or another code of
+  /// UNTDID 1001 for invoices and credit notes, e.g. `"326"` for a partial
+  /// invoice. `auto` is an invoice.
+  /// -> auto | str | int
+  document-type: auto,
   /// Reference information for the document header (e.g., customer number).
   /// If `auto`, defaults to displaying sender tax-nr, sender vat-id, and recipient vat-id in exclusive tax-mode (B2B), or none in inclusive tax-mode (B2C).
   /// -> auto | none | dictionary | array | function
@@ -131,6 +142,7 @@
 
   types.require(date, "invoice::date", datetime)
   types.require(subject, "invoice::subject", auto, str, content)
+  types.require(document-type, "invoice::document-type", auto, str, int)
   types.require(
     references,
     "invoice::references",
@@ -201,6 +213,7 @@
   /** Input Calculations **/
   let eval-theme = theme()
   let eval-locale = locale(base-language, base-region)
+  let document = resolve-document-type(document-type)
 
   let default-region = eval-locale.meta.region
   let sender = sender
@@ -245,15 +258,18 @@
   } else {
     none
   }
-  // Without a country of its own, the delivery address is in the recipient's
-  // country, not in the country of the locale.
+  // Without a country of its own, the delivery address is in the buyer's
+  // country, not in the country of the locale: the recipient's, or the
+  // sender's on a self-billed invoice, which the buyer issues.
   let normalized-delivery-address = if raw-delivery-address != none {
     normalize-party(
       raw-delivery-address,
       default-region,
       is-recipient: true,
       sender-country-code: normalized-sender.country.code,
-      default-country: normalized-recipient.country,
+      default-country: if document.self-billed {
+        normalized-sender.country
+      } else { normalized-recipient.country },
       field: if delivery-address != none { "delivery-address" } else {
         "recipient.delivery-address"
       },
@@ -265,7 +281,7 @@
     normalized-recipient.insert("delivery-address", normalized-delivery-address)
   }
 
-  if subject == auto { subject = eval-locale.strings.document.invoice }
+  if subject == auto { subject = document-title(document, eval-locale.strings) }
 
   let document-subject = (subject, invoice-nr).join(" ")
   let document-tax = if tax != auto { tax } else { eval-locale.tax.default-vat }
@@ -304,6 +320,22 @@
         ))
       }
     }
+    // A self-billed invoice, which the buyer (the sender) issues for the
+    // seller (the recipient), states the seller's tax number or VAT ID (e.g.
+    // § 14 Abs. 4 Satz 1 Nr. 2 UStG), and the buyer's VAT ID.
+    if tax-mode != "inclusive" and document.self-billed {
+      let labels = eval-locale.strings.reference
+      document-references = ()
+      for (label, value) in (
+        (labels.recipient-tax-number, normalized-recipient.tax-nr),
+        (labels.recipient-vat-id, normalized-recipient.vat-id),
+        (labels.vat-id, normalized-sender.vat-id),
+      ) {
+        if value != none and value != "" {
+          document-references.push((label, value))
+        }
+      }
+    }
   } else if type(references) == function {
     document-references = references
   } else if type(references) == array {
@@ -323,6 +355,10 @@
 
     invoice-date: date,
     subject: document-subject,
+    // The title of the document, the subject without the invoice number.
+    title: subject,
+    // The resolved `document-type`, see `resolve-document-type`.
+    document-type: document,
     references: document-references,
     invoice-nr: invoice-nr,
 

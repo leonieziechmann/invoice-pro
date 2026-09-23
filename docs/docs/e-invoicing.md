@@ -107,6 +107,9 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | `IP-PRINT-02`   | error   | Amounts printed in another currency than the invoice currency (BT-5), e.g. a custom locale that prints "zł" while the XML states EUR.                                                                                                                                              |
 | `IP-DEC-01`     | error   | A VAT rate with more than 4 decimals, which the XML cannot state exactly (and which could collide with another VAT group).                                                                                                                                                         |
 | `IP-UNIT-01`    | warning | A unit code used verbatim that is also a common German abbreviation of another unit (`STK`, `PAL`, `FL`, `GL`, `KT`).                                                                                                                                                              |
+| `IP-DOC-01`     | error   | A subject that names another kind of document than an invoice (e.g. "Gutschrift", "Angebot", "Credit note", "Devis") without `document-type`: the e-invoice would state a commercial invoice that asks the buyer to pay. See [Document Type](#9-document-type-bt-3).               |
+| `IP-DOC-03`     | error   | A credit note with a negative total: it states the credited amounts as positive amounts, so it would ask the buyer to pay.                                                                                                                                                         |
+| `IP-DOC-04`     | warning | An invoice with a negative total: valid, but a credit note (`document-type: "credit-note"`) is the document for a credit.                                                                                                                                                          |
 
 ### The `zugferd-errors` Parameter
 
@@ -340,13 +343,86 @@ The `"basic"` profile only supports the standard identifier. See [The `item-id` 
 
 `order-nr` (BT-13), `contract-nr` (BT-12), `delivery-note-nr` (BT-16) and `preceding-invoice-nr` (BT-25, e.g. for corrections) are written to the XML where the profile supports them.
 
+### 9. Document Type (BT-3)
+
+`document-type` states what kind of document the invoice is. It is written as the document type code (BT-3, UNTDID 1001), and unless you set `subject`, it is the printed title:
+
+| `document-type`       | BT-3  | Title (German / English)                 | Meaning                                                                                                 |
+| :-------------------- | :---- | :--------------------------------------- | :------------------------------------------------------------------------------------------------------ |
+| `auto` or `"invoice"` | `380` | Rechnung / Invoice                       | A commercial invoice: the buyer pays the seller.                                                        |
+| `"credit-note"`       | `381` | Rechnungskorrektur / Credit Note         | Credits amounts to the buyer, e.g. for returned goods or a discount granted later.                      |
+| `"corrected"`         | `384` | Korrigierte Rechnung / Corrected Invoice | Replaces the invoice `preceding-invoice-nr`.                                                            |
+| `"prepayment"`        | `386` | Anzahlungsrechnung / Prepayment Invoice  | Asks for an advance payment, which the final invoice deducts. XRechnung does not allow it (`BR-DE-17`). |
+| `"self-billed"`       | `389` | Gutschrift / Self-Billing Invoice        | Issued by the buyer for the seller, e.g. a commission statement (see below).                            |
+
+Any other code of UNTDID 1001 for invoices and credit notes can be given as text, e.g. `"326"` for a partial invoice or `"875"` to `"877"` for construction invoices. It is printed with the title of its kind (an invoice or a credit note), so give it a `subject` of its own. XRechnung allows only `326`, `380`, `381`, `384`, `389`, `875`, `876` and `877` (`BR-DE-17`): the KoSIT validator only warns about other codes, but Mustang rejects them, so `invoice-pro` reports an error; with `zugferd: auto`, such an invoice is written as EN 16931.
+
+**Credit notes.** EN 16931 states a credit note with **positive** amounts: the items are the credited amounts, entered with positive prices, and `document-type: "credit-note"` says that they are credited to the buyer. The amount due (BT-115) is the amount the buyer gets back.
+
+- A credit note with a negative total would ask the buyer to pay, so it stops the e-invoice (`IP-DOC-03`). An invoice with a negative total is valid, but a credit note is the document for it (`IP-DOC-04`, a warning).
+- As long as an amount is due, the credit note says when or how the buyer gets it (`BR-CO-25`): [`payment-goal`](./api-reference/components.md#payment-goal) prints that the amount is transferred within the given days (and states that date, BT-9), a textual `due-date` (e.g. `due-date: "Der Betrag wird mit Ihrer nächsten Rechnung verrechnet."`) states the terms (BT-20).
+- [`bank-details`](./api-reference/components.md#bank-details) on a credit note are the account the amount is paid to, usually the buyer's: the account holder defaults to the recipient's name, and no EPC-QR code is printed. XRechnung requires payment instructions (BG-16) on credit notes as well (`BR-DE-1`).
+- A document that amends an invoice must refer to it (Art. 219 VAT Directive): set `preceding-invoice-nr` to the invoice the credit note refers to.
+- In German, a credit note is titled "Rechnungskorrektur": the German VAT law reserves "Gutschrift" for self-billed invoices (§ 14 Abs. 2 Satz 2 UStG). A commercial credit note titled "Gutschrift" is permitted as well; set `subject: "Gutschrift"` together with `document-type: "credit-note"` if you prefer it.
+
+```typst
+#import "@preview/invoice-pro:0.4.2": *
+
+#show: invoice.with(
+  zugferd: auto,
+  document-type: "credit-note",
+  sender: (
+    name: "Consulting Group GmbH",
+    address: "Tech Avenue 42",
+    city: "80331 München",
+    country: country.de,
+    vat-id: "DE123456789",
+    contact: (
+      name: "Max Mustermann",
+      phone: "+49 89 1234567",
+      email: "max@consultinggroup.de",
+    ),
+  ),
+  recipient: (
+    name: "Acme Corp",
+    address: "Industrial Road 1",
+    city: "70173 Stuttgart",
+    country: country.de,
+    vat-id: "DE987654321",
+    buyer-reference: "DE123456789-12345-12",
+  ),
+  invoice-nr: "CN-2026-007",
+  date: datetime(year: 2026, month: 7, day: 20),
+  preceding-invoice-nr: "INV-2026-102",
+)
+
+#line-items[
+  #item([Workshop cancelled by us], quantity: 1, price: 1500.00, tax: tax.vat(19%))
+]
+
+#payment-goal(days: 14)
+
+#bank-details(
+  bank: "Acme Bank",
+  iban: "DE89370400440532013000",
+)
+```
+
+**Self-billed invoices.** The buyer issues a self-billed invoice for the seller, e.g. a publisher for the royalties of an author or a principal for the commissions of an agent. `sender` is then the buyer, who issues the document, and `recipient` the seller:
+
+- The XML states the recipient as seller (BG-4) and the sender as buyer (BG-7). The messages of the e-invoice name the inputs, e.g. `recipient.vat-id` for the seller VAT identifier.
+- The references state the tax number and VAT ID of the seller (the recipient), which the law requires on the invoice, and the VAT ID of the buyer (the sender).
+- The payment goal says that the sender transfers the amount, and the [`bank-details`](./api-reference/components.md#bank-details) are the seller's account, without EPC-QR code.
+- The title is the mention the law requires on a self-billed invoice (Art. 226 No. 10a VAT Directive): "Gutschrift" in German (§ 14 Abs. 4 Satz 1 Nr. 10 UStG), "Self-Billing Invoice" in English, "Autofacturation" in French, "Autofatturazione" in Italian and "Facturación por el destinatario" in Spanish. Keep it in a `subject` of your own.
+
+**Titles that name another document (`IP-DOC-01`).** Without `document-type`, the e-invoice states a commercial invoice (`380`), which asks the buyer to pay. If the subject names another kind of document, the e-invoice stops with `IP-DOC-01`: a credit note ("Gutschrift", "Rechnungskorrektur", "Stornorechnung", "Credit note", "Avoir", "Nota di credito", ...), a corrected or a self-billed invoice, or a document that is no invoice at all, such as a quote ("Angebot", "Kostenvoranschlag", "Quote", "Offer", "Devis", "Preventivo", "Presupuesto"), a delivery note ("Lieferschein"), an order confirmation, a pro forma invoice or a payment reminder. Set the matching `document-type`, or `document-type: "invoice"` if it is an invoice. The first word of the subject that names a kind of document decides, so "Rechnung zum Angebot 2026-5" is an invoice. An e-invoice is only written for invoices and credit notes: do not set `zugferd` for quotes and other documents that are no invoice.
+
 ---
 
 ## Hardcoded Details & Limitations
 
 - **Business Process URN (BT-23):** Whenever using the `"en16931"` or `"xrechnung"` profiles, the Business Process context URN is hardcoded to `urn:fdc:peppol.eu:2017:poacc:billing:01:1.0` (standard billing transaction).
 - **EAS Scheme Fallback:** If the prefix of a party's VAT ID has no known scheme and neither a custom `electronic-address` nor an email address is specified, the electronic address block is omitted from the XML payload.
-- **Invoice Type Code (BT-3):** Invoices are always written with type code `380` (commercial invoice). Credited lines and negative totals are supported, dedicated credit notes (`381`) are not.
 - **Plain Text:** Names, addresses and references given as content are written as their plain text; formatting is dropped.
 
 ---

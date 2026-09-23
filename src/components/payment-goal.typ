@@ -1,6 +1,7 @@
 #import "../loom-wrapper.typ": loom, managed-motif
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
+#import "../logic/document-type.typ": sender-pays
 
 /// Displays the payment deadline and terms for the invoice.
 ///
@@ -56,7 +57,25 @@
 
       (data, data)
     },
-    draw: (ctx, _, view, ..) => (ctx.theme.payment-goal)(ctx, view),
+    draw: (ctx, _, view, ..) => {
+      // On a credit note or a self-billed invoice, the sender pays the
+      // amount to the recipient. The layout prints the payment sentence of
+      // the language (`text`, or `text-due` with prepayments), so that is
+      // the sentence of this direction here.
+      let ctx = ctx
+      if sender-pays(ctx.at("document-type", default: none)) {
+        let strings = ctx.locale.strings.payment
+        ctx.locale.strings.payment = (
+          strings
+            + (
+              text: strings.text-credit,
+              text-due: strings.text-credit,
+              deadline-soon: strings.deadline-soon-credit,
+            )
+        )
+      }
+      (ctx.theme.payment-goal)(ctx, view)
+    },
     none,
   )
 }

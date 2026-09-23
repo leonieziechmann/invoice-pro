@@ -22,11 +22,3 @@ finding = "amounts-delivery-date-mismatch"
 note = "BG-14 counts undated items with the invoice date; the printed service period does not"
 features = { delivery = "dates-mixed" }
 signatures = ["AGREE_VALID oracle=O-BG14"]
-
-# ---------------------------------------------------------------- invoice-pro's own rules (maintainer decisions)
-
-[[issue]]
-finding = "amounts-doctype-gutschrift-written-as-380"
-note = "subject \"Gutschrift\" without a document type is written as invoice 380 (IP-DOC-01)"
-cases = ["rg-credit-note-subject"]
-signatures = ["AGREE_VALID missing=IP-DOC-01 ours=- official=-"]

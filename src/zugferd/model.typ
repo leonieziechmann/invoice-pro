@@ -12,6 +12,7 @@
 #import "../data/unit.typ": unit-db
 #import "../locale/lang/lang.typ" as languages
 #import "../logic/payment-reference.typ": resolve-payment-reference
+#import "../logic/document-type.typ": resolve-document-type
 
 #let _zero = decimal("0")
 
@@ -1073,6 +1074,13 @@
 #let build-model(ctx, item-data, payment-goal: none, bank: none) = {
   let sender = ctx.at("sender", default: (:))
   let recipient = ctx.at("recipient", default: (:))
+  // The document type (BT-3), see `resolve-document-type`.
+  let document = ctx.at("document-type", default: none)
+  if type(document) != dictionary { document = resolve-document-type(auto) }
+  // The buyer issues a self-billed invoice: the sender of the document is
+  // the buyer and its recipient the seller. From here on, `sender` is the
+  // seller and `recipient` the buyer.
+  if document.self-billed { (sender, recipient) = (recipient, sender) }
   let profile = resolve-profile(
     ctx.at("zugferd", default: "en16931"),
     country-code(recipient),
@@ -1247,7 +1255,12 @@
     printed-currency: printed-currency,
     invoice: (
       number: text-or-none(_field(ctx, "invoice-nr")),
-      type-code: "380",
+      type-code: document.code,
+      // The resolved `document-type`, and the title printed on the document
+      // (the subject without the invoice number), which must not name
+      // another kind of document (IP-DOC-01).
+      document: document,
+      title: text-or-none(ctx.at("title", default: none)),
       issue-date: ctx.at("invoice-date", default: none),
       buyer-reference: text-or-none(first-of(
         ctx.at("buyer-reference", default: none),

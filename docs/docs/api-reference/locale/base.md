@@ -28,11 +28,15 @@ Contains core metadata about the language configuration.
 
 ### `document`
 
-Designations for primary document types.
+Designations for the document types: the default titles of `invoice(document-type: ..)`.
 
-| Key       | Type  | Description                                               |
-| :-------- | :---- | :-------------------------------------------------------- |
-| `invoice` | `str` | The title used for standard invoices (e.g., `"Invoice"`). |
+| Key           | Type  | Description                                                                                                              |
+| :------------ | :---- | :----------------------------------------------------------------------------------------------------------------------- |
+| `invoice`     | `str` | The title used for standard invoices (e.g., `"Invoice"`).                                                                |
+| `credit-note` | `str` | The title of a credit note (e.g., `"Credit Note"`, in German `"Rechnungskorrektur"`).                                    |
+| `corrected`   | `str` | The title of a corrected invoice (e.g., `"Corrected Invoice"`).                                                          |
+| `prepayment`  | `str` | The title of a prepayment invoice (e.g., `"Prepayment Invoice"`).                                                        |
+| `self-billed` | `str` | The title of a self-billed invoice, the mention the law requires on it (e.g., `"Self-Billing Invoice"`, `"Gutschrift"`). |
 
 ### `address`
 
@@ -74,6 +78,7 @@ Column headers and structural labels for the line-items table.
 | `surcharge`   | `str` | Label for applied surcharges.                         |
 | `subtotal`    | `str` | Label indicating a running subtotal within the table. |
 | `conjunction` | `str` | Word before the last name of a bundle description.    |
+| `origin`      | `str` | Label of the country of origin of an item.            |
 
 ### `summary`
 
@@ -150,13 +155,15 @@ Labels for the payment configuration block.
 
 Text blocks and phrasing for payment terms.
 
-| Key             | Type                            | Description                                                                                                                                                  |
-| :-------------- | :------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `text`          | `(content, content) => content` | Generates the final payment instruction sentence. Parameters map to `(sum, deadline)`.                                                                       |
-| `text-due`      | `(content, content) => content` | Replaces `text` when prepayments reduce the payable amount, so `sum` is the remaining amount due (e.g., `"the amount due"` instead of `"the total amount"`). |
-| `deadline-date` | `(content) => content`          | Text generator for a fixed target date (e.g., `[no later than #date]`).                                                                                      |
-| `deadline-days` | `(int) => str`                  | Text generator for a relative target date (e.g., `[within #str(days) days]`).                                                                                |
-| `deadline-soon` | `str`                           | Text for immediate/prompt payment.                                                                                                                           |
+| Key                    | Type                            | Description                                                                                                                                                             |
+| :--------------------- | :------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text`                 | `(content, content) => content` | Generates the final payment instruction sentence. Parameters map to `(sum, deadline)`.                                                                                  |
+| `text-due`             | `(content, content) => content` | Replaces `text` when prepayments reduce the payable amount, so `sum` is the remaining amount due (e.g., `"the amount due"` instead of `"the total amount"`).            |
+| `deadline-date`        | `(content) => content`          | Text generator for a fixed target date (e.g., `[no later than #date]`).                                                                                                 |
+| `deadline-days`        | `(int) => str`                  | Text generator for a relative target date (e.g., `[within #str(days) days]`).                                                                                           |
+| `deadline-soon`        | `str`                           | Text for immediate/prompt payment.                                                                                                                                      |
+| `text-credit`          | `(content, content) => content` | Replaces `text` and `text-due` on a credit note or a self-billed invoice, whose sender pays the amount to the recipient (e.g., `"We will transfer the amount of ..."`). |
+| `deadline-soon-credit` | `str`                           | Replaces `deadline-soon` in `text-credit` (e.g., `"promptly"`).                                                                                                         |
 
 ### `signature`
 

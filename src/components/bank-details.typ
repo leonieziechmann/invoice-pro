@@ -5,6 +5,7 @@
 #import "../utils/iban.typ": format-iban, iban-valid, normalize-iban
 #import "../logic/epc.typ"
 #import "../logic/payment-reference.typ": resolve-remittance
+#import "../logic/document-type.typ": sender-pays
 
 // With an e-invoice and `zugferd-errors: "report"`, problems are shown in the
 // document instead of stopping the compilation.
@@ -13,10 +14,13 @@
     and ctx.at("zugferd-errors", default: "panic") == "report"
 )
 
-// What the root context holds for a sender without a name.
+// What the root context holds for a sender or recipient without a name.
 #let _is-missing(value) = (
   value in (none, "", [])
-    or (type(value) == str and value.starts-with("#sender."))
+    or (
+      type(value) == str
+        and (value.starts-with("#sender.") or value.starts-with("#recipient."))
+    )
 )
 
 /// Defines and renders the bank account information for payments.
@@ -153,11 +157,20 @@
         )
       }
 
-      // The account holder: the explicit `name`, else the sender's name on
-      // one line, as in the e-invoice (BT-27).
+      // On a credit note or a self-billed invoice, the sender pays the
+      // amount to the recipient, so the bank details are the recipient's
+      // account, and the recipient scans no EPC-QR code.
+      let document = ctx.at("document-type", default: none)
+      let recipient-account = sender-pays(document)
+
+      // The account holder: the explicit `name`, else the name on one line
+      // of the sender (as in the e-invoice, BT-27), or of the recipient for
+      // the recipient's account.
       let holder = ctx.sender.name
       if name == auto {
-        let inline = ctx.sender.at("name-inline", default: none)
+        let party = if recipient-account { ctx.recipient } else { ctx.sender }
+        if recipient-account { holder = party.name }
+        let inline = party.at("name-inline", default: none)
         if not _is-missing(inline) { holder = inline }
       }
 
@@ -170,7 +183,7 @@
 
       // The EPC-QR code is only generated when it is shown. SEPA credit
       // transfers are in euro, so it is shown for invoices in EUR only.
-      let qr-display = qr-code.at("display", default: true)
+      let qr-display = qr-code.at("display", default: not recipient-account)
       let currency = ctx.locale.at("currency", default: (:))
       let epc-code = if (
         qr-display and currency.at("code", default: none) == "EUR"

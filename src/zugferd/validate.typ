@@ -20,6 +20,7 @@
 #import "codelists.typ"
 #import "xml.typ": fmt-number, rate-digits
 #import "model.typ": vat-eas-codes, vat-id-country, vat-id-prefix
+#import "document.typ": title-kind
 #import "../utils/iban.typ": iban-valid
 
 #let _zero = decimal("0")
@@ -183,6 +184,151 @@
       ))
       break
     }
+  }
+  out
+}
+
+// --- Document type --------------------------------------------------------
+
+// What a title names that is no invoice at all, for IP-DOC-01.
+#let _no-invoice = (
+  quote: "a quote",
+  delivery-note: "a delivery note",
+  order: "an order",
+  pro-forma: "a pro forma invoice",
+  reminder: "a payment reminder",
+)
+
+// The document types XRechnung allows (BR-DE-17).
+#let _xrechnung-type-codes = (
+  "326": true,
+  "380": true,
+  "381": true,
+  "384": true,
+  "389": true,
+  "875": true,
+  "876": true,
+  "877": true,
+)
+
+// IP-DOC-01: the title of a document without `document-type` names another
+// kind of document than the invoice (BT-3 = 380) the e-invoice states, e.g.
+// "Gutschrift": the e-invoice would ask the buyer to pay a credit note.
+#let _check-title(invoice) = {
+  let document = invoice.document
+  if document.input != auto { return () }
+  let named = title-kind(invoice.title)
+  if named == none or named.kind == "invoice" { return () }
+  let title = _quoted(invoice.title)
+  let as-invoice = "or `document-type: \"invoice\"` if it is an invoice."
+  let (message, hint) = if named.kind in _no-invoice {
+    (
+      "The subject "
+        + title
+        + " names "
+        + _no-invoice.at(named.kind)
+        + ", which is no invoice, but the e-invoice states a commercial invoice (BT-3 = "
+        + document.code
+        + ").",
+      "Do not set `zugferd` for quotes, delivery notes, orders, pro forma invoices or payment reminders: an e-invoice is only written for invoices and credit notes. Set `document-type: \"invoice\"` if it is an invoice.",
+    )
+  } else if named.kind == "corrected" {
+    (
+      "The subject "
+        + title
+        + " names a corrected invoice, but the e-invoice states a new commercial invoice (BT-3 = "
+        + document.code
+        + "), which the buyer would book and pay a second time.",
+      "Set `document-type: \"corrected\"` (384) and `preceding-invoice-nr` to the invoice it replaces, `document-type: \"credit-note\"` (381) for a credit note, "
+        + as-invoice,
+    )
+  } else if named.kind == "self-billed" {
+    (
+      "The subject "
+        + title
+        + " names a self-billed invoice, but the e-invoice states a commercial invoice of the sender (BT-3 = "
+        + document.code
+        + ").",
+      "Set `document-type: \"self-billed\"` (389): the sender is then the buyer, who issues the invoice, and the recipient the seller. Set `document-type: \"invoice\"` if it is an invoice.",
+    )
+  } else {
+    (
+      "The subject "
+        + title
+        + " names a credit note"
+        + if named.kind == "credit-note-or-self-billed" {
+          " or a self-billed invoice"
+        }
+        + ", but the e-invoice states a commercial invoice (BT-3 = "
+        + document.code
+        + "), which asks the buyer to pay.",
+      "Set `document-type: \"credit-note\"` (381) for a credit note and enter the credited items with positive prices, "
+        + if named.kind == "credit-note-or-self-billed" {
+          "`document-type: \"self-billed\"` (389) for a self-billed invoice (which German VAT law calls \"Gutschrift\"), "
+        }
+        + as-invoice,
+    )
+  }
+  (error("IP-DOC-01", "subject", message, hint: hint),)
+}
+
+/// Checks the document type (BT-3): that the title of the document does not
+/// name another kind of document (IP-DOC-01), that the profile allows the
+/// type (BR-DE-17), and that the amounts have the sign of the type.
+///
+/// -> array
+#let check-document-type(model) = {
+  let invoice = model.invoice
+  let document = invoice.at("document", default: none)
+  if type(document) != dictionary { return () }
+  let out = _check-title(invoice)
+  let code = invoice.type-code
+
+  // XRechnung only warns about BR-DE-17, but validators such as Mustang
+  // reject the invoice, so invoice-pro reports an error.
+  if model.profile.xrechnung and code not in _xrechnung-type-codes {
+    out.push(error(
+      "BR-DE-17",
+      "document-type",
+      "XRechnung does not allow the document type "
+        + _quoted(code)
+        + " (BT-3), only 326, 380, 381, 384, 389, 875, 876 and 877.",
+      hint: if code == "386" {
+        "XRechnung has no prepayment invoice: state the advance payment as an invoice (`document-type: \"invoice\"`) or a partial invoice (`document-type: \"326\"`), or use the \"en16931\" profile (as `zugferd: auto` does)."
+      } else {
+        "Use one of these document types, or the \"en16931\" profile (as `zugferd: auto` does)."
+      },
+    ))
+  }
+
+  // A credit note states the credited amounts as positive amounts: a
+  // negative credit note asks the buyer to pay (IP-DOC-03). An invoice with
+  // a negative total is valid, but a credit note is the document for it.
+  let gross = model.totals.gross
+  if document.credit and gross < _zero {
+    out.push(error(
+      "IP-DOC-03",
+      "line-items",
+      "A credit note (BT-3 = "
+        + code
+        + ") states the credited amounts as positive amounts, but its total is "
+        + fmt-number(gross)
+        + ", which would ask the buyer to pay "
+        + fmt-number(-gross)
+        + ".",
+      hint: "Enter the credited items with positive prices: the document type already says that the amounts are credited to the buyer.",
+    ))
+  } else if not document.credit and gross < _zero {
+    out.push(warning(
+      "IP-DOC-04",
+      "line-items",
+      "The total is negative ("
+        + fmt-number(gross)
+        + "), but the document type "
+        + _quoted(code)
+        + " (BT-3) is no credit note: the e-invoice asks the buyer to pay a negative amount.",
+      hint: "For a credit, set `document-type: \"credit-note\"` and enter the credited items with positive prices.",
+    ))
   }
   out
 }
@@ -1723,6 +1869,7 @@
 #let validate(model) = {
   let diagnostics = (
     check-document(model)
+      + check-document-type(model)
       + check-parties(model)
       + check-lines(model)
       + check-taxes(model)

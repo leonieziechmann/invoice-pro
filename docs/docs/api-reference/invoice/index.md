@@ -26,7 +26,8 @@ Initializes the document and orchestrates the data calculation passes.
 | `recipient`            | `dictionary`                                                                                 | Recipient details (e.g., name, address, customer ID).                                                                                                                                                                                                                                              |
 | `delivery-address`     | `none` \| `dictionary`                                                                       | Separate delivery or shipping address (e.g., if different from billing address), with the same keys as `recipient`. Can also be given as `recipient.delivery-address`. Without its own `country`, it is in the recipient's country. In Factur-X / ZUGFeRD, maps to BG-13 (`ram:ShipToTradeParty`). |
 | `date`                 | `datetime`                                                                                   | The date of the invoice. Defaults to `datetime.today()`.                                                                                                                                                                                                                                           |
-| `subject`              | `str` \| `content` \| `auto`                                                                 | The subject line of the invoice. If `auto`, it is inferred from the [locale](../locale/index.md) (e.g., "Rechnung" in German).                                                                                                                                                                     |
+| `subject`              | `str` \| `content` \| `auto`                                                                 | The subject line of the invoice. If `auto`, the title of the `document-type` in the language of the [locale](../locale/index.md) (e.g., "Rechnung" in German).                                                                                                                                     |
+| `document-type`        | `auto` \| `str` \| `int`                                                                     | The type of the document: `"invoice"` (default), `"credit-note"`, `"corrected"`, `"prepayment"`, `"self-billed"` or a UNTDID 1001 code. Sets the printed title and, in Factur-X / ZUGFeRD, BT-3. See [`document-type`](#document-type) below.                                                      |
 | `references`           | `none` \| `dictionary` \| `array`                                                            | Reference information for the document header (e.g., customer number, order date). Accepts a dictionary of key-value pairs or an array of `(label, value)` tuples.                                                                                                                                 |
 | `invoice-nr`           | `none` \| `str` \| `content`                                                                 | The unique identifier or number of the invoice.                                                                                                                                                                                                                                                    |
 | `payment-reference`    | `none` \| `str` \| `content`                                                                 | The payment reference / purpose (Verwendungszweck). Used by [`bank-details`](../components.md#bank-details), the EPC-QR code and the ZUGFeRD XML (BT-83) unless `bank-details` sets its own `reference` or `text`. Defaults to the `invoice-nr`.                                                   |
@@ -128,6 +129,32 @@ If you enable the small business exemption, the system automatically applies the
 :::
 
 _See the [Tax Module API Reference](../tax.md) for a detailed breakdown of all available tax codes and margin schemes._
+
+### `document-type`
+
+The document type says what kind of document the invoice is. Unless you set `subject`, it is the printed title, in the language of the locale:
+
+| `document-type`       | Title (German / English)                 | Meaning                                                                              |
+| :-------------------- | :--------------------------------------- | :----------------------------------------------------------------------------------- |
+| `auto` or `"invoice"` | Rechnung / Invoice                       | A commercial invoice (UNTDID 1001 code `380`).                                       |
+| `"credit-note"`       | Rechnungskorrektur / Credit Note         | Credits amounts to the buyer (`381`). Enter the credited items with positive prices. |
+| `"corrected"`         | Korrigierte Rechnung / Corrected Invoice | Replaces the invoice `preceding-invoice-nr` (`384`).                                 |
+| `"prepayment"`        | Anzahlungsrechnung / Prepayment Invoice  | Asks for an advance payment (`386`).                                                 |
+| `"self-billed"`       | Gutschrift / Self-Billing Invoice        | Issued by the buyer for the seller (`389`): `sender` is the buyer.                   |
+
+Any other UNTDID 1001 code of an invoice or credit note is accepted as text (e.g. `"326"` for a partial invoice) and printed with the title of its kind.
+
+On a credit note and a self-billed invoice, the sender pays the amount to the recipient: [`payment-goal`](../components.md#payment-goal) says so, and the [`bank-details`](../components.md#bank-details) are the recipient's account (its name is the default account holder) without EPC-QR code. The titles can be changed with [`locale.custom.document`](../locale/custom.md), the payment sentence with `locale.custom.payment(text-credit: ..)`.
+
+```typst
+#show: invoice.with(
+  document-type: "credit-note",
+  preceding-invoice-nr: "INV-2026-102",
+  // ...
+)
+```
+
+See [Document Type](../../e-invoicing.md#9-document-type-bt-3) in the e-invoicing guide for credit notes, self-billed invoices and the e-invoice.
 
 ### `references`
 
