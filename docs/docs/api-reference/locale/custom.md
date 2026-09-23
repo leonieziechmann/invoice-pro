@@ -110,7 +110,7 @@ Here, we define the currency, how dates are formatted, how values are **Normaliz
 
 Finally, expose your newly minted locale to the public by utilizing the `build-locale` factory function.
 
-<!-- check-docs-examples: skip -->
+[//]: # "check-docs-examples: skip"
 
 ```typst
 // lib.typ
@@ -126,7 +126,7 @@ Finally, expose your newly minted locale to the public by utilizing the `build-l
 
 Users of your published package can now simply import your locale and pass it directly into the document root:
 
-<!-- check-docs-examples: skip -->
+[//]: # "check-docs-examples: skip"
 
 ```typst
 #import "@preview/invoice-pro:0.4.2": invoice

@@ -277,7 +277,7 @@ When the documentation code and the test code diverge, use the following rule of
 
 **Compiling every documentation example:**
 
-`scripts/check-docs-examples` compiles every `typst` code block in `docs/docs/**/*.md` that is a complete document, i.e. imports the package (`#import "@preview/invoice-pro:<version>": ...`). The import is redirected to the working tree, so the examples are checked against the current code, including those without a test under `tests/docs/`. Snippets that cannot compile on their own (placeholders such as `invoice.with(..)`, imports of local files or other packages) are excluded by putting `<!-- check-docs-examples: skip -->` on the line before the block.
+`scripts/check-docs-examples` compiles every `typst` code block in `docs/docs/**/*.md` that is a complete document, i.e. imports the package (`#import "@preview/invoice-pro:<version>": ...`). The import is redirected to the working tree, so the examples are checked against the current code, including those without a test under `tests/docs/`. Snippets that cannot compile on their own (placeholders such as `invoice.with(..)`, imports of local files or other packages) are excluded by putting `[//]: # "check-docs-examples: skip"` on the line before the block: a link reference definition, which neither Markdown nor MDX renders (an HTML comment such as `<!-- ... -->` breaks the MDX build of the documentation site).
 
 ```bash
 ./scripts/check-docs-examples                  # all pages

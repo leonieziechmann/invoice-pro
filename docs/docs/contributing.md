@@ -37,7 +37,7 @@ This activates a shell containing a custom-wrapped `typst` binary, `typstyle`, `
 2. **Automatic Package Injection:**
    The Nix environment automatically wraps the `typst` binary to point `TYPST_PACKAGE_PATH` directly to the Nix store. Your local code and its dependencies (like `loom`) are instantly available as system packages. The shell hook will confirm the available versions upon entry:
 
-<!-- check-docs-examples: skip -->
+[//]: # "check-docs-examples: skip"
 
 ```typst
 // Import the dynamically linked development version directly

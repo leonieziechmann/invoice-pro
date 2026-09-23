@@ -7,7 +7,9 @@
 # the package (`#import "@preview/invoice-pro:<version>": ...`). The import is
 # redirected to the working tree (`src/lib.typ`), so the examples are checked
 # against the current code. To exclude a block, put the line
-# `<!-- check-docs-examples: skip -->` directly before it.
+# `[//]: # "check-docs-examples: skip"` directly before it: a link reference
+# definition, which neither Markdown nor MDX renders (an HTML comment breaks
+# the MDX build of the documentation site).
 #
 # Usage: check-docs-examples [markdown files...]   (default: docs/docs/**/*.md)
 set -euo pipefail
@@ -50,7 +52,7 @@ for file in "${files[@]}"; do
         start = NR
         body = ""
         complete = 0
-        skip = (previous ~ /<!--[ \t]*check-docs-examples:[ \t]*skip[ \t]*-->/)
+        skip = (previous ~ /^[ \t]*\[\/\/\]:[ \t]*#[ \t]*"check-docs-examples:[ \t]*skip"[ \t]*$/)
         next
       }
       if (inside && $0 ~ /^[ \t]*```[ \t]*$/) {
