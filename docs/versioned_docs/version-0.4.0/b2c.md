@@ -92,9 +92,9 @@ For invoicing a private consumer within your own country, showing gross prices a
 #payment-goal(days: 7)
 
 #bank-details(
-  bank: "Berliner Volksbank",
-  iban: "DE23100900001234567890",
-  bic: "BEVODEBBXXX",
+  bank: "Deutsche Kreditbank",
+  iban: "DE02120300000000202051",
+  bic: "BYLADEM1001",
 )
 ```
 
@@ -142,8 +142,8 @@ For small businesses operating under a local exemption tax scheme (such as the _
 #payment-goal(days: 14)
 
 #bank-details(
-  bank: "Sparkasse KölnBonn",
-  iban: "DE12370400440532135700",
-  bic: "COBA22XXX",
+  bank: "Commerzbank",
+  iban: "DE89370400440532013000",
+  bic: "COBADEFFXXX",
 )
 ```

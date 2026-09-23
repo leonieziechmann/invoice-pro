@@ -37,6 +37,8 @@ This activates a shell containing a custom-wrapped `typst` binary, `typstyle`, `
 2. **Automatic Package Injection:**
    The Nix environment automatically wraps the `typst` binary to point `TYPST_PACKAGE_PATH` directly to the Nix store. Your local code and its dependencies (like `loom`) are instantly available as system packages. The shell hook will confirm the available versions upon entry:
 
+<!-- check-docs-examples: skip -->
+
 ```typst
 // Import the dynamically linked development version directly
 #import "@preview/invoice-pro:0.4.2": *
@@ -55,6 +57,8 @@ check-pr
 ```
 
 This script will sequentially run the linter, compile the tests, and build the documentation locally, providing immediate feedback on whether your PR will pass the automated checks.
+
+If you change the documentation or the public API, also run `check-docs-examples` (or `./scripts/check-docs-examples` outside the Nix shell). It compiles every complete Typst example of the documentation against your working tree.
 
 ## Contribution Guidelines
 
@@ -95,7 +99,7 @@ The current architecture relies on the following optimized packages:
 
 - `letter-pro` for the DIN layout.
 - `sepay` for EPC-QR-Code generation.
-- `ibanator` for IBAN formatting.
+- `ibanator` (through `sepay`) for the IBAN check of the EPC-QR-Code.
 - `loom` for reactive document rendering.
 
 :::info

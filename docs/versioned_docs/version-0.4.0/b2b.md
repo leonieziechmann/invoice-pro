@@ -110,9 +110,9 @@ For invoicing a business client within the same country (e.g., Germany) where st
 #payment-goal(days: 14)
 
 #bank-details(
-  bank: "Münchner Sparkasse",
-  iban: "DE89700202001234567890",
-  bic: "SADEDE88XXX",
+  bank: "Commerzbank",
+  iban: "DE89370400440532013000",
+  bic: "COBADEFFXXX",
 )
 ```
 
@@ -164,7 +164,7 @@ For invoicing a business client in another EU country where the recipient is res
 
 #bank-details(
   bank: "Commerzbank Berlin",
-  iban: "DE12370400440532135700",
-  bic: "COBA22XXX",
+  iban: "DE89370400440532013000",
+  bic: "COBADEFFXXX",
 )
 ```

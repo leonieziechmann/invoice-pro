@@ -77,7 +77,7 @@ Here, we define how currencies are formatted, how values are **Normalized**, and
 
 ```typst
 // region/pl.typ
-#import "@preview/invoice-pro:0.4.2": locale, data
+#import "@preview/invoice-pro:0.4.2": locale, tax
 
 // The region builder function
 #let region-pl = (lang) => (
@@ -100,7 +100,7 @@ Here, we define how currencies are formatted, how values are **Normalized**, and
   ),
   tax: (
     // Set standard Polish VAT
-    default-vat: data.tax.vat(23%),
+    default-vat: tax.vat(23%),
   )
 )
 ```
@@ -108,6 +108,8 @@ Here, we define how currencies are formatted, how values are **Normalized**, and
 ### 3. Compiling with the Factory
 
 Finally, expose your newly minted locale to the public by utilizing the `build-locale` factory function.
+
+<!-- check-docs-examples: skip -->
 
 ```typst
 // lib.typ
@@ -122,6 +124,8 @@ Finally, expose your newly minted locale to the public by utilizing the `build-l
 ```
 
 Users of your published package can now simply import your locale and pass it directly into the document root:
+
+<!-- check-docs-examples: skip -->
 
 ```typst
 #import "@preview/invoice-pro:0.4.2": invoice

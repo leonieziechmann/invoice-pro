@@ -86,17 +86,19 @@ Set `zugferd-errors: "report"` on the invoice to list these problems in the docu
 Problems come in two levels:
 
 - **Errors** make the XML invalid for the profile (e.g. a missing invoice number, an unknown unit code or a VAT breakdown that does not add up).
-- **Warnings** point out data that is valid but most likely not intended (e.g. an IBAN with a wrong check digit, or an EN 16931 invoice without the electronic addresses Peppol expects). Warnings never stop the compilation.
+- **Warnings** point out data that is valid but most likely not intended (e.g. a contact phone number with fewer than three digits, or an EN 16931 invoice without the electronic addresses Peppol expects). Warnings never stop the compilation.
 
 ### The `zugferd-errors` Parameter
 
 The `zugferd-errors` parameter of `invoice` decides what happens with the problems:
 
-| Value               | Behavior                                                                                                                                                                                     |
-| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"panic"` (default) | Errors stop the compilation with the list shown above (including any warnings). An invoice with warnings only compiles.                                                                      |
-| `"report"`          | Nothing stops the compilation. Errors and warnings are listed in a box at the top of the invoice, which is handy while filling in the data in the preview. The XML is embedded nevertheless. |
-| `"ignore"`          | The XML is embedded without any check result. Use this only if you validate the XML yourself.                                                                                                |
+| Value               | Behavior                                                                                                                                                                                                                                                                                                                           |
+| :------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"panic"` (default) | Errors stop the compilation with the list shown above (including any warnings). An invoice with warnings only compiles.                                                                                                                                                                                                            |
+| `"report"`          | Errors and warnings are listed in a box at the top of the invoice instead of stopping the compilation, which is handy while filling in the data in the preview. The XML is embedded nevertheless. If the theme shows no report, errors stop the compilation as with `"panic"` (see [Custom Report Layout](#custom-report-layout)). |
+| `"ignore"`          | The XML is embedded without any check result. Use this only if you validate the XML yourself.                                                                                                                                                                                                                                      |
+
+A missing or invalid IBAN in [`bank-details`](./api-reference/components.md#bank-details) makes the printed invoice wrong as well, so it stops the compilation with a message naming the IBAN, also with `"ignore"`. With `"report"`, it is marked in the bank details instead, and a placeholder takes the place of the EPC-QR code.
 
 ```typst
 #show: invoice.with(
@@ -128,6 +130,8 @@ In `"report"` mode, the list is rendered by the theme function `zugferd-report`,
   // ...
 )
 ```
+
+Whatever the function returns is placed above the invoice body as content (a string works as well). A theme can do without the list with `zugferd-report: none`. Errors must not go unnoticed, though: if the theme shows no report (`none`, or a function that returns `none` or empty content), errors stop the compilation as with `"panic"`, and only warnings are left out. Any other value is rejected with an error naming `theme::zugferd-report`.
 
 ---
 
@@ -272,7 +276,7 @@ With `tax-mode: "inclusive"`, the invoice prints gross prices, while the XML sta
 ### 5. Payment Terms and Instructions
 
 - **Due Date or Payment Terms (BT-9 / BT-20):** As long as an amount is due, the invoice must state when to pay (BR-CO-25). Add a [`payment-goal`](./api-reference/components.md#payment-goal) (with `days` or a `date`) or set `due-date` on the invoice. A textual `date` or `due-date` (e.g. `[upon receipt]`) is written as payment terms.
-- **Payment Instructions (BG-16):** [`bank-details`](./api-reference/components.md#bank-details) with an `iban` are written as credit transfer (SEPA for EUR invoices). XRechnung requires them (BR-DE-1). IBAN and BIC are written without spaces.
+- **Payment Instructions (BG-16):** [`bank-details`](./api-reference/components.md#bank-details) with an `iban` are written as credit transfer (SEPA for EUR invoices). XRechnung requires them (BR-DE-1). IBAN and BIC are written without spaces and in upper case; they are the same values the bank details print and the EPC-QR code carries. A missing or invalid IBAN stops the compilation.
 
 ### 6. Payment Reference (BT-83)
 

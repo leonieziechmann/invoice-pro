@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# Compiles every complete Typst example of the documentation, so that broken
+# examples (renamed parameters, invalid IBANs, ...) are caught before users
+# copy them.
+#
+# A ```typst (or ```typ) block counts as a complete document when it imports
+# the package (`#import "@preview/invoice-pro:<version>": ...`). The import is
+# redirected to the working tree (`src/lib.typ`), so the examples are checked
+# against the current code. To exclude a block, put the line
+# `<!-- check-docs-examples: skip -->` directly before it.
+#
+# Usage: check-docs-examples [markdown files...]   (default: docs/docs/**/*.md)
+set -euo pipefail
+
+if [ ! -f "typst.toml" ]; then
+  echo "Error: check-docs-examples must be run from the root of the invoice-pro repository." >&2
+  exit 1
+fi
+
+TYPST="${TYPST_BIN:-typst}"
+ROOT="$(pwd)"
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+if [ $# -gt 0 ]; then
+  files=("$@")
+else
+  mapfile -t files < <(find docs/docs -name '*.md' | sort)
+fi
+
+# Writes each complete example to $WORK/<file>-<line>.typ and lists it in
+# $WORK/examples as "<example> <file>:<line>".
+for file in "${files[@]}"; do
+  awk -v file="$file" -v work="$WORK" -v root="$ROOT" '
+    function flush(name, out) {
+      if (complete && !skip) {
+        name = file "-" start
+        gsub(/[^A-Za-z0-9.-]/, "_", name)
+        out = work "/" name ".typ"
+        printf "%s", body > out
+        close(out)
+        print out " " file ":" start >> (work "/examples")
+        close(work "/examples")
+      }
+    }
+    {
+      if (!inside && $0 ~ /^[ \t]*```typ(st)?([ \t].*)?$/) {
+        inside = 1
+        indent = match($0, /[^ \t]/) - 1
+        start = NR
+        body = ""
+        complete = 0
+        skip = (previous ~ /<!--[ \t]*check-docs-examples:[ \t]*skip[ \t]*-->/)
+        next
+      }
+      if (inside && $0 ~ /^[ \t]*```[ \t]*$/) {
+        flush()
+        inside = 0
+        previous = $0
+        next
+      }
+      if (inside) {
+        line = substr($0, indent + 1)
+        if (line ~ /@preview\/invoice-pro:[0-9.]+/) {
+          complete = 1
+          gsub(/"@preview\/invoice-pro:[0-9.]+"/, "\"" root "/src/lib.typ\"", line)
+        }
+        body = body line "\n"
+        next
+      }
+      if ($0 !~ /^[ \t]*$/) previous = $0
+    }
+  ' "$file"
+done
+
+if [ ! -f "$WORK/examples" ]; then
+  echo "No complete Typst examples found."
+  exit 0
+fi
+
+failed=0
+total=0
+while read -r example location; do
+  total=$((total + 1))
+  if output=$("$TYPST" compile --root / "$example" "${example%.typ}.pdf" 2>&1); then
+    echo "  ok    $location"
+  else
+    failed=$((failed + 1))
+    echo "  FAIL  $location"
+    echo "$output" | sed 's/^/        /'
+  fi
+done < "$WORK/examples"
+
+echo ""
+if [ "$failed" -gt 0 ]; then
+  echo "✘ $failed of $total documentation examples failed to compile."
+  exit 1
+fi
+echo "✔ All $total documentation examples compile."
