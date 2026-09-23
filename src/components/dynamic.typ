@@ -1,6 +1,12 @@
 #import "../loom-wrapper.typ": content-motif
 #import "../utils/types.typ"
+#import "../utils/helper.typ": first-given
 #import "../logic/payment-reference.typ": bank-signal, resolve-payment-reference
+
+// The value of a key of the recipient, or `none`.
+#let _recipient(ctx, key) = (
+  ctx.at("recipient", default: (:)).at(key, default: none)
+)
 
 #let _to-content(val) = {
   if val == none {
@@ -88,66 +94,58 @@
             }
           }
         } else if key == "customer-nr" or key == "customer-id" {
-          val = ctx.at(
-            "customer-nr",
-            default: ctx.recipient.at(
-              "customer-nr",
-              default: ctx.recipient.at(
-                "id",
-                default: ctx.recipient.at("customer-id", default: none),
-              ),
-            ),
+          // The context holds every parameter of `invoice`, most of them as
+          // `none`, so each fallback is taken explicitly.
+          val = first-given(
+            ctx.at("customer-nr", default: none),
+            _recipient(ctx, "customer-nr"),
+            _recipient(ctx, "id"),
+            _recipient(ctx, "customer-id"),
           )
         } else if key == "order-nr" or key == "po-nr" {
-          val = ctx.at(
-            "order-nr",
-            default: ctx.recipient.at(
-              "order-nr",
-              default: ctx.at(
-                "po-nr",
-                default: ctx.recipient.at("po-nr", default: none),
-              ),
-            ),
+          val = first-given(
+            ctx.at("order-nr", default: none),
+            _recipient(ctx, "order-nr"),
+            ctx.at("po-nr", default: none),
+            _recipient(ctx, "po-nr"),
           )
         } else if key == "order-date" {
-          val = ctx.at(
-            "order-date",
-            default: ctx.recipient.at("order-date", default: none),
+          val = first-given(
+            ctx.at("order-date", default: none),
+            _recipient(ctx, "order-date"),
           )
         } else if key == "project" {
-          val = ctx.at(
-            "project",
-            default: ctx.recipient.at("project", default: none),
+          val = first-given(
+            ctx.at("project", default: none),
+            _recipient(ctx, "project"),
           )
         } else if key == "contract-nr" {
-          val = ctx.at(
-            "contract-nr",
-            default: ctx.recipient.at("contract-nr", default: none),
+          val = first-given(
+            ctx.at("contract-nr", default: none),
+            _recipient(ctx, "contract-nr"),
           )
         } else if key == "quote-nr" {
-          val = ctx.at(
-            "quote-nr",
-            default: ctx.recipient.at("quote-nr", default: none),
+          val = first-given(
+            ctx.at("quote-nr", default: none),
+            _recipient(ctx, "quote-nr"),
           )
         } else if key == "delivery-note-nr" {
-          val = ctx.at(
-            "delivery-note-nr",
-            default: ctx.recipient.at("delivery-note-nr", default: none),
+          val = first-given(
+            ctx.at("delivery-note-nr", default: none),
+            _recipient(ctx, "delivery-note-nr"),
           )
         } else if key == "preceding-invoice-nr" {
-          val = ctx.at(
-            "preceding-invoice-nr",
-            default: ctx.at("original-invoice-nr", default: none),
+          val = first-given(
+            ctx.at("preceding-invoice-nr", default: none),
+            ctx.at("original-invoice-nr", default: none),
           )
         } else if key == "payment-reference" {
           val = resolve-payment-reference(ctx, bank: bank-signal(ctx))
         } else if key == "buyer-reference" or key == "leitweg-id" {
-          val = ctx.at(
-            "buyer-reference",
-            default: ctx.recipient.at(
-              "buyer-reference",
-              default: ctx.recipient.at("leitweg-id", default: none),
-            ),
+          val = first-given(
+            ctx.at("buyer-reference", default: none),
+            _recipient(ctx, "buyer-reference"),
+            _recipient(ctx, "leitweg-id"),
           )
         } else if key == "subject" {
           val = ctx.at("subject", default: none)

@@ -75,12 +75,12 @@ All reference builders accept optional `label` and `value` parameters (e.g. `ref
 
 ### Customer & Recipient
 
-| Function                          | Default Source / Logic                                        | Description                                                              |
-| :-------------------------------- | :------------------------------------------------------------ | :----------------------------------------------------------------------- |
-| **`references.customer-nr`**      | `ctx.customer-nr`, `recipient.customer-nr`, or `recipient.id` | Customer account or client identifier.                                   |
-| **`references.buyer-reference`**  | `recipient.buyer-reference` or `recipient.leitweg-id`         | Buyer reference or Leitweg-ID (EN 16931 BT-10).                          |
-| **`references.recipient-vat-id`** | `recipient.vat-id`                                            | Recipient's VAT identification number (essential for EU Reverse Charge). |
-| **`references.recipient-tax-nr`** | `recipient.tax-nr`                                            | Recipient's national tax number.                                         |
+| Function                          | Default Source / Logic                                        | Description                                                                                                      |
+| :-------------------------------- | :------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------------- |
+| **`references.customer-nr`**      | `ctx.customer-nr`, `recipient.customer-nr`, or `recipient.id` | Customer account or client identifier. An identifier of the `id` module (e.g. `id: id.gln(..)`) prints its `id`. |
+| **`references.buyer-reference`**  | `recipient.buyer-reference` or `recipient.leitweg-id`         | Buyer reference or Leitweg-ID (EN 16931 BT-10).                                                                  |
+| **`references.recipient-vat-id`** | `recipient.vat-id`                                            | Recipient's VAT identification number (essential for EU Reverse Charge).                                         |
+| **`references.recipient-tax-nr`** | `recipient.tax-nr`                                            | Recipient's national tax number.                                                                                 |
 
 ### Orders, Projects & Procurement
 
@@ -89,9 +89,9 @@ All reference builders accept optional `label` and `value` parameters (e.g. `ref
 | **`references.order-nr`**               | `ctx.order-nr`, `recipient.order-nr`, or `po-nr`       | Customer purchase order / PO number (BT-13).                                 |
 | **`references.order-date`**             | `ctx.order-date` or `recipient.order-date`             | Date the order was placed.                                                   |
 | **`references.project`**                | `ctx.project` or `ctx.project-nr`                      | Project name or tracking reference (BT-11).                                  |
-| **`references.contract-nr`**            | `ctx.contract-nr`                                      | Framework agreement or contract number (BT-12).                              |
+| **`references.contract-nr`**            | `ctx.contract-nr` or `recipient.contract-nr`           | Framework agreement or contract number (BT-12).                              |
 | **`references.quote-nr`**               | `ctx.quote-nr` or `ctx.offer-nr`                       | Preceding quotation or estimate reference number.                            |
-| **`references.delivery-note-nr`**       | `ctx.delivery-note-nr`                                 | Despatch advice / delivery note number (BT-16).                              |
+| **`references.delivery-note-nr`**       | `ctx.delivery-note-nr` or `recipient.delivery-note-nr` | Despatch advice / delivery note number (BT-16).                              |
 | **`references.delivery-address`**       | `ctx.delivery-address` or `recipient.delivery-address` | Separate delivery / shipping destination address (BG-13 / BT-56-79).         |
 | **`references.preceding-invoice-nr`**   | `ctx.preceding-invoice-nr` or `original-invoice-nr`    | Preceding invoice reference for credit notes or correction invoices (BT-25). |
 | **`references.preceding-invoice-date`** | `ctx.preceding-invoice-date`                           | Date of the preceding invoice, formatted according to locale (BT-26).        |

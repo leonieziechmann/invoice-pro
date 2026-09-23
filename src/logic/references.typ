@@ -1,11 +1,17 @@
 #import "payment-reference.typ": bank-signal, resolve-payment-reference
 #import "service-period.typ": format-service-period, resolve-service-period
+#import "../utils/helper.typ": first-given
 
 // An identifier given as a dictionary, e.g. a typed identifier of the `id`
 // module (`id.leitweg(..)`), is printed as its identifier.
 #let _identifier-text(value) = {
   if type(value) == dictionary { value.at("id", default: none) } else { value }
 }
+
+// The value of a key of the recipient, or `none`.
+#let _recipient(ctx, key) = (
+  ctx.at("recipient", default: (:)).at(key, default: none)
+)
 
 #let tax-nr(label: auto, value: auto) = {
   ctx => {
@@ -91,16 +97,17 @@
     let title = if label == auto {
       ctx.locale.strings.reference.customer-number
     } else { label }
+    // The invoice's `customer-nr`, else the recipient's customer number or
+    // identifier (an identifier of the `id` module prints its `id`).
     let val = if value == auto {
-      ctx.at("customer-nr", default: ctx.recipient.at(
-        "customer-nr",
-        default: ctx.recipient.at("id", default: ctx.recipient.at(
-          "customer-id",
-          default: none,
-        )),
-      ))
+      first-given(
+        ctx.at("customer-nr", default: none),
+        _recipient(ctx, "customer-nr"),
+        _recipient(ctx, "id"),
+        _recipient(ctx, "customer-id"),
+      )
     } else { value }
-    (title, val)
+    (title, _identifier-text(val))
   }
 }
 
@@ -109,13 +116,12 @@
     let title = if label == auto {
       ctx.locale.strings.reference.buyer-reference
     } else { label }
+    // The same order as the buyer reference of the e-invoice (BT-10).
     let val = if value == auto {
-      _identifier-text(ctx.recipient.at(
-        "buyer-reference",
-        default: ctx.recipient.at(
-          "leitweg-id",
-          default: ctx.at("buyer-reference", default: none),
-        ),
+      _identifier-text(first-given(
+        ctx.at("buyer-reference", default: none),
+        _recipient(ctx, "buyer-reference"),
+        _recipient(ctx, "leitweg-id"),
       ))
     } else { value }
     (title, val)
@@ -151,11 +157,15 @@
     let title = if label == auto {
       ctx.locale.strings.reference.order-number
     } else { label }
+    // The same order as the purchase order reference of the e-invoice
+    // (BT-13).
     let val = if value == auto {
-      ctx.at("order-nr", default: ctx.recipient.at("order-nr", default: ctx.at(
-        "po-nr",
-        default: ctx.recipient.at("po-nr", default: none),
-      )))
+      first-given(
+        ctx.at("order-nr", default: none),
+        _recipient(ctx, "order-nr"),
+        ctx.at("po-nr", default: none),
+        _recipient(ctx, "po-nr"),
+      )
     } else { value }
     (title, val)
   }
@@ -167,10 +177,10 @@
       ctx.locale.strings.reference.order-date
     } else { label }
     let val = if value == auto {
-      let raw = ctx.at("order-date", default: ctx.recipient.at(
-        "order-date",
-        default: none,
-      ))
+      let raw = first-given(
+        ctx.at("order-date", default: none),
+        _recipient(ctx, "order-date"),
+      )
       if type(raw) == datetime {
         (ctx.locale.format.date)(raw)
       } else {
@@ -193,7 +203,10 @@
       ctx.locale.strings.reference.project
     } else { label }
     let val = if value == auto {
-      ctx.at("project", default: ctx.at("project-nr", default: none))
+      first-given(
+        ctx.at("project", default: none),
+        ctx.at("project-nr", default: none),
+      )
     } else { value }
     (title, val)
   }
@@ -204,8 +217,12 @@
     let title = if label == auto {
       ctx.locale.strings.reference.contract-number
     } else { label }
+    // The same order as the contract reference of the e-invoice (BT-12).
     let val = if value == auto {
-      ctx.at("contract-nr", default: none)
+      first-given(
+        ctx.at("contract-nr", default: none),
+        _recipient(ctx, "contract-nr"),
+      )
     } else { value }
     (title, val)
   }
@@ -217,7 +234,10 @@
       ctx.locale.strings.reference.quote-number
     } else { label }
     let val = if value == auto {
-      ctx.at("quote-nr", default: ctx.at("offer-nr", default: none))
+      first-given(
+        ctx.at("quote-nr", default: none),
+        ctx.at("offer-nr", default: none),
+      )
     } else { value }
     (title, val)
   }
@@ -228,8 +248,13 @@
     let title = if label == auto {
       ctx.locale.strings.reference.delivery-note-number
     } else { label }
+    // The same order as the despatch advice reference of the e-invoice
+    // (BT-16).
     let val = if value == auto {
-      ctx.at("delivery-note-nr", default: none)
+      first-given(
+        ctx.at("delivery-note-nr", default: none),
+        _recipient(ctx, "delivery-note-nr"),
+      )
     } else { value }
     (title, val)
   }
@@ -268,10 +293,10 @@
       ctx.locale.strings.reference.preceding-invoice-number
     } else { label }
     let val = if value == auto {
-      ctx.at("preceding-invoice-nr", default: ctx.at(
-        "original-invoice-nr",
-        default: none,
-      ))
+      first-given(
+        ctx.at("preceding-invoice-nr", default: none),
+        ctx.at("original-invoice-nr", default: none),
+      )
     } else { value }
     (title, val)
   }

@@ -283,24 +283,24 @@ Invoiced to #info.recipient.name in #info.recipient.city.
 
 ### Pre-bound Properties
 
-| Field / Property                       | Description                                                                         |
-| :------------------------------------- | :---------------------------------------------------------------------------------- |
-| `#info.invoice-nr`                     | Invoice number (`ctx.invoice-nr`)                                                   |
-| `#info.invoice-date` (or `#info.date`) | Formatted invoice issue date                                                        |
-| `#info.due-date`                       | Calculated payment deadline date                                                    |
-| `#info.customer-nr`                    | Customer / Client ID                                                                |
-| `#info.order-nr`                       | Purchase Order number                                                               |
-| `#info.order-date`                     | Purchase Order date                                                                 |
-| `#info.project`                        | Project name or code                                                                |
-| `#info.contract-nr`                    | Contract reference                                                                  |
-| `#info.quote-nr`                       | Quotation number                                                                    |
-| `#info.delivery-note-nr`               | Delivery note number                                                                |
-| `#info.preceding-invoice-nr`           | Preceding / original invoice number                                                 |
-| `#info.payment-reference`              | Payment reference (Verwendungszweck), resolved like [`bank-details`](#bank-details) |
-| `#info.buyer-reference`                | Buyer reference / Leitweg-ID                                                        |
-| `#info.subject`                        | Document subject line                                                               |
-| `#info.iban`                           | Payment IBAN                                                                        |
-| `#info.bic`                            | Bank Identifier Code (BIC)                                                          |
+| Field / Property                       | Description                                                                                                                                      |
+| :------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `#info.invoice-nr`                     | Invoice number (`ctx.invoice-nr`)                                                                                                                |
+| `#info.invoice-date` (or `#info.date`) | Formatted invoice issue date                                                                                                                     |
+| `#info.due-date`                       | Calculated payment deadline date                                                                                                                 |
+| `#info.customer-nr`                    | Customer / Client ID: the invoice's `customer-nr`, else the recipient's `customer-nr` or `id` (an identifier of the `id` module prints its `id`) |
+| `#info.order-nr`                       | Purchase Order number: the invoice's `order-nr`, else the recipient's, as in the e-invoice (BT-13)                                               |
+| `#info.order-date`                     | Purchase Order date                                                                                                                              |
+| `#info.project`                        | Project name or code                                                                                                                             |
+| `#info.contract-nr`                    | Contract reference: the invoice's `contract-nr`, else the recipient's, as in the e-invoice (BT-12)                                               |
+| `#info.quote-nr`                       | Quotation number                                                                                                                                 |
+| `#info.delivery-note-nr`               | Delivery note number: the invoice's `delivery-note-nr`, else the recipient's, as in the e-invoice (BT-16)                                        |
+| `#info.preceding-invoice-nr`           | Preceding / original invoice number                                                                                                              |
+| `#info.payment-reference`              | Payment reference (Verwendungszweck), resolved like [`bank-details`](#bank-details)                                                              |
+| `#info.buyer-reference`                | Buyer reference / Leitweg-ID                                                                                                                     |
+| `#info.subject`                        | Document subject line                                                                                                                            |
+| `#info.iban`                           | Payment IBAN                                                                                                                                     |
+| `#info.bic`                            | Bank Identifier Code (BIC)                                                                                                                       |
 
 ### Nested Dictionaries
 
