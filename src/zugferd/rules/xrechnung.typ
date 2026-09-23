@@ -168,7 +168,7 @@
       let input = payment.at("terms-input", default: none)
       out.push((
         key: "BR-DE-18",
-        field: if input == none { "payment-goal" } else { input },
+        field: if input == none { "payment-terms" } else { input },
         line: problem.at("line", default: none),
         after: problem.at("after", default: none),
       ))
@@ -179,7 +179,7 @@
     if basis != none and calc.round(basis, digits: 2) != basis {
       out.push((
         key: "BR-DE-18",
-        field: "payment-goal.discount",
+        field: "payment-terms.discount",
         basis: basis,
       ))
     }

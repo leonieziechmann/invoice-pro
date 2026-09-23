@@ -4,6 +4,7 @@
 // states them in the e-invoice (BG-16, see `logic/payment-means.typ`).
 
 #import "../loom-wrapper.typ": loom, managed-motif
+#import "../theming/parts/body.typ": call-part
 #import "../utils/types.typ"
 #import "../utils/text.typ": plain-text
 #import "../utils/iban.typ": format-iban, iban-valid, normalize-iban
@@ -15,15 +16,9 @@
 #import "../logic/document-type.typ": sender-pays
 #import "../logic/currency.typ": currency-code
 
-// The scope of every payment means component: the layout that draws it.
+// The scope of every payment means component.
 #let _scope(ctx) = loom.mutator.batch(ctx, {
   import loom.mutator: *
-
-  nest("theme", {
-    ensure("payment-means", (..) => panic(
-      "theme::payment-means is not provided",
-    ))
-  })
 
   nest("global", {
     nest("total", {
@@ -33,7 +28,7 @@
   })
 })
 
-#let _draw(ctx, _, view, ..) = (ctx.theme.payment-means)(ctx, view)
+#let _draw(ctx, _, view, ..) = call-part(ctx, "payment-means", view)
 
 #let _is-missing(value) = value in (none, "", [])
 

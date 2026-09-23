@@ -96,6 +96,7 @@
       buyer: value.at("buyer", default: none),
       standard: value.at("standard", default: none),
     )
-  } else if value == auto { return auto }
-  return none
+  }
+  if value == auto { return auto }
+  none
 }

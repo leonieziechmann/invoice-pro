@@ -1327,7 +1327,7 @@
   }
 
   if model.totals.due > _zero and payment.due-date == none and terms == none {
-    out.push((key: "BR-CO-25", field: "payment-goal"))
+    out.push((key: "BR-CO-25", field: "payment-terms"))
   }
 
   out += _payment-means(model)

@@ -1,5 +1,63 @@
 #import "../loom-wrapper.typ": loom, managed-motif
 #import "../logic/payment-means.typ": resolve as resolve-payment-means
+#import "../utils/text.typ": plain-text
+#import "../utils/iban.typ": format-iban, normalize-iban
+#import "../validation/issue.typ": blocking-classes, enforce, issue
+#import "../validation/data.typ": check-data
+#import "../theming/access.typ": theme-of, unsealed
+#import "../theming/frame.typ": render-frame
+
+// The data issues of the bank details: a missing or invalid IBAN makes the
+// invoice unpayable (data class: it blocks the XML in draft, and it gets no
+// EPC-QR code; the renderers print it as given), and an EPC-QR code that
+// cannot be generated is shown as a placeholder naming its problems (lint).
+// One id per account: the first is `iban`, the next `iban-2`, ...
+#let _bank-issues(banks) = {
+  let issues = ()
+  for (i, bank) in banks.enumerate() {
+    let suffix = if i == 0 { "" } else { "-" + str(i + 1) }
+    let iban = format-iban(normalize-iban(bank.at("iban", default: "")))
+    if not bank.at("iban-valid", default: true) {
+      issues.push(if iban == "" {
+        issue(
+          "iban" + suffix,
+          "data",
+          "bank-details: the IBAN is missing. Set `iban` on `bank-details`.",
+          ref: "EN 16931 BT-84",
+          fix: "bank-details(iban: \"DE89 3704 0044 0532 0130 00\")",
+          key: "iban-missing",
+        )
+      } else {
+        issue(
+          "iban" + suffix,
+          "data",
+          "bank-details: the IBAN \""
+            + iban
+            + "\" is not valid (wrong check digits or format). Check it for typos.",
+          ref: "EN 16931 BT-84",
+          fix: "bank-details(iban: \"DE89 3704 0044 0532 0130 00\")",
+          key: "iban",
+          args: (iban: iban),
+        )
+      })
+    }
+    let problems = bank.at("qr-problems", default: ())
+    if problems.len() > 0 {
+      issues.push(issue(
+        "epc-qr" + suffix,
+        "lint",
+        "bank-details: the EPC-QR code cannot be generated: "
+          + problems.map(problem => problem.message).join("; ")
+          + ". Hide it with `qr-code: (display: false)` on `bank-details` if it is not needed.",
+        ref: "EPC069-12",
+        fix: "bank-details(.., qr-code: (display: false))",
+        key: "epc-qr",
+        args: (problems: problems.map(problem => problem.short).join(", ")),
+      ))
+    }
+  }
+  issues
+}
 
 /// The internal root container that wraps the invoice body.
 /// It initializes the global context and provides the base document structure to the theme.
@@ -16,15 +74,16 @@
       import loom.mutator: *
 
       nest("sender", {
-        ensure("name", "#sender.name")
-        ensure("address", "#sender.address")
-        ensure("city", "#sender.city")
-        ensure("name-inline", "#sender.name-inline")
-        ensure("address-inline", "#sender.address-inline")
-        ensure("city-inline", "#sender.city-inline")
+        // missing values stay `none`: validation reports them, nothing prints a placeholder
+        ensure("name", none)
+        ensure("address", none)
+        ensure("city", none)
+        ensure("name-inline", none)
+        ensure("address-inline", none)
+        ensure("city-inline", none)
         ensure("country", "#sender.country")
-        ensure("city-name", "#sender.city-name")
-        ensure("post-code", "#sender.post-code")
+        ensure("city-name", none)
+        ensure("post-code", none)
         ensure("state", none)
         ensure("tax-nr", none)
         ensure("vat-id", none)
@@ -35,15 +94,16 @@
       })
 
       nest("recipient", {
-        ensure("name", "#recipient.name")
-        ensure("address", "#recipient.address")
-        ensure("city", "#recipient.city")
-        ensure("name-inline", "#recipient.name-inline")
-        ensure("address-inline", "#recipient.address-inline")
-        ensure("city-inline", "#recipient.city-inline")
+        // missing values stay `none`: validation reports them, nothing prints a placeholder
+        ensure("name", none)
+        ensure("address", none)
+        ensure("city", none)
+        ensure("name-inline", none)
+        ensure("address-inline", none)
+        ensure("city-inline", none)
         ensure("country", "#recipient.country")
-        ensure("city-name", "#recipient.city-name")
-        ensure("post-code", "#recipient.post-code")
+        ensure("city-name", none)
+        ensure("post-code", none)
         ensure("state", none)
         ensure("tax-nr", none)
         ensure("vat-id", none)
@@ -56,7 +116,8 @@
       ensure("invoice-date", datetime.today())
       ensure("subject", "#subject")
       ensure("references", ())
-      ensure("invoice-nr", "#invoice-nr")
+      ensure("invoice-nr", none)
+      ensure("validation", (level: none, issues: ()))
 
       nest("locale", {
         ensure("lang", none)
@@ -68,7 +129,6 @@
         })
       })
 
-      ensure("theme", "document", (.., body) => body)
       ensure("zugferd", none)
       ensure("zugferd-errors", "panic")
 
@@ -106,15 +166,15 @@
       )
       let bank-signal = bank-signals.first(default: none)
 
-      let all-payment-goals = loom.query.collect-signals(
+      let all-payment-terms = loom.query.collect-signals(
         children,
-        kind: "payment-goal",
+        kind: "payment-terms",
       )
       assert(
-        all-payment-goals.len() <= 1,
-        message: "There can only be one `payment-goal` element in the document!",
+        all-payment-terms.len() <= 1,
+        message: "There can only be one `payment-terms` element in the document!",
       )
-      let payment-goal-signal = all-payment-goals.first(default: none)
+      let payment-terms-signal = all-payment-terms.first(default: none)
 
       // The payment means: each bank details are an account of a credit
       // transfer; a direct debit, a payment card and `paid` occur once.
@@ -130,8 +190,8 @@
         payment-means-signals.insert(kind, signals.first(default: none))
       }
       assert(
-        payment-means-signals.paid == none or payment-goal-signal == none,
-        message: "An invoice that is `paid` has no `payment-goal`: nothing is left to pay. Remove the `payment-goal`.",
+        payment-means-signals.paid == none or payment-terms-signal == none,
+        message: "An invoice that is `paid` has no `payment-terms`: nothing is left to pay. Remove the `payment-terms`.",
       )
       // Nor payment terms of its own: a text as `due-date` (e.g. "sofort")
       // would be printed and stated as the payment terms (BT-20) instead of
@@ -172,20 +232,35 @@
         },
       )
 
+      // without a line-items block the totals are zero (the frame and the
+      // validation report still render, e.g. the "no line items" marker)
+      let total = (
+        (
+          net: decimal(0),
+          gross: decimal(0),
+          due: decimal(0),
+          prepaid: decimal(0),
+        )
+          + line-items.at("total", default: (:))
+      )
+      let formated-total = line-items.at("formated-total", default: (:))
+
       let public = (
-        total: line-items.at("total", default: (:)),
-        formated-total: line-items.at("formated-total", default: (:)),
+        total: total,
+        formated-total: formated-total,
         bank: bank-signal,
         payment-means: payment-means,
       )
 
       let view = (
         item-data: item-data,
-        payment-goal: payment-goal-signal,
+        payment-terms: payment-terms-signal,
         bank: bank-signal,
         payment-means: payment-means,
-        total: line-items.at("total", default: (:)),
-        formated-total: line-items.at("formated-total", default: (:)),
+        // all bank details of the body: an account each (the first is `bank`)
+        banks: bank-signals,
+        total: total,
+        formated-total: formated-total,
       )
 
       return (public, view)
@@ -203,7 +278,7 @@
         ctx
           + (
             items: view.item-data.items,
-            payment-goal: view.payment-goal,
+            payment-terms: view.payment-terms,
             bank: view.bank,
           )
       )
@@ -333,7 +408,7 @@
             references: normalized-references,
             items: view.item-data.items,
             item-data: view.item-data,
-            payment-goal: view.payment-goal,
+            payment-terms: view.payment-terms,
             bank: view.bank,
             global: (
               total: view.total,
@@ -343,18 +418,60 @@
           )
       )
 
+      // Validation: the measured checks join the up-front ones; the level decides.
+      let level = ctx.validation.level
+      let issues = if level == none { () } else {
+        (
+          ctx.validation.issues
+            + check-data(
+              "invoice",
+              "measure",
+              (
+                items: view.item-data.items,
+                taxes: view.item-data.taxes.values(),
+                recipient: ctx.recipient,
+              ),
+              region: lower(str(ctx.locale.meta.at("region", default: "de"))),
+            )
+            + _bank-issues(view.banks)
+        )
+      }
+      let issues = enforce(issues, level)
+      // Draft: a machine-readable invoice with missing data is never attached
+      // (a receiving system would book it automatically); the badge and the
+      // report say that it was withheld, and the e-invoice is not validated.
+      // Under `none` no check runs, so the XML is attached as `zugferd-errors`
+      // decides ("off means off", documented on invoice()).
+      let withheld = (
+        ctx.zugferd != none and issues.any(x => x.class in blocking-classes)
+      )
+      let ctx = (
+        ctx
+          + (
+            validation: ctx.validation
+              + (
+                issues: issues,
+                e-invoice-withheld: withheld,
+                e-invoice-profile: if ctx.zugferd != none {
+                  if ctx.zugferd == auto { "auto" } else { ctx.zugferd }
+                },
+              ),
+          )
+      )
+
       let body = body
-      if ctx.zugferd != none {
+      if ctx.zugferd != none and not withheld {
         // Loaded here rather than at the top of the module, so that invoices
         // without an e-invoice do not load the e-invoice modules (code lists,
         // validator, serializer) at all.
         import "../zugferd/zugferd.typ": process-zugferd
         import "../logic/printed.typ": printed-record
+        import "../theming/prints.typ": prints-of
 
         // What the printed invoice shows besides the components, for the
         // checks that it states what the e-invoice states.
         let printed = printed-record(
-          ctx.theme,
+          prints-of(theme-of(ctx)),
           ctx.references,
           ctx.sender,
           ctx.recipient,
@@ -363,7 +480,7 @@
         let result = process-zugferd(
           ctx + (printed: printed),
           view.item-data,
-          payment-goal: view.payment-goal,
+          payment-goal: view.payment-terms,
           bank: view.bank,
           payment-means: view.payment-means,
         )
@@ -397,27 +514,24 @@
         )
 
         if ctx.zugferd-errors == "report" and result.diagnostics.len() > 0 {
-          import "../zugferd/report.typ": format-report, render-zugferd-report
-          let render-report = ctx.theme.at(
+          import "../zugferd/report.typ": format-report
+          // The report is the `zugferd-report` part of the theme. Whatever it
+          // returns is shown as content. A theme without a report (the part
+          // `none`, or a renderer that returns nothing) must not hide errors:
+          // they stop the compilation as with "panic", so no invalid
+          // e-invoice goes out unnoticed.
+          let part-ctx = unsealed(ctx)
+          let render-report = part-ctx.theme.parts.at(
             "zugferd-report",
-            default: render-zugferd-report,
+            default: none,
           )
-          assert(
-            render-report == none or type(render-report) == function,
-            message: "theme::zugferd-report must be `none` or a function `(ctx, result) => content`, got "
-              + repr(render-report),
-          )
-          // Whatever the hook returns is shown as content. A theme without
-          // a report (`zugferd-report: none`, or a hook that returns
-          // nothing) must not hide errors: they stop the compilation as with
-          // "panic", so no invalid e-invoice goes out unnoticed.
           let report = if render-report != none {
-            render-report(ctx, result)
+            render-report(part-ctx, result)
           }
           if report in (none, "", []) {
             assert(
               errors.len() == 0,
-              message: "The theme shows no e-invoice report (theme::zugferd-report is `none` or returns nothing), so the errors below stop the compilation even with `zugferd-errors: \"report\"`.\n"
+              message: "The theme shows no e-invoice report (the part `zugferd-report` is `none` or returns nothing), so the errors below stop the compilation even with `zugferd-errors: \"report\"`.\n"
                 + format-report(result),
             )
           } else {
@@ -426,7 +540,31 @@
         }
       }
 
-      (ctx.theme.document)(ctx, body)
+      // Compliance output lives in core, before and outside any theme code.
+      // PDF metadata takes plain text: names and subjects may be styled
+      // content or, for names, several lines. The author is the seller name
+      // of the e-invoice (BT-27).
+      let keywords = ("Invoice",)
+      if ctx.zugferd != none and not withheld {
+        keywords += ("ZUGFeRD", "Factur-X")
+      }
+      if issues.len() > 0 { keywords += ("Draft",) }
+      let author-name = ctx.sender.at("name-inline", default: none)
+      if author-name in (none, "", []) {
+        author-name = ctx.sender.at("name", default: none)
+      }
+      let author = plain-text(author-name)
+      let description = plain-text(ctx.subject)
+      set document(
+        title: ctx.subject,
+        author: if author == "" { () } else { author },
+        date: if type(ctx.invoice-date) == datetime { ctx.invoice-date } else {
+          auto
+        },
+        description: if description == "" { none } else { description },
+        keywords: keywords,
+      )
+      render-frame(ctx, body)
     },
     body,
   )

@@ -710,8 +710,8 @@
 /// invoice (Art. 226 No. 7). A credit note amends an invoice that states
 /// it, and a prepayment invoice precedes the supply (§ 14 Abs. 5 UStG asks
 /// for the date of the payment only if it is known), see `supply-dated`.
-/// Only known for a theme that prints the references (e.g. DIN 5008), not
-/// for the blank theme.
+/// Only known for a theme whose areas print the references (see
+/// `theming/prints.typ`).
 ///
 /// -> array
 #let period-shown(model, stated, term, document) = {
@@ -957,7 +957,7 @@
   if payment.at("discounts", default: ()).len() > 0 {
     out.push(not-carried(
       profile,
-      "payment-goal.discount",
+      "payment-terms.discount",
       "a cash discount (BT-20)",
       "basic-wl",
     ))

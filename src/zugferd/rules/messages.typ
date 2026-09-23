@@ -756,7 +756,7 @@
         + ", but the printed invoice shows "
         + if stated.len() > 1 { "neither" } else { "it nowhere" }
         + ". The printed invoice and the e-invoice must state the same details, and the law requires the seller's tax number or VAT identifier on every invoice but a small-amount invoice (§ 14 Abs. 4 Satz 1 Nr. 2 UStG, § 33 UStDV; Art. 226 No. 3 of the VAT Directive).",
-      "Print it with the reference signs: keep `references: auto`, use a preset such as `references.preset-b2b()`, or add `references.seller-vat-id()` or `references.seller-tax-nr()` to your references. The address and the `extra` details of the sender and the text of the invoice count as well. A page header or footer of your own (`set page(..)`) cannot be read: give such details as the `footer` of the theme, e.g. `themes.DIN-5008(footer: ..)`, whose text is not checked.",
+      "Print it with the reference signs: keep `references: auto`, use a preset such as `references.preset-b2b()`, or add `references.seller-vat-id()` or `references.seller-tax-nr()` to your references. The address and the `extra` details of the sender and the text of the invoice count as well. A page header or footer of your own (`set page(..)`) cannot be read: give such details to the theme instead, e.g. as content in its `footer` area (`theme.custom.area(\"footer\", parts: (..))`), whose text is not checked.",
     )
   },
   "IP-ID-01": f => (
@@ -1246,7 +1246,7 @@
   // Payment
   "BR-CO-25": f => (
     "An amount is due, but neither the payment due date (BT-9) nor the payment terms (BT-20) are given.",
-    "Add `#payment-goal(days: 14)` or set `due-date` on the invoice.",
+    "Add `#payment-terms(days: 14)` or set `due-date` on the invoice.",
   ),
   "BR-DE-23-b": _several-means,
   "BR-DE-24-b": _several-means,

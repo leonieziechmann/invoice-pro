@@ -1,5 +1,7 @@
 #import "../loom-wrapper.typ": loom, managed-motif
 #import "../utils/types.typ"
+#import "../theming/parts/body.typ": call-part
+#import "@preview/sepay:0.1.1": epc-qr-code
 #import "../utils/coercion.typ"
 #import "../utils/bic.typ": normalize-bic
 #import "../utils/iban.typ": format-iban, iban-valid, normalize-iban
@@ -18,6 +20,24 @@
       type(value) == str
         and (value.starts-with("#sender.") or value.starts-with("#recipient."))
     )
+)
+
+// Stands in for an EPC-QR code that cannot be generated, under
+// `validation: "draft"` and with `zugferd-errors: "report"`. Core-owned: the
+// colours are the fixed ones of the validation feedback.
+#let _qr-placeholder(size, problems) = block(
+  width: size,
+  height: size,
+  inset: 2pt,
+  stroke: 1pt + rgb("#b91c1c"),
+  clip: true,
+  {
+    set par(justify: false, leading: 0.3em)
+    set text(size: 5pt, fill: rgb("#b91c1c"), hyphenate: false)
+    align(center + horizon)[
+      No EPC-QR code: #problems.map(problem => problem.short).join(", ")
+    ]
+  },
 )
 
 /// Defines and renders the bank account information for payments.
@@ -43,9 +63,10 @@
   bank: none,
 
   /// The International Bank Account Number (IBAN), with or without spaces.
-  /// Required: a missing or invalid IBAN (structure or check digits) stops
-  /// the compilation, unless an e-invoice reports its problems in the
-  /// document (`zugferd-errors: "report"`).
+  /// Required: a missing or invalid IBAN (structure or check digits) is a
+  /// problem of the invoice data, which the `validation` level of the invoice
+  /// handles (`"draft"` lists it in the report, `"strict"` stops the
+  /// compilation). It gets no EPC-QR code.
   /// -> none | string
   iban: none,
 
@@ -76,9 +97,11 @@
   /// -> auto
   account-holder-text: auto,
 
-  /// Configuration for a payment QR code (e.g., EPC-QR). By default, the
-  /// code is shown only when the amount is paid by credit transfer: not
-  /// with a `direct-debit` or a `card-payment`, and not on a `paid` invoice.
+  /// Configuration for a payment QR code (e.g., EPC-QR): `display` (bool) and
+  /// `size` (length, at least 20mm), which overrides the theme's QR size. By
+  /// default, the code is shown only when the amount is paid by credit
+  /// transfer: not with a `direct-debit` or a `card-payment`, and not on a
+  /// `paid` invoice.
   /// -> dictionary
   qr-code: (:),
 ) = {
@@ -128,12 +151,6 @@
       put("reference", remittance.reference)
       put("text", remittance.text)
 
-      nest("theme", {
-        ensure("bank-details", (..) => panic(
-          "theme::bank-details is not provided",
-        ))
-      })
-
       nest("global", {
         nest("total", {
           ensure("gross", 0)
@@ -145,25 +162,15 @@
       // line items, the bank details would be printed but not stated.
       let _ = loom.guards.assert-not-inside(ctx, "line-items")
       // The IBAN is checked here, independently of the theme, so that an
-      // invalid one never ends up on an invoice unnoticed.
+      // invalid one never ends up on an invoice unnoticed: a missing or
+      // invalid IBAN is a data issue of the root (see `validation`), which
+      // the validation level handles, and it gets no EPC-QR code.
       let electronic-iban = normalize-iban(iban)
       let valid-iban = iban-valid(electronic-iban)
       // With an e-invoice and `zugferd-errors: "report"`, problems are shown
-      // in the document instead of stopping the compilation.
+      // in the document as well.
       let report = report-problems(ctx)
-      if not valid-iban and not report {
-        panic(
-          if electronic-iban == "" {
-            "bank-details: the IBAN is missing. Set `iban` on `bank-details`."
-          } else {
-            (
-              "bank-details: the IBAN \""
-                + format-iban(electronic-iban)
-                + "\" is not valid (wrong check digits or format). Check it for typos."
-            )
-          },
-        )
-      }
+      let level = ctx.at("validation", default: (:)).at("level", default: none)
 
       // On a credit note or a self-billed invoice, the sender pays the
       // amount to the recipient, so the bank details are the recipient's
@@ -229,18 +236,23 @@
         (payload: none, problems: ())
       }
 
-      // The view of the theme layout (`theme.bank-details`), with every value
-      // ready to print, so the layout only draws (see "Data for Custom
-      // Layouts" in docs/docs/api-reference/theme.md):
+      // The view of the `bank-details` part, with every value ready to
+      // print, so the part only draws (see "Views" in
+      // docs/docs/api-reference/theme/parts.md):
       // - `sender`: `name` (the account holder), `bank`, `iban` and `bic` in
-      //   electronic format (`""` if not given) and `iban-valid`, which is
-      //   only `false` with `report-problems`.
+      //   electronic format (`""` if not given) and `iban-valid`.
       // - `qr-code`: `size` and `display` as given, and the EPC-QR code as
       //   its `payload` (see `epc.qr-code`; `none` if no code is generated)
-      //   or the `problems` that prevent it (only with `report-problems`,
-      //   otherwise `draw` stops; the layout shows a placeholder).
+      //   or the `problems` that prevent it (issues of the root; the part
+      //   shows a placeholder under `validation: "draft"` and with
+      //   `report-problems`).
       // - `reference` or `text` (the resolved payment reference),
       //   `show-reference`, `report-problems` and `payment-amount`.
+      // - v2: `iban` as `(value: electronic, text: grouped in fours, valid:
+      //   ..)`, `payment-reference` (the one string the payer must quote, the
+      //   unstructured text or the structured reference) and `qr`, a function
+      //   `size => content` that draws the code (or its placeholder), `none`
+      //   if there is nothing to draw.
       let data = (
         sender: (
           name: holder,
@@ -251,7 +263,7 @@
         ),
 
         qr-code: (
-          size: qr-code.at("size", default: 5em),
+          size: qr-code.at("size", default: auto),
           display: qr-display,
           payload: epc-code.payload,
           problems: epc-code.problems,
@@ -262,7 +274,52 @@
         show-reference: show-reference,
         report-problems: report,
         payment-amount: amount,
+        iban: (
+          value: electronic-iban,
+          // non-breaking spaces: an IBAN never breaks across lines
+          text: format-iban(electronic-iban).replace(" ", "\u{00A0}"),
+          valid: valid-iban,
+        ),
+        payment-reference: if ctx.text != none { ctx.text } else {
+          ctx.reference
+        },
       )
+
+      // CORE builds the EPC-QR payload (EUR only, see `epc.qr-code`). The part
+      // may only choose placement and size (a size given here wins); the size
+      // is clamped to >= 20 mm and the code is always black on white. A code
+      // that cannot be generated is a placeholder naming its problems.
+      let payload = epc-code.payload
+      let placeholder = (
+        epc-code.problems.len() > 0 and (report or level == "draft")
+      )
+      data.qr = if payload == none and not placeholder { none } else {
+        let fixed = data.qr-code.size
+        let code(s) = {
+          let s = calc.max(s, 20mm)
+          if payload == none {
+            _qr-placeholder(s, epc-code.problems)
+          } else {
+            box(fill: white, inset: 1mm, epc-qr-code(
+              payload.beneficiary,
+              payload.iban,
+              bic: payload.bic,
+              amount: payload.amount,
+              reference: payload.reference,
+              text: payload.text,
+              width: s,
+              height: s,
+            ))
+          }
+        }
+        size => {
+          let size = if fixed == auto { size } else { fixed }
+          // an em size needs the font size, so only it is resolved in context
+          if size.em == 0 { code(size.abs) } else {
+            context code(size.to-absolute())
+          }
+        }
+      }
 
       // Expose IBAN/BIC/reference as a public signal so root can embed them in ZUGFeRD XML.
       // The account name (BT-85) only if it is given: the default holder is
@@ -270,6 +327,12 @@
       // BT-27).
       let public = (
         iban: iban,
+        iban-valid: valid-iban,
+        // why the EPC-QR code cannot be generated (an issue of the root),
+        // besides the IBAN, which is an issue of its own
+        qr-problems: epc-code.problems.filter(problem => (
+          problem.short not in ("IBAN missing", "invalid IBAN")
+        )),
         bic: bic,
         account-name: if name not in (auto, "") { name },
         reference: ctx.reference,
@@ -279,22 +342,7 @@
 
       (public, data)
     },
-    draw: (ctx, _, view, ..) => {
-      // An EPC-QR code that cannot be generated stops the compilation, unless
-      // an e-invoice reports its problems in the document, where the theme
-      // shows a placeholder naming them. It stops while drawing, not while
-      // measuring, so that the errors of components drawn before the bank
-      // details are reported first.
-      let problems = view.qr-code.problems
-      if problems.len() > 0 and not view.report-problems {
-        panic(
-          "bank-details: the EPC-QR code cannot be generated: "
-            + problems.map(problem => problem.message).join("; ")
-            + ". Hide it with `qr-code: (display: false)` on `bank-details` if it is not needed.",
-        )
-      }
-      (ctx.theme.bank-details)(ctx, view)
-    },
+    draw: (ctx, _, view, ..) => call-part(ctx, "bank-details", view),
     none,
   )
 }

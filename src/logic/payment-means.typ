@@ -160,7 +160,7 @@
 /// goal for the payment means of the invoice: the layout prints `text`, or
 /// `text-due` with prepayments, so these are the sentences of a direct debit
 /// or a payment card, and of a credit transfer otherwise. The notes of the
-/// cash discounts (`payment-goal(discount: ..)`) follow the sentence.
+/// cash discounts (`payment-terms(discount: ..)`) follow the sentence.
 ///
 /// -> dictionary
 #let goal-strings(payment, means, discount-notes: ()) = {

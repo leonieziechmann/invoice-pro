@@ -29,7 +29,7 @@
   let out = ()
   for (i, step) in steps.enumerate() {
     let name = (
-      "payment-goal::discount"
+      "payment-terms::discount"
         + if type(discount) == array {
           ".at(" + str(i) + ")"
         } else { "" }
