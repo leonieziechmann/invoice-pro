@@ -2,6 +2,9 @@
 #import "../logic/modifier-applicator.typ": modifier-applicator
 #import "../logic/tax-applicator.typ": tax-applicator
 #import "../logic/tree.typ": resolve-tree
+#import "../logic/exemption-notes.typ": (
+  assign-markers, exemption-notes, group-markers, item-marker,
+)
 #import "../utils/coercion.typ"
 #import "../utils/types.typ"
 #import "../data/tax.typ" as m-tax
@@ -157,31 +160,7 @@
       // groups. It links the notes below the line items to the VAT line of
       // their category and, if a category has items exempt for different
       // reasons, to each of these items.
-      let grounds-of-tax(tax) = tax.at(
-        "grounds-list",
-        default: m-tax.grounds-of(tax),
-      )
-      let marker-symbols = ("*", "**", "***", "****")
-      let grounds-keys = ()
-      for tax in tax-applicator.taxes.values() {
-        for grounds in grounds-of-tax(tax) {
-          let key = m-tax.grounds-key(grounds)
-          if key not in grounds-keys { grounds-keys.push(key) }
-        }
-      }
-      let grounds-marker(grounds) = {
-        let idx = grounds-keys.position(k => k == m-tax.grounds-key(grounds))
-        if idx == none { none } else if idx < marker-symbols.len() {
-          marker-symbols.at(idx)
-        } else { "*" + str(idx + 1) }
-      }
-      // The marker of an item's own grounds, if its category has several.
-      let item-grounds-marker(tax) = {
-        let group = tax-applicator.taxes.at(m-tax.to-tax-key(tax), default: (:))
-        if grounds-of-tax(group).len() < 2 { return none }
-        let markers = m-tax.grounds-of(tax).map(grounds-marker)
-        if markers.len() == 0 { none } else { markers.join(",") }
-      }
+      let markers = assign-markers(tax-applicator.taxes)
 
       let format-item(item) = loom.mutator.batch(item, {
         import loom.mutator: *
@@ -206,7 +185,7 @@
         update("tax", x => (
           rate: (format.percent)(x.rate),
           category: x.category,
-          marker: item-grounds-marker(x),
+          marker: item-marker(x, markers),
         ))
 
         put("has-discounts", item.discounts.len() >= 1)
@@ -287,8 +266,8 @@
         .map(((key, tax)) => {
           let formated-rate = (format.percent)(tax.rate)
           let formated-value = (format.currency)(tax.absolute)
-          let grounds-list = grounds-of-tax(tax)
-          let grounds-markers = grounds-list.map(grounds-marker)
+          let grounds-list = m-tax.grounds-of(tax)
+          let grounds-markers = group-markers(tax, markers)
           (
             rate: [#formated-rate],
             raw-rate: tax.rate,
@@ -483,6 +462,26 @@
         ..item-information,
       )
 
+      // The notes that state why a VAT category carries no VAT, with the
+      // markers to print (see `exemption-notes`).
+      let notes = exemption-notes(
+        formated-taxes,
+        show-total: layout-information.show-total,
+        show-tax-rates: layout-information.show-tax-rates,
+        small-business: if ctx.tax-exempt-small-biz {
+          (
+            clause: ctx.locale.strings.legal.vat-exemption,
+            grounds: ctx
+              .locale
+              .tax
+              .small-enterprise-special-scheme
+              .at("grounds", default: none),
+            same-language: ctx.locale.meta.region
+              == ctx.locale.strings.meta.lang,
+          )
+        },
+      )
+
       let view = (
         items: formated-items,
         entries: formated-entries,
@@ -490,6 +489,8 @@
         surcharges: formated-surcharges,
         prepayments: formated-prepayments,
         taxes: formated-taxes,
+        // Every note is `(kind: .., marker: .., body: ..)`, in print order.
+        exemption-notes: notes,
         total: formated-total,
         unmodified-total: unmodified-formated-total,
         layout-information: layout-information,
