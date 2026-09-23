@@ -1,5 +1,6 @@
-// The parties of the e-invoice: electronic addresses, identifiers and VAT
-// identifiers, as the data model normalizes them and the validator checks them.
+// The parties of the e-invoice: electronic addresses, identifiers, VAT
+// identifiers, countries and post codes, as the data model normalizes them and
+// the validator checks them.
 
 #import "/src/lib.typ": *
 #import "/src/logic/country.typ": normalize-party
@@ -223,6 +224,49 @@
   m.seller.vat-id = "€123456789"
   assert.eq(rules(m), ("BR-CO-09",))
 
+  // A country not stated contradicting the VAT ID (IP-COUNTRY-01)
+  let m = base
+  m.profile = resolve-profile("en16931", "AT")
+  m.buyer = normalized(
+    "buyer",
+    name: "Kunde GmbH",
+    city: (name: "Wien", post-code: "1010"),
+    vat-id: "ATU87654321",
+  )
+  assert.eq(rules(m), ("IP-COUNTRY-01",))
+  assert.eq(find(m, "IP-COUNTRY-01").field, "recipient.country")
+  assert(find(m, "IP-COUNTRY-01").hint.contains("`country: \"AT\"`"))
+  m.buyer.address.country-explicit = true
+  assert.eq(rules(m), ())
+  // ... for the seller as well; a foreign registration needs `country`
+  let m = base
+  m.seller.address.country-explicit = false
+  m.seller.stated-vat-id = "EL123456789"
+  assert.eq(rules(m), ("IP-COUNTRY-01",))
+  m.seller.stated-vat-id = "XI123456789"
+  m.seller.address.country = "GB"
+  assert.eq(rules(m), ())
+
+  // A number in the city that is no post code of the country (IP-ADDR-01)
+  let m = base
+  m.profile = resolve-profile("en16931", "NL")
+  m.buyer = normalized(
+    "buyer",
+    name: "Klant BV",
+    city: "1012 Amsterdam",
+    country: country.nl,
+    vat-id: "NL123456789B01",
+  )
+  assert.eq(rules(m), ("IP-ADDR-01",))
+  assert.eq(find(m, "IP-ADDR-01").field, "recipient.city")
+  m.buyer.address.city = "Praha 1"
+  assert.eq(rules(m), ())
+  let m = base
+  m.seller.address.post-code = none
+  m.seller.address.city = "Berlin 10115"
+  assert.eq(rules(m), ("BR-DE-4", "IP-ADDR-01"))
+  assert(find(m, "BR-DE-4").hint.contains("format of the country"))
+
   // BR-CO-26 for an invoice not subject to VAT: the VAT ID is no way out
   let m = base
   m.outside-scope = true
@@ -230,6 +274,15 @@
   m.seller.id = none
   let co26 = find(m, "BR-CO-26")
   assert(not co26.hint.contains("`vat-id`"), message: co26.hint)
+
+  // Country codes the EN 16931 code list does not have
+  let m = base
+  m.buyer.address.country = "SS"
+  assert(find(m, "BR-CL-14").hint.contains("South Sudan"))
+  m.buyer.address.country = "EL"
+  assert(find(m, "BR-CL-14").hint.contains("\"GR\""))
+  m.buyer.address.country = none
+  assert(find(m, "BR-11").hint.contains("`country: \"DE\"`"))
 }
 
 #show: invoice.with(

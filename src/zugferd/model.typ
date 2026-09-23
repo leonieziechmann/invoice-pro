@@ -275,6 +275,9 @@
     post-code: text-or-none(_field(party, "post-code")),
     state: text-or-none(_field(party, "state")),
     country: country-code(party),
+    // Whether the party states its country (`country` or `region`); otherwise
+    // it is the country of the locale or, for a delivery address, the buyer's.
+    country-explicit: party.at("country-explicit", default: true) != false,
   )
 }
 
@@ -336,6 +339,7 @@
   id-keys: (),
   global-id-keys: (),
   address: address,
+  from-buyer: true,
 )
 
 // Map common invoice-pro unit strings to UN/ECE recommendation 20 unit codes.

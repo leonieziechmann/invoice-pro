@@ -19,7 +19,7 @@
 
 #import "codelists.typ"
 #import "xml.typ": fmt-number
-#import "model.typ": vat-eas-codes, vat-id-prefix
+#import "model.typ": vat-eas-codes, vat-id-country, vat-id-prefix
 
 #let _zero = decimal("0")
 
@@ -115,6 +115,13 @@
 
 // --- Parties --------------------------------------------------------------
 
+// Hints for country codes that are missing from the code list of EN 16931.
+#let _country-hints = (
+  EL: "Use \"GR\" (`country.gr`) for Greece; \"EL\" is only the prefix of Greek VAT identifiers.",
+  SS: "South Sudan (SS) is missing from the code list the EN 16931 validators apply, so an e-invoice cannot state it.",
+  UK: "Use \"GB\" (`country.uk`) for the United Kingdom.",
+)
+
 #let _check-country(code, rule, field, term) = {
   if code == none {
     return (
@@ -124,7 +131,7 @@
         "The " + term + " is missing.",
         hint: "Set `country` on the "
           + field.split(".").first()
-          + ", e.g. `country: country.de`.",
+          + ", e.g. `country: country.de` or `country: \"DE\"`.",
       ),
     )
   }
@@ -133,16 +140,92 @@
       error(
         "BR-CL-14",
         field,
-        "The " + term + " " + _quoted(code) + " is not an ISO 3166-1 code.",
-        hint: if code == "UK" {
-          "Use \"GB\" (`country.uk`) for the United Kingdom."
-        } else {
-          "Use a country from the `country` module, e.g. `country: country.de`."
-        },
+        "The "
+          + term
+          + " "
+          + _quoted(code)
+          + " is not in the ISO 3166-1 code list of EN 16931.",
+        hint: _country-hints.at(
+          code,
+          default: "Use a country of the `country` module (e.g. `country.de`), an ISO code (e.g. \"DE\") or `country.custom(code: ..)`.",
+        ),
       ),
     )
   }
   ()
+}
+
+// A party without `country` is in the country of the locale. If the VAT ID it
+// states was issued by another country, that default is most likely wrong. An
+// explicit `country` always settles it, e.g. for a foreign VAT registration.
+#let _check-country-of-vat-id(party, field, term, bt) = {
+  let address = party.address
+  if (
+    address.at("country-explicit", default: true) or address.country == none
+  ) { return () }
+  let vat-id = party.at("stated-vat-id", default: party.vat-id)
+  let issuer = vat-id-country(vat-id)
+  if issuer == none or issuer == address.country { return () }
+  (
+    error(
+      "IP-COUNTRY-01",
+      field + ".country",
+      "The "
+        + term
+        + " country ("
+        + bt
+        + ") is not stated and defaults to "
+        + _quoted(address.country)
+        + ", the country of the locale, but the "
+        + term
+        + " VAT identifier "
+        + _quoted(vat-id)
+        + " was issued by "
+        + _quoted(issuer)
+        + ".",
+      hint: "Set `country` on the "
+        + field
+        + ", e.g. `country: "
+        + _quoted(issuer)
+        + "`.",
+    ),
+  )
+}
+
+// Patterns of rare checks, compiled once on first use.
+#let _post-code-digits() = regex("[0-9]{3,}")
+
+// A city line whose post code the parser of the party's country does not
+// recognize stays whole: the post code is missing, and the number is written
+// into the city name.
+#let _check-post-code(party, field, term, city-bt, code-bt) = {
+  let address = party.address
+  if (
+    address.post-code != none
+      or address.city == none
+      or address.country == none
+      or address.city.match(_post-code-digits()) == none
+  ) { return () }
+  (
+    error(
+      "IP-ADDR-01",
+      field + ".city",
+      "The "
+        + term
+        + " city "
+        + _quoted(address.city)
+        + " contains a number that is not a post code of "
+        + _quoted(address.country)
+        + ": the post code ("
+        + code-bt
+        + ") would be missing, and the number would be written into the city name ("
+        + city-bt
+        + ").",
+      hint: "Write the city line in the post code format of the country, check `country` on the "
+        + field
+        + ", or pass the parts, e.g. `city: (name: \"Berlin\", post-code: \"10115\")`.",
+    ),
+  )
 }
 
 // `rules`: the rule for a missing address and the rule for a missing scheme.
@@ -373,6 +456,7 @@
     "sender.country",
     "seller country code (BT-40)",
   )
+  out += _check-country-of-vat-id(seller, "sender", "seller", "BT-40")
   if profile.addresses {
     out += _check-country(
       buyer.address.country,
@@ -380,12 +464,25 @@
       "recipient.country",
       "buyer country code (BT-55)",
     )
+    out += _check-country-of-vat-id(buyer, "recipient", "buyer", "BT-55")
     if ship-to != none {
       out += _check-country(
         ship-to.address.country,
         "BR-57",
         "delivery-address.country",
         "deliver-to country code (BT-80)",
+      )
+    }
+    out += _check-post-code(seller, "sender", "seller", "BT-37", "BT-38")
+    out += _check-post-code(buyer, "recipient", "buyer", "BT-52", "BT-53")
+    // Without a delivery address of its own, the buyer's address is checked.
+    if ship-to != none and not ship-to.at("from-buyer", default: false) {
+      out += _check-post-code(
+        ship-to,
+        "delivery-address",
+        "deliver-to",
+        "BT-77",
+        "BT-78",
       )
     }
   }
@@ -542,9 +639,9 @@
           code-rule,
           field + ".city",
           "XRechnung requires the " + term + " post code.",
-          hint: "Write the post code in `city` on the "
+          hint: "Write the post code in the format of the country of the "
             + field
-            + ", e.g. \"10115 Berlin\" or `(name: \"Berlin\", post-code: \"10115\")`.",
+            + " (e.g. \"10115 Berlin\") or pass `city: (name: .., post-code: ..)`.",
         ))
       }
     }

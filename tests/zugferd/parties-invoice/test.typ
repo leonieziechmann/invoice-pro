@@ -142,3 +142,17 @@
     assert.eq(rules(result), ("CII-SR-449", "CII-SR-450", "IP-ID-02"))
   },
 )
+
+// 5. A recipient without country whose VAT ID and city are Austrian
+#e-invoice(
+  recipient: (
+    name: "Kunde GmbH",
+    address: "Ringstraße 2",
+    city: "1010 Wien",
+    vat-id: "ATU87654321",
+  ),
+  item-tax: tax.intra-community(),
+  result => {
+    assert.eq(rules(result), ("IP-ADDR-01", "IP-COUNTRY-01"))
+  },
+)
