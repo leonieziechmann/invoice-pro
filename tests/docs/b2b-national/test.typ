@@ -38,9 +38,14 @@
 
   invoice-nr: "INV-2026-0089",
   date: datetime(year: 2026, month: 7, day: 9),
+  // The period of the supply, printed by `references.service-time()`
+  service-period: (
+    datetime(year: 2026, month: 6, day: 1),
+    datetime(year: 2026, month: 6, day: 30),
+  ),
   references: (
-    "Leistungszeitraum": "Juni 2026",
-    "Bestellnummer": "PO-99120",
+    references.service-time(),
+    ("Bestellnummer", "PO-99120"),
   ),
 )
 

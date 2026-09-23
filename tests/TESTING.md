@@ -610,6 +610,8 @@ Every non-trivial code block in `docs/docs/` must be registered here. When addin
 | `api-reference/theme.md`         | `din5008-example`  | DIN-5008 theme with custom parameters                        | `docs/api-theme-din5008/`       | ✅                 |
 | `api-reference/theme.md`         | `blank-example`    | Blank theme with native Typst page setup                     | `docs/api-theme-blank/`         | ✅                 |
 | `e-invoicing.md`                 | `custom-report`    | Theme `zugferd-report` function for a custom problem list    | `docs/e-invoicing-report/`      | ✅                 |
+| `e-invoicing.md`                 | `credit-note`      | Credit note (document type 381) with a preceding invoice     | `docs/e-invoicing-credit-note/` | ✅                 |
+| `e-invoicing.md`                 | `item-data`        | Note, date and country of origin of items                    | `docs/e-invoicing-item-data/`   | ✅                 |
 | `e-invoicing.md`                 | `complete-example` | Complete ZUGFeRD-compliant invoice                           | `docs/e-invoicing-complete/`    | ✅                 |
 | `api-reference/locale/index.md`  | `locale-customize` | Locale customization with `locale.custom` overrides          | —                               | ⚠️ not implemented |
 | `api-reference/locale/index.md`  | `currency-format`  | Custom currency formatting override                          | —                               | ⚠️ not implemented |
