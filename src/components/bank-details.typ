@@ -1,7 +1,21 @@
 #import "../loom-wrapper.typ": loom, managed-motif
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
+#import "../utils/iban.typ": format-iban, iban-valid, normalize-iban
 #import "../logic/payment-reference.typ": resolve-remittance
+
+// With an e-invoice and `zugferd-errors: "report"`, problems are shown in the
+// document instead of stopping the compilation.
+#let _report-problems(ctx) = (
+  ctx.at("zugferd", default: none) != none
+    and ctx.at("zugferd-errors", default: "panic") == "report"
+)
+
+// What the root context holds for a sender without a name.
+#let _is-missing(value) = (
+  value in (none, "", [])
+    or (type(value) == str and value.starts-with("#sender."))
+)
 
 /// Defines and renders the bank account information for payments.
 ///
@@ -114,11 +128,39 @@
       })
     }),
     measure: (ctx, _) => {
+      // The IBAN is checked here, independently of the theme, so that an
+      // invalid one never ends up on an invoice unnoticed.
+      let electronic-iban = normalize-iban(iban)
+      let valid-iban = iban-valid(electronic-iban)
+      let report-problems = _report-problems(ctx)
+      if not valid-iban and not report-problems {
+        panic(
+          if electronic-iban == "" {
+            "bank-details: the IBAN is missing. Set `iban` on `bank-details`."
+          } else {
+            (
+              "bank-details: the IBAN \""
+                + format-iban(electronic-iban)
+                + "\" is not valid (wrong check digits or format). Check it for typos."
+            )
+          },
+        )
+      }
+
+      // The account holder: the explicit `name`, else the sender's name on
+      // one line, as in the e-invoice (BT-27).
+      let holder = ctx.sender.name
+      if name == auto {
+        let inline = ctx.sender.at("name-inline", default: none)
+        if not _is-missing(inline) { holder = inline }
+      }
+
       let data = (
         sender: (
-          name: ctx.sender.name,
+          name: holder,
           bank: bank,
-          iban: iban,
+          iban: electronic-iban,
+          iban-valid: valid-iban,
           bic: bic,
         ),
 
@@ -130,6 +172,9 @@
         reference: ctx.reference,
         text: ctx.text,
         show-reference: show-reference,
+        // Whether the theme shows problems (e.g. an IBAN the EPC-QR code
+        // cannot carry) in the document instead of stopping the compilation.
+        report-problems: report-problems,
         payment-amount: if payment-amount == auto {
           ctx.global.total.at("due", default: ctx.global.total.gross)
         } else {
