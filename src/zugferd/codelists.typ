@@ -4,7 +4,13 @@
 // EN 16931 Schematron (FACTUR-X_EN16931_codedb.xml). Each list is a
 // dictionary so that membership checks (`code in list`) are cheap.
 
-#let _to-set(codes) = codes.join(" ").split(" ").map(c => (c, true)).to-dict()
+// Pairs every code with `true` natively (`zip`) instead of calling a closure
+// per code: the lists hold about 2 900 codes, and the closure calls took
+// most of the time of loading this module.
+#let _to-set(codes) = {
+  let list = codes.join(" ").split(" ")
+  list.zip((true,) * list.len()).to-dict()
+}
 
 /// ISO 3166-1 alpha-2 country codes (BT-40, BT-55, BT-80; BR-CL-14)
 ///
