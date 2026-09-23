@@ -217,20 +217,22 @@
     ("contract", "contract-nr", true),
   ))
   // Keys invoices often carry, which only look like misspellings of known
-  // keys ("tax-nr", "street", "country")
+  // keys ("tax-nr", "street")
   assert.eq(
-    keys(
-      "seller",
-      fax-nr: "+49 30 123457",
-      siret: "303 265 045 00014",
-      county: "Kent",
-    ),
+    keys("seller", fax-nr: "+49 30 123457", siret: "303 265 045 00014"),
     (
       ("fax-nr", none, false),
       ("siret", none, false),
-      ("county", none, false),
     ),
   )
+  // Without `country`, a `county` is most likely a misspelled `country`; the
+  // hint covers a county, which next to a `country` loses nothing
+  let county = party-model((county: "Kent"), role: "buyer").input-keys.first()
+  assert.eq((county.like, county.einvoice), ("country", true))
+  assert(county.hint.contains("no field for a county"))
+  assert.eq(keys("buyer", county: "Kent", country: "GB"), (
+    ("county", "country", false),
+  ))
   // Keys of `contact`; of the buyer contact, the e-invoice reads only the
   // email address
   assert.eq(keys("seller", contact: (name: "A", mail: "a@b.de")), (

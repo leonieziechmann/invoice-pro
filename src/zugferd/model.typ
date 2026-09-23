@@ -425,19 +425,23 @@
   plz: ("city", _post-code-hint),
   land: "country",
   country-code: "country",
+  // A missing "r" of `country`, or the county of a British or Irish address.
+  county: (
+    "country",
+    "Rename it to `country` if it states the country. The e-invoice has no field for a county; write it into `address` to print it.",
+  ),
 )
 
 // Keys invoices often carry that `invoice-pro` does not read, but which look
 // like misspellings of keys it knows ("fax-nr" and "tax-nr", "siret" and
-// "street", "county" and "country"). Like any unknown key, they are not
-// written into the e-invoice, but they are never taken for a misspelling.
+// "street"). Like any unknown key, they are not written into the e-invoice,
+// but they are never taken for a misspelling.
 #let _other-keys = (
   fax-nr: true,
   fax-no: true,
   faxnr: true,
   siret: true,
   siren: true,
-  county: true,
 )
 
 // Patterns for unknown keys, compiled once on first use: unknown keys are rare.
@@ -556,13 +560,23 @@
 #let _input-keys(party, role) = {
   let known = party-keys.at(role)
   // A key standing for the city or post code loses nothing next to a city
-  // line whose post code was recognized.
+  // line whose post code was recognized, one standing for the country (e.g.
+  // `county`) nothing next to a `country` the party states.
   let has-post-code = text-or-none(_field(party, "post-code")) != none
+  let has-country = party.at(
+    "country-explicit",
+    default: not _is-unset(party.at("country", default: none)),
+  )
   let result = ()
   for (key, value) in party.pairs() {
     if key in known or key in _derived-keys or _is-unset(value) { continue }
     let entry = _unknown-key(key, known)
-    if entry.like == "city" and has-post-code { entry.einvoice = false }
+    if (
+      (entry.like == "city" and has-post-code)
+        or (entry.like == "country" and has-country == true)
+    ) {
+      entry.einvoice = false
+    }
     result.push(entry)
   }
   let contact = party.at("contact", default: none)

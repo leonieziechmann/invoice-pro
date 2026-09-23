@@ -168,14 +168,19 @@
   },
 )
 // Keys invoices often carry are no misspellings, even where they look like
-// one ("fax-nr" and "tax-nr", "siret" and "street"), and the buyer contact is
-// printed only
+// one ("fax-nr" and "tax-nr", "siret" and "street", "county" next to
+// `country`), and the buyer contact is printed only
 #e-invoice(
   sender: seller + (fax-nr: "+49 89 1234568", siret: "303 265 045 00014"),
-  recipient: buyer + (contact: (name: "Mme Dupont", tel: "+33 1 23 45 67 89")),
+  recipient: buyer
+    + (
+      county: "Île-de-France",
+      contact: (name: "Mme Dupont", tel: "+33 1 23 45 67 89"),
+    ),
   result => {
     assert.eq(rules(result), ())
     assert.eq(rules(result, level: "warning"), (
+      "IP-KEY-01",
       "IP-KEY-01",
       "IP-KEY-01",
       "IP-KEY-01",
