@@ -682,6 +682,10 @@ def adversarial():
 def write(cases, out, meta):
     out = Path(out)
     common.require_under_root(out)
+    # Old cases are removed, so only ever write over a generated corpus (for
+    # example not over the committed regression cases).
+    if any(out.glob("*.typ")) and not (out / "manifest.json").exists():
+        raise common.ToolError(f"{out} holds .typ files but no manifest.json: it is not a generated corpus")
     out.mkdir(parents=True, exist_ok=True)
     for old in out.glob("*.typ"):
         old.unlink()
@@ -706,12 +710,17 @@ def main(argv=None):
     out = Path(args.out) if args.out else common.build_dir() / "corpus"
     cases, unreachable = build(args.population, args.seed, args.legal_extra, args.random)
     meta = {"seed": args.seed, "population": args.population, "dims": DIMS, "unreachable_pairs": unreachable}
-    write(cases, out, meta)
+    try:
+        write(cases, out, meta)
+    except common.ToolError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
     counts = {}
     for case in cases:
         counts[case["population"]] = counts.get(case["population"], 0) + 1
     print(f"{len(cases)} cases in {out}: {counts}; value pairs no legal invoice can have: {len(unreachable)}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

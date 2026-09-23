@@ -4,6 +4,7 @@
 """
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -24,6 +25,30 @@ class Golden(unittest.TestCase):
         self.assertEqual(len(documents), len(set(documents)))
         for document in documents:
             self.assertTrue((common.REPO / document).exists(), document)
+
+    def test_every_validation_call_is_understood(self):
+        original = golden.LIST
+        with tempfile.TemporaryDirectory() as tmp:
+            golden.LIST = Path(tmp) / "validate-all-zugferd"
+            try:
+                golden.LIST.write_text(
+                    'if ! command -v "$VALIDATE_ZUGFERD" &> /dev/null; then\nfi\n'
+                    '"$VALIDATE_ZUGFERD" "template/invoice.typ"\n'
+                    "for doc in tests/integration/payment-reference/*/test.typ; do\n"
+                    '  "$VALIDATE_ZUGFERD" "$doc"\ndone\n'
+                )
+                self.assertEqual(golden.listed_documents()[0], "template/invoice.typ")
+                # A call whose document is not known, or a loop over nothing,
+                # would leave a document without golden file.
+                for listing in (
+                    '"$VALIDATE_ZUGFERD" "$DOCUMENT"\n',
+                    'for doc in tests/none/*/test.typ; do\n  "$VALIDATE_ZUGFERD" "$doc"\ndone\n',
+                ):
+                    golden.LIST.write_text('"$VALIDATE_ZUGFERD" "template/invoice.typ"\n' + listing)
+                    with self.assertRaises(common.ToolError):
+                        golden.listed_documents()
+            finally:
+                golden.LIST = original
 
     def test_golden_paths(self):
         def path(document):

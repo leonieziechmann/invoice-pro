@@ -121,7 +121,13 @@ def sha256_file(path, chunk=1 << 20):
 # ---------------------------------------------------------------- Typst
 
 
-def typst_compile(src, out, root=REPO, inputs=None, timestamp=DEFAULT_TIMESTAMP, jobs=None, timings=None):
+# Longest compilation of one document before it counts as failed: a hanging
+# case must not hold up the whole run until the CI job times out.
+COMPILE_TIMEOUT = 300
+
+
+def typst_compile(src, out, root=REPO, inputs=None, timestamp=DEFAULT_TIMESTAMP, jobs=None, timings=None,
+                  timeout=COMPILE_TIMEOUT):
     """Compiles `src` to the PDF/A-3b `out`. Returns (ok, stderr, seconds)."""
     cmd = [typst_bin(), "compile", "--root", str(root), "--pdf-standard=a-3b"]
     if timestamp is not None:
@@ -135,9 +141,11 @@ def typst_compile(src, out, root=REPO, inputs=None, timestamp=DEFAULT_TIMESTAMP,
     cmd += [str(src), str(out)]
     start = time.perf_counter()
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except FileNotFoundError:
         raise ToolError(f"Typst not found ({typst_bin()}); set TYPST_BIN")
+    except subprocess.TimeoutExpired:
+        return False, f"error: the compilation took longer than {timeout} s", time.perf_counter() - start
     return proc.returncode == 0, proc.stderr, time.perf_counter() - start
 
 
@@ -373,6 +381,10 @@ class Mustang:
             self.proc.stdin.close()
         except OSError:
             pass
-        self.proc.wait(timeout=60)
+        try:
+            self.proc.wait(timeout=60)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+            self.proc.wait()
         self.reader.join(timeout=10)
         self.log.close()

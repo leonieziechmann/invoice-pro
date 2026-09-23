@@ -1,6 +1,6 @@
 """Unit tests of the conformance tools themselves (no Typst, no Java).
 
-  python3 -m unittest discover -s tools -p 'test_*.py'
+  python3 -m unittest discover -s tools/zugferd -p 'test_*.py'
 
 The proof layer is only as good as its classification, report parsing,
 oracles and generator constraints, so these parts are tested on their own.
@@ -222,6 +222,22 @@ class Headers(unittest.TestCase):
             with self.assertRaises(common.ToolError):
                 run.parse_header(file)
 
+    def test_cases_keep_the_harness(self):
+        head = "// expect: AGREE_VALID\n// finding: f\n// The theme: blank, as in zugferd-errors: \"panic\".\n\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "case.typ"
+
+            def load(body):
+                file.write_text(head + '#import "_base.typ": *\n#show: invoice.with(\n' + body + ")\n", encoding="utf-8")
+                return run.load_cases([file])[0]["id"]
+
+            self.assertEqual(load("  ..setup,\n  zugferd: \"en16931\",\n"), "rg-case")
+            self.assertEqual(load("  ..setup,\n  theme: harness(themes.DIN-5008()),\n"), "rg-case")
+            # Another theme or mode after `..setup` would lose the diagnostics.
+            for body in ("  ..setup,\n  theme: themes.DIN-5008(),\n", '  ..setup,\n  zugferd-errors: "panic",\n'):
+                with self.assertRaises(common.ToolError):
+                    load(body)
+
     def test_regression_cases(self):
         cases = run.load_cases([HERE / "corpus" / "regression"])
         self.assertTrue(cases)
@@ -400,6 +416,19 @@ class Generator(unittest.TestCase):
         self.assertEqual((outside["seller_vat"], outside["buyer_vat"], outside["seller_ids"]),
                          (None, None, [["", gen.SELLER_ID]]))
         self.assertIsNone(facts(route="de-us")["buyer_vat"])
+
+    def test_write_replaces_only_a_generated_corpus(self):
+        base = common.build_dir()
+        base.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=base) as tmp:
+            out = Path(tmp)
+            (out / "case.typ").write_text("// expect: AGREE_VALID\n", encoding="utf-8")
+            with self.assertRaises(common.ToolError):  # e.g. the regression cases
+                gen.write([], out, {})
+            self.assertTrue((out / "case.typ").exists())
+            (out / "manifest.json").write_text("{}", encoding="utf-8")
+            gen.write([], out, {})  # a generated corpus is replaced
+            self.assertFalse((out / "case.typ").exists())
 
     def test_resolved_profile(self):
         self.assertEqual(gen.resolved_profile(dict(gen.SIMPLE, profile="en16931", route="de-de")), "en16931")

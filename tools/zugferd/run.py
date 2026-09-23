@@ -28,6 +28,7 @@ Exit code: 0 all green (or only known issues), 1 failures, 2 setup error.
 """
 
 import argparse
+import collections
 import fnmatch
 import json
 import multiprocessing
@@ -74,6 +75,9 @@ TOTALS = {
     "BT-115": "ram:DuePayableAmount",
 }
 _HEADER = re.compile(r"^//\s*(expect|error|finding|facts):\s*(.*)$")
+# Arguments of a regression case that would switch the harness off.
+_THEME_ARG = re.compile(r"(?<![\w-])theme\s*:\s*(\S*)")
+_ERRORS_ARG = re.compile(r"(?<![\w-])zugferd-errors\s*:\s*([^\s,)]*)")
 
 
 # ---------------------------------------------------------------- cases
@@ -134,8 +138,7 @@ def load_cases(paths):
             cases.append(_file_case(path))
         else:
             raise common.ToolError(f"{path}: not a corpus directory or .typ file")
-    ids = [c["id"] for c in cases]
-    duplicates = sorted({i for i in ids if ids.count(i) > 1})
+    duplicates = sorted(i for i, n in collections.Counter(c["id"] for c in cases).items() if n > 1)
     if duplicates:
         raise common.ToolError(f"duplicate case ids: {', '.join(duplicates)}")
     return cases
@@ -147,6 +150,15 @@ def _file_case(file):
     # Without the harness, "no diagnostics attached" would read as "no errors".
     if "harness(" not in text and "..setup" not in text:
         raise common.ToolError(f"{file}: a case must use the harness theme (`..setup` of _base.typ or `harness(..)`)")
+    # Nor may the case switch it off after `..setup`: another theme, or a
+    # mode other than "report", would silently lose the diagnostics.
+    code = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("//"))
+    for m in _THEME_ARG.finditer(code):
+        if not m.group(1).startswith("harness("):
+            raise common.ToolError(f"{file}: `theme: {m.group(1)}` loses the diagnostics; wrap it: `theme: harness(..)`")
+    for m in _ERRORS_ARG.finditer(code):
+        if m.group(1) != '"report"':
+            raise common.ToolError(f"{file}: the harness needs `zugferd-errors: \"report\"`, not {m.group(1)}")
     return {
         "id": "rg-" + file.stem,
         "population": "regression",
@@ -168,15 +180,17 @@ def compile_case(case, out_dir, timestamp=common.DEFAULT_TIMESTAMP):
     if not ok:
         res["crash"] = stderr.strip()[:4000]
         return res
-    attachments, text = common.read_pdf(pdf)
+    try:
+        attachments, text = common.read_pdf(pdf)
+        diagnostics = attachments.get(common.DIAGNOSTICS_ATTACHMENT)
+        data = json.loads(diagnostics) if diagnostics else {}
+    except Exception as e:  # a broken PDF or attachment fails this case, not the run
+        res["crash"] = f"cannot read the PDF or its diagnostics: {e!r}"
+        return res
     res["pdf_text"] = text
-    diagnostics = attachments.get(common.DIAGNOSTICS_ATTACHMENT)
-    if diagnostics:
-        data = json.loads(diagnostics)
-        res["diagnostics"] = data.get("diagnostics", [])
+    res["diagnostics"] = data.get("diagnostics", [])
+    if data:
         res["reported_profile"] = (data.get("profile") or {}).get("id")
-    else:
-        res["diagnostics"] = []
     name, xml = common.invoice_xml(attachments)
     if xml is not None:
         xml_path = Path(out_dir) / f"{case['id']}.xml"

@@ -38,17 +38,31 @@ LIST = REPO / "scripts" / "validate-all-zugferd"
 
 
 def listed_documents():
-    """The documents scripts/validate-all-zugferd validates, in its order."""
-    docs = []
+    """The documents scripts/validate-all-zugferd validates, in its order.
+
+    Every call of the validator must name a document or the variable of a
+    loop over a glob; anything else is an error, so that no document is
+    validated without its golden file.
+    """
+    docs, loops = [], set()
     for line in LIST.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         m = re.match(r'^"\$VALIDATE_ZUGFERD"\s+"([^"$]+\.typ)"', line)
         if m:
             docs.append(m.group(1))
             continue
-        m = re.match(r"^for\s+\w+\s+in\s+(\S+\.typ)\s*;", line)
+        m = re.match(r"^for\s+(\w+)\s+in\s+(\S+\.typ)\s*;", line)
         if m:
-            docs += sorted(str(p.relative_to(REPO)) for p in REPO.glob(m.group(1)))
+            found = sorted(str(p.relative_to(REPO)) for p in REPO.glob(m.group(2)))
+            if not found:
+                raise common.ToolError(f"{LIST}: {m.group(2)} matches no document")
+            loops.add(m.group(1))
+            docs += found
+            continue
+        m = re.match(r'^"\$VALIDATE_ZUGFERD"\s+"\$(\w+)"', line)
+        if line.startswith('"$VALIDATE_ZUGFERD"') and not (m and m.group(1) in loops):
+            raise common.ToolError(f"{LIST}: cannot tell the document of {line!r}; "
+                                   'write `"$VALIDATE_ZUGFERD" "path/to/test.typ"`')
     if not docs:
         raise common.ToolError(f"no documents found in {LIST}")
     return docs
@@ -127,8 +141,12 @@ def main(argv=None):
     failed = 0
     with tempfile.TemporaryDirectory(prefix="golden-") as tmp:
         work = Path(tmp)
-        with ThreadPoolExecutor(args.jobs) as pool:
-            results = list(pool.map(lambda d: (d, *check(d, work)), documents))
+        try:
+            with ThreadPoolExecutor(args.jobs) as pool:
+                results = list(pool.map(lambda d: (d, *check(d, work)), documents))
+        except common.ToolError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 2
     for document, xml, problems in results:
         target = golden_path(document)
         rel = target.relative_to(REPO)
