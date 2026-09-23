@@ -385,7 +385,7 @@ An invoice that is paid already, e.g. in cash or by card at the counter, uses [`
 #paid(method: "cash", date: datetime(year: 2026, month: 9, day: 1))
 ```
 
-A card payment or a direct debit adds its details with its own component. XRechnung requires them: the payment card for `"card"` (`BR-DE-24-a`), the direct debit for `"direct-debit"` (`BR-DE-25-a`, in another currency than euro its mandate reference, `PEPPOL-EN16931-R061`) and the bank details for `"transfer"` (`BR-DE-23-a`):
+A card payment or a direct debit adds its details with its own component. XRechnung requires them: the payment card for `"card"` (`BR-DE-24-a`), the direct debit for `"direct-debit"` (`BR-DE-25-a`, in another currency than euro its mandate reference, `PEPPOL-EN16931-R061`) and the bank details for `"transfer"` (`BR-DE-23-a`). The other profiles with payment means ask for the bank details of `"transfer"` as well, as EN 16931 requires the account of a credit transfer (`BR-61`), although its official validation does not check it in CII:
 
 ```typst
 #paid(method: "card")
