@@ -24,6 +24,20 @@
   if result == "" { none } else { result }
 }
 
+/// The payment terms (BT-20) of a text, or `none`. Unlike other texts, they
+/// keep their line breaks: the XRechnung Skonto syntax (BR-DE-18) writes each
+/// cash discount on a line of its own, e.g. "#SKONTO#TAGE=14#PROZENT=2.00#",
+/// followed by a line break, which is added when the text ends with such a
+/// line.
+///
+/// -> str | none
+#let payment-terms(value) = {
+  let terms = plain-text(value, keep-newlines: true)
+  if terms == "" { none } else if terms.ends-with("#") { terms + "\n" } else {
+    terms
+  }
+}
+
 // The plain text of an identifier without any whitespace (VAT IDs, IBANs).
 #let compact(value) = {
   let result = plain-text(value).replace(regex("\\s"), "")
@@ -516,13 +530,16 @@
   let bic = if bank != none { compact(bank.at("bic", default: none)) }
 
   // BT-9 and BT-20: the invoice's own `due-date` wins over the payment goal.
+  // `terms-input` is the input the payment terms come from.
   let due-date = none
   let terms = none
+  let terms-input = none
   let explicit-due-date = ctx.at("due-date", default: none)
   if type(explicit-due-date) == datetime {
     due-date = explicit-due-date
   } else {
-    terms = text-or-none(explicit-due-date)
+    terms = payment-terms(explicit-due-date)
+    if terms != none { terms-input = "due-date" }
   }
   if payment-goal != none {
     let goal-date = payment-goal.at("date", default: none)
@@ -536,17 +553,19 @@
       due-date = invoice-date + duration(days: days)
     }
     if terms == none and type(goal-date) != datetime {
-      terms = text-or-none(goal-date)
+      terms = payment-terms(goal-date)
+      if terms != none { terms-input = "payment-goal" }
     }
     // Without days or a date, the payment goal prints that the amount is due
     // at once ("sofort nach Erhalt"), which are the payment terms.
     if terms == none and due-date == none and goal-date == none {
-      terms = text-or-none(
+      terms = payment-terms(
         locale
           .at("strings", default: (:))
           .at("payment", default: (:))
           .at("deadline-soon", default: none),
       )
+      if terms != none { terms-input = "payment-goal" }
     }
   }
 
@@ -617,6 +636,7 @@
       },
       due-date: due-date,
       terms: terms,
+      terms-input: terms-input,
     ),
   )
 }

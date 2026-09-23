@@ -663,10 +663,57 @@
 
 // --- Payment --------------------------------------------------------------
 
+// BR-DE-18, as the XRechnung 3.0 validation tests it: each line of the
+// payment terms (BT-20) that starts with "#" matches XR-SKONTO-REGEX, and the
+// text after the last "#...#" starts with a line break.
+#let _skonto-line = regex(
+  "#(SKONTO)#TAGE=([0-9]+#PROZENT=[0-9]+\\.[0-9]{2})(#BASISBETRAG=-?[0-9]+\\.[0-9]{2})?#$",
+)
+#let _line-break = regex("\\r?\\n")
+#let _hash-block = regex("#.+#")
+#let _leading-line-break = regex("^\\s*\\n")
+// Whitespace as XPath's normalize-space() collapses it.
+#let _xml-whitespace = regex("[ \\t\\r\\n]+")
+
+// The line of the payment terms that breaks the XRechnung Skonto syntax
+// (BR-DE-18): `none` if there is none, "" if only the line break after the
+// last Skonto line is missing.
+#let _skonto-problem(terms) = {
+  let skonto = false
+  for line in terms.split(_line-break) {
+    let normalized = line.replace(_xml-whitespace, " ").trim(" ")
+    if normalized.starts-with("#") {
+      if normalized.match(_skonto-line) == none { return normalized }
+      skonto = true
+    }
+  }
+  if (
+    skonto
+      and terms.split(_hash-block).last().match(_leading-line-break) == none
+  ) { return "" }
+  none
+}
+
 #let check-payment(model) = {
   if not model.profile.settlement { return () }
   let out = ()
   let payment = model.payment
+
+  if model.profile.xrechnung and payment.terms != none {
+    let problem = _skonto-problem(payment.terms)
+    if problem != none {
+      let input = payment.at("terms-input", default: none)
+      out.push(error(
+        "BR-DE-18",
+        if input == none { "payment-goal" } else { input },
+        "In the payment terms (BT-20), every line that starts with \"#\" must be a cash discount in the XRechnung syntax, e.g. \"#SKONTO#TAGE=14#PROZENT=2.00#\", followed by a line break"
+          + if problem == "" { "." } else {
+            ", but " + _quoted(problem) + " is not."
+          },
+        hint: "Write each cash discount on a line of its own: `#SKONTO#TAGE=` with the days, `#PROZENT=` with the percent and two decimals, optionally `#BASISBETRAG=` with the amount it applies to, and a closing `#`, e.g. \"Zahlbar innerhalb von 30 Tagen.\\n#SKONTO#TAGE=14#PROZENT=2.00#\". Do not start other lines with \"#\".",
+      ))
+    }
+  }
 
   if (
     model.totals.due > _zero
