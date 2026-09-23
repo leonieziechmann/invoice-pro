@@ -29,6 +29,8 @@
   item-description: false,
   // BT-12, BT-16, BT-25: contract, despatch advice and preceding invoice.
   document-references: false,
+  // BT-21, BT-22: invoice notes.
+  notes: false,
   // The EN 16931 business rules (BR-*) apply to the whole document.
   en16931: false,
   // The German CIUS XRechnung (BR-DE-*) applies on top of EN 16931.
@@ -50,6 +52,7 @@
       party-ids: true,
       buyer-vat-id: true,
       document-references: true,
+      notes: true,
     ),
   // BASIC is a CIUS of EN 16931 and therefore carries the EN 16931 prefix.
   basic: _base
@@ -62,6 +65,7 @@
       party-ids: true,
       buyer-vat-id: true,
       document-references: true,
+      notes: true,
       en16931: true,
     ),
   en16931: _base
@@ -79,6 +83,7 @@
       item-ids: true,
       item-description: true,
       document-references: true,
+      notes: true,
       en16931: true,
     ),
   xrechnung: _base
@@ -96,6 +101,7 @@
       item-ids: true,
       item-description: true,
       document-references: true,
+      notes: true,
       en16931: true,
       xrechnung: true,
     ),

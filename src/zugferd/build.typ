@@ -44,6 +44,18 @@
   "ram:IssueDateTime": _date(invoice.issue-date),
 )
 
+// Emits the notes of the invoice (BT-22 with the subject code BT-21).
+#let build-notes(notes) = {
+  let entries = ()
+  for note in notes {
+    entries.push((
+      "ram:Content": note.content,
+      "ram:SubjectCode": note.subject-code,
+    ))
+  }
+  entries
+}
+
 // Emits a postal address (BG-5, BG-8, BG-15). ZUGFeRD knows three address
 // lines; any further lines are joined into the third one.
 #let build-postal-address(address) = {
@@ -504,6 +516,12 @@
     trade-settlement.insert("ram:InvoiceReferencedDocument", reference)
   }
 
+  let exchanged-document = build-exchanged-document(invoice)
+  let notes = invoice.at("notes", default: ())
+  if profile.notes and notes != () {
+    exchanged-document.insert("ram:IncludedNote", build-notes(notes))
+  }
+
   let transaction = (:)
   if profile.lines and model.lines != () {
     transaction.insert(
@@ -523,7 +541,7 @@
       "@xmlns:udt": "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100",
       "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
       "rsm:ExchangedDocumentContext": build-document-context(profile),
-      "rsm:ExchangedDocument": build-exchanged-document(invoice),
+      "rsm:ExchangedDocument": exchanged-document,
       "rsm:SupplyChainTradeTransaction": transaction,
     ),
   )

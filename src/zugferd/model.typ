@@ -929,6 +929,27 @@
   none
 }
 
+// The notes of the invoice (BT-22 and BT-21, see `normalize-notes`): the
+// plain text of each note with its line breaks, and its subject code in upper
+// case. A note without text is left out.
+#let _notes(notes) = {
+  let result = ()
+  for note in notes {
+    if type(note) != dictionary { continue }
+    let content = plain-text(
+      note.at("text", default: none),
+      keep-newlines: true,
+    )
+    if content == "" { continue }
+    let code = compact(note.at("subject-code", default: none))
+    result.push((
+      content: content,
+      subject-code: if code != none { upper(code) },
+    ))
+  }
+  result
+}
+
 // Categories whose VAT breakdown must not carry an exemption reason
 // (BR-S-10, BR-Z-10, BR-AF-10, BR-AG-10).
 #let _taxed-categories = ("S", "Z", "L", "M")
@@ -1311,6 +1332,8 @@
       )),
       // BT-26, a `datetime` or `none`.
       preceding-invoice-date: ctx.at("preceding-invoice-date", default: none),
+      // BT-22 and BT-21: `(content: .., subject-code: ..)` each.
+      notes: _notes(ctx.at("notes", default: ())),
     ),
     seller: seller,
     buyer: buyer,

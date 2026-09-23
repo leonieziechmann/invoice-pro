@@ -9,6 +9,7 @@
 #import "locale/region/base.typ": base-region
 #import "logic/country.typ": normalize-party, resolve-party-country
 #import "logic/document-type.typ": document-title, resolve-document-type
+#import "logic/notes.typ": normalize-notes
 
 /// The main entry point for creating an invoice document.
 /// It orchestrates the theme, localization, and data calculation passes.
@@ -102,6 +103,12 @@
   /// Custom payment reference / purpose (Verwendungszweck).
   /// -> none | string | content
   payment-reference: none,
+  /// Notes about the invoice as a whole: a text, or an array of texts and
+  /// dictionaries `(text: .., subject-code: ..)` with a UNTDID 4451 subject
+  /// code (e.g. `"AAI"`). They are printed below the line items and written
+  /// into the e-invoice (BT-22, BT-21).
+  /// -> none | str | content | array
+  notes: none,
 
   /// The default tax rate to apply if not specified elsewhere.
   /// If `auto`, it is inferred from the locale.
@@ -221,6 +228,7 @@
     content,
   )
   types.require(tax-nr, "invoice::tax-nr", none, str, content)
+  types.require(notes, "invoice::notes", none, str, content, array)
 
   types.require(tax, "invoice::tax", none, auto, types.tax-like)
   types.require(tax-mode, "invoice::tax-mode", "inclusive", "exclusive")
@@ -408,6 +416,8 @@
     preceding-invoice-date: preceding-invoice-date,
     due-date: due-date,
     payment-reference: payment-reference,
+    // `(text: .., subject-code: ..)` each, see `normalize-notes`.
+    notes: normalize-notes(notes),
 
     tax: document-tax,
     tax-mode: tax-mode,

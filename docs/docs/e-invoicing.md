@@ -111,6 +111,7 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | `IP-DOC-02`     | error   | A corrected invoice (`document-type: "corrected"`) without `preceding-invoice-nr`: it replaces an invoice, which the VAT Directive (Art. 219) requires it to name. XRechnung checks it as `BR-DE-26`.                                                                              |
 | `IP-DOC-03`     | error   | A credit note with a negative total: it states the credited amounts as positive amounts, so it would ask the buyer to pay.                                                                                                                                                         |
 | `IP-DOC-04`     | warning | An invoice with a negative total: valid, but a credit note (`document-type: "credit-note"`) is the document for a credit.                                                                                                                                                          |
+| `IP-PROFILE-01` | warning | An input the chosen profile cannot state, e.g. `notes` in `"minimum"`: it is printed, but not written into the e-invoice.                                                                                                                                                          |
 | `IP-PERIOD-01`  | warning | A service period printed as a text of its own (e.g. `references.service-time(value: "Juni 2026")`), which the XML cannot state. See [Service Period](#10-service-period-bt-72--bg-14).                                                                                             |
 
 ### The `zugferd-errors` Parameter
@@ -443,6 +444,20 @@ A single date is written as the actual delivery date (BT-72), a period as the in
 ```
 
 A service period printed as a text of its own, e.g. `references.service-time(value: "Juni 2026")` or a reference `("Leistungszeitraum", "Juni 2026")`, cannot reach the XML, which would state another date: `invoice-pro` warns about it (`IP-PERIOD-01`). Set `service-period` instead.
+
+### 11. Notes (BT-22)
+
+`notes` on the invoice are texts about the invoice as a whole, e.g. terms of delivery or legal notices. They are printed below the line items, with the exemption notes, and written into the XML as invoice notes (BT-22) with their line breaks, from the `"basic-wl"` profile on (`"minimum"` has none, which is reported as a warning, `IP-PROFILE-01`). A note can carry a subject code of UNTDID 4451 (BT-21, `BR-CL-08`), e.g. `"AAI"` for general information or `"REG"` for regulatory information:
+
+```typst
+#show: invoice.with(
+  notes: (
+    "Lieferung frei Haus.",
+    (text: "Es gelten unsere Allgemeinen Geschäftsbedingungen.", subject-code: "AAI"),
+  ),
+  // ...
+)
+```
 
 ---
 

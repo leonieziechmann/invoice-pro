@@ -481,6 +481,11 @@
           )
         },
       )
+      // The notes of the invoice (`invoice(notes: ..)`), which the e-invoice
+      // states as well (BT-22), follow the exemption notes.
+      for note in ctx.at("notes", default: ()) {
+        notes.push((kind: "note", marker: none, body: note.text))
+      }
 
       let view = (
         items: formated-items,
@@ -489,7 +494,9 @@
         surcharges: formated-surcharges,
         prepayments: formated-prepayments,
         taxes: formated-taxes,
-        // Every note is `(kind: .., marker: .., body: ..)`, in print order.
+        // Every note is `(kind: .., marker: .., body: ..)`, in print order:
+        // the exemption notes (kind "small-business" or "grounds"), then the
+        // notes of the invoice (kind "note").
         exemption-notes: notes,
         total: formated-total,
         unmodified-total: unmodified-formated-total,

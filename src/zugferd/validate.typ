@@ -20,7 +20,7 @@
 #import "codelists.typ"
 #import "xml.typ": fmt-number, rate-digits
 #import "model.typ": vat-eas-codes, vat-id-country, vat-id-prefix
-#import "document.typ": title-kind
+#import "document.typ": note-subject-code-valid, title-kind
 #import "../utils/iban.typ": iban-valid
 
 #let _zero = decimal("0")
@@ -365,13 +365,43 @@
 
 // --- Document data --------------------------------------------------------
 
-/// Checks the data of the document besides its type: that the service
-/// period the invoice prints is the one the XML states (IP-PERIOD-01).
+/// Checks the data of the document besides its type: the notes (BT-21,
+/// BT-22), and that the service period the invoice prints is the one the XML
+/// states (IP-PERIOD-01).
 ///
 /// -> array
 #let check-document-data(model) = {
   let out = ()
   let profile = model.profile
+
+  // The notes are printed in any case, but only BASIC WL and the richer
+  // profiles can state them.
+  let notes = model.invoice.at("notes", default: ())
+  if notes.len() > 0 and not profile.notes {
+    out.push(warning(
+      "IP-PROFILE-01",
+      "notes",
+      "The "
+        + profile.name
+        + " profile has no invoice notes (BT-22), so `notes` are printed, but not written into the e-invoice.",
+      hint: "Use the \"basic-wl\" profile or a richer one to state them.",
+    ))
+  }
+  if profile.notes {
+    for note in notes {
+      let code = note.subject-code
+      if code != none and not note-subject-code-valid(code) {
+        out.push(error(
+          "BR-CL-08",
+          "notes",
+          "The subject code "
+            + _quoted(code)
+            + " of a note (BT-21) is not a code of UNTDID 4451.",
+          hint: "Use a code such as \"AAI\" (general information), \"REG\" (regulatory information), \"TXD\" (tax declaration) or \"SUR\" (supplier remarks), or leave out `subject-code`.",
+        ))
+      }
+    }
+  }
 
   // IP-PERIOD-01: a service period printed as a text of its own (e.g.
   // `references.service-time(value: "Juni 2026")`) cannot reach the XML,
