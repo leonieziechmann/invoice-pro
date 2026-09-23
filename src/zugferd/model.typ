@@ -284,10 +284,32 @@
     KWH: ("kwh",),
     MWH: ("mwh",),
     H87: ("st", "stk", "stck", "pc", "pcs", "pce"),
-    LS: ("psch", "pausch", "pauschal", "flat rate"),
+    LS: ("psch", "pausch", "pauschal", "flat", "flat rate", "lumpsum"),
     IE: ("person", "persons", "pers", "personen"),
     ZP: ("page", "pages", "seite", "seiten"),
     P1: ("%", "percent", "prozent"),
+  ).pairs() {
+    for text in texts { table.insert(text, code) }
+  }
+  // Plurals that the languages list no own form for and that are no singular
+  // with "s" (French, Italian and Spanish).
+  for (code, texts) in (
+    H87: ("pezzi", "unidades"),
+    PR: ("paia", "pares"),
+    HUR: ("ore",),
+    DAY: ("giorni",),
+    MON: ("mesi",),
+    ANN: ("anni", "année", "années"),
+    KGM: ("chilogrammi",),
+    GRM: ("grammi",),
+    TNE: ("tonnellate",),
+    MTR: ("metri",),
+    MTK: ("mètres carrés", "metri quadrati", "metros cuadrados"),
+    MMT: ("millimetri",),
+    CMT: ("centimetri",),
+    KMT: ("chilometri",),
+    LTR: ("litri",),
+    MTQ: ("mètres cubes", "metri cubi", "metros cúbicos"),
   ).pairs() {
     for text in texts { table.insert(text, code) }
   }

@@ -62,6 +62,17 @@
     ("forfait", "LS"),
     ("horas", "HUR"),
     ("metro cuadrado", "MTK"),
+    ("ore", "HUR"),
+    ("giorni", "DAY"),
+    ("pezzi", "H87"),
+    ("unidades", "H87"),
+    ("années", "ANN"),
+    ("mètres carrés", "MTK"),
+    ("metri cubi", "MTQ"),
+    // Names of the functions of the `unit` module
+    ("flat", "LS"),
+    ("lumpsum", "LS"),
+    ("sqm", "MTK"),
     // Codes as they are
     ("H87", "H87"),
     ("MIN", "MIN"),
