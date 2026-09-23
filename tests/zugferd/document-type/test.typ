@@ -259,6 +259,47 @@
   )
 ]
 
+// The sender of a credit note or a self-billed invoice pays the amount: it
+// cannot collect it from the recipient by direct debit or payment card, and
+// grants no cash discount. Each stops with a message instead of printing a
+// sentence in the wrong direction.
+#for (document-type, sender, recipient) in (
+  ("credit-note", seller, buyer-de),
+  ("self-billed", buyer-de, seller),
+) {
+  let message(body) = catch(() => invoice(
+    theme: themes.blank,
+    locale: locale.de-de,
+    document-type: document-type,
+    sender: sender,
+    recipient: recipient,
+    invoice-nr: "RK-4",
+  )[
+    #line-items[#item([Bonus], price: 500, tax: tax.vat(19%))]
+    #body
+  ])
+  for (body, expected) in (
+    (
+      direct-debit(mandate: "M-1", creditor-id: "DE98ZZZ09999999999"),
+      "direct-debit: a credit note or a self-billed invoice is paid by its sender",
+    ),
+    (
+      card-payment(last4: "1234"),
+      "card-payment: a credit note or a self-billed invoice is paid by its sender",
+    ),
+    (
+      payment-goal(days: 30, discount: (days: 14, percent: 2%)),
+      "payment-goal: a cash discount (`discount`) is not supported on a credit note or a self-billed invoice",
+    ),
+  ) {
+    let got = message(body)
+    assert(
+      got != none and got.contains(expected),
+      message: "Expected `" + expected + "`, got " + repr(got),
+    )
+  }
+}
+
 // --- 5. The document type is written as BT-3 ---
 #for (type, code) in (
   (auto, "380"),

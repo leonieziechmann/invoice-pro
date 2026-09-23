@@ -188,6 +188,7 @@
         <ram:TypeCode>58</ram:TypeCode>
         <ram:PayeePartyCreditorFinancialAccount>
           <ram:IBANID>DE75512108001245126199</ram:IBANID>
+          <ram:AccountName>Müller &amp; Söhne GmbH</ram:AccountName>
         </ram:PayeePartyCreditorFinancialAccount>
         <ram:PayeeSpecifiedCreditorFinancialInstitution>
           <ram:BICID>SOLADEST600</ram:BICID>

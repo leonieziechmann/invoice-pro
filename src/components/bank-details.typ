@@ -6,6 +6,7 @@
 #import "../logic/epc.typ"
 #import "../logic/payment-reference.typ": resolve-remittance
 #import "../logic/document-type.typ": sender-pays
+#import "../logic/payment-means.typ": of-context, transfer-requested
 
 // With an e-invoice and `zugferd-errors: "report"`, problems are shown in the
 // document instead of stopping the compilation.
@@ -33,7 +34,8 @@
 /// -> content
 #let bank-details(
   /// The name of the account holder. Defaults to the sender's name on one
-  /// line, as in the e-invoice (BT-27).
+  /// line, as in the e-invoice (BT-27). A name given here is also the
+  /// account name of the e-invoice (BT-85).
   /// -> auto | none | string
   name: auto,
 
@@ -75,7 +77,9 @@
   /// -> auto
   account-holder-text: auto,
 
-  /// Configuration for a payment QR code (e.g., EPC-QR).
+  /// Configuration for a payment QR code (e.g., EPC-QR). By default, the
+  /// code is shown only when the amount is paid by credit transfer: not
+  /// with a `direct-debit` or a `card-payment`, and not on a `paid` invoice.
   /// -> dictionary
   qr-code: (:),
 ) = {
@@ -138,6 +142,9 @@
       })
     }),
     measure: (ctx, _) => {
+      // The root context collects the payment means of the body; inside the
+      // line items, the bank details would be printed but not stated.
+      let _ = loom.guards.assert-not-inside(ctx, "line-items")
       // The IBAN is checked here, independently of the theme, so that an
       // invalid one never ends up on an invoice unnoticed.
       let electronic-iban = normalize-iban(iban)
@@ -182,8 +189,14 @@
       }
 
       // The EPC-QR code is only generated when it is shown. SEPA credit
-      // transfers are in euro, so it is shown for invoices in EUR only.
-      let qr-display = qr-code.at("display", default: not recipient-account)
+      // transfers are in euro, so it is shown for invoices in EUR only. It
+      // asks the buyer to transfer the amount, so by default it is left out
+      // when the amount is collected otherwise or paid already, and on the
+      // recipient's account.
+      let qr-display = qr-code.at(
+        "display",
+        default: not recipient-account and transfer-requested(of-context(ctx)),
+      )
       let currency = ctx.locale.at("currency", default: (:))
       let epc-code = if (
         qr-display and currency.at("code", default: none) == "EUR"
@@ -236,9 +249,12 @@
       )
 
       // Expose IBAN/BIC/reference as a public signal so root can embed them in ZUGFeRD XML.
+      // The account name (BT-85) only if it is given: the default holder is
+      // the seller, whom the e-invoice names already (BT-27).
       let public = (
         iban: iban,
         bic: bic,
+        account-name: if name not in (auto, "") { name },
         reference: ctx.reference,
         text: ctx.text,
         payment-amount: data.payment-amount,

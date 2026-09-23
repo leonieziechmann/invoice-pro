@@ -16,6 +16,11 @@
 #import "../logic/service-period.typ": (
   format-service-period, resolve-service-period,
 )
+#import "../logic/payment-means.typ": (
+  card-code, direct-debit-code, method-code, resolve as resolve-payment-means,
+  transfer-code,
+)
+#import "xml.typ": fmt-number
 
 #let _zero = decimal("0")
 
@@ -1295,11 +1300,133 @@
   lines
 }
 
+// --- Payment -------------------------------------------------------------------
+
+// An identifier in upper case (IBAN, BIC, creditor identifier), or `none`.
+#let _upper-id(value) = {
+  let id = compact(value)
+  if id == none { none } else { upper(id) }
+}
+
+// A payment means (BG-16) with its payment means code (BT-81), its kind (see
+// `code-kind`) and the input it comes from, for messages. The details of a
+// credit transfer (BG-17: `iban`, `account-name`, `bic`), a payment card
+// (BG-18: `card`) and a direct debit (the debited account of BG-19,
+// `debtor-iban`) are set by `payment-means-model`.
+#let _means(type-code, kind, field) = (
+  type-code: type-code,
+  kind: kind,
+  field: field,
+  iban: none,
+  account-name: none,
+  bic: none,
+  card: none,
+  debtor-iban: none,
+)
+
+/// The payment means (BG-16) of the invoice, in the order of the XML: one for
+/// each account of a credit transfer (`bank-details`, BG-17), the direct
+/// debit, the payment card (BG-18), and the method of `paid` if none of them
+/// details it (e.g. cash). An invoice has one kind of payment means; the
+/// validator reports conflicting ones.
+///
+/// -> array
+#let payment-means-model(means, currency) = {
+  let entries = ()
+  for bank in means.transfers {
+    entries.push(
+      _means(transfer-code(currency), "transfer", "bank-details")
+        + (
+          iban: _upper-id(bank.at("iban", default: none)),
+          // Only an explicit name of `bank-details` (BT-85).
+          account-name: text-or-none(bank.at("account-name", default: none)),
+          bic: _upper-id(bank.at("bic", default: none)),
+        ),
+    )
+  }
+  let debit = means.direct-debit
+  if debit != none {
+    entries.push(
+      _means(direct-debit-code(currency), "direct-debit", "direct-debit")
+        + (debtor-iban: _upper-id(debit.at("debtor-iban", default: none))),
+    )
+  }
+  let card = means.card
+  if card != none {
+    entries.push(
+      _means(card-code(card.at("kind", default: auto)), "card", "card-payment")
+        + (
+          card: (
+            id: card.last4,
+            holder: text-or-none(card.at("holder", default: none)),
+          ),
+        ),
+    )
+  }
+  let paid = means.paid
+  let kind = if paid != none { paid.at("kind", default: none) }
+  if kind != none {
+    let detailed = (
+      (kind == "transfer" and means.transfers.len() > 0)
+        or (kind == "direct-debit" and debit != none)
+        or (kind == "card" and card != none)
+    )
+    if not detailed {
+      entries.push(_means(method-code(paid.method, currency), kind, "paid"))
+    }
+  }
+  entries
+}
+
+/// A cash discount in the Skonto syntax of XRechnung (BR-DE-18): the days,
+/// the percentage with two decimals and the amount it applies to, if given,
+/// e.g. "#SKONTO#TAGE=14#PROZENT=2.00#".
+///
+/// -> str
+#let skonto-line(discount) = (
+  "#SKONTO#TAGE="
+    + str(discount.days)
+    + "#PROZENT="
+    + fmt-number(discount.percent)
+    + if discount.basis != none {
+      "#BASISBETRAG=" + fmt-number(discount.basis)
+    } else { "" }
+    + "#"
+)
+
+// Payment terms of several parts, each on a line of its own.
+#let _terms-lines(first, lines) = {
+  let parts = if first == none { () } else { (first,) }
+  payment-terms((parts + lines).join("\n"))
+}
+
+/// The payment terms (BT-20) a profile states: XRechnung states cash
+/// discounts in its Skonto syntax (`terms-xrechnung`, `none` if the terms
+/// have none), the other profiles as the invoice prints them.
+///
+/// -> none | str
+#let profile-terms(payment, profile) = {
+  let xrechnung = payment.at("terms-xrechnung", default: none)
+  if profile.xrechnung and xrechnung != none { xrechnung } else {
+    payment.terms
+  }
+}
+
 /// Builds the e-invoice data model from the root context and the computed
 /// line item data.
 ///
+/// `payment-means` are the payment means of the invoice as the root context
+/// resolves them (see `logic/payment-means.typ`); without them, the bank
+/// details `bank` are its only payment means.
+///
 /// -> dictionary
-#let build-model(ctx, item-data, payment-goal: none, bank: none) = {
+#let build-model(
+  ctx,
+  item-data,
+  payment-goal: none,
+  bank: none,
+  payment-means: none,
+) = {
   let sender = ctx.at("sender", default: (:))
   let recipient = ctx.at("recipient", default: (:))
   // The document type (BT-3), see `resolve-document-type`.
@@ -1419,7 +1546,19 @@
   let net-total = line-total - allowance-total + charge-total
   let tax-total = _sum(breakdown.map(tax => tax.amount))
   let gross-total = net-total + tax-total
-  let prepaid-total = to-decimal(item-data.at("prepaid-total", default: 0))
+  let means = if payment-means != none { payment-means } else {
+    resolve-payment-means(
+      if bank != none { (bank,) } else { () },
+      none,
+      none,
+      none,
+    )
+  }
+  // An invoice that is paid already (`paid`) has the total as paid amount
+  // (BT-113), prepayments included, so nothing is due (BT-115).
+  let prepaid-total = if means.paid != none { gross-total } else {
+    to-decimal(item-data.at("prepaid-total", default: 0))
+  }
 
   let locale = ctx.at("locale", default: (:))
   let currency-meta = locale.at("currency", default: (:))
@@ -1441,9 +1580,6 @@
   // The service period and the date format the invoice prints it with.
   let service-period = _service-period(ctx, items)
   let format-date = locale.at("format", default: (:)).at("date", default: none)
-
-  let iban = if bank != none { compact(bank.at("iban", default: none)) }
-  let bic = if bank != none { compact(bank.at("bic", default: none)) }
 
   // BT-9 and BT-20: the invoice's own `due-date` wins over the payment goal.
   // `terms-input` is the input the payment terms come from.
@@ -1488,6 +1624,34 @@
       if terms != none { terms-input = "payment-goal" }
     }
   }
+  // The cash discounts of the payment goal follow the terms, each on a line
+  // of its own: as the invoice prints them, and in XRechnung in its Skonto
+  // syntax (BR-DE-18).
+  let discounts = if payment-goal != none {
+    payment-goal.at("discounts", default: ())
+  } else { () }
+  let terms-xrechnung = none
+  if discounts.len() > 0 {
+    let notes = ()
+    let lines = ()
+    for discount in discounts {
+      notes.push(plain-text(discount.note))
+      lines.push(skonto-line(discount))
+    }
+    terms-xrechnung = _terms-lines(terms, lines)
+    terms = _terms-lines(terms, notes)
+    if terms-input == none { terms-input = "payment-goal" }
+  }
+  // A paid invoice states what it prints about the payment.
+  if means.paid != none and terms == none {
+    let lines = ()
+    for line in means.paid.at("terms", default: ()) {
+      lines.push(plain-text(line))
+    }
+    terms = _terms-lines(none, lines)
+    if terms != none { terms-input = "paid" }
+  }
+  let debit = means.direct-debit
 
   (
     profile: profile,
@@ -1577,17 +1741,27 @@
     ),
     payment: (
       reference: text-or-none(resolve-payment-reference(ctx, bank: bank)),
-      // BT-81: SEPA credit transfer, other credit transfers outside EUR.
-      means: if iban != none {
-        (
-          type-code: if currency == "EUR" { "58" } else { "30" },
-          iban: upper(iban),
-          bic: if bic != none { upper(bic) },
-        )
-      },
+      // BG-16: the payment means and their details.
+      means: payment-means-model(means, currency),
+      // BG-19: the mandate reference (BT-89) and the creditor identifier
+      // (BT-90) of a direct debit.
+      mandate: if debit != none { _identifier(debit.mandate) },
+      creditor-id: if debit != none { _upper-id(debit.creditor-id) },
+      // The invoice is paid already (`paid`).
+      paid: means.paid != none,
       due-date: due-date,
+      // BT-20, and in XRechnung, if they differ, the terms with the cash
+      // discounts in its Skonto syntax (see `profile-terms`).
       terms: terms,
+      terms-xrechnung: terms-xrechnung,
       terms-input: terms-input,
+      // The cash discounts of the payment goal: `days`, `percent` (in
+      // percent) and `basis` (`none` if not given).
+      discounts: discounts.map(discount => (
+        days: discount.days,
+        percent: discount.percent,
+        basis: discount.basis,
+      )),
     ),
   )
 }

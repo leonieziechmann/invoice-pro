@@ -429,7 +429,12 @@ The automated `validate-all-zugferd` suite covers:
 - `tests/integration/zugferd-tax-representative/test.typ` — Swiss seller identified by its UID (BT-30) with a fiscal representative in Germany (BG-11), whose VAT identifier satisfies the rules of an intra-community supply (category `K`).
 - `tests/integration/zugferd-minimum-legal-id/test.typ` — Factur-X MINIMUM of a French micro-entrepreneur identified by its SIRET (BT-30) instead of a VAT identifier.
 - `tests/integration/zugferd-credit-note/test.typ` — Credit note (document type `381`) with positive amounts in XRechnung: the preceding invoice (BT-25), the refund date and the buyer's account the amount is refunded to (BG-16).
+- `tests/integration/zugferd-direct-debit/test.typ` — XRechnung collected by SEPA direct debit (BT-81 = 59) with mandate reference (BT-89), creditor identifier (BT-90) and debited account (BT-91).
+- `tests/integration/zugferd-card-payment/test.typ` — EN 16931 invoice paid by credit card (BT-81 = 54, BG-18): paid amount (BT-113) equal to the total, nothing due.
+- `tests/integration/zugferd-paid-cash/test.typ` — XRechnung paid in cash (BT-81 = 10), with the printed payment sentence as payment terms (BT-20).
+- `tests/integration/zugferd-cash-discount/test.typ` — XRechnung with two cash discounts in the Skonto syntax of the KoSIT (BT-20, BR-DE-18), one with a base amount, and an account name (BT-85).
 - `tests/docs/e-invoicing-complete/test.typ` — Complete example of the e-invoicing documentation.
+- `tests/docs/e-invoicing-sepa-debit/test.typ` — Direct debit example of the e-invoicing documentation.
 - `template/invoice.typ` — Default release invoice template.
 
 #### When to Run ZUGFeRD Validation
@@ -520,7 +525,7 @@ export MUSTANG_JAR=~/Downloads/Mustang-CLI-2.14.0.jar
 | `INPUT_ERROR`    | the compilation stopped with the message the case expects (a deliberate input check)                    |
 | `NO_XML`         | no e-invoice XML was attached                                                                           |
 
-The oracles compare the XML with the facts the generator put into the invoice (`O-BT1` invoice number, `O-BT3` document type, `O-BT5` currency, `O-BT27`/`O-BT44` party names, `O-BT29`/`O-BT31`/`O-BT32` seller identifiers, `O-BT46`/`O-BT48` buyer identifiers, `O-BT37`/`O-BT38`/`O-BT52`/`O-BT53` city and post code, `O-BT40`/`O-BT55`/`O-BT80` countries, `O-BG23` VAT categories and rates, `O-BT120` exemption reasons, `O-BG20/21` and `O-BG27/28` allowances and charges with their amounts, `O-BG14` invoicing period, `O-BT9` due date, `O-BT84` IBAN, `O-BT130` units, `O-BT153` item names) and with the printed PDF (`O-PDF-BT112`/`O-PDF-BT115` totals, `O-PDF-BT120` exemption reasons). `O-META-*` are the relations between twins. `O-DIAG` checks invoice-pro's own messages in every case: each error names its rule, the input field, the problem and a hint.
+The oracles compare the XML with the facts the generator put into the invoice (`O-BT1` invoice number, `O-BT3` document type, `O-BT5` currency, `O-BT27`/`O-BT44` party names, `O-BT29`/`O-BT31`/`O-BT32` seller identifiers, `O-BT46`/`O-BT48` buyer identifiers, `O-BT37`/`O-BT38`/`O-BT52`/`O-BT53` city and post code, `O-BT40`/`O-BT55`/`O-BT80` countries, `O-BG23` VAT categories and rates, `O-BT120` exemption reasons, `O-BG20/21` and `O-BG27/28` allowances and charges with their amounts, `O-BG14` invoicing period, `O-BT9` due date, `O-BT84` IBAN, `O-BT81` payment means codes, `O-BT85` account name, `O-BG18` payment card, `O-BT89`/`O-BT90`/`O-BT91` direct debit, `O-BT113` paid invoice, `O-BT20` payment terms, `O-BT130` units, `O-BT153` item names) and with the printed PDF (`O-PDF-BT112`/`O-PDF-BT115` totals, `O-PDF-BT120` exemption reasons). `O-META-*` are the relations between twins. `O-DIAG` checks invoice-pro's own messages in every case: each error names its rule, the input field, the problem and a hint.
 
 **Hard gates.** The job fails when a case does not meet its expectation. The only exceptions are the failure signatures listed in `tools/zugferd/known-issues.toml` (see below), and they never cover the hard gate of the legal population: every legal invoice must be `AGREE_VALID`, so a `FALSE_NEGATIVE`, `FALSE_POSITIVE`, `STRICTER`, `CRASH`, `GUARD_ONLY` or any other class there fails the job even when its signature is listed (the report says `HARD GATE BROKEN`). Oracle failures of legal invoices can be known issues. The job also fails when a listed signature no longer occurs.
 
@@ -635,6 +640,7 @@ Every non-trivial code block in `docs/docs/` must be registered here. When addin
 | `api-reference/index.md`               | `blueprint`            | Architectural blueprint with items, payment, bank, signature            | `docs/api-index-blueprint/`      | ✅                 |
 | `api-reference/invoice.md`             | `minimal-config`       | Minimal valid configuration example                                     | `docs/api-invoice-minimal/`      | ✅                 |
 | `api-reference/components.md`          | `apply-bulk-tax`       | Apply block wrapping items with shared tax rate                         | `docs/api-components-apply/`     | ✅                 |
+| `api-reference/components.md`          | `payment-means`        | Cash discount, direct debit, card payment and paid invoice              | `docs/api-components-payment/`   | ✅                 |
 | `api-reference/theme.md`               | `din5008-example`      | DIN-5008 theme with custom parameters                                   | `docs/api-theme-din5008/`        | ✅                 |
 | `api-reference/theme.md`               | `blank-example`        | Blank theme with native Typst page setup                                | `docs/api-theme-blank/`          | ✅                 |
 | `e-invoicing.md`                       | `custom-report`        | Theme `zugferd-report` function for a custom problem list               | `docs/e-invoicing-report/`       | ✅                 |
@@ -642,6 +648,7 @@ Every non-trivial code block in `docs/docs/` must be registered here. When addin
 | `e-invoicing.md`                       | `item-data`            | Note, date and country of origin of items                               | `docs/e-invoicing-item-data/`    | ✅                 |
 | `e-invoicing.md`                       | `complete-example`     | Complete ZUGFeRD-compliant invoice                                      | `docs/e-invoicing-complete/`     | ✅                 |
 | `api-reference/invoice/identifiers.md` | `printing-identifiers` | Register number as legal registration identifier and printed in `extra` | `docs/api-identifiers-printing/` | ✅                 |
+| `e-invoicing.md`                       | `direct-debit`         | XRechnung collected by SEPA direct debit                                | `docs/e-invoicing-sepa-debit/`   | ✅                 |
 | `api-reference/locale/index.md`        | `locale-customize`     | Locale customization with `locale.custom` overrides                     | —                                | ⚠️ not implemented |
 | `api-reference/locale/index.md`        | `currency-format`      | Custom currency formatting override                                     | —                                | ⚠️ not implemented |
 | `api-reference/locale/custom.md`       | `pl-language`          | Polish language dictionary definition                                   | —                                | ⚠️ not implemented |

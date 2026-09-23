@@ -37,6 +37,13 @@ Facts (all optional; an absent fact is not checked):
   period                   [start, end] of BG-14 (YYYYMMDD)      O-BG14
   due_date                 BT-9 (YYYYMMDD)                       O-BT9
   iban                     BT-84                                 O-BT84
+  payment_means            BT-81 of each payment means, in order O-BT81
+  account_name             BT-85                                 O-BT85
+  card                     [BT-87, BT-88] of the payment card    O-BG18
+  mandate, creditor_id     BT-89, BT-90                          O-BT89, O-BT90
+  debtor_iban              BT-91                                 O-BT91
+  paid                     true: BT-113 = BT-112, BT-115 = 0     O-BT113
+  payment_terms            BT-20, exactly                        O-BT20
   units                    BT-130 of every line, in order        O-BT130
   line_names               BT-153 of every line, in order        O-BT153
   number_format            [decimal sign, group sign] of the printed amounts
@@ -221,6 +228,38 @@ def _check_modifiers(check, oracle, facts_mods, found, inclusive, line_rates=Non
             )
 
 
+def _check_payment(check, facts, doc):
+    """The payment means (BG-16) and payment terms the input states: the codes
+    (BT-81), the account name (BT-85), the payment card (BG-18), the direct
+    debit (BT-89, BT-90, BT-91), a paid invoice (BT-113, BT-115) and the terms
+    (BT-20)."""
+    means = SETTLEMENT + "/ram:SpecifiedTradeSettlementPaymentMeans"
+    terms = SETTLEMENT + "/ram:SpecifiedTradePaymentTerms"
+    expected = {
+        "O-BT81": ("payment_means", means + "/ram:TypeCode"),
+        "O-BT85": ("account_name", means + "/ram:PayeePartyCreditorFinancialAccount/ram:AccountName"),
+        "O-BT89": ("mandate", terms + "/ram:DirectDebitMandateID"),
+        "O-BT90": ("creditor_id", SETTLEMENT + "/ram:CreditorReferenceID"),
+        "O-BT91": ("debtor_iban", means + "/ram:PayerPartyDebtorFinancialAccount/ram:IBANID"),
+        "O-BT20": ("payment_terms", terms + "/ram:Description"),
+    }
+    for oracle, (fact, path) in expected.items():
+        if facts.get(fact) is None:
+            continue
+        want = facts[fact] if isinstance(facts[fact], list) else [facts[fact]]
+        got = xtext(doc, path)
+        check(oracle, got == want, f"{got} != {want!r}")
+    if facts.get("card") is not None:
+        card = means + "/ram:ApplicableTradeSettlementFinancialCard"
+        got = [xtext1(doc, card + "/ram:ID"), xtext1(doc, card + "/ram:CardholderName")]
+        check("O-BG18", got == list(facts["card"]), f"{got} != {facts['card']!r}")
+    if facts.get("paid"):
+        grand = dec(xtext1(doc, SUMMATION + "/ram:GrandTotalAmount"))
+        paid = dec(xtext1(doc, SUMMATION + "/ram:TotalPrepaidAmount"))
+        due = dec(xtext1(doc, SUMMATION + "/ram:DuePayableAmount"))
+        check("O-BT113", paid == grand and due == 0, f"paid {paid}, due {due} of {grand}")
+
+
 def check(facts, doc, pdf_text, profile):
     """Problems of one case (list of "O-<id>: detail")."""
     problems = []
@@ -329,6 +368,7 @@ def check(facts, doc, pdf_text, profile):
                 SETTLEMENT + "/ram:SpecifiedTradeSettlementPaymentMeans/ram:PayeePartyCreditorFinancialAccount/ram:IBANID",
             )
             check_("O-BT84", got == [facts["iban"]], f"{got} != {facts['iban']!r}")
+        _check_payment(check_, facts, doc)
 
     if profile in WITH_LINES:
         lines = doc.xpath(LINES, namespaces=NS)

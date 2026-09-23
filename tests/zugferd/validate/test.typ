@@ -20,7 +20,8 @@
   // Errors are listed before warnings, each with a rule, field and message.
   let m = base
   m.invoice.number = none
-  m.payment.means.iban = "DE00512108001245126199"
+  m.totals.prepaid = m.totals.gross + 1
+  m.totals.due = decimal("-1")
   let diagnostics = validate(m)
   assert.eq(diagnostics.map(d => d.level), ("error", "warning"))
   assert.eq(diagnostics.first(), (
@@ -35,7 +36,7 @@
   let m = base
   m.invoice.number = none
   m.invoice.buyer-reference = none
-  m.payment.means = none
+  m.payment.means = ()
   assert.eq(rules(m), ("BR-02", "BR-DE-1", "BR-DE-15"))
 
   // --- Document ---
@@ -229,16 +230,22 @@
   m.payment.terms = "sofort"
   assert.eq(rules(m), ())
   let m = base
-  m.payment.means = none
+  m.payment.means = ()
   assert.eq(rules(m), ("BR-DE-1",))
   m.profile = resolve-profile("en16931", "FR")
   assert.eq(rules(m), ())
+  // An invalid IBAN is an error: the buyer could not pay (XRechnung: BR-DE-19
+  // for a SEPA credit transfer)
   let m = base
-  m.payment.means.iban = "DE00512108001245126199"
+  m.payment.means.at(0).iban = "DE00512108001245126199"
+  assert.eq(rules(m), ("BR-DE-19",))
+  m.profile = resolve-profile("en16931", "FR")
+  assert.eq(rules(m), ("IP-PAY-01",))
+  let m = base
   m.totals.prepaid = m.totals.gross + 1
   m.totals.due = decimal("-1")
   assert.eq(rules(m), ())
-  assert.eq(rules(m, level: "warning"), ("BR-CO-16", "BR-DE-19"))
+  assert.eq(rules(m, level: "warning"), ("BR-CO-16",))
 
   // --- Consistency with the printed invoice ---
   let m = base

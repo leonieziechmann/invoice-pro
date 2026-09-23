@@ -147,6 +147,33 @@
     reference: "Concepto",
   ),
 
+  /// Textos de los medios de pago además de los datos bancarios
+  payment-means: (
+    method: "Forma de pago",
+    transfer: "Transferencia",
+    direct-debit: "Domiciliación bancaria",
+    sepa-direct-debit: "Adeudo directo SEPA",
+    card: "Pago con tarjeta",
+    credit-card: "Tarjeta de crédito",
+    debit-card: "Tarjeta de débito",
+    cash: "Efectivo",
+    cheque: "Cheque",
+    online: "Pago en línea",
+    mandate: "Referencia del mandato",
+    creditor-id: "Identificador del acreedor",
+    debtor-iban: "Su IBAN",
+    card-number: "Número de tarjeta",
+    card-holder: "Titular de la tarjeta",
+    paid: (
+      sum,
+      date,
+    ) => [El importe total de *#sum* ha sido pagado#if date != none [ el #date].],
+    paid-due: (
+      sum,
+      date,
+    ) => [El importe pendiente de *#sum* ha sido pagado#if date != none [ el #date].],
+  ),
+
   /// Bloques de texto para condiciones de pago
   payment: (
     /// Genera la frase final de instrucciones de pago.
@@ -160,6 +187,33 @@
       sum,
       deadline,
     ) => [Por favor, transfiera el importe pendiente de *#sum* #deadline a la cuenta indicada a continuación.],
+
+    /// Frase de pago para una domiciliación bancaria.
+    text-direct-debit: (
+      sum,
+      deadline,
+    ) => [El importe total de *#sum* se cargará en su cuenta mediante domiciliación bancaria #deadline.],
+    text-direct-debit-due: (
+      sum,
+      deadline,
+    ) => [El importe pendiente de *#sum* se cargará en su cuenta mediante domiciliación bancaria #deadline.],
+
+    /// Frase de pago para un pago con tarjeta.
+    text-card: (
+      sum,
+      deadline,
+    ) => [El importe total de *#sum* se cargará en su tarjeta #deadline.],
+    text-card-due: (
+      sum,
+      deadline,
+    ) => [El importe pendiente de *#sum* se cargará en su tarjeta #deadline.],
+
+    /// Nota de un descuento por pronto pago.
+    cash-discount: (
+      percent,
+      deadline,
+      basis,
+    ) => [Por pago #deadline se concede un descuento por pronto pago del #percent#if basis != none [ sobre #basis].],
 
     /// Texto para una fecha de vencimiento fija.
     deadline-date: date => ("antes del", date).join(" "),

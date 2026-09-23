@@ -109,6 +109,9 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | `IP-TAX-01`     | error   | `tax: none` in an e-invoice: the items would be declared as zero rated (`Z`). Use `tax.zero()`, `tax.exempt(grounds: ..)`, `tax.outside-scope()` or `tax-exempt-small-biz`.                                                                                                        |
 | `IP-PRINT-02`   | error   | Amounts printed in another currency than the invoice currency (BT-5), e.g. a custom locale that prints "zł" while the XML states EUR.                                                                                                                                              |
 | `IP-DEC-01`     | error   | A VAT rate with more than 4 decimals, which the XML cannot state exactly (and which could collide with another VAT group).                                                                                                                                                         |
+| `IP-PAY-01`     | error   | An IBAN with wrong check digits or format in `bank-details` or as `debtor-iban` of `direct-debit`, where `BR-DE-19` and `BR-DE-20` do not check it (outside XRechnung, or an invoice not in euro).                                                                                 |
+| `IP-PAY-02`     | error   | A SEPA creditor identifier (BT-90) of `direct-debit` with wrong check digits or format.                                                                                                                                                                                            |
+| `IP-PAY-03`     | error   | Two kinds of payment means that the official rules accept together, e.g. `bank-details` next to `card-payment`: an invoice states one payment means (BT-81), so that the buyer does not pay twice.                                                                                 |
 | `IP-UNIT-01`    | warning | A unit code used verbatim that is also a common German abbreviation of another unit (`STK`, `PAL`, `FL`, `GL`, `KT`).                                                                                                                                                              |
 | `IP-DOC-01`     | error   | A subject that names another kind of document than an invoice (e.g. "Gutschrift", "Angebot", "Credit note", "Devis") without `document-type`: the e-invoice would state a commercial invoice that asks the buyer to pay. See [Document Type](#9-document-type-bt-3).               |
 | `IP-DOC-02`     | error   | A corrected invoice (`document-type: "corrected"`) without `preceding-invoice-nr`: it replaces an invoice, which the VAT Directive (Art. 219) requires it to name. XRechnung checks it as `BR-DE-26`.                                                                              |
@@ -128,7 +131,7 @@ The `zugferd-errors` parameter of `invoice` decides what happens with the proble
 | `"report"`          | Errors and warnings are listed in a box at the top of the invoice instead of stopping the compilation, which is handy while filling in the data in the preview. If the theme shows no report, errors stop the compilation as with `"panic"` (see [Custom Report Layout](#custom-report-layout)). The XML of an invoice with errors is attached as a draft: as `invoice-draft.xml` instead of `factur-x.xml` and with the relationship `"data"`, so that no receiving software takes it for the e-invoice. With warnings only, the XML is attached as usual. |
 | `"ignore"`          | The check is skipped on purpose: the XML is attached as usual (`factur-x.xml`, relationship of the profile), whatever its errors. It may then be invalid, and you are responsible for it. Use this only if you validate the XML yourself, e.g. when a recipient explicitly accepts a deviation.                                                                                                                                                                                                                                                             |
 
-A missing or invalid IBAN in [`bank-details`](./api-reference/components.md#bank-details) makes the printed invoice wrong as well, so it stops the compilation with a message naming the IBAN, also with `"ignore"`. With `"report"`, it is marked in the bank details instead, and a placeholder takes the place of the EPC-QR code.
+A missing or invalid IBAN in [`bank-details`](./api-reference/components.md#bank-details), or an invalid IBAN or creditor identifier of a [`direct-debit`](./api-reference/components.md#direct-debit), makes the printed invoice wrong as well, so it stops the compilation with a message naming it, also with `"ignore"`. With `"report"`, it is marked where it is printed instead (a placeholder takes the place of the EPC-QR code), and the report lists it as an error (`BR-DE-19` or `BR-DE-20` in XRechnung, `IP-PAY-01` or `IP-PAY-02` otherwise), so the XML is attached as a draft.
 
 ```typst
 #show: invoice.with(
@@ -397,16 +400,111 @@ With `tax-mode: "inclusive"`, the invoice prints gross prices, while the XML sta
 
 ### 5. Payment Terms and Instructions
 
-- **Due Date or Payment Terms (BT-9 / BT-20):** As long as an amount is due, the invoice must state when to pay (BR-CO-25). Add a [`payment-goal`](./api-reference/components.md#payment-goal) (with `days` or a `date`) or set `due-date` on the invoice. A textual `date` or `due-date` (e.g. `[upon receipt]`) is written as payment terms, with its line breaks.
-- **Cash Discount (Skonto):** XRechnung states a cash discount in the payment terms, as a line of its own in the syntax of the KoSIT: `#SKONTO#TAGE=` with the days, `#PROZENT=` with the percent and two decimals, optionally `#BASISBETRAG=` with the amount it applies to, and a closing `#`. In the `"xrechnung"` profile, every line of the payment terms that starts with `#` must follow this syntax, and a line after the last cash discount that contains `#` more than once must end with its last `#` (BR-DE-18). `invoice-pro` adds the line break that XRechnung requires after a closing `#` at the end of the terms:
+- **Due Date or Payment Terms (BT-9 / BT-20):** As long as an amount is due, the invoice must state when to pay (BR-CO-25). Add a [`payment-goal`](./api-reference/components.md#payment-goal) (with `days` or a `date`) or set `due-date` on the invoice. A textual `date` or `due-date` (e.g. `[upon receipt]`) is written as payment terms, with its line breaks. An invoice that is [paid already](#paid-invoices) has nothing due and needs neither.
+- **Payment Instructions (BG-16):** The components that say how the buyer pays are the payment means of the e-invoice (see below). IBAN and BIC are written without spaces and in upper case; they are the same values the bank details print and the EPC-QR code carries.
 
-  ```typst
-  due-date: "Zahlbar innerhalb von 30 Tagen netto, innerhalb von 14 Tagen mit 2 % Skonto.\n#SKONTO#TAGE=14#PROZENT=2.00#",
-  ```
+#### Payment Means
 
-  The printed invoice must state an agreed cash discount as well, but the themes do not print a textual `due-date` on their own: print it where you state the payment terms (e.g. with [`#info.due-date`](./api-reference/components.md#info-module)) or state the cash discount in your own words. A cash discount is no [`discount`](./api-reference/line-items/index.md#adjustments-modifier-discount--surcharge): a discount reduces the amounts of the invoice no matter when the buyer pays.
+Each payment means has a component that prints it and states it in the e-invoice, so the printed invoice and the XML always say the same. The payment goal prints the sentence of the payment means: it asks for a transfer only when the buyer pays by credit transfer.
 
-- **Payment Instructions (BG-16):** [`bank-details`](./api-reference/components.md#bank-details) with an `iban` are written as credit transfer (SEPA for EUR invoices). XRechnung requires them (BR-DE-1). IBAN and BIC are written without spaces and in upper case; they are the same values the bank details print and the EPC-QR code carries. A missing or invalid IBAN stops the compilation.
+| Component                                                    | Payment means code (BT-81)                                       | Written details                                                                                                  |
+| :----------------------------------------------------------- | :--------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------- |
+| [`bank-details`](./api-reference/components.md#bank-details) | `58` SEPA credit transfer (`30` in another currency than euro)   | IBAN (BT-84), account name (BT-85, only a `name` given to `bank-details`), BIC (BT-86)                           |
+| [`direct-debit`](./api-reference/components.md#direct-debit) | `59` SEPA direct debit (`49` in another currency than euro)      | Mandate reference (BT-89), creditor identifier (BT-90), debited account (BT-91)                                  |
+| [`card-payment`](./api-reference/components.md#card-payment) | `54` credit card, `55` debit card, `48` bank card (`kind: auto`) | Last digits of the card number (BT-87), card holder (BT-88)                                                      |
+| [`paid`](./api-reference/components.md#paid)                 | The code of its `method`, e.g. `10` for cash                     | Paid amount (BT-113) equal to the total, nothing due (BT-115), and the printed sentence as payment terms (BT-20) |
+
+- **One payment means:** An invoice states one payment means (BT-81), so that the buyer knows how to pay and does not pay twice. A direct debit next to bank details is an error in XRechnung (`BR-DE-23-b`), as is a direct debit next to a payment card (`BR-DE-24-b`); `invoice-pro` reports the other combinations as `IP-PAY-03`. To show your bank account for information only, print it as text. Several `bank-details` are several accounts of one credit transfer, and each of them is written.
+- **EPC-QR code:** The QR code of the bank details asks the buyer to transfer the amount. It is therefore only shown by default when the invoice is paid by credit transfer: not next to a `direct-debit` or a `card-payment`, and not on a `paid` invoice. `qr-code: (display: true)` shows it anyway.
+- **XRechnung:** An XRechnung requires payment instructions (`BR-DE-1`) and the details of its payment means: the IBAN of a credit transfer (`BR-DE-23-a`), the payment card of a card payment (`BR-DE-24-a`), and for a direct debit the mandate reference (`PEPPOL-EN16931-R061`), the creditor identifier (`BR-DE-30`) and the debited account (`BR-DE-31`). The IBANs must be valid (`BR-DE-19`, `BR-DE-20`); `invoice-pro` checks the check digits of the creditor identifier as well (`IP-PAY-02`). XRechnung only warns about an invalid IBAN and about a missing mandate reference, and the KoSIT validator accepts such an invoice, but other validators, such as Mustang, reject it, and the amount could not be paid or collected. `invoice-pro` therefore reports these rules as errors.
+- **Profiles:** BASIC WL and BASIC state a direct debit, but neither the account name nor the payment card, and MINIMUM states no payment means at all, only the amount due. What a profile cannot state is still printed, and the report lists it as the warning `IP-PROFILE-01`.
+
+#### Direct Debit
+
+A SEPA direct debit needs the mandate the buyer signed and your creditor identifier; XRechnung requires the IBAN of the debited account as well. The payment goal then announces the debit instead of asking for a transfer:
+
+```typst
+#import "@preview/invoice-pro:0.4.2": *
+
+#show: invoice.with(
+  theme: themes.DIN-5008(font: "libertinus serif"),
+  locale: locale.en-de,
+  zugferd: "xrechnung",
+  sender: (
+    name: "Consulting Group GmbH",
+    address: "Tech Avenue 42",
+    city: "80331 München",
+    country: country.de,
+    vat-id: "DE123456789",
+    contact: (
+      name: "Max Mustermann",
+      phone: "+49 89 1234567",
+      email: "max@consultinggroup.de",
+    ),
+  ),
+  recipient: (
+    name: "Acme Corp",
+    address: "Industrial Road 1",
+    city: (name: "Stuttgart", post-code: "70173"),
+    country: country.de,
+    email: "invoices@acme.example",
+    buyer-reference: "04011000-12345-67",
+  ),
+  invoice-nr: "INV-2026-104",
+  date: datetime(year: 2026, month: 9, day: 1),
+)
+
+#line-items[
+  #item([Maintenance contract, September], price: 250)
+]
+
+// "The total amount of 297,50 € will be collected from your account by
+// direct debit within 14 days."
+#payment-goal(days: 14)
+
+#direct-debit(
+  mandate: "M-2026-017",
+  creditor-id: "DE98ZZZ09999999999",
+  debtor-iban: "DE02 1203 0000 0000 2020 51",
+)
+```
+
+#### Paid Invoices
+
+An invoice that is paid already, e.g. in cash or by card at the counter, uses [`paid`](./api-reference/components.md#paid) instead of a payment goal: it prints that the amount was paid, and how, and that nothing is due. The e-invoice states the total as paid amount (BT-113), nothing due (BT-115) and the payment means it was paid with. `method` is one of `"cash"` (10), `"cheque"` (20), `"online"` (68), `"card"` (48, or the code of the `card-payment`), `"transfer"` (58, or 30 in another currency than euro) and `"direct-debit"` (59, or 49), or another code of UNTDID 4461 with its printed name, e.g. `(code: "97", name: [Clearing])`.
+
+```typst
+#paid(method: "cash", date: datetime(year: 2026, month: 9, day: 1))
+```
+
+A card payment or a direct debit adds its details with its own component. XRechnung requires them: the payment card for `"card"` (`BR-DE-24-a`), the direct debit for `"direct-debit"` (`BR-DE-25-a`, in another currency than euro its mandate reference, `PEPPOL-EN16931-R061`) and the bank details for `"transfer"` (`BR-DE-23-a`). The other profiles with payment means ask for the bank details of `"transfer"` as well, as EN 16931 requires the account of a credit transfer (`BR-61`), although its official validation does not check it in CII:
+
+```typst
+#paid(method: "card")
+#card-payment(last4: "4242", holder: "Claire Martin", kind: "credit")
+```
+
+With prepayments, the printed sentence states the remaining amount that was paid; the e-invoice states the total as paid amount either way. An invoice that is paid has no payment goal: `paid` next to `payment-goal` stops the compilation.
+
+#### Cash Discount (Skonto)
+
+A cash discount for a payment within fewer days is part of the payment goal. One entry is printed after the payment sentence and written into the payment terms (BT-20):
+
+```typst
+// "... within 30 days ... For payment within 14 days, a cash discount of 2%
+// is granted."
+#payment-goal(days: 30, discount: (days: 14, percent: 2%))
+```
+
+An array states several steps, and `basis` the amount a discount applies to, e.g. `discount: ((days: 7, percent: 3%), (days: 14, percent: 2%, basis: 1000))`. XRechnung states each step as a line in the syntax of the KoSIT (`BR-DE-18`), e.g. `#SKONTO#TAGE=14#PROZENT=2.00#`, with `#BASISBETRAG=` for the basis; the other profiles state the printed sentences. The percentage has at most two decimals, as the e-invoice states it. A cash discount changes no amount of the invoice: the buyer deducts it when paying in time. It is therefore no [`discount`](./api-reference/line-items/index.md#adjustments-modifier-discount--surcharge), which reduces the amounts of the invoice no matter when the buyer pays.
+
+If you write the payment terms yourself, as a textual `due-date`, state a cash discount in XRechnung as a line of its own in this syntax: `#SKONTO#TAGE=` with the days, `#PROZENT=` with the percent and two decimals, optionally `#BASISBETRAG=` with the amount it applies to, and a closing `#`. In the `"xrechnung"` profile, every line of the payment terms that starts with `#` must follow this syntax, and a line after the last cash discount that contains `#` more than once must end with its last `#` (BR-DE-18). `invoice-pro` adds the line break that XRechnung requires after a closing `#` at the end of the terms:
+
+```typst
+due-date: "Zahlbar innerhalb von 30 Tagen netto, innerhalb von 14 Tagen mit 2 % Skonto.\n#SKONTO#TAGE=14#PROZENT=2.00#",
+```
+
+The themes do not print a textual `due-date` on their own: print it where you state the payment terms (e.g. with [`#info.due-date`](./api-reference/components.md#info-module)), so that the printed invoice states the cash discount as well.
 
 ### 6. Payment Reference (BT-83)
 
@@ -453,6 +551,7 @@ Any other code of UNTDID 1001 for invoices and credit notes can be given as text
 - A credit note with a negative total would ask the buyer to pay, so it stops the e-invoice (`IP-DOC-03`). An invoice with a negative total is valid, but a credit note is the document for it (`IP-DOC-04`, a warning).
 - As long as an amount is due, the credit note says when or how the buyer gets it (`BR-CO-25`): [`payment-goal`](./api-reference/components.md#payment-goal) prints that the amount is transferred within the given days (and states that date, BT-9), a textual `due-date` (e.g. `due-date: "Der Betrag wird mit Ihrer nächsten Rechnung verrechnet."`) states the terms (BT-20).
 - [`bank-details`](./api-reference/components.md#bank-details) on a credit note are the account the amount is paid to, usually the buyer's: the account holder defaults to the recipient's name, and no EPC-QR code is printed. Do not reuse the bank details of your invoices on a credit note: your own account would be printed with the buyer as its holder and stated as the account the credit is paid into. XRechnung requires payment instructions (BG-16) on credit notes as well (`BR-DE-1`).
+- The sender of a credit note or a self-billed invoice pays the amount, so it cannot collect it from the recipient: [`direct-debit`](./api-reference/components.md#direct-debit), [`card-payment`](./api-reference/components.md#card-payment) and a cash discount of the payment goal (`discount`) stop the compilation on these documents. [`paid`](./api-reference/components.md#paid) states that the amount has been paid already.
 - A document that amends an invoice must refer to it (Art. 219 VAT Directive): set `preceding-invoice-nr` (and `preceding-invoice-date`) to the invoice the credit note refers to. The default `references` print them.
 - In German, a credit note is titled "Rechnungskorrektur": the German VAT law reserves "Gutschrift" for self-billed invoices (§ 14 Abs. 2 Satz 2 UStG). A commercial credit note titled "Gutschrift" is permitted as well; set `subject: "Gutschrift"` together with `document-type: "credit-note"` if you prefer it.
 

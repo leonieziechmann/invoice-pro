@@ -169,6 +169,45 @@
     reference: "Reference",
   ),
 
+  /// Texts of the payment means besides the bank details: `direct-debit`,
+  /// `card-payment` and `paid`.
+  payment-means: (
+    /// Label of the payment method.
+    method: "Payment method",
+    /// Names of the payment methods.
+    transfer: "Bank transfer",
+    direct-debit: "Direct debit",
+    sepa-direct-debit: "SEPA direct debit",
+    card: "Card payment",
+    credit-card: "Credit card",
+    debit-card: "Debit card",
+    cash: "Cash",
+    cheque: "Cheque",
+    online: "Online payment",
+    /// Labels of the details of a direct debit and a payment card.
+    mandate: "Mandate reference",
+    creditor-id: "Creditor identifier",
+    debtor-iban: "Your IBAN",
+    card-number: "Card number",
+    card-holder: "Cardholder",
+    /// The sentence of an invoice that is paid already (`paid`): the paid
+    /// amount and the date of the payment (`none` if not given).
+    /// -> (content|str, none|content|str) => content
+    paid: (
+      sum,
+      date,
+    ) => if date
+      == none [The total amount of *#sum* has been paid.] else [The total amount of *#sum* was paid on #date.],
+    /// `paid` when prepayments reduced the payable amount, so `sum` is the
+    /// remaining amount that was paid.
+    /// -> (content|str, none|content|str) => content
+    paid-due: (
+      sum,
+      date,
+    ) => if date
+      == none [The amount due of *#sum* has been paid.] else [The amount due of *#sum* was paid on #date.],
+  ),
+
   /// Text blocks for payment terms
   payment: (
     /// Generates the final payment instruction sentence.
@@ -185,6 +224,47 @@
       sum,
       deadline,
     ) => [Please transfer the amount due of *#sum* #deadline to the account listed below.],
+
+    /// The payment sentence when the amount is collected by direct debit
+    /// (`direct-debit`), in place of `text`.
+    /// -> (content|str, content|str) => content
+    text-direct-debit: (
+      sum,
+      deadline,
+    ) => [The total amount of *#sum* will be collected from your account by direct debit #deadline.],
+
+    /// `text-direct-debit` when prepayments reduce the payable amount.
+    /// -> (content|str, content|str) => content
+    text-direct-debit-due: (
+      sum,
+      deadline,
+    ) => [The amount due of *#sum* will be collected from your account by direct debit #deadline.],
+
+    /// The payment sentence when the amount is charged to a payment card
+    /// (`card-payment`), in place of `text`.
+    /// -> (content|str, content|str) => content
+    text-card: (
+      sum,
+      deadline,
+    ) => [The total amount of *#sum* will be charged to your card #deadline.],
+
+    /// `text-card` when prepayments reduce the payable amount.
+    /// -> (content|str, content|str) => content
+    text-card-due: (
+      sum,
+      deadline,
+    ) => [The amount due of *#sum* will be charged to your card #deadline.],
+
+    /// The note of a cash discount (`payment-goal(discount: ..)`), printed
+    /// after the payment sentence: the percentage, the deadline (as
+    /// `deadline-days` words it) and the amount the discount applies to
+    /// (`none` if not given).
+    /// -> (str, str, none|content|str) => content
+    cash-discount: (
+      percent,
+      deadline,
+      basis,
+    ) => [For payment #deadline, a cash discount of #percent#if basis != none [ on #basis] is granted.],
 
     /// Text for a fixed target date.
     /// -> (content|str) => str

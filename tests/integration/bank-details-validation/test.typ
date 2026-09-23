@@ -95,7 +95,9 @@
   assert.eq(error(iban: invalid, qr-code: (display: false)), expected)
   // Outside the euro area there is no EPC-QR code; the IBAN is checked anyway.
   assert.eq(error(iban: invalid, region-locale: locale.de-ch), expected)
-  // The e-invoice only warns about it (BR-DE-19), the invoice must not compile.
+  // The printed invoice would be wrong as well, so the bank details stop the
+  // compilation before the e-invoice reports it (IP-PAY-01, in XRechnung
+  // BR-DE-19), also when its problems are ignored.
   assert.eq(error(iban: invalid, zugferd: "en16931"), expected)
   assert.eq(
     error(iban: invalid, zugferd: "en16931", zugferd-errors: "ignore"),
@@ -207,7 +209,8 @@
     lines(reported).contains("IBAN: DE00 3704 0044 0532 0130 00 (invalid)"),
   )
   assert(plain(reported).contains("No EPC-QR code: invalid IBAN"))
-  assert.eq(query(<report>).map(it => it.value), (("BR-DE-19",),))
+  // An invalid IBAN is an error of the e-invoice, so its XML is only a draft.
+  assert.eq(query(<report>).map(it => it.value), (("IP-PAY-01",),))
 
   assert.eq(payload(placeholder), ())
   assert(

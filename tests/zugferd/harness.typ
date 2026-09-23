@@ -5,7 +5,20 @@
 #import "/src/zugferd/model.typ": build-model
 #import "/src/zugferd/validate.typ": validate
 #import "/src/zugferd/build.typ": build-xml
+#import "/src/logic/payment-means.typ": resolve as resolve-payment-means
 #import "/tests/data-test.typ": data-test, loom
+
+/// The payment means of rendered children, as the root context resolves
+/// them: the bank details, the direct debit, the payment card and `paid`.
+#let payment-means(data) = {
+  let signals(kind) = loom.query.collect-signals(data, kind: kind)
+  resolve-payment-means(
+    signals("bank-details"),
+    signals("direct-debit").first(default: none),
+    signals("card-payment").first(default: none),
+    signals("paid").first(default: none),
+  )
+}
 
 // A German seller with every detail XRechnung asks for.
 #let seller = (
@@ -69,6 +82,7 @@
         signal("line-items").item-data,
         payment-goal: signal("payment-goal"),
         bank: signal("bank-details"),
+        payment-means: payment-means(data),
       ))
     },
     body,

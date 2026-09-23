@@ -147,6 +147,33 @@
     reference: "Causale",
   ),
 
+  /// Testi dei mezzi di pagamento oltre ai dettagli bancari
+  payment-means: (
+    method: "Modalità di pagamento",
+    transfer: "Bonifico",
+    direct-debit: "Addebito diretto",
+    sepa-direct-debit: "Addebito diretto SEPA",
+    card: "Pagamento con carta",
+    credit-card: "Carta di credito",
+    debit-card: "Carta di debito",
+    cash: "Contanti",
+    cheque: "Assegno",
+    online: "Pagamento online",
+    mandate: "Riferimento del mandato",
+    creditor-id: "Identificativo del creditore",
+    debtor-iban: "Il Suo IBAN",
+    card-number: "Numero della carta",
+    card-holder: "Titolare della carta",
+    paid: (
+      sum,
+      date,
+    ) => [L'importo totale di *#sum* è stato pagato#if date != none [ il #date].],
+    paid-due: (
+      sum,
+      date,
+    ) => [L'importo dovuto di *#sum* è stato pagato#if date != none [ il #date].],
+  ),
+
   /// Blocchi di testo per i termini di pagamento
   payment: (
     /// Genera la frase finale delle istruzioni di pagamento.
@@ -160,6 +187,33 @@
       sum,
       deadline,
     ) => [Si prega di versare l'importo dovuto di *#sum* #deadline sul conto indicato di seguito.],
+
+    /// Frase di pagamento per un addebito diretto.
+    text-direct-debit: (
+      sum,
+      deadline,
+    ) => [L'importo totale di *#sum* sarà addebitato sul Suo conto tramite addebito diretto #deadline.],
+    text-direct-debit-due: (
+      sum,
+      deadline,
+    ) => [L'importo dovuto di *#sum* sarà addebitato sul Suo conto tramite addebito diretto #deadline.],
+
+    /// Frase di pagamento per un pagamento con carta.
+    text-card: (
+      sum,
+      deadline,
+    ) => [L'importo totale di *#sum* sarà addebitato sulla Sua carta #deadline.],
+    text-card-due: (
+      sum,
+      deadline,
+    ) => [L'importo dovuto di *#sum* sarà addebitato sulla Sua carta #deadline.],
+
+    /// Nota di uno sconto per pagamento anticipato.
+    cash-discount: (
+      percent,
+      deadline,
+      basis,
+    ) => [Per pagamento #deadline è concesso uno sconto del #percent#if basis != none [ su #basis].],
 
     /// Testo per una data di scadenza fissa.
     deadline-date: date => ("entro il", date).join(" "),

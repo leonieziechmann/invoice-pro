@@ -16,6 +16,24 @@
 /// -> str
 #let normalize-iban(iban) = upper(plain-text(iban).replace(_whitespace, ""))
 
+/// The remainder of an alphanumeric text in upper case, read as a number
+/// with the letters A to Z standing for 10 to 35, divided by 97: the check
+/// of ISO 7064 MOD 97-10, which IBANs and SEPA creditor identifiers use. A
+/// text with correct check digits has the remainder 1.
+///
+/// -> int
+#let mod97(text) = {
+  let remainder = 0
+  for char in text.clusters() {
+    if char.match(_digit) != none {
+      remainder = calc.rem(remainder * 10 + int(char), 97)
+    } else {
+      remainder = calc.rem(remainder * 100 + str.to-unicode(char) - 55, 97)
+    }
+  }
+  remainder
+}
+
 /// Whether an IBAN in electronic format (see `normalize-iban`) has the
 /// structure of an IBAN (country code, check digits, up to 30 alphanumeric
 /// characters) and correct check digits (ISO 7064 MOD 97-10).
@@ -26,15 +44,7 @@
   if iban.match(_iban-format) == none {
     return false
   }
-  let remainder = 0
-  for char in (iban.slice(4) + iban.slice(0, 4)).clusters() {
-    if char.match(_digit) != none {
-      remainder = calc.rem(remainder * 10 + int(char), 97)
-    } else {
-      remainder = calc.rem(remainder * 100 + str.to-unicode(char) - 55, 97)
-    }
-  }
-  remainder == 1
+  mod97(iban.slice(4) + iban.slice(0, 4)) == 1
 }
 
 /// Formats an IBAN in electronic format for print: groups of four

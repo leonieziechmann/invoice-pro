@@ -146,6 +146,33 @@
     reference: "Référence",
   ),
 
+  /// Texts of the payment means besides the bank details
+  payment-means: (
+    method: "Mode de paiement",
+    transfer: "Virement",
+    direct-debit: "Prélèvement",
+    sepa-direct-debit: "Prélèvement SEPA",
+    card: "Paiement par carte",
+    credit-card: "Carte de crédit",
+    debit-card: "Carte de débit",
+    cash: "Espèces",
+    cheque: "Chèque",
+    online: "Paiement en ligne",
+    mandate: "Référence unique du mandat",
+    creditor-id: "Identifiant créancier",
+    debtor-iban: "Votre IBAN",
+    card-number: "Numéro de carte",
+    card-holder: "Titulaire de la carte",
+    paid: (
+      sum,
+      date,
+    ) => [Le montant total de *#sum* a été payé#if date != none [ le #date].],
+    paid-due: (
+      sum,
+      date,
+    ) => [Le montant restant dû de *#sum* a été payé#if date != none [ le #date].],
+  ),
+
   /// Text blocks for payment terms
   payment: (
     text: (
@@ -156,6 +183,27 @@
       sum,
       deadline,
     ) => [Veuillez transférer le montant restant dû de *#sum* #deadline sur le compte indiqué ci-dessous.],
+    text-direct-debit: (
+      sum,
+      deadline,
+    ) => [Le montant total de *#sum* sera prélevé sur votre compte #deadline.],
+    text-direct-debit-due: (
+      sum,
+      deadline,
+    ) => [Le montant restant dû de *#sum* sera prélevé sur votre compte #deadline.],
+    text-card: (
+      sum,
+      deadline,
+    ) => [Le montant total de *#sum* sera débité de votre carte #deadline.],
+    text-card-due: (
+      sum,
+      deadline,
+    ) => [Le montant restant dû de *#sum* sera débité de votre carte #deadline.],
+    cash-discount: (
+      percent,
+      deadline,
+      basis,
+    ) => [En cas de paiement #deadline, un escompte de #percent#if basis != none [ sur #basis] est accordé.],
 
     deadline-date: date => ("au plus tard le", date).join(" "),
     deadline-days: days => (

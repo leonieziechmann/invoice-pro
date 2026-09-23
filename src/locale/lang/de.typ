@@ -140,6 +140,32 @@
     reference: "Verwendungszweck",
   ),
 
+  payment-means: (
+    method: "Zahlungsart",
+    transfer: "Überweisung",
+    direct-debit: "Lastschrift",
+    sepa-direct-debit: "SEPA-Lastschrift",
+    card: "Kartenzahlung",
+    credit-card: "Kreditkarte",
+    debit-card: "Debitkarte",
+    cash: "Barzahlung",
+    cheque: "Scheck",
+    online: "Online-Zahlung",
+    mandate: "Mandatsreferenz",
+    creditor-id: "Gläubiger-ID",
+    debtor-iban: "Ihre IBAN",
+    card-number: "Kartennummer",
+    card-holder: "Karteninhaber:in",
+    paid: (
+      sum,
+      date,
+    ) => [Der Gesamtbetrag in Höhe von *#sum* wurde#if date != none [ am #date] bezahlt.],
+    paid-due: (
+      sum,
+      date,
+    ) => [Der fällige Betrag in Höhe von *#sum* wurde#if date != none [ am #date] bezahlt.],
+  ),
+
   payment: (
     text: (
       sum,
@@ -149,6 +175,27 @@
       sum,
       deadline,
     ) => [Bitte überweisen Sie den fälligen Betrag in Höhe von *#sum* #deadline auf das unten angegebene Konto.],
+    text-direct-debit: (
+      sum,
+      deadline,
+    ) => [Der Gesamtbetrag in Höhe von *#sum* wird #deadline per Lastschrift von Ihrem Konto eingezogen.],
+    text-direct-debit-due: (
+      sum,
+      deadline,
+    ) => [Der fällige Betrag in Höhe von *#sum* wird #deadline per Lastschrift von Ihrem Konto eingezogen.],
+    text-card: (
+      sum,
+      deadline,
+    ) => [Der Gesamtbetrag in Höhe von *#sum* wird Ihrer Karte #deadline belastet.],
+    text-card-due: (
+      sum,
+      deadline,
+    ) => [Der fällige Betrag in Höhe von *#sum* wird Ihrer Karte #deadline belastet.],
+    cash-discount: (
+      percent,
+      deadline,
+      basis,
+    ) => [Bei Zahlung #deadline gewähren wir #percent Skonto#if basis != none [ auf #basis].],
     deadline-date: date => ("bis zum", date).join(" "),
     deadline-days: days => (
       "innerhalb von",

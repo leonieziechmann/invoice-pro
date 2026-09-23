@@ -19,9 +19,10 @@
 
 #import "codelists.typ"
 #import "xml.typ": fmt-number, rate-digits
-#import "model.typ": vat-eas-codes, vat-id-country, vat-id-prefix
+#import "model.typ": profile-terms, vat-eas-codes, vat-id-country, vat-id-prefix
 #import "document.typ": note-subject-code-valid, title-kind
-#import "../utils/iban.typ": iban-valid
+#import "../utils/iban.typ": format-iban, iban-valid
+#import "../utils/creditor-id.typ": creditor-id-valid
 
 #let _zero = decimal("0")
 
@@ -2239,13 +2240,314 @@
   none
 }
 
+// An input the profile has no business term for: it is not written into the
+// e-invoice. `lowest` is the lowest profile that states it.
+#let _payment-not-carried(profile, field, term, lowest) = warning(
+  "IP-PROFILE-01",
+  field,
+  "The "
+    + profile.name
+    + " profile cannot state "
+    + term
+    + ", so `"
+    + field
+    + "` is not written into the e-invoice.",
+  hint: "Use the " + _quoted(lowest) + " profile or higher to state it.",
+)
+
+// What a kind of payment means is, and the input that states it, for
+// messages. A means of `paid` without details names its code.
+#let _means-names = (
+  transfer: "a credit transfer",
+  direct-debit: "a direct debit",
+  card: "a payment card",
+)
+#let _code-names = (
+  "10": "cash",
+  "20": "a cheque",
+  "68": "an online payment service",
+)
+#let _means-description(means) = {
+  let name = _means-names.at(means.kind, default: none)
+  if name == none {
+    name = _code-names.at(
+      means.type-code,
+      default: "the payment means code " + means.type-code,
+    )
+  }
+  name + " (`" + means.field + "`)"
+}
+
+// The inputs of the payment means, besides the bank details of a credit
+// transfer, for hints.
+#let _means-hint = "`#bank-details(iban: ..)` for a credit transfer, `#direct-debit(mandate: .., creditor-id: .., debtor-iban: ..)` for a SEPA direct debit, `#card-payment(last4: ..)` for a payment card, or `#paid(method: ..)` for an invoice that is paid already"
+
+// The payment means (BG-16): one kind of payment means, each with the
+// details of its kind (XRechnung: BR-DE-1, BR-DE-19, BR-DE-20, BR-DE-23,
+// BR-DE-24, BR-DE-25, BR-DE-30, BR-DE-31, PEPPOL-EN16931-R061).
+#let _check-payment-means(model) = {
+  let out = ()
+  let profile = model.profile
+  let xrechnung = profile.xrechnung
+  let payment = model.payment
+  let means = payment.means
+
+  if means.len() == 0 {
+    if xrechnung {
+      out.push(error(
+        "BR-DE-1",
+        if payment.at("paid", default: false) { "paid.method" } else {
+          "bank-details"
+        },
+        "XRechnung requires payment instructions (BG-16).",
+        hint: if payment.at("paid", default: false) {
+          "Set `method` on `paid` to the way the invoice was paid, e.g. `paid(method: \"cash\")`, or add the payment means it was paid with, e.g. `#bank-details(iban: ..)` for a credit transfer."
+        } else { "Add the payment means of the invoice: " + _means-hint + "." },
+      ))
+    }
+    return out
+  }
+
+  // An invoice states one payment means code (BT-81). XRechnung forbids the
+  // details of a direct debit (BG-19: the mandate reference, the creditor
+  // identifier or a debited account) next to a credit transfer (BR-DE-23-b)
+  // or a payment card (BR-DE-24-b); the other combinations are conflicting
+  // instructions as well, which could make the buyer pay twice.
+  let kinds = ()
+  let conflicting = ()
+  let debit-details = (
+    payment.at("mandate", default: none) != none
+      or payment.at("creditor-id", default: none) != none
+  )
+  for entry in means {
+    if entry.kind not in kinds {
+      kinds.push(entry.kind)
+      conflicting.push(entry)
+    }
+    if entry.debtor-iban != none { debit-details = true }
+  }
+  if kinds.len() > 1 {
+    let rule = if xrechnung and debit-details and "transfer" in kinds {
+      "BR-DE-23-b"
+    } else if xrechnung and debit-details and "card" in kinds {
+      "BR-DE-24-b"
+    } else { "IP-PAY-03" }
+    let names = conflicting.map(_means-description)
+    let fields = conflicting.map(entry => entry.field)
+    let paid = "paid" in fields
+    out.push(error(
+      rule,
+      fields.join(", "),
+      "The invoice states several payment means: "
+        + names.slice(0, -1).join(", ")
+        + " and "
+        + names.last()
+        + ". An invoice states one payment means (BT-81)"
+        + if paid { ": the one it was paid with." } else {
+          ", so that the buyer knows how to pay and does not pay twice."
+        },
+      hint: if paid {
+        "Remove the payment means the invoice was not paid with, e.g. `bank-details` of an invoice paid in cash, or set `method` on `paid` to the one it was paid with. To show your bank account for information only, print it as text."
+      } else {
+        "Keep the payment means the buyer pays with, e.g. remove `bank-details` when the amount is collected by direct debit or charged to a card. To show your bank account for information only, print it as text."
+      },
+    ))
+  }
+
+  let sepa-debit = false
+  for entry in means {
+    if entry.kind == "transfer" {
+      if entry.iban == none {
+        // `paid(method: "transfer")` without bank details, or bank details
+        // without an IBAN (with `zugferd-errors: "report"`; otherwise
+        // `bank-details` stops the compilation).
+        let paid = entry.field == "paid"
+        out.push(error(
+          if xrechnung { "BR-DE-23-a" } else { "BR-61" },
+          if paid { "paid.method" } else { "bank-details.iban" },
+          "A credit transfer (BT-81 = "
+            + entry.type-code
+            + ") states the account the amount is transferred to (BT-84), but none is given.",
+          hint: if paid {
+            "Add `#bank-details(iban: ..)` with the account the invoice was paid to."
+          } else { "Set `iban` on `bank-details`." },
+        ))
+      } else if not iban-valid(entry.iban) {
+        out.push(error(
+          if xrechnung and entry.type-code == "58" { "BR-DE-19" } else {
+            "IP-PAY-01"
+          },
+          "bank-details.iban",
+          "The IBAN (BT-84) "
+            + _quoted(format-iban(entry.iban))
+            + " is not valid (wrong check digits or format).",
+          hint: "Check the IBAN for typos.",
+        ))
+      }
+      if entry.account-name != none and not profile.account-name {
+        out.push(_payment-not-carried(
+          profile,
+          "bank-details.name",
+          "the account name (BT-85)",
+          "en16931",
+        ))
+      }
+    } else if entry.kind == "direct-debit" {
+      sepa-debit = sepa-debit or entry.type-code == "59"
+      if entry.field == "paid" {
+        // `paid(method: "direct-debit")` without the direct debit: XRechnung
+        // requires the direct debit (BG-19) of a SEPA direct debit, and the
+        // mandate reference of any direct debit (PEPPOL-EN16931-R061).
+        if xrechnung {
+          let sepa = entry.type-code == "59"
+          out.push(error(
+            if sepa { "BR-DE-25-a" } else { "PEPPOL-EN16931-R061" },
+            "paid.method",
+            if sepa {
+              "A SEPA direct debit (BT-81 = 59) states the direct debit (BG-19), but none is given."
+            } else {
+              (
+                "A direct debit (BT-81 = "
+                  + entry.type-code
+                  + ") states the mandate reference (BT-89), but none is given."
+              )
+            },
+            hint: "Add `#direct-debit(mandate: .., creditor-id: .., debtor-iban: ..)` with the direct debit the invoice was paid with.",
+          ))
+        }
+      } else if xrechnung {
+        // The direct debit component requires the mandate reference and
+        // the creditor identifier; the debited account is optional.
+        if payment.at("mandate", default: none) == none {
+          out.push(error(
+            "PEPPOL-EN16931-R061",
+            "direct-debit.mandate",
+            "XRechnung requires the mandate reference (BT-89) of a direct debit.",
+            hint: "Set `mandate` on `direct-debit` to the reference of the direct debit mandate.",
+          ))
+        }
+        if payment.at("creditor-id", default: none) == none {
+          out.push(error(
+            "BR-DE-30",
+            "direct-debit.creditor-id",
+            "XRechnung requires the creditor identifier (BT-90) of a direct debit.",
+            hint: "Set `creditor-id` on `direct-debit` to your SEPA creditor identifier.",
+          ))
+        }
+        if entry.debtor-iban == none {
+          out.push(error(
+            "BR-DE-31",
+            "direct-debit.debtor-iban",
+            "XRechnung requires the debited account (BT-91) of a direct debit.",
+            hint: "Set `debtor-iban` on `direct-debit` to the IBAN of the buyer's account that is debited.",
+          ))
+        }
+      }
+      if entry.debtor-iban != none and not iban-valid(entry.debtor-iban) {
+        out.push(error(
+          if xrechnung and entry.type-code == "59" { "BR-DE-20" } else {
+            "IP-PAY-01"
+          },
+          "direct-debit.debtor-iban",
+          "The IBAN of the debited account (BT-91) "
+            + _quoted(format-iban(entry.debtor-iban))
+            + " is not valid (wrong check digits or format).",
+          hint: "Check the IBAN for typos.",
+        ))
+      }
+    } else if entry.kind == "card" {
+      if entry.card == none {
+        // `paid(method: "card")` without the payment card.
+        if xrechnung {
+          out.push(error(
+            "BR-DE-24-a",
+            "paid.method",
+            "A card payment (BT-81 = "
+              + entry.type-code
+              + ") states the payment card (BG-18), but none is given.",
+            hint: "Add `#card-payment(last4: ..)` with the last digits of the card the invoice was paid with.",
+          ))
+        }
+      } else if not profile.payment-card {
+        out.push(_payment-not-carried(
+          profile,
+          "card-payment",
+          "the payment card (BG-18)",
+          "en16931",
+        ))
+      }
+    }
+    if entry.type-code not in codelists.payment-means {
+      out.push(error(
+        "BR-CL-16",
+        "paid.method",
+        "The payment means code (BT-81) "
+          + _quoted(entry.type-code)
+          + " is not in the UNTDID 4461 code list.",
+        hint: "Use a code of UNTDID 4461, e.g. \"10\" for cash or \"97\" for a clearing between partners, or one of the methods of `paid`, e.g. `\"cash\"`.",
+      ))
+    }
+  }
+
+  // The check digits of a SEPA creditor identifier (BT-90).
+  let creditor-id = payment.at("creditor-id", default: none)
+  if sepa-debit and creditor-id != none and not creditor-id-valid(creditor-id) {
+    out.push(error(
+      "IP-PAY-02",
+      "direct-debit.creditor-id",
+      "The creditor identifier (BT-90) "
+        + _quoted(creditor-id)
+        + " is not a valid SEPA creditor identifier (wrong check digits or format).",
+      hint: "Check the creditor identifier for typos, e.g. \"DE98ZZZ09999999999\".",
+    ))
+  }
+  out
+}
+
+// The payment details the MINIMUM profile cannot state: it states the amount
+// due, but no payment means and no payment terms.
+#let _check-minimum-payment(model) = {
+  let out = ()
+  let profile = model.profile
+  let payment = model.payment
+  for entry in payment.means {
+    // BASIC WL states a direct debit in full, but a payment card only by its
+    // payment means code: EN 16931 is the lowest profile that states it.
+    if entry.field == "direct-debit" {
+      out.push(_payment-not-carried(
+        profile,
+        entry.field,
+        "the direct debit (BG-19)",
+        "basic-wl",
+      ))
+    } else if entry.field == "card-payment" {
+      out.push(_payment-not-carried(
+        profile,
+        entry.field,
+        "the payment card (BG-18)",
+        "en16931",
+      ))
+    }
+  }
+  if payment.at("discounts", default: ()).len() > 0 {
+    out.push(_payment-not-carried(
+      profile,
+      "payment-goal.discount",
+      "a cash discount (BT-20)",
+      "basic-wl",
+    ))
+  }
+  out
+}
+
 #let check-payment(model) = {
-  if not model.profile.settlement { return () }
+  if not model.profile.settlement { return _check-minimum-payment(model) }
   let out = ()
   let payment = model.payment
+  let terms = profile-terms(payment, model.profile)
 
-  if model.profile.xrechnung and payment.terms != none {
-    let problem = _skonto-problem(payment.terms)
+  if model.profile.xrechnung and terms != none {
+    let problem = _skonto-problem(terms)
     if problem != none {
       let input = payment.at("terms-input", default: none)
       let syntax = "every line that starts with \"#\" must be a cash discount in the XRechnung syntax, e.g. \"#SKONTO#TAGE=14#PROZENT=2.00#\", followed by a line break"
@@ -2271,11 +2573,24 @@
     }
   }
 
-  if (
-    model.totals.due > _zero
-      and payment.due-date == none
-      and payment.terms == none
-  ) {
+  // XRechnung states the amount a cash discount applies to with 2 decimals.
+  if model.profile.xrechnung {
+    for discount in payment.at("discounts", default: ()) {
+      let basis = discount.basis
+      if basis != none and calc.round(basis, digits: 2) != basis {
+        out.push(error(
+          "BR-DE-18",
+          "payment-goal.discount",
+          "The amount a cash discount applies to (#BASISBETRAG) has 2 decimals in XRechnung, but "
+            + str(basis)
+            + " has more.",
+          hint: "Give the `basis` of the cash discount with at most 2 decimals.",
+        ))
+      }
+    }
+  }
+
+  if model.totals.due > _zero and payment.due-date == none and terms == none {
     out.push(error(
       "BR-CO-25",
       "payment-goal",
@@ -2284,23 +2599,7 @@
     ))
   }
 
-  if payment.means == none {
-    if model.profile.xrechnung {
-      out.push(error(
-        "BR-DE-1",
-        "bank-details",
-        "XRechnung requires payment instructions (BG-16).",
-        hint: "Add `#bank-details(iban: ..)` with the account to pay to.",
-      ))
-    }
-  } else if not iban-valid(payment.means.iban) {
-    out.push(warning(
-      "BR-DE-19",
-      "bank-details.iban",
-      "The IBAN (BT-84) " + _quoted(payment.means.iban) + " is not valid.",
-      hint: "Check the IBAN for typos.",
-    ))
-  }
+  out += _check-payment-means(model)
 
   if model.totals.prepaid > model.totals.gross and model.totals.gross >= _zero {
     out.push(warning(

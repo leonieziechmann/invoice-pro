@@ -119,6 +119,7 @@
         <ram:TypeCode>58</ram:TypeCode>
         <ram:PayeePartyCreditorFinancialAccount>
           <ram:IBANID>DE89370400440532013000</ram:IBANID>
+          <ram:AccountName>Factoring Bank AG</ram:AccountName>
         </ram:PayeePartyCreditorFinancialAccount>
         <ram:PayeeSpecifiedCreditorFinancialInstitution>
           <ram:BICID>COBADEFFXXX</ram:BICID>

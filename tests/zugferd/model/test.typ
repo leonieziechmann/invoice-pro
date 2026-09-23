@@ -213,9 +213,16 @@
   assert.eq(model.payment.due-date, datetime(year: 2026, month: 9, day: 15))
   assert.eq(model.payment.terms, "sofort")
   assert.eq(model.payment.means, (
-    type-code: "58",
-    iban: "DE75512108001245126199",
-    bic: "SOLADEST600",
+    (
+      type-code: "58",
+      kind: "transfer",
+      field: "bank-details",
+      iban: "DE75512108001245126199",
+      account-name: none,
+      bic: "SOLADEST600",
+      card: none,
+      debtor-iban: none,
+    ),
   ))
   assert.eq(model.payment.reference, "2026-01")
 })[
@@ -231,7 +238,7 @@
 #model-test(due-date: datetime(year: 2026, month: 10, day: 1), model => {
   assert.eq(model.payment.due-date, datetime(year: 2026, month: 10, day: 1))
   assert.eq(model.payment.terms, "within 30 days")
-  assert.eq(model.payment.means, none)
+  assert.eq(model.payment.means, ())
 })[
   #line-items[#item([A], price: 1)]
   #payment-goal(date: [within 30 days])

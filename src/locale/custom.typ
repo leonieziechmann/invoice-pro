@@ -1,3 +1,8 @@
+// Every function below returns its patch as an array of one dictionary, so
+// that several of them in one code block join into a list of patches (two
+// dictionaries would be merged, and the second `strings` would replace the
+// first). `build-locale` applies the patches in their order.
+
 /// Internal helper to remove unconfigured (`auto`) arguments.
 /// This guarantees that we only patch fields the user explicitly defined,
 /// preventing base translations from being overwritten by `auto`.
@@ -21,7 +26,7 @@
 /// - corrected (auto, str): e.g., "Corrected Invoice", "Korrigierte Rechnung"
 /// - prepayment (auto, str): e.g., "Prepayment Invoice", "Anzahlungsrechnung"
 /// - self-billed (auto, str): e.g., "Self-Billing Invoice", "Gutschrift"
-/// -> dictionary
+/// -> array
 #let document(
   invoice: auto,
   credit-note: auto,
@@ -37,18 +42,18 @@
       prepayment: prepayment,
       self-billed: self-billed,
     ))
-    return (strings: (document: payload))
+    (strings: (document: payload))
   },
 )
 
 /// Customizes the address-related labels.
 /// - recipient (auto, str): e.g., "Bill To", "Empfänger"
 /// - sender (auto, str): e.g., "From", "Absender"
-/// -> dictionary
+/// -> array
 #let address(recipient: auto, sender: auto) = (
   {
     let payload = _clean-auto((recipient: recipient, sender: sender))
-    return (strings: (address: payload))
+    (strings: (address: payload))
   },
 )
 
@@ -75,7 +80,7 @@
 /// - contact-person (auto, str): e.g., "Contact Person", "Ansprechpartner:in"
 /// - contact-phone (auto, str): e.g., "Phone", "Telefon"
 /// - contact-email (auto, str): e.g., "Email", "E-Mail"
-/// -> dictionary
+/// -> array
 #let reference(
   tax-number: auto,
   invoice-number: auto,
@@ -127,7 +132,7 @@
       contact-phone: contact-phone,
       contact-email: contact-email,
     ))
-    return (strings: (reference: payload))
+    (strings: (reference: payload))
   },
 )
 
@@ -149,7 +154,7 @@
 ///   bundle description, e.g., "and", "und"
 /// - origin (auto, str): label of the country of origin of an item, e.g.,
 ///   "Country of origin", "Ursprungsland"
-/// -> dictionary
+/// -> array
 #let line-items(
   position: auto,
   description: auto,
@@ -184,7 +189,7 @@
       origin: origin,
     ))
 
-    return (strings: (line-items: payload))
+    (strings: (line-items: payload))
   },
 )
 
@@ -194,7 +199,7 @@
 /// - total (auto, str): e.g., "Total", "Gesamtbetrag"
 /// - including (auto, str): e.g., "incl.", "inkl."
 /// - excluding (auto, str): e.g., "excl.", "zzgl."
-/// -> dictionary
+/// -> array
 #let summary(
   sum: auto,
   vat-tax: auto,
@@ -210,7 +215,7 @@
       including: including,
       excluding: excluding,
     ))
-    return (strings: (summary: payload))
+    (strings: (summary: payload))
   },
 )
 
@@ -232,7 +237,7 @@
       quantity: quantity,
       date: date,
     ))
-    return (strings: (global-info: payload))
+    (strings: (global-info: payload))
   },
 )
 
@@ -242,7 +247,7 @@
 /// - iban (auto, str): e.g., "IBAN"
 /// - bic (auto, str): e.g., "BIC"
 /// - reference (auto, str): e.g., "Reference", "Verwendungszweck"
-/// -> dictionary
+/// -> array
 #let bank-details(
   account-holder: auto,
   bank: auto,
@@ -258,13 +263,74 @@
       bic: bic,
       reference: reference,
     ))
-    return (strings: (bank-details: payload))
+    (strings: (bank-details: payload))
+  },
+)
+
+/// Customizes the texts of the payment means `direct-debit`, `card-payment`
+/// and `paid`.
+/// - method (auto, str): label of the payment method, e.g., "Payment method"
+/// - transfer, direct-debit, sepa-direct-debit, card, credit-card,
+///   debit-card, cash, cheque, online (auto, str): names of the payment
+///   methods, e.g., "SEPA direct debit", "Barzahlung"
+/// - mandate, creditor-id, debtor-iban, card-number, card-holder (auto,
+///   str): labels of the details of a direct debit and a payment card
+/// - paid (auto, fn): sentence of a paid invoice: (sum, date) => content,
+///   `date` is `none` if not given
+/// - paid-due (auto, fn): `paid` after prepayments: (sum, date) => content
+/// -> array
+#let payment-means(
+  method: auto,
+  transfer: auto,
+  direct-debit: auto,
+  sepa-direct-debit: auto,
+  card: auto,
+  credit-card: auto,
+  debit-card: auto,
+  cash: auto,
+  cheque: auto,
+  online: auto,
+  mandate: auto,
+  creditor-id: auto,
+  debtor-iban: auto,
+  card-number: auto,
+  card-holder: auto,
+  paid: auto,
+  paid-due: auto,
+) = (
+  {
+    let payload = _clean-auto((
+      method: method,
+      transfer: transfer,
+      direct-debit: direct-debit,
+      sepa-direct-debit: sepa-direct-debit,
+      card: card,
+      credit-card: credit-card,
+      debit-card: debit-card,
+      cash: cash,
+      cheque: cheque,
+      online: online,
+      mandate: mandate,
+      creditor-id: creditor-id,
+      debtor-iban: debtor-iban,
+      card-number: card-number,
+      card-holder: card-holder,
+      paid: paid,
+      paid-due: paid-due,
+    ))
+    (strings: (payment-means: payload))
   },
 )
 
 /// Customizes the payment instructions and deadline texts.
 /// - text (auto, fn): Function generating the main sentence: (sum, currency, deadline) => content
 /// - text-due (auto, fn): Main sentence when prepayments reduce the payable amount: (sum, deadline) => content
+/// - text-direct-debit, text-direct-debit-due (auto, fn): `text` and
+///   `text-due` of an amount collected by `direct-debit`: (sum, deadline) => content
+/// - text-card, text-card-due (auto, fn): `text` and `text-due` of an amount
+///   charged to a `card-payment`: (sum, deadline) => content
+/// - cash-discount (auto, fn): Note of a cash discount of the payment goal:
+///   (percent, deadline, basis) => content, `basis` is `none` if not given
 /// - deadline-date (auto, fn): Function formatting a fixed date: (date) => str
 /// - deadline-days (auto, fn): Function formatting relative days: (days) => str
 /// - deadline-soon (auto, str): Text for immediate payment: e.g., "upon receipt"
@@ -272,10 +338,15 @@
 ///   invoice, whose sender pays the amount: (sum, deadline) => content
 /// - deadline-soon-credit (auto, str): Text for immediate payment in
 ///   `text-credit`: e.g., "promptly"
-/// -> dictionary
+/// -> array
 #let payment(
   text: auto,
   text-due: auto,
+  text-direct-debit: auto,
+  text-direct-debit-due: auto,
+  text-card: auto,
+  text-card-due: auto,
+  cash-discount: auto,
   deadline-date: auto,
   deadline-days: auto,
   deadline-soon: auto,
@@ -286,33 +357,38 @@
     let payload = _clean-auto((
       text: text,
       text-due: text-due,
+      text-direct-debit: text-direct-debit,
+      text-direct-debit-due: text-direct-debit-due,
+      text-card: text-card,
+      text-card-due: text-card-due,
+      cash-discount: cash-discount,
       deadline-date: deadline-date,
       deadline-days: deadline-days,
       deadline-soon: deadline-soon,
       text-credit: text-credit,
       deadline-soon-credit: deadline-soon-credit,
     ))
-    return (strings: (payment: payload))
+    (strings: (payment: payload))
   },
 )
 
 /// Customizes the signature and closing area.
 /// - closing (auto, str): e.g., "Sincerely,", "Mit freundlichen Grüßen"
-/// -> dictionary
+/// -> array
 #let signature(closing: auto) = (
   {
     let payload = _clean-auto((closing: closing))
-    return (strings: (signature: payload))
+    (strings: (signature: payload))
   },
 )
 
 /// Customizes standard legal texts.
 /// - vat-exemption (auto, str): Legal text for small business tax exemptions.
-/// -> dictionary
+/// -> array
 #let legal(vat-exemption: auto) = (
   {
     let payload = _clean-auto((vat-exemption: vat-exemption))
-    return (strings: (legal: payload))
+    (strings: (legal: payload))
   },
 )
 
@@ -337,7 +413,7 @@
       ambiguous-tax: ambiguous-tax,
       invalid-tax: invalid-tax,
     ))
-    return (strings: (errors: payload))
+    (strings: (errors: payload))
   },
 )
 
@@ -352,7 +428,7 @@
 /// -> (number) => number
 /// - infer-tax (auto, fn): Function that maps a raw rate to a tax object.
 /// -> (number) => tax
-/// -> dictionary
+/// -> array
 #let normalize(
   money: auto,
   money-fine: auto,
@@ -364,7 +440,7 @@
       money-fine: money-fine,
       infer-tax: infer-tax,
     ))
-    return (region: (normalize: payload))
+    (region: (normalize: payload))
   },
 )
 
@@ -376,7 +452,7 @@
 /// - currency-fine (auto, fn): -> (number) => str
 /// - date (auto, fn): -> (datetime | array) => str
 /// - time (auto, fn): -> (datetime) => str
-/// -> dictionary
+/// -> array
 #let format(
   percent: auto,
   number: auto,
@@ -394,7 +470,7 @@
       date: date,
       time: time,
     ))
-    return (region: (format: payload))
+    (region: (format: payload))
   },
 )
 
@@ -402,7 +478,7 @@
 /// Useful for overriding default rates or providing custom exemption grounds.
 /// - default-vat (auto, tax): Standard VAT tax object.
 /// - small-enterprise-special-scheme (auto, tax): Tax object for small business exemptions.
-/// -> dictionary
+/// -> array
 #let tax(
   default-vat: auto,
   small-enterprise-special-scheme: auto,
@@ -412,6 +488,6 @@
       default-vat: default-vat,
       small-enterprise-special-scheme: small-enterprise-special-scheme,
     ))
-    return (region: (tax: payload))
+    (region: (tax: payload))
   },
 )
