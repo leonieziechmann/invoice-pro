@@ -48,6 +48,8 @@ Identifiers are optional: an invoice without them needs none of this. Plain text
 
 An identifier with a scheme given as `id` is the global identifier (`ram:GlobalID`), the same as `global-id`. The legal registration identifier is part of every profile, MINIMUM included, where it is the seller's identifier besides its VAT identifier (`BR-CO-26`).
 
+An identifier that produces no text stops the compilation with the input it was given for, with and without e-invoice, as it would be missing from the printed invoice and the XML without notice: a constructor given without calling it (`legal-id: id.siret` instead of `legal-id: id.siret("..")`), or a dictionary whose `id` is missing or empty (`legal-id: (scheme: "0002")`). An empty value such as `""` or `none` (e.g. an empty field of imported data) counts as not given, and an electronic address without `id` is derived from the VAT identifier or the email address instead.
+
 ## Problems
 
 A constructor never stops the compilation. What is wrong with an identifier is kept as its problems, and an e-invoice reports them as errors with the input they were given for:

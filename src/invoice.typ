@@ -8,6 +8,7 @@
 #import "locale/lang/base.typ": base-language
 #import "locale/region/base.typ": base-region
 #import "logic/country.typ": normalize-party, resolve-party-country
+#import "logic/party-inputs.typ": check-identifiers, identifier-keys
 #import "logic/document-type.typ": document-title, resolve-document-type
 #import "logic/notes.typ": normalize-notes
 #import "logic/service-period.typ": (
@@ -183,6 +184,21 @@
     none,
     dictionary,
   )
+  // An identifier that produces no text (e.g. `legal-id: id.siret` without
+  // calling it) would be missing from the printed invoice and the e-invoice.
+  check-identifiers(sender, "sender", identifier-keys.sender)
+  check-identifiers(recipient, "recipient", identifier-keys.recipient)
+  check-identifiers(
+    delivery-address,
+    "delivery-address",
+    identifier-keys.delivery-address,
+  )
+  check-identifiers(
+    recipient.at("delivery-address", default: none),
+    "recipient.delivery-address",
+    identifier-keys.delivery-address,
+  )
+  check-identifiers(payee, "payee", identifier-keys.payee)
 
   types.require(date, "invoice::date", datetime)
   types.require(
