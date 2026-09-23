@@ -14,11 +14,13 @@
 # hides a new class of failure. No entry excuses a legal invoice that is not
 # AGREE_VALID (the hard gate); only oracle failures of legal invoices can be
 # known issues. `run.py --strict` ignores this file.
-
-# ---------------------------------------------------------------- valid XML, wrong content (oracles)
-
-[[issue]]
-finding = "amounts-delivery-date-mismatch"
-note = "BG-14 counts undated items with the invoice date; the printed service period does not"
-features = { delivery = "dates-mixed" }
-signatures = ["AGREE_VALID oracle=O-BG14"]
+#
+# Entries look like this:
+#
+#   [[issue]]
+#   finding = "amounts-delivery-date-mismatch"
+#   note = "BG-14 counts undated items with the invoice date"
+#   features = { delivery = "dates-mixed" }
+#   signatures = ["AGREE_VALID oracle=O-BG14"]
+#
+# There are none at the moment.

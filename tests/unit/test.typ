@@ -747,20 +747,15 @@
     (date: datetime(year: 2026, month: 7, day: 9), period: none),
   )
 
-  // 3. Items with single shared date
+  // 3. Items with single shared date and an undated item, which does not
+  // count (as for the printed service period)
   assert.eq(
     determine-delivery-dates(ctx, (
       (name: "A", date: datetime(year: 2026, month: 7, day: 1)),
       (name: "B", date: datetime(year: 2026, month: 7, day: 1)),
-      (name: "C", date: auto), // resolves to invoice date
+      (name: "C", date: auto),
     )),
-    (
-      date: none,
-      period: (
-        datetime(year: 2026, month: 7, day: 1),
-        datetime(year: 2026, month: 7, day: 9),
-      ),
-    ),
+    (date: datetime(year: 2026, month: 7, day: 1), period: none),
   )
 
   // 4. Items with single shared date (without auto falling back to invoice-date)

@@ -13,6 +13,9 @@
 #import "../locale/lang/lang.typ" as languages
 #import "../logic/payment-reference.typ": resolve-payment-reference
 #import "../logic/document-type.typ": resolve-document-type
+#import "../logic/service-period.typ": (
+  format-service-period, resolve-service-period,
+)
 
 #let _zero = decimal("0")
 
@@ -881,32 +884,49 @@
 /// -> str
 #let map-unit-code(unit) = resolve-unit(unit).code
 
-// Determine delivery date or period from items
-#let determine-delivery-dates(ctx, items) = {
-  let all-dates = ()
-  for item in items {
-    let item-date = item.at("date", default: none)
-    if item-date == auto or item-date == none {
-      all-dates.push(ctx.invoice-date)
-    } else if type(item-date) == datetime {
-      all-dates.push(item-date)
-    } else if type(item-date) == array {
-      for d in item-date {
-        if type(d) == datetime {
-          all-dates.push(d)
-        }
-      }
+/// The delivery date (BT-72) or the invoicing period (BG-14) of the
+/// e-invoice: the service period the invoice prints (see
+/// `resolve-service-period`), as `(date: .., period: ..)`. A single date is
+/// the delivery date, a period its first and last date.
+///
+/// -> dictionary
+#let _delivery(period) = {
+  if period == none {
+    (date: none, period: none)
+  } else if period.start == period.end {
+    (date: period.start, period: none)
+  } else {
+    (date: none, period: (period.start, period.end))
+  }
+}
+
+#let _service-period(ctx, items) = resolve-service-period(
+  items,
+  ctx.at("invoice-date", default: none),
+  service-period: ctx.at("service-period", default: none),
+)
+
+#let determine-delivery-dates(ctx, items) = _delivery(_service-period(
+  ctx,
+  items,
+))
+
+// The text of the service period the invoice prints as a reference (one
+// labelled like `references.service-time`), or `none`.
+#let _printed-service-period(ctx) = {
+  let strings = ctx.at("locale", default: (:)).at("strings", default: (:))
+  let labels = strings.at("reference", default: (:))
+  let label = text-or-none(labels.at("service-time", default: none))
+  let references = ctx.at("references", default: ())
+  if label == none or type(references) != array { return none }
+  for reference in references {
+    if type(reference) != array or reference.len() != 2 { continue }
+    let (title, value) = reference
+    if type(title) in (str, content) and text-or-none(title) == label {
+      return if type(value) in (str, content) { text-or-none(value) }
     }
   }
-
-  let sorted-dates = all-dates.filter(d => type(d) == datetime).sorted().dedup()
-  if sorted-dates.len() == 0 {
-    (date: ctx.invoice-date, period: none)
-  } else if sorted-dates.len() == 1 {
-    (date: sorted-dates.first(), period: none)
-  } else {
-    (date: none, period: (sorted-dates.first(), sorted-dates.last()))
-  }
+  none
 }
 
 // Categories whose VAT breakdown must not carry an exemption reason
@@ -1204,6 +1224,10 @@
     })
   }
 
+  // The service period and the date format the invoice prints it with.
+  let service-period = _service-period(ctx, items)
+  let format-date = locale.at("format", default: (:)).at("date", default: none)
+
   let iban = if bank != none { compact(bank.at("iban", default: none)) }
   let bic = if bank != none { compact(bank.at("bic", default: none)) }
 
@@ -1291,7 +1315,18 @@
     seller: seller,
     buyer: buyer,
     ship-to: ship-to,
-    delivery: determine-delivery-dates(ctx, items),
+    // The service period (BT-72 or BG-14), see `resolve-service-period` for
+    // its `source`. `text` is how `references.service-time` prints it,
+    // `printed` the text of the service period the invoice prints as a
+    // reference, if any.
+    delivery: _delivery(service-period)
+      + (
+        source: if service-period != none { service-period.source },
+        text: if type(format-date) == function {
+          text-or-none(format-service-period(service-period, format-date))
+        },
+        printed: _printed-service-period(ctx),
+      ),
     lines: lines,
     allowance-charges: allowance-charges,
     taxes: breakdown,

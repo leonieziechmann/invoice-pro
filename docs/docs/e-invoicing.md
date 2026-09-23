@@ -111,6 +111,7 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | `IP-DOC-02`     | error   | A corrected invoice (`document-type: "corrected"`) without `preceding-invoice-nr`: it replaces an invoice, which the VAT Directive (Art. 219) requires it to name. XRechnung checks it as `BR-DE-26`.                                                                              |
 | `IP-DOC-03`     | error   | A credit note with a negative total: it states the credited amounts as positive amounts, so it would ask the buyer to pay.                                                                                                                                                         |
 | `IP-DOC-04`     | warning | An invoice with a negative total: valid, but a credit note (`document-type: "credit-note"`) is the document for a credit.                                                                                                                                                          |
+| `IP-PERIOD-01`  | warning | A service period printed as a text of its own (e.g. `references.service-time(value: "Juni 2026")`), which the XML cannot state. See [Service Period](#10-service-period-bt-72--bg-14).                                                                                             |
 
 ### The `zugferd-errors` Parameter
 
@@ -419,6 +420,29 @@ Any other code of UNTDID 1001 for invoices and credit notes can be given as text
 - The title is the mention the law requires on a self-billed invoice (Art. 226 No. 10a VAT Directive): "Gutschrift" in German (§ 14 Abs. 4 Satz 1 Nr. 10 UStG), "Self-Billing Invoice" in English, "Autofacturation" in French, "Autofatturazione" in Italian and "Facturación por el destinatario" in Spanish. Keep it in a `subject` of your own.
 
 **Titles that name another document (`IP-DOC-01`).** Without `document-type`, the e-invoice states a commercial invoice (`380`), which asks the buyer to pay. If the subject names another kind of document, the e-invoice stops with `IP-DOC-01`: a credit note ("Gutschrift", "Rechnungskorrektur", "Stornorechnung", "Credit note", "Avoir", "Nota di credito", ...), a corrected or a self-billed invoice, or a document that is no invoice at all, such as a quote ("Angebot", "Kostenvoranschlag", "Quote", "Offer", "Devis", "Preventivo", "Presupuesto"), a delivery note ("Lieferschein"), an order confirmation, a pro forma invoice or a payment reminder. Set the matching `document-type`, or `document-type: "invoice"` if it is an invoice. The first word of the subject that names a kind of document decides, so "Rechnung zum Angebot 2026-5" is an invoice. An e-invoice is only written for invoices and credit notes: do not set `zugferd` for quotes and other documents that are no invoice.
+
+### 10. Service Period (BT-72 / BG-14)
+
+The date or period of the supply is mandatory invoice content in many countries (e.g. § 14 Abs. 4 Nr. 6 UStG). `invoice-pro` resolves it once, for the printed invoice ([`references.service-time()`](./api-reference/invoice/references.md)) and the XML alike:
+
+1. the `service-period` of the invoice, a `datetime` or a period `(start, end)`, if you set it;
+2. else from the earliest to the latest `date` of the items (of `item`, `bundle` and `group`, a date or a period). Items without a date do not count when others have one;
+3. else the invoice date, if no item has a date.
+
+A single date is written as the actual delivery date (BT-72), a period as the invoicing period (BG-14, BT-73 and BT-74), both from the `"basic-wl"` profile on.
+
+```typst
+#show: invoice.with(
+  service-period: (
+    datetime(year: 2026, month: 6, day: 1),
+    datetime(year: 2026, month: 6, day: 30),
+  ),
+  references: (references.invoice-nr(), references.service-time()),
+  // ...
+)
+```
+
+A service period printed as a text of its own, e.g. `references.service-time(value: "Juni 2026")` or a reference `("Leistungszeitraum", "Juni 2026")`, cannot reach the XML, which would state another date: `invoice-pro` warns about it (`IP-PERIOD-01`). Set `service-period` instead.
 
 ---
 

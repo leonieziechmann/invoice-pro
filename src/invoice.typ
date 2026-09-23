@@ -41,6 +41,12 @@
   /// The date of the invoice. Defaults to today.
   /// -> datetime
   date: datetime.today(),
+  /// The date or period `(start, end)` of the supply, printed by
+  /// `references.service-time()` and written to the e-invoice (BT-72 or
+  /// BG-14). If `none`, the earliest to the latest date of the items, or the
+  /// invoice date if no item has a date.
+  /// -> none | datetime | array
+  service-period: none,
   /// The subject line of the invoice. If `auto`, the title of the
   /// `document-type` in the language of the locale, e.g. "Rechnung".
   /// -> string | content
@@ -145,6 +151,24 @@
   )
 
   types.require(date, "invoice::date", datetime)
+  types.require(
+    service-period,
+    "invoice::service-period",
+    none,
+    types.date-like,
+  )
+  if (
+    type(service-period) == array
+      and service-period.last() < service-period.first()
+  ) {
+    panic(
+      "invoice::service-period ends before it starts: "
+        + service-period.first().display()
+        + " to "
+        + service-period.last().display()
+        + ". Give it as `(start, end)`.",
+    )
+  }
   types.require(subject, "invoice::subject", auto, str, content)
   types.require(document-type, "invoice::document-type", auto, str, int)
   types.require(
@@ -364,6 +388,7 @@
     delivery-address: normalized-delivery-address,
 
     invoice-date: date,
+    service-period: service-period,
     subject: document-subject,
     // The title of the document, the subject without the invoice number.
     title: subject,

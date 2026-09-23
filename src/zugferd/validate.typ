@@ -363,6 +363,51 @@
   out
 }
 
+// --- Document data --------------------------------------------------------
+
+/// Checks the data of the document besides its type: that the service
+/// period the invoice prints is the one the XML states (IP-PERIOD-01).
+///
+/// -> array
+#let check-document-data(model) = {
+  let out = ()
+  let profile = model.profile
+
+  // IP-PERIOD-01: a service period printed as a text of its own (e.g.
+  // `references.service-time(value: "Juni 2026")`) cannot reach the XML,
+  // which states the service period of the items or the invoice date. The
+  // delivery information exists from BASIC WL on.
+  let delivery = model.at("delivery", default: (:))
+  let printed = delivery.at("printed", default: none)
+  let stated = delivery.at("text", default: none)
+  if (
+    profile.settlement
+      and printed != none
+      and stated != none
+      and printed != stated
+  ) {
+    out.push(warning(
+      "IP-PERIOD-01",
+      "references",
+      "The invoice prints the service period "
+        + _quoted(printed)
+        + ", but the e-invoice states "
+        + _quoted(stated)
+        + " ("
+        + if delivery.at("period", default: none) != none { "BG-14" } else {
+          "BT-72"
+        }
+        + ")"
+        + if delivery.at("source", default: none) == "invoice-date" {
+          ", the invoice date, as no item has a date"
+        }
+        + ".",
+      hint: "Set `service-period` on the invoice, e.g. `service-period: (datetime(year: 2026, month: 6, day: 1), datetime(year: 2026, month: 6, day: 30))`, and print it with `references.service-time()`.",
+    ))
+  }
+  out
+}
+
 // --- Parties --------------------------------------------------------------
 
 // Hints for country codes that are missing from the code list of EN 16931.
@@ -1900,6 +1945,7 @@
   let diagnostics = (
     check-document(model)
       + check-document-type(model)
+      + check-document-data(model)
       + check-parties(model)
       + check-lines(model)
       + check-taxes(model)

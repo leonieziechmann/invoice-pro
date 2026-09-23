@@ -66,12 +66,12 @@ All reference builders accept optional `label` and `value` parameters (e.g. `ref
 
 ### Document & Core
 
-| Function                      | Default Source / Logic                                  | Description                                                                                            |
-| :---------------------------- | :------------------------------------------------------ | :----------------------------------------------------------------------------------------------------- |
-| **`references.invoice-nr`**   | `ctx.invoice-nr`                                        | Invoice identifier / number.                                                                           |
-| **`references.invoice-date`** | `ctx.invoice-date` (`date`)                             | Invoice issue date, formatted according to locale.                                                     |
-| **`references.due-date`**     | `ctx.due-date` or derived from `#payment-goal()`        | Payment deadline date.                                                                                 |
-| **`references.service-time`** | Computed min & max dates across all `item.date` entries | Period or date of service delivery. Falls back to invoice date if items don't define individual dates. |
+| Function                      | Default Source / Logic                                                           | Description                                                                                                                                                        |
+| :---------------------------- | :------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`references.invoice-nr`**   | `ctx.invoice-nr`                                                                 | Invoice identifier / number.                                                                                                                                       |
+| **`references.invoice-date`** | `ctx.invoice-date` (`date`)                                                      | Invoice issue date, formatted according to locale.                                                                                                                 |
+| **`references.due-date`**     | `ctx.due-date` or derived from `#payment-goal()`                                 | Payment deadline date.                                                                                                                                             |
+| **`references.service-time`** | The invoice's `service-period`, else the earliest and latest `date` of the items | Period or date of service delivery, as the e-invoice states it (BT-72 / BG-14). Items without a date do not count; the invoice date is used if no item has a date. |
 
 ### Customer & Recipient
 
