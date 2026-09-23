@@ -86,9 +86,9 @@ Set `zugferd-errors: "report"` on the invoice to list these problems in the docu
 Problems come in two levels:
 
 - **Errors** make the XML invalid for the profile (e.g. a missing invoice number, an unknown unit code or a VAT breakdown that does not add up), or the invoice wrong in a way the official validators cannot see (see below).
-- **Warnings** point out data that is valid but most likely not intended (e.g. an EN 16931 invoice without the electronic addresses Peppol expects, or a key of a party that `invoice-pro` does not know). Warnings never stop the compilation.
+- **Warnings** point out data that is valid but most likely not intended (e.g. an EN 16931 invoice without the electronic addresses Peppol expects, a key of a party that `invoice-pro` does not know, or a unit code that is also a common abbreviation of another unit). Warnings never stop the compilation.
 
-For XRechnung, the seller contact phone number must contain at least three digits (`BR-DE-27`), and the email address must match the pattern of the XRechnung Schematron (`BR-DE-28`, e.g. an internationalized domain in punycode). XRechnung only warns about these two rules, and the KoSIT validator accepts such an invoice, but other validators, such as Mustang, reject it. `invoice-pro` therefore reports them as errors.
+For XRechnung, the seller contact phone number must contain at least three digits (`BR-DE-27`), and the email address must match the pattern of the XRechnung Schematron (`BR-DE-28`, ASCII only: write a domain with umlauts in punycode, e.g. `info@xn--mller-bau-q9a.de` for `info@müller-bau.de`). XRechnung only warns about these two rules, and the KoSIT validator accepts such an invoice, but other validators, such as Mustang, reject it. `invoice-pro` therefore reports them as errors.
 
 Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice-pro` checks some rules of its own, whose ids start with `IP-`. Here it is stricter than the official validators: they accept the XML, but a value the invoice states would be lost or wrong, or the law requires more than the profile checks.
 
@@ -101,6 +101,10 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | `IP-KEY-02`     | error   | A misspelled key the e-invoice reads, or another name of it (e.g. `vatId`, `vat_id`, `ustid`, `uid`, `e-mail` or `zip`): its value would be missing without notice.                                                                                                                |
 | `IP-VAT-226`    | error   | BASIC WL: an intra-community supply (`K`) or a cross-border reverse charge (`AE`) without the buyer VAT identifier, which Art. 226 No. 4 of the VAT Directive requires on the invoice. BASIC WL has no invoice lines, so the official rules (`BR-IC-02`, `BR-AE-02`) do not apply. |
 | `IP-VAT-138`    | warning | An intra-community supply (`K`) to a buyer whose VAT identifier was not issued by an EU member state (or "XI" for Northern Ireland).                                                                                                                                               |
+| `IP-TAX-01`     | error   | `tax: none` in an e-invoice: the items would be declared as zero rated (`Z`). Use `tax.zero()`, `tax.exempt(grounds: ..)`, `tax.outside-scope()` or `tax-exempt-small-biz`.                                                                                                        |
+| `IP-PRINT-02`   | error   | Amounts printed in another currency than the invoice currency (BT-5), e.g. a custom locale that prints "zł" while the XML states EUR.                                                                                                                                              |
+| `IP-DEC-01`     | error   | A VAT rate with more than 4 decimals, which the XML cannot state exactly (and which could collide with another VAT group).                                                                                                                                                         |
+| `IP-UNIT-01`    | warning | A unit code used verbatim that is also a common German abbreviation of another unit (`STK`, `PAL`, `FL`, `GL`, `KT`).                                                                                                                                                              |
 
 ### The `zugferd-errors` Parameter
 
@@ -254,7 +258,7 @@ ZUGFeRD requires line-item units to comply with the **UN/ECE Recommendation 20**
   ```typst
   unit: (display: "Piece", code: "C62")
   ```
-- **Automatic Mapping:** As a fallback, a string that is exactly a unit code (e.g. `"H87"`) is used as is, and common unit strings (such as `"h"`, `"hrs"`, `"Std."` for hours, or `"days"`, `"Tag"` for days) are mapped to their official codes. Any other string becomes `C62` ("one").
+- **Automatic Mapping:** A string that is exactly a unit code (e.g. `"H87"`) is used as is. Other strings are mapped by the unit names of every language of `invoice-pro`, the symbols of the `unit` module and common abbreviations, e.g. `"Std."` or `"hrs"` for hours, `"Tage"` for days, `"m²"` or `"qm"` for square metres, `"km"`, `"t"`, `"kWh"`, `"Stk."` for pieces, `"Seiten"` for pages or `"pauschal"` for a lump sum. A string `invoice-pro` does not know is an error (BR-CL-23) rather than a guess: pass the unit as a dictionary with its code, e.g. `(display: "Nacht", code: "C62")` for a number of nights. A code that is also a common German abbreviation of another unit (`"STK"` is the code of sticks, `"PAL"` of pascal; also `"FL"`, `"GL"` and `"KT"`) is taken as a code, with a warning (`IP-UNIT-01`).
 
 Unit codes are checked against the UN/ECE Recommendation 20 code list. Unit prices are rounded to the fine precision of the locale (`normalize.money-fine`, 4 decimals by default) before the line totals are calculated, and the printed invoice and the XML use this rounded price. For prices with more decimals (e.g. energy tariffs), round them more finely, up to 6 decimals:
 
@@ -269,6 +273,8 @@ Unit codes are checked against the UN/ECE Recommendation 20 code list. Unit pric
 
 A `base-quantity` (e.g. a price per 100 pieces) is written as the price base quantity (BT-149); it must be greater than 0.
 
+Quantities and base quantities are rounded to 4 decimals, the precision the built-in number formats print, before anything is calculated with them. A quantity of `1/3` is therefore printed and written as 0.3333, and with a price of 1000.00 the line total is 333.30, as a reader of the invoice would calculate it. If you print numbers with a custom `format.number`, keep at least 4 decimals so the printed quantity is the one the total is based on.
+
 ### 3. Tax Category Codes
 
 Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the standard functions from the `tax` module:
@@ -281,11 +287,11 @@ Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the 
 - Export: `tax.export()` (maps to category **G**). Requires the seller VAT identifier.
 - Outside Scope / Small Business: `tax.outside-scope()` and `tax-exempt-small-biz: true` (map to category **O**). An invoice not subject to VAT carries no VAT identifiers, so the seller is identified by `tax-nr` or `id`. Items of category `O` cannot be mixed with other categories on one invoice.
 
-EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `M`. The special constructors in `tax.special` that map to other categories (e.g. `lower-rate`, the margin schemes or split payment `B`) cannot be used for e-invoices.
+EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `M`. The special constructors in `tax.special` that map to other categories (e.g. `lower-rate`, the margin schemes or split payment `B`) cannot be used for e-invoices. Items under a margin scheme are written as exempt with the note the law requires, e.g. `tax.exempt(grounds: "Margin scheme - second-hand goods")` (in Germany "Gebrauchtgegenstände/Sonderregelung"). `tax.special.ceuta-melilla(..)` (`M`) needs a rate above 0%, and items not subject to VAT (`O`) have none.
 
-Where EN 16931 requires an exemption reason (`AE`, `K`, `G`, `O`), the standard text (e.g. "Reverse charge") is used unless you pass your own `grounds`. For the taxed categories (`S`, `Z`, `L`, `M`), `grounds` are printed on the invoice but left out of the XML, which does not allow them there. If the items of one category have different `grounds`, each of them is printed, and the XML joins them with `; ` into the one exemption reason (BT-120) of the category.
+Where EN 16931 requires an exemption reason (`AE`, `K`, `G`, `O`) and the items give no `grounds` of their own, the note of the invoice language (`tax-exemption` in the [language schema](./api-reference/locale/base.md#tax-exemption), e.g. "Steuerfreie innergemeinschaftliche Lieferung" for `tax.intra-community()` in German) is printed below the line items and written as exemption reason, so the invoice and the XML state the same note. With `tax-exempt-small-biz: true`, the small business note of the invoice is the exemption reason. For the taxed categories (`S`, `Z`, `L`, `M`), `grounds` are printed on the invoice but left out of the XML, which does not allow them there. If the items of one category have different `grounds`, each of them is printed, and the XML joins them with `; ` into the one exemption reason (BT-120) of the category.
 
-`tax: none` on the invoice is not a tax category: the items are printed with 0%, but an e-invoice must say why no VAT is charged, so choose one of the functions above instead.
+`tax: none` on the invoice is not a tax category: the items are printed with 0%, but an e-invoice must say why no VAT is charged, so it stops with the error `IP-TAX-01`. Choose one of the functions above instead.
 
 Document level discounts and surcharges (BG-20, BG-21) belong to a VAT category as well. An absolute amount is split over the categories of the items (see [VAT categories of modifiers](./api-reference/line-items/index.md#vat-categories-of-document-and-bundle-modifiers)); pin it to one with `tax`, e.g. `surcharge([Shipping], amount: 4.90, tax: tax.vat(19%))`.
 
@@ -293,11 +299,19 @@ Avoid using raw percentages (e.g., `19%`) directly on items if you need strict v
 
 ### 4. Gross Prices
 
-With `tax-mode: "inclusive"`, the invoice prints gross prices, while the XML states net amounts as EN 16931 requires. Every line and allowance is converted on its own, and rounding differences of a cent are assigned to the largest line of the VAT category, so the XML adds up exactly to the net and gross totals printed on the invoice.
+With `tax-mode: "inclusive"`, the invoice prints gross prices, while the XML states net amounts as EN 16931 requires. The net unit prices are rounded with the fine precision of the locale (`normalize.money-fine`), like every unit price. Every line and allowance is converted on its own, and rounding differences of a cent are assigned to the largest line of the VAT category, so the XML adds up exactly to the net and gross totals printed on the invoice.
 
 ### 5. Payment Terms and Instructions
 
-- **Due Date or Payment Terms (BT-9 / BT-20):** As long as an amount is due, the invoice must state when to pay (BR-CO-25). Add a [`payment-goal`](./api-reference/components.md#payment-goal) (with `days` or a `date`) or set `due-date` on the invoice. A textual `date` or `due-date` (e.g. `[upon receipt]`) is written as payment terms.
+- **Due Date or Payment Terms (BT-9 / BT-20):** As long as an amount is due, the invoice must state when to pay (BR-CO-25). Add a [`payment-goal`](./api-reference/components.md#payment-goal) (with `days` or a `date`) or set `due-date` on the invoice. A textual `date` or `due-date` (e.g. `[upon receipt]`) is written as payment terms, with its line breaks.
+- **Cash Discount (Skonto):** XRechnung states a cash discount in the payment terms, as a line of its own in the syntax of the KoSIT: `#SKONTO#TAGE=` with the days, `#PROZENT=` with the percent and two decimals, optionally `#BASISBETRAG=` with the amount it applies to, and a closing `#`. In the `"xrechnung"` profile, every line of the payment terms that starts with `#` must follow this syntax, and a line after the last cash discount that contains `#` more than once must end with its last `#` (BR-DE-18). `invoice-pro` adds the line break that XRechnung requires after a closing `#` at the end of the terms:
+
+  ```typst
+  due-date: "Zahlbar innerhalb von 30 Tagen netto, innerhalb von 14 Tagen mit 2 % Skonto.\n#SKONTO#TAGE=14#PROZENT=2.00#",
+  ```
+
+  The printed invoice must state an agreed cash discount as well, but the themes do not print a textual `due-date` on their own: print it where you state the payment terms (e.g. with [`#info.due-date`](./api-reference/components.md#info-module)) or state the cash discount in your own words. A cash discount is no [`discount`](./api-reference/line-items/index.md#adjustments-modifier-discount--surcharge): a discount reduces the amounts of the invoice no matter when the buyer pays.
+
 - **Payment Instructions (BG-16):** [`bank-details`](./api-reference/components.md#bank-details) with an `iban` are written as credit transfer (SEPA for EUR invoices). XRechnung requires them (BR-DE-1). IBAN and BIC are written without spaces and in upper case; they are the same values the bank details print and the EPC-QR code carries. A missing or invalid IBAN stops the compilation.
 
 ### 6. Payment Reference (BT-83)

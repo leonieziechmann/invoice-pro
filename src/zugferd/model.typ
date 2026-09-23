@@ -8,7 +8,9 @@
 #import "codelists.typ"
 #import "profile.typ": resolve-profile
 #import "../utils/coercion.typ": to-decimal, to-ratio
-#import "../data/tax.typ": to-tax-key
+#import "../data/tax.typ": default-grounds, to-tax-key
+#import "../data/unit.typ": unit-db
+#import "../locale/lang/lang.typ" as languages
 #import "../logic/payment-reference.typ": resolve-payment-reference
 
 #let _zero = decimal("0")
@@ -23,6 +25,21 @@
   let result = plain-text(value)
   if result == "" { none } else { result }
 }
+
+/// The payment terms (BT-20) of a text, or `none`. Unlike other texts, they
+/// keep their line breaks: the XRechnung Skonto syntax (BR-DE-18) writes each
+/// cash discount on a line of its own, e.g. "#SKONTO#TAGE=14#PROZENT=2.00#",
+/// followed by a line break, which is added when the text ends with such a
+/// line.
+///
+/// -> str | none
+#let payment-terms(value) = {
+  let terms = plain-text(value, keep-newlines: true)
+  if terms == "" { none } else if terms.ends-with("#") { terms + "\n" } else {
+    terms
+  }
+}
+
 
 // Invisible format characters (Unicode category Cf: zero width space, byte
 // order mark, word joiner, soft hyphen, ...), which copied identifiers often
@@ -683,30 +700,185 @@
   from-buyer: true,
 )
 
-// Map common invoice-pro unit strings to UN/ECE recommendation 20 unit codes.
-#let map-unit-code(unit) = {
-  if type(unit) == dictionary {
-    let code = compact(unit.at("code", default: none))
-    if code != none { return code }
-    unit = unit.at("display", default: none)
+// The UN/ECE Recommendation 20 codes of the units of the `unit` module, by
+// their key in the language files.
+#let _unit-codes = (
+  piece: "H87",
+  "set": "SET",
+  pair: "PR",
+  "lump-sum": "LS",
+  hour: "HUR",
+  day: "DAY",
+  month: "MON",
+  year: "ANN",
+  kilogram: "KGM",
+  gram: "GRM",
+  tonne: "TNE",
+  metre: "MTR",
+  "square-metre": "MTK",
+  millimetre: "MMT",
+  centimetre: "CMT",
+  kilometre: "KMT",
+  litre: "LTR",
+  "cubic-metre": "MTQ",
+)
+
+/// Unit texts and the UN/ECE Recommendation 20 codes they stand for, by the
+/// text in lower case without a trailing ".": the symbols and names of the
+/// unit database, the unit names of every language of invoice-pro and common
+/// abbreviations. Only whole texts match, never a part of one.
+///
+/// It is built when called, so an invoice without e-invoice does not build
+/// it: `build-model` builds it once for all lines (see `unit-resolver`).
+///
+/// -> dictionary
+#let unit-aliases() = {
+  let table = (:)
+  for (code, texts) in (
+    HUR: ("hr", "hrs", "std", "stunde", "stunden"),
+    MIN: ("min", "mins", "minute", "minutes", "minuten"),
+    SEC: ("s", "sec", "sek", "second", "seconds", "sekunde", "sekunden"),
+    WEE: ("wk", "wks", "week", "weeks", "woche", "wochen"),
+    MON: ("mon",),
+    ANN: ("yr", "yrs"),
+    KGM: ("kilo", "kilos"),
+    TNE: ("to", "tonnen"),
+    MTR: ("meter", "meters", "lfm"),
+    MTK: ("m2", "qm", "sqm", "square meter", "square meters"),
+    MTQ: ("m3", "cbm", "cubic meter", "cubic meters"),
+    LTR: ("ltr", "liter", "liters"),
+    MLT: ("ml",),
+    KWH: ("kwh",),
+    MWH: ("mwh",),
+    H87: ("st", "stk", "stck", "pc", "pcs", "pce"),
+    LS: ("psch", "pausch", "pauschal", "flat", "flat rate", "lumpsum"),
+    IE: ("person", "persons", "pers", "personen"),
+    ZP: ("page", "pages", "seite", "seiten"),
+    P1: ("%", "percent", "prozent"),
+  ).pairs() {
+    for text in texts { table.insert(text, code) }
   }
-  let raw = plain-text(unit)
-  // A unit written exactly as a code, e.g. "H87". Case-sensitive, so that "St"
-  // (Stück) is not taken for "ST" (sheet).
-  if raw in codelists.units { return raw }
-  let u = lower(raw)
-  if u in ("hrs", "hr", "h", "std.", "std", "stunde", "stunden") {
-    "HUR"
-  } else if u in ("day", "days", "tag", "tage") { "DAY" } else if (
-    u in ("month", "months", "monat", "monate")
-  ) { "MON" } else if u in ("year", "years", "jahr", "jahre") {
-    "ANN"
-  } else if u in ("kg",) { "KGM" } else if u in ("g", "gram") {
-    "GRM"
-  } else if u in ("m", "meter") { "MTR" } else if u in ("l", "liter") {
-    "LTR"
-  } else { "C62" }
+  // Plurals that the languages list no own form for and that are no singular
+  // with "s" (French, Italian and Spanish).
+  for (code, texts) in (
+    H87: ("pezzi", "unidades"),
+    PR: ("paia", "pares"),
+    HUR: ("ore",),
+    DAY: ("giorni",),
+    MON: ("mesi",),
+    ANN: ("anni", "année", "années"),
+    KGM: ("chilogrammi",),
+    GRM: ("grammi",),
+    TNE: ("tonnellate",),
+    MTR: ("metri",),
+    MTK: ("mètres carrés", "metri quadrati", "metros cuadrados"),
+    MMT: ("millimetri",),
+    CMT: ("centimetri",),
+    KMT: ("chilometri",),
+    LTR: ("litri",),
+    MTQ: ("mètres cubes", "metri cubi", "metros cúbicos"),
+  ).pairs() {
+    for text in texts { table.insert(text, code) }
+  }
+  for unit in unit-db {
+    if unit.symbol != none { table.insert(lower(unit.symbol), unit.code) }
+    table.insert(lower(unit.name), unit.code)
+  }
+  for strings in (
+    languages.de,
+    languages.en,
+    languages.fr,
+    languages.it,
+    languages.es,
+  ) {
+    for (key, names) in strings.units.pairs() {
+      let code = _unit-codes.at(key, default: none)
+      if code == none { continue }
+      // A name, or its singular and plural.
+      let names = if type(names) == dictionary { names.values() } else {
+        (names,)
+      }
+      for name in names { table.insert(lower(name), code) }
+    }
+  }
+  table
 }
+
+// Unit codes that are also common German abbreviations of other units, with
+// what the code means and what the abbreviation stands for. Taken verbatim,
+// they most likely do not mean what the code says.
+#let _ambiguous-unit-codes = (
+  STK: ("stick", "Stück"),
+  PAL: ("pascal", "Palette"),
+  FL: ("flake ton", "Flasche"),
+  GL: ("gram per litre", "Glas"),
+  KT: ("kit", "Karton"),
+)
+
+/// A function that returns the UN/ECE Recommendation 20 code of a unit
+/// (BT-130, BT-150) as `(code: .., issue: ..)`. It builds the table of
+/// `unit-aliases` once for all units it resolves, and keeps it to itself: a
+/// function argument is hashed on every call.
+///
+/// A unit of the `unit` module or a dictionary carries its code. A text that
+/// is exactly a code (e.g. "H87") is taken as it is, but a code that is also a
+/// common abbreviation of another unit (e.g. "STK", the code of sticks) has
+/// the issue `(kind: "ambiguous", ..)`. Any other text is looked up in the
+/// unit names and abbreviations invoice-pro knows ("Std.", "m²", "qm",
+/// "Stück", "pauschal", ...). A text it does not know has the issue
+/// `(kind: "unknown", text: ..)` and the code C62 ("one") as placeholder:
+/// invoice-pro does not guess what it means. Without a unit, the quantity
+/// is a number of "one" (C62).
+///
+/// -> function
+#let unit-resolver() = {
+  let aliases = unit-aliases()
+  unit => {
+    if type(unit) == dictionary {
+      let code = compact(unit.at("code", default: none))
+      if code != none { return (code: code, issue: none) }
+      unit = unit.at("display", default: none)
+    }
+    let text = plain-text(unit)
+    if text == "" { return (code: "C62", issue: none) }
+    // A unit written exactly as a code; case-sensitive, so that "min" is not
+    // looked up as the code "MIN" but as an abbreviation (which gives the
+    // same).
+    if text in codelists.units {
+      let ambiguous = _ambiguous-unit-codes.at(text, default: none)
+      return (
+        code: text,
+        issue: if ambiguous != none {
+          (
+            kind: "ambiguous",
+            text: text,
+            meaning: ambiguous.first(),
+            abbreviation: ambiguous.last(),
+          )
+        },
+      )
+    }
+    let key = lower(text).trim(".", at: end)
+    let code = aliases.at(key, default: none)
+    // A plural with "s" ("heures", "kgs"), but not "ms" for "m".
+    if code == none and key.ends-with("s") and key.clusters().len() > 2 {
+      code = aliases.at(key.slice(0, -1), default: none)
+    }
+    if code != none { return (code: code, issue: none) }
+    (code: "C62", issue: (kind: "unknown", text: text))
+  }
+}
+
+/// The UN/ECE Recommendation 20 code of a unit as `(code: .., issue: ..)`,
+/// see `unit-resolver`.
+///
+/// -> dictionary
+#let resolve-unit(unit) = unit-resolver()(unit)
+
+/// The UN/ECE Recommendation 20 code of a unit, see `unit-resolver`.
+///
+/// -> str
+#let map-unit-code(unit) = resolve-unit(unit).code
 
 // Determine delivery date or period from items
 #let determine-delivery-dates(ctx, items) = {
@@ -736,24 +908,22 @@
   }
 }
 
-// VAT exemption reason texts EN 16931 expects for a category (BR-AE-10,
-// BR-IC-10, BR-G-10, BR-O-10) when the tax has no `grounds` of its own.
-#let _default-exemption-reasons = (
-  AE: "Reverse charge",
-  K: "Intra-community supply",
-  G: "Export outside the EU",
-  O: "Not subject to VAT",
-)
-
 // Categories whose VAT breakdown must not carry an exemption reason
 // (BR-S-10, BR-Z-10, BR-AF-10, BR-AG-10).
 #let _taxed-categories = ("S", "Z", "L", "M")
 
-#let exemption-reason(category, grounds) = {
+/// The exemption reason (BT-120) of a VAT category: the plain text of its
+/// grounds. The VAT groups of the line items state the note of the language
+/// for the categories that need a reason (AE, K, G, O) when their items give
+/// no grounds, and print it (see `calculate-taxes`); without any, it is taken
+/// from `strings` the same way.
+///
+/// -> str | none
+#let exemption-reason(category, grounds, strings: (:)) = {
   if category in _taxed-categories { return none }
   let reason = text-or-none(grounds)
   if reason != none { reason } else {
-    _default-exemption-reasons.at(str(category), default: none)
+    text-or-none(default-grounds(category, strings))
   }
 }
 
@@ -771,7 +941,16 @@
 }
 
 // An invoice line (BG-25) with net amounts.
-#let line-model(item, index, inclusive: false, price-digits: 4) = {
+// With gross prices, `round-price` rounds the net price as the invoice
+// rounds unit prices (the `money-fine` rounding of the locale). `unit` is the
+// unit of the item as `unit-resolver` resolves it, resolved here when `auto`.
+#let line-model(
+  item,
+  index,
+  inclusive: false,
+  round-price: price => calc.round(price, digits: 4),
+  unit: auto,
+) = {
   let tax = item.at("tax", default: (:))
   if type(tax) != dictionary { tax = (:) }
   let rate = to-ratio(tax.at("rate", default: 0))
@@ -780,7 +959,7 @@
   let base-quantity = to-decimal(item.at("base-quantity", default: 1))
   let price = to-decimal(item.at("price", default: 0))
   if inclusive {
-    price = calc.round(price / (1 + rate), digits: price-digits)
+    price = round-price(price / (1 + rate))
   }
   // BR-27: the item net price must not be negative, the quantity carries the
   // sign of a credited line instead.
@@ -807,6 +986,8 @@
   if type(item-id) == str { item-id = (seller: item-id) }
   if type(item-id) != dictionary { item-id = (:) }
 
+  if unit == auto { unit = resolve-unit(item.at("unit", default: none)) }
+
   (
     index: index,
     id: first-of(text-or-none(item.at("pos", default: none)), str(index + 1)),
@@ -817,12 +998,17 @@
     buyer-id: text-or-none(item-id.at("buyer", default: none)),
     quantity: quantity,
     base-quantity: base-quantity,
-    unit-code: map-unit-code(item.at("unit", default: none)),
+    unit-code: unit.code,
+    // A unit text without a known code, or a code that most likely means
+    // something else (see `unit-resolver`).
+    unit-issue: unit.issue,
     price: price,
     net: _net(to-decimal(item.at("total", default: 0)), rate, inclusive),
     key: _tax-key(tax),
     category: text-or-none(tax.at("category", default: none)),
     rate: rate,
+    // No tax was set for the item (`tax: none`), see `tax.implicit-zero`.
+    implicit: tax.at("implicit", default: false),
     allowances: allowances,
     charges: charges,
   )
@@ -899,12 +1085,24 @@
     default: ctx.at("tax-mode", default: "exclusive"),
   )
   let inclusive = tax-mode == "inclusive"
-  let price-digits = (
+  // Net prices of gross prices are rounded like every unit price of the
+  // invoice: with the fine money rounding of the locale, so a locale that
+  // keeps 6 decimals keeps them in the XML as well.
+  let round-price = (
     ctx
       .at("locale", default: (:))
-      .at("currency", default: (:))
-      .at("decimals-fine", default: 4)
+      .at("normalize", default: (:))
+      .at("money-fine", default: none)
   )
+  if type(round-price) != function {
+    let digits = (
+      ctx
+        .at("locale", default: (:))
+        .at("currency", default: (:))
+        .at("decimals-fine", default: 4)
+    )
+    round-price = price => calc.round(price, digits: digits)
+  }
 
   // BR-O-02: an invoice not subject to VAT carries no VAT identifiers. MINIMUM
   // has no VAT breakdown; there the seller VAT ID is needed for BR-CO-26.
@@ -929,14 +1127,17 @@
     _ship-to-buyer(buyer.address)
   } else { none }
 
-  let lines = items
-    .enumerate()
-    .map(((i, item)) => line-model(
+  let resolve = unit-resolver()
+  let lines = ()
+  for (i, item) in items.enumerate() {
+    lines.push(line-model(
       item,
       i,
       inclusive: inclusive,
-      price-digits: price-digits,
+      round-price: round-price,
+      unit: resolve(item.at("unit", default: none)),
     ))
+  }
   let allowance-charges = document-allowance-charges(
     item-data.at("discounts", default: ()),
     item-data.at("surcharges", default: ()),
@@ -956,7 +1157,13 @@
         rate: to-ratio(tax.at("rate", default: 0)),
         basis: to-decimal(tax.at("basis", default: 0)),
         amount: to-decimal(tax.at("absolute", default: 0)),
-        reason: exemption-reason(category, tax.at("grounds", default: none)),
+        reason: exemption-reason(
+          category,
+          tax.at("grounds", default: none),
+          strings: ctx.at("locale", default: (:)).at("strings", default: (:)),
+        ),
+        // Some item of the group has no tax (`tax: none`).
+        implicit: tax.at("implicit", default: false),
       )
     })
 
@@ -973,22 +1180,36 @@
   let prepaid-total = to-decimal(item-data.at("prepaid-total", default: 0))
 
   let locale = ctx.at("locale", default: (:))
-  let currency = compact(
-    locale.at("currency", default: (:)).at("code", default: none),
-  )
+  let currency-meta = locale.at("currency", default: (:))
+  let currency = compact(currency-meta.at("code", default: none))
   if currency != none { currency = upper(currency) }
+  // How the invoice prints an amount (`format.currency`) and a unit price
+  // (`format.currency-fine`), to check that it prints the currency the XML
+  // states (BT-5).
+  let printed-currency = (
+    symbol: text-or-none(currency-meta.at("symbol", default: none)),
+  )
+  for (name, key) in (("amount", "currency"), ("price", "currency-fine")) {
+    let formatter = locale.at("format", default: (:)).at(key, default: none)
+    printed-currency.insert(name, if type(formatter) == function {
+      plain-text(formatter(decimal("1")))
+    })
+  }
 
   let iban = if bank != none { compact(bank.at("iban", default: none)) }
   let bic = if bank != none { compact(bank.at("bic", default: none)) }
 
   // BT-9 and BT-20: the invoice's own `due-date` wins over the payment goal.
+  // `terms-input` is the input the payment terms come from.
   let due-date = none
   let terms = none
+  let terms-input = none
   let explicit-due-date = ctx.at("due-date", default: none)
   if type(explicit-due-date) == datetime {
     due-date = explicit-due-date
   } else {
-    terms = text-or-none(explicit-due-date)
+    terms = payment-terms(explicit-due-date)
+    if terms != none { terms-input = "due-date" }
   }
   if payment-goal != none {
     let goal-date = payment-goal.at("date", default: none)
@@ -1002,17 +1223,19 @@
       due-date = invoice-date + duration(days: days)
     }
     if terms == none and type(goal-date) != datetime {
-      terms = text-or-none(goal-date)
+      terms = payment-terms(goal-date)
+      if terms != none { terms-input = "payment-goal" }
     }
     // Without days or a date, the payment goal prints that the amount is due
     // at once ("sofort nach Erhalt"), which are the payment terms.
     if terms == none and due-date == none and goal-date == none {
-      terms = text-or-none(
+      terms = payment-terms(
         locale
           .at("strings", default: (:))
           .at("payment", default: (:))
           .at("deadline-soon", default: none),
       )
+      if terms != none { terms-input = "payment-goal" }
     }
   }
 
@@ -1021,6 +1244,7 @@
     tax-mode: tax-mode,
     outside-scope: outside-scope,
     currency: currency,
+    printed-currency: printed-currency,
     invoice: (
       number: text-or-none(_field(ctx, "invoice-nr")),
       type-code: "380",
@@ -1083,6 +1307,7 @@
       },
       due-date: due-date,
       terms: terms,
+      terms-input: terms-input,
     ),
   )
 }

@@ -73,7 +73,7 @@ Create a dictionary containing your translations. Notice how we only override th
 
 The region configuration is defined as a function: `(lang) => dictionary`. It receives the finalized language dictionary so that it can utilize translated strings if a specific tax configuration requires standard regional text.
 
-Here, we define how currencies are formatted, how values are **Normalized**, and the standard VAT rate for Poland. This logic remains consistent whether the system is utilizing **Forward/Backward Calculation** for line-items.
+Here, we define the currency, how dates are formatted, how values are **Normalized**, and the standard VAT rate for Poland. This logic remains consistent whether the system is utilizing **Forward/Backward Calculation** for line-items.
 
 ```typst
 // region/pl.typ
@@ -84,12 +84,13 @@ Here, we define how currencies are formatted, how values are **Normalized**, and
   meta: (
     region: "pl",
   ),
+  // The currency: the amounts are printed with its symbol (e.g. "1.230,00 zł")
+  // and rounded to its decimals, and the e-invoice states its code.
+  currency: (
+    code: "PLN",
+    symbol: "zł",
+  ),
   format: (
-    // Format currency to append 'zł' and use comma decimals
-    currency: (val) => {
-      let rounded = calc.round(val, digits: 2)
-      str(rounded).replace(".", ",") + " zł"
-    },
     // Customize date formatting
     date: (val) => if type(val) == datetime {
       val.display("[day].[month].[year]")
@@ -151,9 +152,14 @@ Users of your published package can now simply import your locale and pass it di
 
 When defining the `lang` parameter for the factory, refer to the language override keys. When defining the `region` parameter, your function must return a dictionary conforming to the following structure:
 
-| Key         | Type         | Description                                                                                                          |
-| :---------- | :----------- | :------------------------------------------------------------------------------------------------------------------- |
-| `meta`      | `dictionary` | Contains the `region` string identifier (e.g., `"pl"`, `"cz"`).                                                      |
-| `format`    | `dictionary` | Functions controlling the conversion of integers/floats/dates to strings (e.g., `currency`, `date`, `percent`).      |
-| `normalize` | `dictionary` | Functions determining rounding logic for `money`, `money-fine`, and `infer-tax` parameters.                          |
-| `tax`       | `dictionary` | Contains default `data.tax` objects to be applied globally (e.g., `default-vat`, `small-enterprise-special-scheme`). |
+| Key         | Type         | Description                                                                                                                             |
+| :---------- | :----------- | :-------------------------------------------------------------------------------------------------------------------------------------- |
+| `meta`      | `dictionary` | Contains the `region` string identifier (e.g., `"pl"`, `"cz"`).                                                                         |
+| `currency`  | `dictionary` | The currency of the region (`code`, `symbol`, `decimals`, `decimals-fine`). The e-invoice states its `code` as invoice currency (BT-5). |
+| `format`    | `dictionary` | Functions controlling the conversion of integers/floats/dates to strings (e.g., `currency`, `date`, `percent`).                         |
+| `normalize` | `dictionary` | Functions determining rounding logic for `money`, `money-fine`, and `infer-tax` parameters.                                             |
+| `tax`       | `dictionary` | Contains default `data.tax` objects to be applied globally (e.g., `default-vat`, `small-enterprise-special-scheme`).                    |
+
+:::info
+The currency formatting and rounding follow the `currency` of the region: a region (or an override such as `locale.de-de.with((region: (currency: (code: "USD", symbol: "$"))))`) that sets the `currency` but not `format.currency`, `format.currency-fine`, `normalize.money` or `normalize.money-fine` gets them derived from it, so the printed amounts and the currency code of the e-invoice always agree. If you provide your own currency formatter, it must print the same currency: an e-invoice whose printed amounts show another currency than its code stops with the error `IP-PRINT-02`. Unit prices (`currency-fine`) may be printed in a subunit instead, e.g. `32,45 ct` for an energy tariff.
+:::

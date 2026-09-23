@@ -61,7 +61,7 @@ You must provide either a `price` (unit price) **or** a `total` (fixed line tota
 | --------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`          | `str` \| `content`                                                   | The primary title of the item.                                                                                                                                                                                                                                                     |
 | `description`   | `str` \| `content` \| `auto` \| `none`                               | Detailed text appearing below the name.                                                                                                                                                                                                                                            |
-| `quantity`      | `number` \| `auto`                                                   | The numeric amount being billed (defaults to 1).                                                                                                                                                                                                                                   |
+| `quantity`      | `number` \| `auto`                                                   | The numeric amount being billed (defaults to 1), rounded to 4 decimals before the total is calculated.                                                                                                                                                                             |
 | `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g). Must be greater than 0.                                                                                                                                                                                             |
 | `unit`          | `str` \| `content` \| `dictionary` \| `function` \| `auto` \| `none` | The unit of measurement (e.g., `"h"`, `"pcs"`). Pass a function from the `unit` module or a dictionary for ZUGFeRD compliance — see below. With `auto`, it inherits the unit of an enclosing `group` or `apply`, otherwise it defaults to `unit.piece`.                            |
 | `date`          | `datetime` \| `array` \| `auto` \| `none`                            | When the service was provided. Use a single `datetime` or a range array `(datetime, datetime)`.                                                                                                                                                                                    |
@@ -147,18 +147,18 @@ For a complete list of standardized tax functions, margin schemes, and how to cr
 
 Groups multiple items together as a virtual single item while automatically aggregating their totals and dates.
 
-| Key             | Type                                                                 | Description                                                                                                                      |
-| --------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `name`          | `str` \| `content`                                                   | The name of the bundle.                                                                                                          |
-| `description`   | `str` \| `content` \| `auto` \| `none`                               | If set to `auto`, it lists the names of all child items ("A, B and C", in the language of the locale).                           |
-| `quantity`      | `number` \| `auto`                                                   | The quantity of the bundle itself (defaults to 1). A nested bundle does not inherit it.                                          |
-| `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g). Must be greater than 0.                                           |
-| `unit`          | `str` \| `content` \| `dictionary` \| `function` \| `auto` \| `none` | The unit of measurement for the bundle. Accepts the same dictionary form, function, or string as `item` for ZUGFeRD compliance.  |
-| `item-id`       | `str` \| `dictionary` \| `auto` \| `none`                            | Article identifiers of the bundle for the ZUGFeRD XML. Same forms as on `item`. See [above](#the-item-id-parameter-and-zugferd). |
-| `date`          | `datetime` \| `array` \| `auto` \| `none`                            | If set to `auto`, calculates the date range based on the earliest and latest dates of the items inside the bundle.               |
-| `input-gross`   | `bool` \| `auto`                                                     | Overrides the parent `input-gross` setting specifically for children.                                                            |
-| `tax`           | `ratio` \| `dictionary` \| `auto`                                    | Overrides the parent `tax` setting specifically for children.                                                                    |
-| `body`          | `content`                                                            | The nested items, modifiers, or sub-bundles belonging to this group.                                                             |
+| Key             | Type                                                                 | Description                                                                                                                                 |
+| --------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`          | `str` \| `content`                                                   | The name of the bundle.                                                                                                                     |
+| `description`   | `str` \| `content` \| `auto` \| `none`                               | If set to `auto`, it lists the names of all child items ("A, B and C", in the language of the locale).                                      |
+| `quantity`      | `number` \| `auto`                                                   | The quantity of the bundle itself (defaults to 1), rounded to 4 decimals like the quantity of an item. A nested bundle does not inherit it. |
+| `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g). Must be greater than 0.                                                      |
+| `unit`          | `str` \| `content` \| `dictionary` \| `function` \| `auto` \| `none` | The unit of measurement for the bundle. Accepts the same dictionary form, function, or string as `item` for ZUGFeRD compliance.             |
+| `item-id`       | `str` \| `dictionary` \| `auto` \| `none`                            | Article identifiers of the bundle for the ZUGFeRD XML. Same forms as on `item`. See [above](#the-item-id-parameter-and-zugferd).            |
+| `date`          | `datetime` \| `array` \| `auto` \| `none`                            | If set to `auto`, calculates the date range based on the earliest and latest dates of the items inside the bundle.                          |
+| `input-gross`   | `bool` \| `auto`                                                     | Overrides the parent `input-gross` setting specifically for children.                                                                       |
+| `tax`           | `ratio` \| `dictionary` \| `auto`                                    | Overrides the parent `tax` setting specifically for children.                                                                               |
+| `body`          | `content`                                                            | The nested items, modifiers, or sub-bundles belonging to this group.                                                                        |
 
 ### Mixed Tax Brackets
 
@@ -295,7 +295,7 @@ Helper Functions `discount(..)` and `surcharge(..)` use the exact same parameter
 | Key           | Type                                   | Description                                                                                                                                                                |
 | :------------ | :------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`        | `str` \| `content`                     | The name/title of the adjustment (e.g., "Student Discount", "Express Shipping").                                                                                           |
-| `label`       | `str` \| `content` \| `auto` \| `none` | Custom label prefix (e.g. "Rabatt", "Nachlass", "Skonto"). If `auto`, resolves to locale default. If `none`, no prefix is displayed.                                       |
+| `label`       | `str` \| `content` \| `auto` \| `none` | Custom label prefix (e.g. "Rabatt", "Nachlass", "Bonus"). If `auto`, resolves to locale default. If `none`, no prefix is displayed.                                        |
 | `amount`      | `ratio` \| `decimal-like` \| `auto`    | If a `ratio` (e.g., `-10%`), it acts as a relative percentage. If a `decimal-like` number (e.g., `15.00`), it acts as an absolute monetary amount.                         |
 | `input-gross` | `bool` \| `auto`                       | For absolute monetary amounts (e.g., `10.00` instead of `10%`), this defines if the entered value already includes tax. Follows standard cascading logic if set to `auto`. |
 | `description` | `str` \| `content` \| `auto` \| `none` | Extra context or conditions for the modifier.                                                                                                                              |
@@ -319,7 +319,7 @@ For absolute monetary amounts (e.g., `10.00` instead of `10%`), the `input-gross
   The subtotal before taxes will be exactly 10.00 units less. The final gross impact will depend on the tax rate.
 - **Custom or Omitted Label:**
   ```typst
-  #discount("Skonto", label: none, amount: 2%) // Renders just "↳ Skonto (-2%)" without prefix
+  #discount("Treuerabatt", label: none, amount: 2%) // Renders just "↳ Treuerabatt (-2%)" without prefix
   #discount("Treueaktion", label: "Sondernachlass", amount: 5%)
   ```
 

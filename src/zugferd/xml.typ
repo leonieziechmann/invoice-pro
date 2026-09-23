@@ -47,8 +47,17 @@
 // Format a quantity (BT-129, BT-149) without losing its decimals.
 #let fmt-quantity(d) = fmt-number(d, max-digits: 6)
 
-// Format a decimal rate (0.19) as a ZUGFeRD percentage string ("19.00").
-#let fmt-rate(rate) = fmt-number(to-ratio(rate) * 100)
+/// The decimals of a VAT rate in percent the XML states (BT-96, BT-103,
+/// BT-119, BT-152). EN 16931 does not limit them; 4 state every real rate
+/// exactly, e.g. 9.975%.
+#let rate-digits = 4
+
+// Format a decimal rate (0.19) as a ZUGFeRD percentage string: "19.00",
+// "5.50", "9.975".
+#let fmt-rate(rate) = fmt-number(
+  to-ratio(rate) * 100,
+  max-digits: rate-digits,
+)
 
 // Format a datetime as YYYYMMDD for the ZUGFeRD date format code 102.
 #let fmt-date(date) = if type(date) == datetime and date.year() != none {

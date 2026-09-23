@@ -1,7 +1,7 @@
 #import "../loom-wrapper.typ": loom
 #import "../utils/coercion.typ"
 #import "../data/tax.typ"
-#import "calc-item.typ": require-positive-base-quantity
+#import "calc-item.typ": normalize-quantity, require-positive-base-quantity
 
 #let create-virtual-tax-item(
   ctx,
@@ -17,9 +17,9 @@
   let norm-money = ctx.locale.normalize.money
   let norm-money-fine = ctx.locale.normalize.money-fine
 
-  let quantity = ctx.bundle-quantity
-  let base-quantity = ctx.bundle-base-quantity
-  require-positive-base-quantity(base-quantity, "bundle")
+  require-positive-base-quantity(ctx.bundle-base-quantity, "bundle")
+  let quantity = normalize-quantity(ctx.bundle-quantity)
+  let base-quantity = normalize-quantity(ctx.bundle-base-quantity)
   let quantity-modifier = quantity / base-quantity
 
   // The items of a bundle make up one unit (per base quantity) of it.

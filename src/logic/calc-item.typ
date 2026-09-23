@@ -1,18 +1,45 @@
 #import "../utils/coercion.typ"
 #import "../data/tax.typ" as m-tax
 
+/// The decimals of a quantity (BT-129, BT-149). A quantity is rounded to them
+/// once, before anything is calculated with it, so the line total, the
+/// printed quantity and the e-invoice all use the same value, e.g. 0.3333 for
+/// a quantity of `1/3`. The built-in number formats print 4 decimals.
+#let quantity-digits = 4
+
+/// A quantity rounded to `quantity-digits` decimals.
+///
+/// -> decimal | auto | none
+#let normalize-quantity(value) = {
+  let quantity = coercion.to-decimal(value)
+  if quantity == auto or quantity == none { return quantity }
+  calc.round(quantity, digits: quantity-digits)
+}
+
 /// Panics unless `base-quantity` (the quantity the price refers to) is above
-/// 0: the price is divided by it (BT-149, PEPPOL-EN16931-R121).
+/// 0 once rounded: the price is divided by it (BT-149, PEPPOL-EN16931-R121).
 #let require-positive-base-quantity(base-quantity, name) = {
   let value = coercion.to-decimal(base-quantity)
   if value == auto or value == none { return }
-  if value <= 0 {
-    panic(
-      name
-        + "::base-quantity must be greater than 0, got "
-        + str(value).replace("\u{2212}", "-")
-        + ". It is the quantity the price refers to, e.g. `base-quantity: 100` for a price per 100 pieces.",
-    )
+  if normalize-quantity(value) <= 0 {
+    let written = str(value).replace("\u{2212}", "-")
+    panic(if value > 0 {
+      (
+        name
+          + "::base-quantity must be at least 0.0001, got "
+          + written
+          + ". Quantities are rounded to "
+          + str(quantity-digits)
+          + " decimals."
+      )
+    } else {
+      (
+        name
+          + "::base-quantity must be greater than 0, got "
+          + written
+          + ". It is the quantity the price refers to, e.g. `base-quantity: 100` for a price per 100 pieces."
+      )
+    })
   }
 }
 
@@ -23,9 +50,9 @@
   let norm-money-fine = ctx.locale.normalize.money-fine
 
   // 1. Quantity & Uni Normalization
-  let quantity = to-dec(ctx.quantity)
-  let base-quantity = to-dec(ctx.base-quantity)
-  require-positive-base-quantity(base-quantity, "item")
+  require-positive-base-quantity(ctx.base-quantity, "item")
+  let quantity = normalize-quantity(ctx.quantity)
+  let base-quantity = normalize-quantity(ctx.base-quantity)
   let quantity-multiplier = quantity / base-quantity
   let unit = ctx.unit
 

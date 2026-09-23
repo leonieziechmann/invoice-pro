@@ -102,6 +102,13 @@
     date: "Date de prestation pour tous les articles :",
   ),
 
+  tax-exemption: (
+    reverse-charge: "Autoliquidation",
+    intra-community: "Livraison intracommunautaire exonérée de TVA",
+    export: "Exportation exonérée de TVA",
+    outside-scope: "Opération non soumise à la TVA",
+  ),
+
   units: (
     piece: "pièce",
     "set": "ensemble",

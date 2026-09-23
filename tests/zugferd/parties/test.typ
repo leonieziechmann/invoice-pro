@@ -455,7 +455,8 @@
   let with-category(model, category, lines: false, allowance: false) = {
     let model = model
     model.taxes = (
-      model.taxes.first() + (category: category, rate: decimal("0")),
+      model.taxes.first()
+        + (category: category, rate: decimal("0"), amount: decimal("0")),
     )
     if lines { model.lines.at(0).category = category }
     if allowance {

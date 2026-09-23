@@ -1,10 +1,22 @@
 #import "../loom-wrapper.typ": compute-motif, loom
 #import "../utils/coercion.typ"
+#import "../data/tax.typ" as m-tax
 #import "group-by-tax.typ": group-by-tax
 
 #let calculate-taxes(ctx, children) = {
   let norm-money = ctx.locale.normalize.money
   let norm-money-fine = ctx.locale.normalize.money-fine
+  let strings = ctx.locale.at("strings", default: (:))
+  // The VAT group of the small business scheme (`tax-exempt-small-biz`).
+  let small-business-key = if ctx.at("tax-exempt-small-biz", default: false) {
+    let scheme = (
+      ctx
+        .locale
+        .at("tax", default: (:))
+        .at("small-enterprise-special-scheme", default: none)
+    )
+    if type(scheme) == dictionary { m-tax.to-tax-key(scheme) }
+  }
 
   let modifier-applicator = loom.query.find-signal(
     children,
@@ -72,6 +84,27 @@
       absolute: decimal("0"),
       basis: decimal("0"),
     )
+
+    // A category that needs an exemption reason (AE, K, G, O) states the note
+    // of the language (`tax-exemption`) when no item gives grounds. It is
+    // printed below the line items like other grounds and written as
+    // exemption reason into the e-invoice (BT-120), so both say the same.
+    // The themes print the note of the small business scheme themselves
+    // (`legal.vat-exemption` if the scheme has no grounds), so it is only the
+    // reason of its group.
+    if tax.grounds-list.len() == 0 and not m-tax.has-grounds(tax.grounds) {
+      if key == small-business-key {
+        tax.grounds = strings
+          .at("legal", default: (:))
+          .at("vat-exemption", default: none)
+      } else {
+        let note = m-tax.default-grounds(tax.category, strings)
+        if note != none {
+          tax.grounds = note
+          tax.grounds-list = (note,)
+        }
+      }
+    }
 
     if is-net-based {
       let tax-amount = norm-money(group-total * tax.rate)

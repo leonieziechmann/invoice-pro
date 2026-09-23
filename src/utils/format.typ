@@ -57,6 +57,10 @@
 
 /// Helper function to reduce formatting boilerplate in concrete regions.
 /// Generates the standard number and currency formatters based on the provided metadata.
+///
+/// `currency-formatters` rebuilds the formatters with the same number format
+/// for another currency: `build-locale` uses it when a patch sets the
+/// currency of a region but not its currency formatters.
 #let make-formatters(numeric-format, currency-meta, currency-location: end) = {
   let currency-format = (
     currency: currency-meta.symbol,
@@ -99,5 +103,11 @@
         number-format: numeric-format + (accuracy: accuracy, padding: true),
       )
     },
+
+    currency-formatters: meta => make-formatters(
+      numeric-format,
+      meta,
+      currency-location: currency-location,
+    ),
   )
 }

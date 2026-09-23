@@ -20,8 +20,7 @@
   // Errors are listed before warnings, each with a rule, field and message.
   let m = base
   m.invoice.number = none
-  m.profile = resolve-profile("en16931", "DE")
-  m.buyer.electronic-address = none
+  m.payment.means.iban = "DE00512108001245126199"
   let diagnostics = validate(m)
   assert.eq(diagnostics.map(d => d.level), ("error", "warning"))
   assert.eq(diagnostics.first(), (
@@ -110,12 +109,27 @@
   m.seller.contact.phone = none
   m.seller.contact.email = none
   assert.eq(rules(m), ("BR-DE-5", "BR-DE-6", "BR-DE-7"))
-  // XRechnung only warns, but Mustang rejects the invoice: errors
+  // BR-DE-27 and BR-DE-28 are errors (Mustang rejects the invoice), with the
+  // official e-mail syntax of XRechnung (XR-EMAIL-REGEX)
   let m = base
   m.seller.contact.phone = "12"
   m.seller.contact.email = "seller.example.de"
   assert.eq(rules(m), ("BR-DE-27", "BR-DE-28"))
   assert.eq(rules(m, level: "warning"), ())
+  for email in (
+    "info@müller-bau.de",
+    ".max@seller.de",
+    "max@seller",
+    "a@b@c.de",
+  ) {
+    m.seller.contact.email = email
+    assert.eq(rules(m), ("BR-DE-27", "BR-DE-28"), message: email)
+  }
+  m.seller.contact.phone = "(089) 12"
+  for email in ("info@xn--mller-bau-q9a.de", "max.m+rechnung@seller-gmbh.de") {
+    m.seller.contact.email = email
+    assert.eq(rules(m), (), message: email)
+  }
   let m = base
   m.seller.address.city = none
   m.seller.address.post-code = none
@@ -154,11 +168,20 @@
   // --- VAT ---
   let tax(category, rate: 0, reason: none) = (
     base.taxes.first()
-      + (category: category, rate: decimal(rate), reason: reason)
+      + (
+        category: category,
+        rate: decimal(rate),
+        reason: reason,
+        amount: calc.round(base.taxes.first().basis * decimal(rate), digits: 2),
+      )
   )
   let with-tax(model, ..taxes) = {
     let model = model
     model.taxes = taxes.pos()
+    // The lines have the category of the (first) VAT group, as in an invoice.
+    for i in range(model.lines.len()) {
+      model.lines.at(i).category = model.taxes.first().category
+    }
     model
   }
   assert.eq(rules(with-tax(base, tax("AA", rate: "0.07"))), ("BR-CL-18",))

@@ -194,7 +194,10 @@
 // --- 5. Intra-community supply: deliver to the buyer's country ---
 #model-test(tax: tax.intra-community(), model => {
   assert.eq(model.ship-to.address.country, "FR")
-  assert.eq(model.taxes.first().reason, "Intra-community supply")
+  assert.eq(
+    model.taxes.first().reason,
+    "Steuerfreie innergemeinschaftliche Lieferung",
+  )
 })[#line-items[#item([A], price: 1)]]
 
 #model-test(
@@ -293,8 +296,8 @@
   assert.eq(map-unit-code("hrs"), "HUR")
   assert.eq(map-unit-code([Std.]), "HUR")
   assert.eq(map-unit-code("Tage"), "DAY")
-  // "St" (Stück) is no unit code, "ST" (sheet) is
-  assert.eq(map-unit-code("St"), "C62")
+  // "St" (Stück) is the common abbreviation of pieces
+  assert.eq(map-unit-code("St"), "H87")
   assert.eq(map-unit-code(none), "C62")
 }
 

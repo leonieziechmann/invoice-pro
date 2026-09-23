@@ -110,6 +110,21 @@
     date: "Service date for all items:",
   ),
 
+  /// Notes on why no VAT is charged, for the VAT categories that need one
+  /// when their items give no `grounds` of their own. The note is printed
+  /// below the line items and written as exemption reason (BT-120) into the
+  /// e-invoice.
+  tax-exemption: (
+    /// Reverse charge (AE), e.g. `tax.new(category: "AE")` without grounds.
+    reverse-charge: "Reverse charge",
+    /// Intra-community supply (K), `tax.intra-community()`.
+    intra-community: "Tax-exempt intra-community supply",
+    /// Export outside the EU (G), `tax.export()`.
+    export: "Tax-exempt export",
+    /// Not subject to VAT (O), `tax.outside-scope()`.
+    outside-scope: "Not subject to VAT",
+  ),
+
   /// Designations for common units of measure
   units: (
     piece: "piece",
