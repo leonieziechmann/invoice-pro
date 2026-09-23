@@ -65,6 +65,7 @@
     contact-person: "Referente",
     contact-phone: "Telefono",
     contact-email: "E-mail",
+    payee: "Beneficiario del pagamento",
   ),
 
   /// Intestazioni di colonna ed etichette per la tabella degli articoli

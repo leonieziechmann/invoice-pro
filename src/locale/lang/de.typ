@@ -63,6 +63,7 @@
     contact-person: "Ansprechpartner:in",
     contact-phone: "Telefon",
     contact-email: "E-Mail",
+    payee: "Zahlungsempfänger",
   ),
 
   line-items: (

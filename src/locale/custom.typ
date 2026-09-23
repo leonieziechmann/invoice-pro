@@ -80,6 +80,8 @@
 /// - contact-person (auto, str): e.g., "Contact Person", "Ansprechpartner:in"
 /// - contact-phone (auto, str): e.g., "Phone", "Telefon"
 /// - contact-email (auto, str): e.g., "Email", "E-Mail"
+/// - payee (auto, str): who receives the payment instead of the sender,
+///   e.g., "Payee", "Zahlungsempfänger"
 /// -> array
 #let reference(
   tax-number: auto,
@@ -105,6 +107,7 @@
   contact-person: auto,
   contact-phone: auto,
   contact-email: auto,
+  payee: auto,
 ) = (
   {
     let payload = _clean-auto((
@@ -131,6 +134,7 @@
       contact-person: contact-person,
       contact-phone: contact-phone,
       contact-email: contact-email,
+      payee: payee,
     ))
     (strings: (reference: payload))
   },

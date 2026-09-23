@@ -65,6 +65,7 @@
     contact-person: "Personne de contact",
     contact-phone: "Téléphone",
     contact-email: "E-mail",
+    payee: "Bénéficiaire du paiement",
   ),
 
   /// Column headers and labels for the line-items table

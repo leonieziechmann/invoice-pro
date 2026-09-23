@@ -3,6 +3,7 @@
 // must name the invoice it replaces (BR-DE-26 in XRechnung, IP-DOC-02).
 
 #import "/src/lib.typ": *
+#import "/src/utils/text.typ": plain-text
 #import "/src/zugferd/profile.typ": resolve-profile
 #import "/tests/zugferd/harness.typ": (
   bank, buyer-de, buyer-fr, diagnostic, model-test, rules, seller, xml-elements,
@@ -139,23 +140,31 @@
   locale: locale.de-de,
   sender: seller,
   recipient: buyer-de,
+  date: datetime(year: 2026, month: 9, day: 1),
   ..args,
 )[]
+// The date of the supply of a German seller (§ 14 Abs. 4 Satz 1 Nr. 6
+// UStG), here the invoice date, is marked content
+#let plain-refs(refs) = refs.map(((label, value)) => (label, plain-text(value)))
 #default-references(
   document-type: "credit-note",
   preceding-invoice-nr: "R-2026-11",
   preceding-invoice-date: preceding-date,
-  refs => assert.eq(refs, (
+  refs => assert.eq(plain-refs(refs), (
     ("Steuernummer", "123/456/78901"),
     ("USt-IdNr.", "DE123456789"),
     ("Empfänger:in USt-IdNr.", "DE987654321"),
+    ("Leistungszeitraum", "01.09.2026"),
     ("Vorherige Rechnungsnummer", "R-2026-11"),
     ("Datum der vorherigen Rechnung", "30.08.2026"),
   )),
 )
+// With gross prices (B2C) as well
 #default-references(
   tax-mode: "inclusive",
   preceding-invoice-nr: "R-2026-11",
-  refs => assert.eq(refs, (("Vorherige Rechnungsnummer", "R-2026-11"),)),
+  refs => assert.eq(plain-refs(refs).slice(3), (
+    ("Leistungszeitraum", "01.09.2026"),
+    ("Vorherige Rechnungsnummer", "R-2026-11"),
+  )),
 )
-#default-references(tax-mode: "inclusive", refs => assert.eq(refs, ()))

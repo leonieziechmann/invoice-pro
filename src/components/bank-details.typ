@@ -33,9 +33,10 @@
 ///
 /// -> content
 #let bank-details(
-  /// The name of the account holder. Defaults to the sender's name on one
-  /// line, as in the e-invoice (BT-27). A name given here is also the
-  /// account name of the e-invoice (BT-85).
+  /// The name of the account holder. Defaults to the name of the `payee` of
+  /// the invoice, else the sender's name on one line, as in the e-invoice
+  /// (BT-59, BT-27). A name given here is also the account name of the
+  /// e-invoice (BT-85).
   /// -> auto | none | string
   name: auto,
 
@@ -171,14 +172,30 @@
       let recipient-account = sender-pays(document)
 
       // The account holder: the explicit `name`, else the name on one line
-      // of the sender (as in the e-invoice, BT-27), or of the recipient for
-      // the recipient's account.
+      // of whom the amount is paid to: the payee (BG-10, e.g. a factoring
+      // company that receives the payment instead of the seller), the sender
+      // (as in the e-invoice, BT-27), or the recipient for the recipient's
+      // account.
       let holder = ctx.sender.name
       if name == auto {
-        let party = if recipient-account { ctx.recipient } else { ctx.sender }
-        if recipient-account { holder = party.name }
-        let inline = party.at("name-inline", default: none)
-        if not _is-missing(inline) { holder = inline }
+        let payee = ctx.at("payee", default: none)
+        let payee-name = if (
+          type(payee) == dictionary and not recipient-account
+        ) {
+          payee.at("name", default: none)
+        }
+        if not _is-missing(payee-name) {
+          holder = if type(payee-name) == array {
+            payee-name.join(", ")
+          } else { payee-name }
+        } else {
+          let party = if recipient-account { ctx.recipient } else {
+            ctx.sender
+          }
+          if recipient-account { holder = party.name }
+          let inline = party.at("name-inline", default: none)
+          if not _is-missing(inline) { holder = inline }
+        }
       }
 
       let electronic-bic = normalize-bic(bic)

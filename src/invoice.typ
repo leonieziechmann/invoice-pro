@@ -11,9 +11,7 @@
 #import "logic/party-inputs.typ": check-identifiers, identifier-keys
 #import "logic/document-type.typ": document-title, resolve-document-type
 #import "logic/notes.typ": normalize-notes
-#import "logic/service-period.typ": (
-  format-service-period, resolve-service-period,
-)
+#import "logic/references.typ" as reference-builders
 #import "data/currency.typ": with-currency
 
 /// The main entry point for creating an invoice document.
@@ -49,7 +47,9 @@
   /// Who receives the payment instead of the seller, e.g. a factoring
   /// company: `(name: .., id: .., global-id: .., legal-id: ..)`, of which
   /// only `name` is required. Written into the e-invoice as the payee
-  /// (BG-10); not printed.
+  /// (BG-10), printed by the default `references` and
+  /// `references.payee()`, and the account holder of `bank-details` unless
+  /// they name another one.
   /// -> none | dictionary
   payee: none,
 
@@ -62,9 +62,9 @@
   date: datetime.today(),
   /// The date or period `(start, end)` of the supply, printed by
   /// `references.service-time()` (which the default `references` include if
-  /// it is given) and written to the e-invoice (BT-72 or BG-14). If `none`,
-  /// the earliest to the latest date of the items, or the invoice date if no
-  /// item has a date.
+  /// it is given, and for a seller in Germany always) and written to the
+  /// e-invoice (BT-72 or BG-14). If `none`, the earliest to the latest date
+  /// of the items, or the invoice date if no item has a date.
   /// -> none | datetime | array
   service-period: none,
   /// The subject line of the invoice. If `auto`, the title of the
@@ -81,8 +81,12 @@
   /// -> auto | str | int
   document-type: auto,
   /// Reference information for the document header (e.g., customer number).
-  /// If `auto`, defaults to displaying sender tax-nr, sender vat-id, and recipient vat-id in exclusive tax-mode (B2B), or none in inclusive tax-mode (B2C),
-  /// followed by the `service-period`, the `preceding-invoice-nr` and the `preceding-invoice-date` if they are given.
+  /// If `auto`, what the law requires on the invoice, with net and gross
+  /// prices alike: the seller's tax number and VAT ID (the recipient's on a
+  /// self-billed invoice) and the buyer's VAT ID, the date of the supply (the
+  /// `service-period`, for a seller in Germany always, else only if it is
+  /// given), the `payee` and the `preceding-invoice-nr` and
+  /// `preceding-invoice-date`, each if it is given.
   /// -> auto | none | dictionary | array | function
   references: auto,
   /// The unique identifier or number of the invoice.
@@ -393,60 +397,38 @@
 
   let document-references = ()
   if references == auto {
-    if tax-mode != "inclusive" {
-      let sender-tax-nr = normalized-sender.tax-nr
-      if sender-tax-nr != none and sender-tax-nr != "" {
-        document-references.push((
-          eval-locale.strings.reference.tax-number,
-          sender-tax-nr,
-        ))
-      }
-      let sender-vat-id = normalized-sender.vat-id
-      if sender-vat-id != none and sender-vat-id != "" {
-        document-references.push((
-          eval-locale.strings.reference.vat-id,
-          sender-vat-id,
-        ))
-      }
-      let recipient-vat-id = normalized-recipient.vat-id
-      if recipient-vat-id != none and recipient-vat-id != "" {
-        document-references.push((
-          eval-locale.strings.reference.recipient-vat-id,
-          recipient-vat-id,
-        ))
-      }
+    // What the law requires on every invoice besides the parties and the
+    // items, also with gross prices (B2C), and what the e-invoice states:
+    // - the seller's tax number or VAT identification number (§ 14 Abs. 4
+    //   Satz 1 Nr. 2 UStG, Art. 226 No. 3 of the VAT Directive; BT-31,
+    //   BT-32), the recipient's on a self-billed invoice, and the buyer's
+    //   VAT identification number (Art. 226 No. 4; BT-48). An invoice of up
+    //   to 250 EUR may leave out the seller's (§ 33 UStDV), but the printed
+    //   invoice then would not state what the e-invoice states;
+    // - the date of the supply (BT-72, BG-14): the invoice's
+    //   `service-period`, and for a seller in Germany in any case, as § 14
+    //   Abs. 4 Satz 1 Nr. 6 UStG requires it also when it is the date of the
+    //   invoice: the dates of the items or the invoice date, which the
+    //   e-invoice states then. Elsewhere, only a date that differs from the
+    //   invoice date is required (Art. 226 No. 7), which the dates of the
+    //   items state where the items print them;
+    // - the payee (BG-10), who receives the payment instead of the seller;
+    // - the preceding invoice (BG-3) of a document that amends an invoice
+    //   (Art. 219 of the VAT Directive).
+    let seller = if document.self-billed { normalized-recipient } else {
+      normalized-sender
     }
-    // A self-billed invoice, which the buyer (the sender) issues for the
-    // seller (the recipient), states the seller's tax number or VAT ID (e.g.
-    // § 14 Abs. 4 Satz 1 Nr. 2 UStG), and the buyer's VAT ID.
-    if tax-mode != "inclusive" and document.self-billed {
-      let labels = eval-locale.strings.reference
-      document-references = ()
-      for (label, value) in (
-        (labels.recipient-tax-number, normalized-recipient.tax-nr),
-        (labels.recipient-vat-id, normalized-recipient.vat-id),
-        (labels.vat-id, normalized-sender.vat-id),
-      ) {
-        if value != none and value != "" {
-          document-references.push((label, value))
-        }
-      }
+    let seller-country = seller.country.at("code", default: none)
+    document-references = (
+      reference-builders.seller-tax-nr(),
+      reference-builders.seller-vat-id(),
+      reference-builders.buyer-vat-id(),
+    )
+    if service-period != none or seller-country == "DE" {
+      document-references.push(reference-builders.service-time())
     }
-    // The service period and the preceding invoice (e.g. of a credit note or
-    // a corrected invoice) are printed if they are given, as the e-invoice
-    // states them (BT-72 or BG-14, BG-3): the service period is part of the
-    // invoice (e.g. § 14 Abs. 4 Satz 1 Nr. 6 UStG), and a document that
-    // amends an invoice refers to it (Art. 219 of the VAT Directive).
+    if payee != none { document-references.push(reference-builders.payee()) }
     let labels = eval-locale.strings.reference
-    if service-period != none {
-      document-references.push((
-        labels.service-time,
-        format-service-period(
-          resolve-service-period((), date, service-period: service-period),
-          eval-locale.format.date,
-        ),
-      ))
-    }
     if preceding-invoice-nr not in (none, "", []) {
       document-references.push((
         labels.preceding-invoice-number,

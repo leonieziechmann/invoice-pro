@@ -60,6 +60,7 @@
     contact-person: "Contact Person",
     contact-phone: "Phone",
     contact-email: "Email",
+    payee: "Payee",
   ),
 
   line-items: (

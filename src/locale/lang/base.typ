@@ -75,6 +75,9 @@
     contact-person: "Contact Person",
     contact-phone: "Phone",
     contact-email: "Email",
+    /// Who receives the payment instead of the sender, e.g. a factoring
+    /// company (`invoice(payee: ..)`, BG-10 of the e-invoice).
+    payee: "Payee",
   ),
 
   /// Column headers and labels for the line-items table

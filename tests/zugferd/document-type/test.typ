@@ -508,17 +508,22 @@
 )
 
 // The references of a self-billed invoice state the seller's (recipient's)
-// tax number and VAT ID, and the buyer's (sender's) VAT ID
+// tax number and VAT ID, and the buyer's (sender's) VAT ID, followed by the
+// date of the supply, which the seller in Germany must state (§ 14 Abs. 4
+// Satz 1 Nr. 6 UStG)
 #title-test(
   locale: locale.de-de,
   document-type: "self-billed",
   sender: buyer-de,
   recipient: seller,
   ctx => {
-    assert.eq(ctx.references, (
+    assert.eq(ctx.references.slice(0, 3), (
       ("Empfänger:in Steuernummer", "123/456/78901"),
       ("Empfänger:in USt-IdNr.", "DE123456789"),
       ("USt-IdNr.", "DE987654321"),
+    ))
+    assert.eq(ctx.references.map(r => r.first()).slice(3), (
+      "Leistungszeitraum",
     ))
     []
   },

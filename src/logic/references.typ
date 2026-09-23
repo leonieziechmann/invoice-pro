@@ -69,12 +69,20 @@
   }
 }
 
+/// The label of the printed service period among the references, whatever
+/// its title: the e-invoice compares it with the service period it states
+/// (BT-72, BG-14, IP-PERIOD-01).
+#let service-period-label = label("invoice-pro:service-period")
+
 #let service-time(label: auto, value: auto) = {
   ctx => {
     let title = if label == auto {
       ctx.locale.strings.reference.service-time
     } else { label }
-    // The service period the e-invoice states as well (BT-72, BG-14).
+    let format-date = ctx.locale.format.date
+    // The service period the e-invoice states as well (BT-72, BG-14), or a
+    // date or period `(start, end)` given as `value`, in the date format of
+    // the locale, as any date the invoice prints.
     let val = if value == auto {
       let items = ctx.at("items", default: none)
       format-service-period(
@@ -83,12 +91,25 @@
           ctx.invoice-date,
           service-period: ctx.at("service-period", default: none),
         ),
-        ctx.locale.format.date,
+        format-date,
+      )
+    } else if type(value) == datetime {
+      format-date(value)
+    } else if (
+      type(value) == array
+        and value.len() == 2
+        and type(value.first()) == datetime
+        and type(value.last()) == datetime
+    ) {
+      format-service-period(
+        (start: value.first(), end: value.last()),
+        format-date,
       )
     } else {
       value
     }
-    (title, val)
+    if val in (none, "", []) { return (title, none) }
+    (title, [#val<invoice-pro:service-period>])
   }
 }
 
@@ -148,6 +169,97 @@
     let val = if value == auto {
       ctx.recipient.at("tax-nr", default: none)
     } else { value }
+    (title, val)
+  }
+}
+
+// Whether the document is a self-billed invoice, which the buyer issues: its
+// sender is the buyer and its recipient the seller (`document-type`).
+#let _self-billed(ctx) = {
+  let document = ctx.at("document-type", default: none)
+  type(document) == dictionary and document.at("self-billed", default: false)
+}
+
+/// The seller's tax number, which the invoice must state if the seller has
+/// no VAT identification number on it (§ 14 Abs. 4 Satz 1 Nr. 2 UStG): the
+/// sender's, or on a self-billed invoice the recipient's, with the label of
+/// the party it belongs to.
+///
+/// -> function
+#let seller-tax-nr(label: auto, value: auto) = {
+  ctx => {
+    let strings = ctx.locale.strings.reference
+    let self-billed = _self-billed(ctx)
+    let title = if label != auto { label } else if self-billed {
+      strings.recipient-tax-number
+    } else { strings.tax-number }
+    let val = if value != auto { value } else {
+      let seller = if self-billed { ctx.recipient } else { ctx.sender }
+      seller.at("tax-nr", default: none)
+    }
+    (title, val)
+  }
+}
+
+/// The seller's VAT identification number (Art. 226 No. 3 of the VAT
+/// Directive, § 14 Abs. 4 Satz 1 Nr. 2 UStG): the sender's, or on a
+/// self-billed invoice the recipient's, with the label of the party it
+/// belongs to.
+///
+/// -> function
+#let seller-vat-id(label: auto, value: auto) = {
+  ctx => {
+    let strings = ctx.locale.strings.reference
+    let self-billed = _self-billed(ctx)
+    let title = if label != auto { label } else if self-billed {
+      strings.recipient-vat-id
+    } else { strings.vat-id }
+    let val = if value != auto { value } else {
+      let seller = if self-billed { ctx.recipient } else { ctx.sender }
+      seller.at("vat-id", default: none)
+    }
+    (title, val)
+  }
+}
+
+/// The buyer's VAT identification number, which a reverse charge and an
+/// intra-community supply state (Art. 226 No. 4 of the VAT Directive): the
+/// recipient's, or on a self-billed invoice the sender's, with the label of
+/// the party it belongs to.
+///
+/// -> function
+#let buyer-vat-id(label: auto, value: auto) = {
+  ctx => {
+    let strings = ctx.locale.strings.reference
+    let self-billed = _self-billed(ctx)
+    let title = if label != auto { label } else if self-billed {
+      strings.vat-id
+    } else { strings.recipient-vat-id }
+    let val = if value != auto { value } else {
+      let buyer = if self-billed { ctx.sender } else { ctx.recipient }
+      buyer.at("vat-id", default: none)
+    }
+    (title, val)
+  }
+}
+
+/// Who receives the payment instead of the seller, e.g. a factoring company
+/// (`invoice(payee: ..)`, BG-10 of the e-invoice): the name of the payee on
+/// one line.
+///
+/// -> function
+#let payee(label: auto, value: auto) = {
+  ctx => {
+    let title = if label == auto {
+      ctx.locale.strings.reference.payee
+    } else { label }
+    let val = if value != auto { value } else {
+      let party = ctx.at("payee", default: none)
+      let name = if type(party) == dictionary {
+        party.at("name", default: none)
+      }
+      if type(name) == array { name.join(", ") } else { name }
+    }
     (title, val)
   }
 }
@@ -416,6 +528,23 @@
 }
 
 // Preset Packs
+//
+// Every preset prints what the law requires on an invoice besides the
+// parties and the items (e.g. § 14 Abs. 4 UStG, Art. 226 of the VAT
+// Directive): the date of the supply (`service-time`), the seller's tax
+// number and VAT identification number, which on a self-billed invoice are
+// the recipient's, the buyer's VAT identification number (for a reverse
+// charge or an intra-community supply) and the payee. A reference whose
+// value is not given is left out.
+
+// The references of the parties that every preset ends with.
+#let _party-references() = (
+  seller-tax-nr(),
+  seller-vat-id(),
+  buyer-vat-id(),
+  payee(),
+)
+
 #let preset-b2b() = (
   invoice-nr(),
   customer-nr(),
@@ -423,9 +552,7 @@
   invoice-date(),
   service-time(),
   due-date(),
-  tax-nr(),
-  vat-id(),
-  recipient-vat-id(),
+  .._party-references(),
 )
 
 #let preset-b2g() = (
@@ -435,9 +562,7 @@
   invoice-date(),
   service-time(),
   due-date(),
-  tax-nr(),
-  vat-id(),
-  recipient-vat-id(),
+  .._party-references(),
 )
 
 #let preset-project() = (
@@ -447,9 +572,7 @@
   invoice-date(),
   service-time(),
   due-date(),
-  tax-nr(),
-  vat-id(),
-  recipient-vat-id(),
+  .._party-references(),
 )
 
 #let preset-din-5008() = (
@@ -457,4 +580,6 @@
   order-date(),
   contact-person(),
   invoice-date(),
+  service-time(),
+  .._party-references(),
 )

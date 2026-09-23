@@ -188,7 +188,7 @@ Both the `sender` and `recipient` dictionaries must include:
     city: (name: "Berlin", post-code: "10115")
     ```
 - **Tax Identifiers:**
-  - The **sender** should include a `tax-nr` (national tax number) and/or `vat-id` (value-added tax identifier, written with its country prefix, e.g. `"DE123456789"`; spaces and invisible characters, such as the zero width spaces of copied text, are removed).
+  - The **sender** should include a `tax-nr` (national tax number) and/or `vat-id` (value-added tax identifier, written with its country prefix, e.g. `"DE123456789"`; spaces and invisible characters, such as the zero width spaces of copied text, are removed). The law requires one of them on the printed invoice (§ 14 Abs. 4 Satz 1 Nr. 2 UStG; Art. 226 No. 3 of the VAT Directive requires the VAT identifier): the default `references` and every [preset](./api-reference/invoice/references.md#preset-packages) print the seller's tax number and VAT identifier and the buyer's VAT identifier, with net and gross prices alike. Earlier versions printed none of them for gross prices (`tax-mode: "inclusive"`).
   - The **recipient** (buyer) should include a `vat-id` if applicable. Intra-community supplies (`K`) require it. Reverse charge (`AE`) requires it or, for a buyer without VAT identifier (e.g. a domestic reverse charge under § 13b UStG), the buyer's `legal-id` (BT-47, see below). A cross-border reverse charge needs the VAT identifier by law (Art. 226 No. 4 of the VAT Directive), which the legal registration identifier does not replace (`IP-VAT-226`). In `"basic-wl"`, which has no invoice lines, `invoice-pro` requires it for `K` and a cross-border `AE` by law (`IP-VAT-226`), but not for a domestic reverse charge.
   - The `"minimum"` profile identifies the seller by its VAT identifier (BT-31) or its legal registration identifier (BT-30), so the **sender** needs a `vat-id` or a `legal-id` there, e.g. a French micro-entrepreneur without VAT identifier its SIRET (`legal-id: id.siret(..)`). Senders identified by a `tax-nr` or `id` only need `"basic-wl"` or higher.
 
@@ -287,7 +287,7 @@ Both the `sender` and `recipient` dictionaries must include:
   )
   ```
 
-  A payee needs its name, which is not the seller's (`BR-17`), and at most one of `id` and `global-id` (`CII-SR-451`). Leave out `payee` when the seller receives the payment itself. The built-in themes do not print the payee: name it on the printed invoice as well, e.g. as the account holder of the bank details (`bank-details(name: "Factoring Bank AG", ..)`), whom the EPC-QR code names as the beneficiary. Without `name`, the bank details print the seller as the account holder.
+  A payee needs its name, which is not the seller's (`BR-17`), and at most one of `id` and `global-id` (`CII-SR-451`). Leave out `payee` when the seller receives the payment itself. The printed invoice names the payee as the e-invoice does: the default `references` and every preset print it ("Zahlungsempfänger", "Payee", `references.payee()`), and it is the default account holder of the [`bank-details`](./api-reference/components.md#bank-details), whom the EPC-QR code names as the beneficiary. The account name of the e-invoice (BT-85) is only written for a `name` given to `bank-details`. Earlier versions printed neither, and the bank details and the EPC-QR code named the seller as the account holder.
 
 - **Electronic Addresses & EAS Routing (BT-34 / BT-49):** For routing across networks (such as Peppol), both parties need an electronic address. XRechnung requires them; for the other profiles a missing address is reported as a warning (`"en16931"`) or not at all.
   - **Auto-derivation from VAT ID:** If `vat-id` is specified on the party, the system derives the endpoint from it. The Electronic Address Scheme (EAS) is chosen by the country prefix of the VAT ID:
@@ -601,7 +601,7 @@ Any other code of UNTDID 1001 for invoices and credit notes can be given as text
 **Self-billed invoices.** The buyer issues a self-billed invoice for the seller, e.g. a publisher for the royalties of an author or a principal for the commissions of an agent. `sender` is then the buyer, who issues the document, and `recipient` the seller:
 
 - The XML states the recipient as seller (BG-4) and the sender as buyer (BG-7). The messages of the e-invoice name the inputs, e.g. `recipient.vat-id` for the seller VAT identifier.
-- The references state the tax number and VAT ID of the seller (the recipient), which the law requires on the invoice, and the VAT ID of the buyer (the sender).
+- The default references and every preset state the tax number and VAT ID of the seller (the recipient), which the law requires on the invoice, and the VAT ID of the buyer (the sender); `references.seller-tax-nr()`, `references.seller-vat-id()` and `references.buyer-vat-id()` print them in references of your own. Earlier versions printed the sender's tax identifiers with the presets.
 - The payment goal says that the sender transfers the amount, and the [`bank-details`](./api-reference/components.md#bank-details) are the seller's account, without EPC-QR code.
 - The title is the mention the law requires on a self-billed invoice (Art. 226 No. 10a VAT Directive): "Gutschrift" in German (§ 14 Abs. 4 Satz 1 Nr. 10 UStG), "Self-Billing Invoice" in English, "Autofacturation" in French, "Autofatturazione" in Italian and "Facturación por el destinatario" in Spanish. Keep it in a `subject` of your own.
 
@@ -615,7 +615,7 @@ The date or period of the supply is mandatory invoice content in many countries 
 2. else from the earliest to the latest `date` of the items (of `item`, `bundle` and `group`, a date or a period). Items without a date do not count when others have one;
 3. else the invoice date, if no item has a date.
 
-A single date is written as the actual delivery date (BT-72), a period as the invoicing period (BG-14, BT-73 and BT-74), both from the `"basic-wl"` profile on (`"minimum"` has neither: a `service-period` is then reported as a warning, `IP-PROFILE-01`). The default `references` print a `service-period` you set; with references of your own, add `references.service-time()`:
+A single date is written as the actual delivery date (BT-72), a period as the invoicing period (BG-14, BT-73 and BT-74), both from the `"basic-wl"` profile on (`"minimum"` has neither: a `service-period` is then reported as a warning, `IP-PROFILE-01`). The default `references` print a `service-period` you set and, for a seller in Germany, the date of the supply in any case: German law requires it on the invoice also when it is the date of the invoice (§ 14 Abs. 4 Satz 1 Nr. 6 UStG), and without dates on the items, the XML states the invoice date. Every preset prints it as well; with references of your own, add `references.service-time()`:
 
 ```typst
 #show: invoice.with(

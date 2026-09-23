@@ -218,6 +218,10 @@
         public-references.contact-person,
         public-references.contact-phone,
         public-references.contact-email,
+        public-references.seller-tax-nr,
+        public-references.seller-vat-id,
+        public-references.buyer-vat-id,
+        public-references.payee,
       )
       let all-preset-fns = (
         public-references.preset-b2b,

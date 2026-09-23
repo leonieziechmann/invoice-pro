@@ -5,6 +5,7 @@
 // text of its own cannot reach the XML (IP-PERIOD-01).
 
 #import "/src/lib.typ": *
+#import "/src/utils/text.typ": plain-text
 #import "/src/logic/service-period.typ": (
   format-service-period, resolve-service-period,
 )
@@ -70,10 +71,17 @@
 }
 
 // --- 2. The XML states the printed service period ---
-// A theme that hands the printed references to `check`.
+// A theme that hands the printed references to `check`, as plain text (the
+// printed service period is marked content, see `references.service-time`).
 #let printed-test(check, ..args, body) = invoice(
   theme: () => (
-    themes.blank() + (document: (ctx, _) => check(ctx.references))
+    themes.blank()
+      + (
+        document: (ctx, _) => check(ctx.references.map(((label, value)) => (
+          label,
+          plain-text(value),
+        ))),
+      )
   ),
   locale: locale.de-de,
   sender: seller,
@@ -180,7 +188,7 @@
 ]
 
 // The default references print the service period of the invoice, which
-// the e-invoice states, after the tax numbers (B2B) or on their own (B2C)
+// the e-invoice states, after the tax numbers, with net and gross prices
 #printed-test(references: auto, service-period: june, refs => {
   assert.eq(refs, (
     ("Steuernummer", "123/456/78901"),
@@ -195,19 +203,37 @@
   tax-mode: "inclusive",
   service-period: day(6, 12),
   refs => {
-    assert.eq(refs, (("Leistungszeitraum", "12.06.2026"),))
+    assert.eq(refs.last(), ("Leistungszeitraum", "12.06.2026"))
     []
   },
 )[#mixed]
-// ... but not the service period of the items, which the items print
+// A seller in Germany prints the date of the supply in any case (§ 14
+// Abs. 4 Satz 1 Nr. 6 UStG): the dates of the items, or the invoice date
 #printed-test(references: auto, refs => {
-  assert.eq(refs.map(ref => ref.first()), (
-    "Steuernummer",
-    "USt-IdNr.",
-    "Empfänger:in USt-IdNr.",
-  ))
+  assert.eq(refs.last(), ("Leistungszeitraum", "15.08.2026"))
   []
 })[#mixed]
+#printed-test(references: auto, refs => {
+  assert.eq(refs.last(), ("Leistungszeitraum", "01.09.2026"))
+  []
+})[
+  #line-items[#item([A], price: 100)]
+]
+// A seller elsewhere only the invoice's own `service-period`: the dates of
+// the items are printed with the items, and the invoice date is the date of
+// the invoice (Art. 226 No. 7 of the VAT Directive)
+#printed-test(
+  references: auto,
+  sender: seller + (country: country.at, vat-id: "ATU12345675"),
+  refs => {
+    assert.eq(refs.map(ref => ref.first()), (
+      "Steuernummer",
+      "USt-IdNr.",
+      "Empfänger:in USt-IdNr.",
+    ))
+    []
+  },
+)[#mixed]
 
 // --- 4. A service period printed as a text of its own (IP-PERIOD-01) ---
 // The references are evaluated while the invoice is drawn, so these tests

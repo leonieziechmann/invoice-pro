@@ -65,6 +65,7 @@
     contact-person: "Persona de contacto",
     contact-phone: "Teléfono",
     contact-email: "Correo electrónico",
+    payee: "Beneficiario del pago",
   ),
 
   /// Encabezados de columna y etiquetas para la tabla de artículos
