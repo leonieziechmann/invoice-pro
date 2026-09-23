@@ -204,6 +204,17 @@ Metadata for the primary currency used in the region. This is essential for stru
 | `decimals`      | `int` | The standard number of subunits/decimal places for financial totals (e.g., `2`). |
 | `decimals-fine` | `int` | The allowed number of decimal places for singular unit prices (usually `4`).     |
 
+The currency formatters (`format.currency`, `format.currency-fine`) and the rounding (`normalize.money`, `normalize.money-fine`) derive from it. If a region or an override sets the `currency` without these functions, they are rebuilt from it, so the printed amounts always show the currency whose `code` the e-invoice states (BT-5):
+
+```typst
+#import "@preview/invoice-pro:0.4.2": invoice, locale
+
+#show: invoice.with(
+  // Prints "1.234,50 $" and states USD in the e-invoice
+  locale: locale.de-de.with((region: (currency: (code: "USD", symbol: "$")))),
+)
+```
+
 ### `normalize`
 
 Functions mapping raw inputs to **Normalized** values.
@@ -226,6 +237,8 @@ Functions responsible for converting data types into localized strings.
 | `currency-fine` | `number => str`                             | High-precision currency formatting used when unit prices require extra decimals.      |
 | `date`          | `(datetime \| (datetime, datetime)) => str` | Formats a single date or an array defining a date range into a human-readable string. |
 | `time`          | `datetime => str`                           | Formats a time object into a localized string (e.g., 24h or AM/PM).                   |
+
+The regions build `number`, `currency` and `currency-fine` with `make-formatters` (from `utils/format.typ`), which also adds `currency-formatters`: a function that builds `currency` and `currency-fine` with the same number format for another `currency` dictionary. The locale factory uses it when an override changes the currency alone.
 
 ### `tax`
 

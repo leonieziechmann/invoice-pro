@@ -42,6 +42,14 @@
   "XBB XBC XBD XCD XDR XOF XPD XPF XPT XSU XTS XUA XXX YER ZAR ZMW ZWL",
 ))
 
+/// Currency codes of `currencies` that the BR-CL-04 list of the EN 16931
+/// Schematron (EN16931-CII-validation.xslt) does not contain yet: it still
+/// lists the codes they replaced (MRO, STD, VEF). Mustang and the KoSIT
+/// validator apply that list to BASIC, EN 16931 and XRechnung invoices in
+/// addition to the Factur-X one, so an invoice in these currencies cannot be
+/// valid there.
+#let cen-rejected-currencies = _to-set(("MRU STN UYW VES",))
+
 /// UN/ECE Recommendation 20 and 21 unit codes (BT-130, BT-150; BR-CL-23)
 #let units = _to-set((
   "10 11 13 14 15 20 21 22 23 24 25 27 28 33 34 35 37 38 40 41 56 57 58 59",

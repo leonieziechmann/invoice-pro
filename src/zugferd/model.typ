@@ -521,10 +521,21 @@
   let prepaid-total = to-decimal(item-data.at("prepaid-total", default: 0))
 
   let locale = ctx.at("locale", default: (:))
-  let currency = compact(
-    locale.at("currency", default: (:)).at("code", default: none),
-  )
+  let currency-meta = locale.at("currency", default: (:))
+  let currency = compact(currency-meta.at("code", default: none))
   if currency != none { currency = upper(currency) }
+  // How the invoice prints an amount and a unit price, to check that it
+  // prints the currency the XML states (BT-5).
+  let printed-currency = (
+    symbol: text-or-none(currency-meta.at("symbol", default: none)),
+    samples: (),
+  )
+  for key in ("currency", "currency-fine") {
+    let formatter = locale.at("format", default: (:)).at(key, default: none)
+    if type(formatter) == function {
+      printed-currency.samples.push(plain-text(formatter(decimal("1"))))
+    }
+  }
 
   let iban = if bank != none { compact(bank.at("iban", default: none)) }
   let bic = if bank != none { compact(bank.at("bic", default: none)) }
@@ -574,6 +585,7 @@
     tax-mode: tax-mode,
     outside-scope: outside-scope,
     currency: currency,
+    printed-currency: printed-currency,
     invoice: (
       number: text-or-none(_field(ctx, "invoice-nr")),
       type-code: "380",

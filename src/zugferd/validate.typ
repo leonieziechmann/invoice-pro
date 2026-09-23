@@ -74,6 +74,10 @@
 
 // --- Document -------------------------------------------------------------
 
+// The characters of a printed amount besides its currency: digits,
+// separators, signs and spaces.
+#let _amount-characters = regex("[\\d\\s.,'’+\\-()]")
+
 #let check-document(model) = {
   let out = ()
   if model.invoice.number == none {
@@ -109,6 +113,55 @@
         + " is not an ISO 4217 code.",
       hint: "Use a currency code such as \"EUR\" or \"CHF\" in the locale.",
     ))
+  } else if (
+    model.profile.en16931
+      and model.currency in codelists.cen-rejected-currencies
+  ) {
+    out.push(error(
+      "BR-CL-04",
+      "locale",
+      "The invoice currency code (BT-5) "
+        + _quoted(model.currency)
+        + " is missing in the code list of the EN 16931 validation, so no e-invoice in the "
+        + model.profile.name
+        + " profile can use it.",
+      hint: "Invoice in another currency, or use the \"minimum\" or \"basic-wl\" profile, whose validation knows the code.",
+    ))
+  }
+
+  // IP-PRINT-02: the invoice prints its amounts in the currency the XML
+  // states: with its code or the symbol of the locale, and not with "€" for
+  // another currency. A formatter that prints no currency says nothing else.
+  let printed = model.at("printed-currency", default: none)
+  if (
+    type(model.currency) == str
+      and model.currency in codelists.currencies
+      and printed != none
+  ) {
+    for sample in printed.samples {
+      let sign = sample.replace(_amount-characters, "")
+      if (
+        sign == ""
+          or not (sample.contains("€") and model.currency != "EUR")
+            and (
+              sample.contains(model.currency)
+                or printed.symbol != none and sample.contains(printed.symbol)
+            )
+      ) { continue }
+      out.push(error(
+        "IP-PRINT-02",
+        "locale",
+        "The invoice prints amounts in "
+          + _quoted(sign)
+          + " (e.g. "
+          + _quoted(sample)
+          + "), but the e-invoice states the currency "
+          + _quoted(model.currency)
+          + " (BT-5).",
+        hint: "Set the currency of the locale's region to the printed one, e.g. `currency: (code: \"PLN\", symbol: \"zł\")` in a region builder or `locale.de-de.with((region: (currency: (code: \"PLN\", symbol: \"zł\"))))`; the amounts are then printed with its symbol.",
+      ))
+      break
+    }
   }
   out
 }
