@@ -42,10 +42,11 @@
   // What numbers are grouped with: spaces, dots, hyphens and slashes.
   separators: regex("[\\s\\p{Cf}./-]+"),
   digits: regex("^[0-9]+$"),
-  // "CHE" and the 9 digits of a Swiss UID, and the suffix of a Swiss VAT
-  // number (the UID followed by "MWST", "TVA" or "IVA").
+  // "CHE" and the 9 digits of a Swiss UID, and the suffixes it is written
+  // with: "MWST", "TVA" or "IVA" for a VAT number, "HR" or "RC" for an entry
+  // in the commercial register, also several of them ("MWST/TVA/IVA").
   uid-ch: regex("^CHE[0-9]{9}$"),
-  vat-suffix: regex("(MWST|TVA|IVA)$"),
+  uid-ch-suffix: regex("(MWST|TVA|IVA|HR|RC)+$"),
   // Grobadressierung (2 to 12 digits), an optional Feinadressierung (up to
   // 30 capital letters and digits) and 2 check digits, separated by "-".
   leitweg: regex("^[0-9]{2,12}(-[0-9A-Z]{1,30})?-[0-9]{2}$"),
@@ -237,8 +238,8 @@
 
 /// The Swiss enterprise identification number (UID): "CHE" and 9 digits
 /// with a check digit, e.g. "CHE-123.456.788". The suffix of a Swiss VAT
-/// number ("MWST", "TVA", "IVA") is dropped: the UID is the same. ISO/IEC 6523
-/// scheme `0183`.
+/// number ("MWST", "TVA", "IVA") or of an entry in the commercial register
+/// ("HR", "RC") is dropped: the UID is the same. ISO/IEC 6523 scheme `0183`.
 ///
 /// -> dictionary
 #let uid-ch(
@@ -254,7 +255,7 @@
   }
   let patterns = _patterns()
   let id = upper(text.replace(patterns.separators, "")).replace(
-    patterns.vat-suffix,
+    patterns.uid-ch-suffix,
     "",
   )
   let problems = ()

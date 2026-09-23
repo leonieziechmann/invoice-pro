@@ -39,12 +39,15 @@
   // The establishments of La Poste have a check of their own
   assert.eq(problems(id.siret("35600000012346")), ())
   assert.eq(problems(id.siret("35600000000048")), ())
-  // The Swiss UID, also written as VAT number or in lower case
+  // The Swiss UID, also written as VAT number, with the suffix of the
+  // commercial register or in lower case
   for value in (
     "CHE-123.456.788",
     "CHE123456788",
     "CHE-123.456.788 MWST",
     "che 123 456 788 tva",
+    "CHE-123.456.788 HR",
+    "CHE-123.456.788 MWST/TVA/IVA",
   ) {
     assert.eq(
       id.uid-ch(value),

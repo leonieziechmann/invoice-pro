@@ -31,7 +31,7 @@ Identifiers are optional: an invoice without them needs none of this. Plain text
 | `id.custom(scheme, id)`           | any other identifier with the code of its scheme                   | as given     | nothing: the escape hatch                                                              | `id.custom("0208", "0123456749")` (Belgian enterprise number) |
 
 - Spaces, dots and hyphens that numbers are often grouped with are removed (`"123 456 782 00010"` is `"12345678200010"`); the hyphens of a Leitweg-ID are part of it.
-- `id.uid-ch` also takes a Swiss VAT number: the suffix "MWST", "TVA" or "IVA" is dropped, as the UID is the same.
+- `id.uid-ch` also takes the UID with the suffix of a Swiss VAT number ("MWST", "TVA" or "IVA") or of the commercial register ("HR" or "RC"): the suffix is dropped, as the UID is the same.
 - `id.register` writes the court in front of the number, e.g. "Amtsgericht München, HRB 4711": a register number is unique only within its register, and EN 16931 has no field of its own for the court.
 - The scheme codes are those of ISO/IEC 6523 (ICD), the Leitweg-ID's of the electronic address schemes (EAS). The e-invoice checks the scheme of `id.custom` against the code list of the field it is given for (`BR-CL-10`, `BR-CL-11`, `BR-CL-25`).
 
