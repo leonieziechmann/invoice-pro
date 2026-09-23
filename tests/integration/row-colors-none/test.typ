@@ -1,11 +1,11 @@
 #import "/src/lib.typ": *
 #import "/tests/test-locale.typ": test-locale
 
-// Striping disabled on the DIN-5008 theme
+// Striping disabled on the classic theme
 #show: invoice.with(
-  theme: themes.DIN-5008(
-    font: "libertinus serif",
-    color-row-even: none,
+  theme: theme.classic.with(
+    theme.custom.fonts(body: "libertinus serif"),
+    theme.custom.items-table(zebra: (none, none)),
   ),
   locale: test-locale,
   sender: (

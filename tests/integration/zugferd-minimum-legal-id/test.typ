@@ -7,7 +7,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.fr-fr,
   zugferd: "minimum",
   tax-exempt-small-biz: true,
@@ -32,4 +32,4 @@
 #line-items[
   #item([Création du site web], price: 900, quantity: 1, unit: unit.piece)
 ]
-#payment-goal(days: 30)
+#payment-terms(days: 30)

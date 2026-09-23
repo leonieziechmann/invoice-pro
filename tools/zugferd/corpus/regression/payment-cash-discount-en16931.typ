@@ -18,7 +18,7 @@
 #line-items[
   #item([Beratung], price: 100, quantity: 10, tax: tax.vat(19%))
 ]
-#payment-goal(
+#payment-terms(
   days: 30,
   discount: (
     (days: 14, percent: 2%),

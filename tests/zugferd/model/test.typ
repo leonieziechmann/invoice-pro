@@ -33,7 +33,7 @@
 /// Renders an invoice and calls `test` with the e-invoice data model built
 /// from its children.
 #let model-test(test, ..args, body) = invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "en16931",
   zugferd-errors: "ignore",
@@ -48,7 +48,7 @@
       test(build-model(
         ctx,
         signal("line-items").item-data,
-        payment-goal: signal("payment-goal"),
+        payment-goal: signal("payment-terms"),
         bank: signal("bank-details"),
       ))
     },
@@ -227,7 +227,7 @@
   assert.eq(model.payment.reference, "2026-01")
 })[
   #line-items[#item([A], price: 1)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank-details(
     bank: "Musterbank",
     iban: "de75 5121 0800 1245 1261 99",
@@ -241,7 +241,7 @@
   assert.eq(model.payment.means, ())
 })[
   #line-items[#item([A], price: 1)]
-  #payment-goal(date: [within 30 days])
+  #payment-terms(date: [within 30 days])
 ]
 
 // A payment goal without days or date is due at once, as printed
@@ -250,7 +250,7 @@
   assert.eq(model.payment.terms, "sofort nach Erhalt")
 })[
   #line-items[#item([A], price: 1)]
-  #payment-goal()
+  #payment-terms()
 ]
 
 // --- 7. Electronic addresses (BT-34, BT-49) ---

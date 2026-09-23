@@ -74,7 +74,7 @@
   assert.eq(rules(m), ("FX-SCH-A-000162",))
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -82,22 +82,20 @@
 // The layout of the line items gets them after the exemption notes, and
 // still prints the tax statement.
 #invoice(
-  theme: () => (
-    themes.blank()
-      + (
-        line-items: (ctx, view, body) => {
-          assert.eq(
-            view.exemption-notes.map(note => (note.kind, note.body)),
-            (
-              ("grounds", "Steuerfreie Leistung nach § 4 Nr. 21 UStG"),
-              ("note", "Lieferung frei Haus.\nMontage nach Absprache."),
-              ("note", [Es gelten unsere *AGB*.]),
-            ),
-          )
-          []
-        },
+  theme: theme.plain.with(theme.custom.wrap(
+    "line-items",
+    (ctx, view, inner) => {
+      assert.eq(
+        view.exemption-notes.map(note => (note.kind, note.body)),
+        (
+          ("grounds", "Steuerfreie Leistung nach § 4 Nr. 21 UStG"),
+          ("note", "Lieferung frei Haus.\nMontage nach Absprache."),
+          ("note", [Es gelten unsere *AGB*.]),
+        ),
       )
-  ),
+      inner(ctx, view)
+    },
+  )),
   locale: locale.de-de,
   sender: seller,
   recipient: buyer-fr,
@@ -113,19 +111,15 @@
 ]
 
 #invoice(
-  theme: () => (
-    themes.blank()
-      + (
-        line-items: (ctx, view, body) => {
-          let printed = plain-text(
-            (themes.blank().line-items)(ctx, view, body),
-          )
-          assert(printed.contains("Alle Artikel sind zzgl. 19"))
-          assert(printed.contains("Lieferung frei Haus."))
-          []
-        },
-      )
-  ),
+  theme: theme.plain.with(theme.custom.wrap(
+    "notes",
+    (ctx, view, inner) => {
+      let printed = inner(ctx, view)
+      assert(plain-text(printed).contains("Alle Artikel sind zzgl. 19"))
+      assert(plain-text(printed).contains("Lieferung frei Haus."))
+      printed
+    },
+  )),
   locale: locale.de-de,
   sender: seller,
   recipient: buyer-fr,

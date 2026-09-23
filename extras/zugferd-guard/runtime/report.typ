@@ -65,7 +65,7 @@
   "ram:BuyerReference": "recipient.buyer-reference",
   "ram:SpecifiedTradeSettlementHeaderMonetarySummation": "amounts",
   "ram:SpecifiedTradeSettlementPaymentMeans": "bank-details",
-  "ram:SpecifiedTradePaymentTerms": "payment-goal",
+  "ram:SpecifiedTradePaymentTerms": "payment-terms",
   "ram:InvoiceCurrencyCode": "currency",
   "ram:IncludedNote": "notes",
   "ram:BillingSpecifiedPeriod": "service-period",

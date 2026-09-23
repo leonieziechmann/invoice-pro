@@ -75,15 +75,10 @@
 // A theme that hands the printed references to `check`, as plain text (the
 // printed service period is marked content, see `references.service-time`).
 #let printed-test(check, ..args, body) = invoice(
-  theme: () => (
-    themes.blank()
-      + (
-        document: (ctx, _) => check(ctx.references.map(((label, value)) => (
-          label,
-          plain-text(value),
-        ))),
-      )
-  ),
+  theme: theme.plain.with(theme.custom.wrap("title", (ctx, view, inner) => {
+    check(ctx.references.map(((label, value)) => (label, plain-text(value))))
+    inner(ctx, view)
+  })),
   locale: locale.de-de,
   sender: seller,
   recipient: buyer-fr,
@@ -101,7 +96,7 @@
     #item([A], price: 100, date: day(8, 15))
     #item([B], price: 100)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #printed-test(refs => {
@@ -130,7 +125,7 @@
     ]
     #item([Material], price: 50)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #printed-test(refs => {
@@ -152,7 +147,7 @@
   assert.eq(model.delivery.source, "invoice-date")
 })[
   #line-items[#item([A], price: 100)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 // ... but not on a credit note, which amends an invoice: its own date is not
@@ -160,7 +155,7 @@
 // one
 #let undated = [
   #line-items[#item([A], price: 100)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #model-test(
@@ -254,7 +249,7 @@
   assert.eq(rules(m, level: "warning"), ())
 })[
   #line-items[#item([Wartung Juni], price: 100)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #model-test(date: invoice-date, service-period: day(6, 12), model => {
@@ -262,7 +257,7 @@
   assert.eq(model.delivery.period, none)
 })[
   #line-items[#item([Lieferung], price: 100)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -322,15 +317,10 @@
 // report is only shown with diagnostics; each shown report leaves a marker,
 // which the end of the file counts.
 #let report-test(check, ..args, body) = invoice(
-  theme: () => (
-    themes.blank()
-      + (
-        zugferd-report: (ctx, result) => {
-          check(result)
-          [#metadata(none)<report-checked>]
-        },
-      )
-  ),
+  theme: theme.plain.with(theme.custom.part("zugferd-report", (ctx, result) => {
+    check(result)
+    [#metadata(none)<report-checked>]
+  })),
   locale: locale.de-de,
   zugferd: "en16931",
   zugferd-errors: "report",
@@ -372,7 +362,7 @@
   },
 )[
   #line-items[#item([Wartung Juni], price: 100)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 // A reference of its own with the title of the service period is compared
@@ -390,7 +380,7 @@
   },
 )[
   #line-items[#item([Wartung Juni], price: 100, date: day(6, 30))]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 // MINIMUM states no service period
@@ -402,7 +392,7 @@
   result => assert.eq(result.diagnostics.map(d => d.rule), ("IP-PROFILE-01",)),
 )[
   #line-items[#item([Wartung Juni], price: 100)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 // `references.service-time()` prints the service period of the XML. (The
@@ -420,7 +410,7 @@
     #item([Wartung Juni], price: 100)
     #screws
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -453,7 +443,7 @@
     #item([A], price: 100, date: day(8, 15))
     #screws
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 // Another date contradicts the e-invoice
@@ -468,7 +458,7 @@
   },
 )[
   #line-items[#item([A], price: 100, date: day(8, 15))]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 // ... also under a title of its own, and as a period besides the invoice's
@@ -491,7 +481,7 @@
   },
 )[
   #line-items[#item([Wartung Juni], price: 100)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #report-test(
@@ -503,7 +493,7 @@
     #item([Wartung Juni], price: 100)
     #screws
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -522,7 +512,7 @@
   },
 )[
   #line-items[#item([Wartung Juni], price: 100)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 

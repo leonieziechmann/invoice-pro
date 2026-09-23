@@ -80,16 +80,20 @@
 }
 
 // --- 2. "report" hands all diagnostics to the theme instead of failing ---
+// The invoice number is missing: the checks of the invoice data would withhold
+// the XML instead of validating it, so they are off.
 #let incomplete = (
-  theme: themes.blank.with(
-    zugferd-report: (ctx, result) => {
+  theme: theme.plain.with(theme.custom.part(
+    "zugferd-report",
+    (ctx, result) => {
       let rules = result.diagnostics.map(d => d.rule)
       assert.eq(rules, ("BR-02", "BR-CO-25"))
       assert.eq(result.profile.id, "en16931")
       [#metadata(rules)<reported-rules>]
     },
-  ),
+  )),
   locale: locale.de-de,
+  validation: none,
   zugferd: "en16931",
   sender: (
     name: "Seller GmbH",
@@ -120,15 +124,18 @@
 // not read) ---
 #invoice(
   ..incomplete,
-  theme: themes.blank.with(zugferd-report: (ctx, result) => [#metadata(
-    result.diagnostics.map(d => (d.level, d.rule)),
-  )<warned-rules>]),
+  theme: theme.plain.with(theme.custom.part(
+    "zugferd-report",
+    (ctx, result) => [#metadata(
+      result.diagnostics.map(d => (d.level, d.rule)),
+    )<warned-rules>],
+  )),
   zugferd-errors: "report",
   invoice-nr: "RE-2026-001",
   sender: incomplete.sender + (fax-nr: "+49 89 1234568"),
 )[
   #line-items[#item([Consulting], price: 100)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank-details(iban: "DE89370400440532013000")
 ]
 

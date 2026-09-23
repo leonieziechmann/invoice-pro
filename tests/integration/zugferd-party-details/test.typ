@@ -16,7 +16,7 @@
 #let leitweg = id.leitweg("04011000-1234512345-06")
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "xrechnung",
   sender: (
@@ -61,7 +61,7 @@
 #line-items[
   #item([Wartungsvertrag Q3], quantity: 1, unit: unit.piece, price: 1200.00)
 ]
-#payment-goal(days: 30)
+#payment-terms(days: 30)
 #bank-details(
   name: "Factoring Bank AG",
   bank: "Factoring Bank AG",

@@ -94,7 +94,7 @@
 // left (BR-CO-26), and it has no payment terms (BR-CO-25). Both are reported
 // as validation errors instead of a crash.
 #let reported-invoice = invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "en16931",
   sender: (
@@ -127,7 +127,7 @@
     message: "Expected a validation error, got " + repr(message),
   )
   assert(message.contains("[BR-CO-26] sender:"), message: message)
-  assert(message.contains("[BR-CO-25] payment-goal:"), message: message)
+  assert(message.contains("[BR-CO-25] payment-terms:"), message: message)
 }
 
 // --- 3. Full invoice rendering with an identifiable seller ---
@@ -146,4 +146,4 @@
 #line-items[
   #item([Consulting], price: 100, quantity: 1)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)

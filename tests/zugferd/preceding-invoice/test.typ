@@ -40,7 +40,7 @@
   },
 )[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -51,7 +51,7 @@
   ))
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -70,7 +70,7 @@
   }
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -91,7 +91,7 @@
   assert.eq(rules(m), ())
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -102,24 +102,19 @@
   model => assert.eq(rules(model), ()),
 )[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
 // --- 4. The printed reference ---
 #invoice(
-  theme: () => (
-    themes.blank()
-      + (
-        document: (ctx, body) => {
-          assert.eq(ctx.references, (
-            ("Vorherige Rechnungsnummer", "R-2026-11"),
-            ("Datum der vorherigen Rechnung", "30.08.2026"),
-          ))
-          []
-        },
-      )
-  ),
+  theme: theme.plain.with(theme.custom.wrap("title", (ctx, view, inner) => {
+    assert.eq(ctx.references, (
+      ("Vorherige Rechnungsnummer", "R-2026-11"),
+      ("Datum der vorherigen Rechnung", "30.08.2026"),
+    ))
+    inner(ctx, view)
+  })),
   locale: locale.de-de,
   sender: seller,
   recipient: buyer-de,
@@ -134,15 +129,10 @@
 // The default references print the preceding invoice the e-invoice states,
 // e.g. the invoice a credit note refers to
 #let default-references(check, ..args) = invoice(
-  theme: () => (
-    themes.blank()
-      + (
-        document: (ctx, body) => {
-          check(ctx.references)
-          []
-        },
-      )
-  ),
+  theme: theme.plain.with(theme.custom.wrap("title", (ctx, view, inner) => {
+    check(ctx.references)
+    inner(ctx, view)
+  })),
   locale: locale.de-de,
   sender: seller,
   recipient: buyer-de,

@@ -19,7 +19,7 @@
 )
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.en-de,
   zugferd: "en16931",
   sender: (
@@ -58,7 +58,7 @@ Fiscal representative: #representative.name, #representative.address,
     tax: tax.intra-community(),
   )
 ]
-#payment-goal(days: 30)
+#payment-terms(days: 30)
 #bank-details(
   bank: "Beispielbank",
   iban: "CH9300762011623852957",

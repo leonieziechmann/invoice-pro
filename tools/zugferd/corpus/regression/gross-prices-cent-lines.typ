@@ -26,5 +26,5 @@
     item([Kleinteil #(i + 1)], price: 0.01, quantity: 1, tax: tax.vat(19%))
   }
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

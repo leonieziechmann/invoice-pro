@@ -1,40 +1,40 @@
 // The printed invoice states the payment means the e-invoice states: the
-// payment goal announces a direct debit or a card payment instead of asking
+// payment terms announce a direct debit or a card payment instead of asking
 // for a transfer, a paid invoice says that it is paid and that nothing is
 // due, the components print their details, and the bank details show no
 // EPC-QR code when the buyer is not asked to transfer the amount. Wrong
 // input stops the compilation with a message.
 
 #import "/src/lib.typ": *
-#import "/src/themes/base-theme/payment-goal.typ": render-payment-goal
-#import "/src/themes/base-theme/payment-means.typ": render-payment-means
-#import "/src/themes/base-theme/bank-details.typ": render-bank-details
 #import "/tests/integration/payment-reference/harness.typ": find-all, plain
 
-// Records what the layouts print, per scenario.
-#let capturing-theme(scenario) = themes.blank.with(
-  payment-goal: (ctx, view) => {
-    let printed = render-payment-goal(ctx, view)
+// Records what the default parts print, per scenario.
+#let capturing-theme(scenario) = theme.plain.with(
+  theme.custom.wrap("payment-terms", (ctx, view, inner) => {
+    let printed = inner(ctx, view)
     [#metadata((scenario, "goal", plain(printed)))<printed>#printed]
-  },
-  payment-means: (ctx, view) => {
-    let printed = render-payment-means(ctx, view)
+  }),
+  theme.custom.wrap("payment-means", (ctx, view, inner) => {
+    let printed = inner(ctx, view)
     [#metadata((scenario, view.kind, plain(printed)))<printed>#printed]
-  },
-  bank-details: (ctx, view) => {
-    let printed = render-bank-details(ctx, view)
+  }),
+  theme.custom.wrap("bank-details", (ctx, view, inner) => {
+    let printed = inner(ctx, view)
     let qr = find-all(printed, image).len() > 0
     [#metadata((
         scenario,
         "bank",
         if qr { "QR" } else { "no QR" },
       ))<printed>#printed]
-  },
+  }),
 )
 
+// The invoices are bare fixtures (no tax ID of the sender), so validation is
+// off.
 #let test-invoice(scenario, lang: locale.de-de, ..args, body) = invoice(
   theme: capturing-theme(scenario),
   locale: lang,
+  validation: none,
   sender: (name: "Muster GmbH", address: "Hauptstraße 1", city: "10115 Berlin"),
   recipient: (name: "Kunde AG", address: "Domstraße 5", city: "50667 Köln"),
   invoice-nr: "RE-1",
@@ -57,18 +57,18 @@
 #let card = card-payment(last4: "1234", holder: "Erika Kunde")
 
 // --- 1. Rendered cases, checked below ---
-#test-invoice("transfer")[#items #payment-goal(days: 14) #bank]
-#test-invoice("direct-debit")[#items #payment-goal(days: 14) #debit]
-#test-invoice("direct-debit-due")[#deposit #payment-goal(days: 14) #debit]
-#test-invoice("card")[#items #payment-goal() #card]
+#test-invoice("transfer")[#items #payment-terms(days: 14) #bank]
+#test-invoice("direct-debit")[#items #payment-terms(days: 14) #debit]
+#test-invoice("direct-debit-due")[#deposit #payment-terms(days: 14) #debit]
+#test-invoice("card")[#items #payment-terms() #card]
 #test-invoice("card-en", lang: locale.en-de)[
   #items
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #card-payment(last4: "987654", kind: "debit")
 ]
 #test-invoice("skonto")[
   #items
-  #payment-goal(
+  #payment-terms(
     days: 30,
     discount: ((days: 7, percent: 3%), (days: 14, percent: 2%, basis: 100)),
   )
@@ -87,13 +87,13 @@
 #test-invoice("paid-card")[#items #paid(method: "card") #card]
 #test-invoice("direct-debit-bank")[
   #items
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #debit
   #bank
 ]
 #test-invoice("direct-debit-bank-qr")[
   #items
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #debit
   #bank-details(iban: "DE89370400440532013000", qr-code: (display: true))
 ]
@@ -130,12 +130,12 @@
 #let lower-case-euro = locale.de-de.with((region: (currency: (code: "eur"))))
 #test-invoice("debit-eur", lang: lower-case-euro)[
   #items
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #debit
 ]
 #test-invoice("bank-eur", lang: lower-case-euro)[
   #items
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #test-invoice(
@@ -145,7 +145,7 @@
     payment(text-card: (sum, deadline) => [Charged: *#sum* #deadline.])
     payment-means(card-number: "Card", paid: (sum, date) => [Paid: #sum.])
   }),
-)[#items #payment-goal(days: 3) #card]
+)[#items #payment-terms(days: 3) #card]
 
 #context {
   // Amounts are printed with a narrow no-break space before the currency.
@@ -289,8 +289,8 @@
 #{
   let error(body) = catch(() => test-invoice("error", body))
   assert.eq(
-    error[#items #payment-goal(days: 14) #paid(method: "cash")],
-    "assertion failed: An invoice that is `paid` has no `payment-goal`: nothing is left to pay. Remove the `payment-goal`.",
+    error[#items #payment-terms(days: 14) #paid(method: "cash")],
+    "assertion failed: An invoice that is `paid` has no `payment-terms`: nothing is left to pay. Remove the `payment-terms`.",
   )
   // Nor payment terms of its own
   assert.eq(
@@ -332,7 +332,7 @@
     ]).contains("is not a valid SEPA creditor identifier"),
   )
   assert.eq(
-    error[#items #payment-goal(days: 14) #debit #debit],
+    error[#items #payment-terms(days: 14) #debit #debit],
     "assertion failed: There can only be one `direct-debit` element in the document!",
   )
   assert.eq(

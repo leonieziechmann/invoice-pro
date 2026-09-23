@@ -142,7 +142,7 @@ Visual regression tests catch rendering changes but not logical errors in calcul
 #import "/tests/test-locale.typ": test-locale
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: test-locale,
   sender: (name: "Test Sender", address: "Street 1", city: "City"),
   recipient: (name: "Test Recipient", address: "Street 2", city: "City"),
@@ -178,7 +178,7 @@ Key details:
 
 - **`loom.query.find-signal(data, "line-items")`** extracts the signal published by the `#line-items` component, which contains the full totals breakdown.
 - **`decimal("100")`** — use `decimal()` for exact numeric comparisons (avoids floating-point mismatches).
-- **`themes.blank`** — use the blank theme when you only care about data, not visual output.
+- **`theme.plain`** — use the blank theme when you only care about data, not visual output.
 - Tax constructors — use `tax.vat(rate)` for standard or reduced rates, and `tax.zero()` for zero-rated items. Each produces a different tax category.
 - **Assertion messages** — always include both the expected and actual value in the message for fast debugging. Use the pattern: `"Field: expected <value>, got " + repr(actual)`. The `repr()` function ensures the actual value is displayed in a readable format.
 - **Valid IBAN/BIC** — when using `bank-details` in tests or docs, always use values that pass validation checks. Use IBAN `DE75512108001245126199` and a valid 8 or 11 character BIC (e.g., `SOLADEST600`). Fake values like `DE12 3456 7890...` or `EXAMPLEBICX` will fail IBAN/BIC validation.
@@ -213,7 +213,7 @@ tests/<category>/<test-name>/
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
+  theme: theme.classic.with(theme.custom.fonts(body: "libertinus serif")),
   sender: (name: "Test Corp", address: "1 Test St", city: "12345 Testville"),
   recipient: (name: "Client", address: "2 Client Ave", city: "54321 Clientown"),
   invoice-nr: "TEST-001",
@@ -243,7 +243,7 @@ tests/line-items/<test-name>/
 
 1. Create the directory and add the `.gitignore`.
 2. Write `test.typ` using `data-test` and `test-locale` (see example above).
-3. **Important:** For unit-like data tests, you should use `themes.blank` as the theme. Note that `themes.blank` is a value, not a function, so use it directly: `invoice.with(theme: themes.blank)`. This ensures that the minimal possible amount of code is executed to narrow the test scope.
+3. **Important:** For unit-like data tests, you should use `theme.plain` as the theme. Note that `theme.plain` is a value, not a function, so use it directly: `invoice.with(theme: theme.plain)`. This ensures that the minimal possible amount of code is executed to narrow the test scope.
 4. Run `tt run` — the test passes if all `assert.eq()` calls succeed.
 
 > **Note:** Data tests may still produce visual output (and thus `out/`), but the assertions are what determine pass/fail.
@@ -305,7 +305,7 @@ tests/issues/issue-<number>/
 1. Create a directory named `issue-<number>` under `tests/issues/` (using the GitHub issue number).
 2. Write `test.typ` that reproduces the bug scenario described in the issue.
 3. Add the `.gitignore`.
-4. Use `data-test` with `test-locale` and `themes.blank` if the bug involves calculations. Use a visual regression test (with `ref/1.png`) if the bug is visual.
+4. Use `data-test` with `test-locale` and `theme.plain` if the bug involves calculations. Use a visual regression test (with `ref/1.png`) if the bug is visual.
 5. Add a comment at the top of `test.typ` linking to the issue and briefly describing the bug.
 6. Register the test in the Issue Test Registry below.
 
@@ -322,7 +322,7 @@ tests/issues/issue-<number>/
 #import "/tests/test-locale.typ": test-locale
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: test-locale,
   sender: (name: "Test Sender"),
   recipient: (name: "Test Recipient"),
@@ -573,7 +573,7 @@ A regression case is a small invoice in `tools/zugferd/corpus/regression/` that 
 
 The case describes the correct behavior, also while it still fails; the failure is then a known issue until the fix lands.
 
-The case must keep the harness of `..setup`: another theme is wrapped (`theme: harness(themes.DIN-5008())`), and `zugferd-errors` stays `"report"`. Without the harness no diagnostics are attached, which would read as "invoice-pro reported nothing", so the runner refuses such a case.
+The case must keep the harness of `..setup`: another theme is wrapped (`theme: harness(theme.classic)`), and `zugferd-errors` stays `"report"`. Without the harness no diagnostics are attached, which would read as "invoice-pro reported nothing", so the runner refuses such a case.
 
 #### Known Issues and Triage
 

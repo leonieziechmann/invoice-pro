@@ -20,7 +20,7 @@
 )
 #let items(..args) = [
   #line-items[#item([Leistung], price: 100, ..args)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 // The codes of the VAT breakdown (BG-23), in the order of the XML.
@@ -107,7 +107,7 @@
       code: "VATEX-EU-132-1C",
     ))
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #model-test(model => {
@@ -123,7 +123,7 @@
       ))
     ]
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #model-test(model => {
@@ -137,7 +137,7 @@
       code: "VATEX-EU-132-1C",
     ))
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -244,7 +244,7 @@
       code: "VATEX-EU-132-1I",
     ))
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 

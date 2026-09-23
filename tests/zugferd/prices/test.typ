@@ -36,7 +36,7 @@
   },
 )[
   #line-items[#item([Strom], price: 0.123456, quantity: 10000, unit: "kWh")]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -49,7 +49,7 @@
   assert(calc.abs(r120(model.lines.first())) <= decimal("0.02"))
 })[
   #line-items[#item([Strom], price: 0.1235, quantity: 10000, unit: "kWh")]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -78,7 +78,7 @@
   },
 )[
   #line-items[#item([Schrauben], price: 9.99, quantity: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -96,7 +96,7 @@
   },
 )[
   #line-items[#item([API-Aufrufe], price: 0.0001, quantity: 2000000000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -125,7 +125,7 @@
       )
     }
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -144,6 +144,6 @@
     quantity: 250,
     base-quantity: 100,
   )]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]

@@ -6,9 +6,11 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "en16931",
+  // incomplete e-invoice data must fail the build, not withhold the XML
+  validation: "strict",
   sender: (
     name: "Seller GmbH",
     address: "Street 1",
@@ -56,7 +58,7 @@
     item-id: (seller: "PEN-01", buyer: "B-778", standard: "4006381333931"),
   )
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(
   bank: "Musterbank",
   iban: "DE75512108001245126199",

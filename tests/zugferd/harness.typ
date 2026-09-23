@@ -84,7 +84,7 @@
 /// `test` with the e-invoice data model built from it; then checks the XML
 /// of the model with the test oracle (`check-oracle`).
 #let model-test(test, ..args, body) = invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "en16931",
   zugferd-errors: "ignore",
@@ -100,7 +100,7 @@
       let model = build-model(
         ctx,
         items.item-data,
-        payment-goal: signal("payment-goal"),
+        payment-goal: signal("payment-terms"),
         bank: signal("bank-details"),
         payment-means: payment-means(data),
       )

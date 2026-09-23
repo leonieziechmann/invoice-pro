@@ -12,7 +12,7 @@
 /// Renders an invoice and calls `test` with its VAT groups (as printed) and
 /// the exemption reasons of its e-invoice.
 #let notes-test(test, ..args, body) = invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "en16931",
   zugferd-errors: "ignore",

@@ -30,9 +30,12 @@
     city: (name: "Berlin", post-code: "10115"),
     country: country.de,
   )
+  // The checks of the invoice data are off: they would withhold the XML of
+  // an invoice without the seller's tax IDs instead of validating it.
   invoice(
-    theme: themes.blank,
+    theme: theme.plain,
     locale: locale.de-de,
+    validation: none,
     zugferd: zugferd,
     sender: base-sender + sender-overrides,
     recipient: base-recipient + recipient-overrides,
@@ -41,7 +44,7 @@
       #line-items[
         #item([Consulting], price: 100, quantity: 1, tax: tax.vat(19%))
       ]
-      #payment-goal(days: 14)
+      #payment-terms(days: 14)
       #bank-details(
         bank: "Musterbank",
         iban: "DE89370400440532013000",
@@ -181,7 +184,7 @@
 
 // --- 2. Valid full invoice rendering with all mandatory fields satisfied ---
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "en16931",
   sender: (
@@ -210,7 +213,7 @@
 #line-items[
   #item([Consulting], price: 100, quantity: 1, tax: tax.vat(19%))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(
   bank: "Musterbank",
   iban: "DE89370400440532013000",

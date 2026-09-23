@@ -40,7 +40,7 @@
   with-goal: true,
   test,
 ) = invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: zugferd,
   zugferd-errors: "ignore",
@@ -53,12 +53,12 @@
     test(process-zugferd(
       ctx,
       signal("line-items").item-data,
-      payment-goal: signal("payment-goal"),
+      payment-goal: signal("payment-terms"),
       bank: signal("bank-details"),
     ))
   })[
     #line-items[#item([Consulting], price: 100, tax: tax.vat(19%))]
-    #if with-goal [#payment-goal(days: 14)]
+    #if with-goal [#payment-terms(days: 14)]
     #bank-details(
       bank: "Musterbank",
       iban: "DE89370400440532013000",
@@ -133,7 +133,7 @@
 //    bank details next to a direct debit are two payment means (BR-DE-23-b in
 //    XRechnung, CII-SR-467 in EN 16931)
 #invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: auto,
   zugferd-errors: "ignore",
@@ -146,7 +146,7 @@
     let result = process-zugferd(
       ctx,
       signal("line-items").item-data,
-      payment-goal: signal("payment-goal"),
+      payment-goal: signal("payment-terms"),
       bank: signal("bank-details"),
       payment-means: payment-means(data),
     )
@@ -155,7 +155,7 @@
     assert.eq(rules(result, "warning"), ())
   })[
     #line-items[#item([Consulting], price: 100, tax: tax.vat(19%))]
-    #payment-goal(days: 14)
+    #payment-terms(days: 14)
     #direct-debit(
       mandate: "M-2026-017",
       creditor-id: "DE98ZZZ09999999999",

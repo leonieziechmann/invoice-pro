@@ -16,7 +16,7 @@
 #import "/tests/test-locale.typ": test-locale
 
 #let check(test, locale: test-locale, ..args, body) = invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale,
   sender: (name: "Seller", address: "Street 1", city: "City"),
   recipient: (name: "Buyer", address: "Street 2", city: "City"),

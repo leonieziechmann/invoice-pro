@@ -79,7 +79,7 @@
   assert.eq(rules(model), ())
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -130,7 +130,7 @@
   )
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -147,7 +147,7 @@
   },
 )[
   #line-items[#item([Strom], price: 0.3245, quantity: 1000, unit: "kWh")]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -163,6 +163,6 @@
   assert.eq(rules(m), ())
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]

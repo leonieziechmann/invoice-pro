@@ -49,13 +49,19 @@
 
 // --- 2. Notes of an invoice ---
 
-// Runs `test` with the notes and the lines of the printed global information.
+// Runs `test` with the notes and the lines of the printed global information,
+// in a wrap of the `line-items` part, which then renders as usual. The
+// invoices are bare fixtures, so validation is off.
 #let check(test, ..args, body) = invoice(
-  theme: themes.blank.with(line-items: (ctx, data, body) => {
-    test(data.exemption-notes, printed-lines(ctx, data))
-    body
-  }),
+  theme: theme.plain.with(theme.custom.wrap(
+    "line-items",
+    (ctx, view, inner) => {
+      test(view.exemption-notes, printed-lines(ctx, view))
+      inner(ctx, view)
+    },
+  )),
   locale: test-locale,
+  validation: none,
   sender: (name: "Seller", address: "Street 1", city: "City"),
   recipient: (name: "Buyer", address: "Street 2", city: "City"),
   ..args,

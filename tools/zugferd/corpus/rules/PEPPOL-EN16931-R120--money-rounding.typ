@@ -24,5 +24,5 @@
 #line-items[
   #item([Kabel], price: decimal("0.325"), quantity: 1, tax: tax.vat(19%))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

@@ -4,22 +4,28 @@
 // (`(scheme: "0088", id: .., kind: .., problems: ..)`).
 
 #import "/src/lib.typ": *
+#import "/src/loom-wrapper.typ": motif
 #import "/tests/integration/payment-reference/harness.typ": plain
 
-// DIN-5008 theme that records the rendered body and the resolved reference
-// signs as metadata.
-#let capturing-theme = () => {
-  let theme = themes.DIN-5008(font: "libertinus serif")()
-  let document(ctx, body) = {
-    let captured = metadata((
-      body: body,
+// The classic theme (DIN 5008 letter), whose `title` part records the
+// resolved reference signs, and a motif that records the body as drawn (the
+// `info` values are text by then).
+#let capturing-theme = theme.classic.with(
+  theme.custom.fonts(body: "libertinus serif"),
+  theme.custom.wrap("title", (ctx, view, inner) => {
+    [#metadata((
       references: ctx.references,
       labels: ctx.locale.strings.reference,
-    ))
-    (theme.document)(ctx, [#body#captured<captured>])
-  }
-  theme + (document: document)
-}
+    ))<captured>]
+    inner(ctx, view)
+  }),
+)
+#let captured-body(body) = motif(
+  scope: ctx => ctx,
+  measure: (_, children) => (children, none),
+  draw: (ctx, _, _, body) => [#metadata(body)<captured-body>#body],
+  body,
+)
 
 #show: invoice.with(
   theme: capturing-theme,
@@ -53,24 +59,28 @@
   date: datetime(year: 2026, month: 9, day: 1),
 )
 
-#line-items[
-  #item([Consulting], quantity: 8, unit: unit.hour, price: 120)
+#captured-body[
+  #line-items[
+    #item([Consulting], quantity: 8, unit: unit.hour, price: 120)
+  ]
+  #payment-terms(days: 14)
+
+  Seller register: #info.sender.legal-id
+
+  Buyer register: #info.recipient.legal-id
+
+  Buyer reference: #info.buyer-reference
+
+  Buyer GLN: #info.dynamic("recipient", "id")
 ]
-#payment-goal(days: 14)
-
-Seller register: #info.sender.legal-id
-
-Buyer register: #info.recipient.legal-id
-
-Buyer reference: #info.buyer-reference
-
-Buyer GLN: #info.dynamic("recipient", "id")
 
 #context {
   let captured = query(<captured>)
+  let bodies = query(<captured-body>)
   // Introspection is empty in the first layout iteration.
-  if captured.len() == 0 { return }
-  let (body, references, labels) = captured.first().value
+  if captured.len() == 0 or bodies.len() == 0 { return }
+  let (references, labels) = captured.first().value
+  let body = bodies.first().value
 
   // The e-invoice states the identifiers without the typed dictionary.
   let xml = str(query(pdf.attach).first().data)

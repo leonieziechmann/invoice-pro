@@ -739,7 +739,10 @@ def render(cid, f, mutation=None, opts=None):
     if mutation == "no-lines":
         lines, names, grounds, doc_mods, item_mods = [], [], [], [], []
         item_data = {"item_notes": [], "item_origins": []}
-    theme = "themes.DIN-5008()" if f["theme"].startswith("din-5008") else "themes.blank"
+    # The DIN 5008 letter of 0.4 had no footer: the classic preset without its
+    # legal footer, which prints the seller's VAT ID and tax number, prints
+    # what it did (the references and the parties).
+    theme = 'theme.classic.with(theme.custom.area("footer", none))' if f["theme"].startswith("din-5008") else "theme.plain"
     profile = "auto" if f["profile"] == "auto" else f'"{f["profile"]}"'
     invoice_nr = opts.get("invoice_nr", f'"{cid}"')
     src = [
@@ -751,6 +754,7 @@ def render(cid, f, mutation=None, opts=None):
         f"  locale: locale.{locale},",
         f"  zugferd: {profile},",
         '  zugferd-errors: "report",',
+        "  validation: none,",
         f'  tax-mode: "{f["mode"]}",',
         "  sender: (" + ", ".join(sender) + "),",
         "  recipient: (" + ", ".join(recipient) + "),",
@@ -765,9 +769,9 @@ def render(cid, f, mutation=None, opts=None):
     ]
     pay, terms = f["payment"], mutation != "no-payment-terms"
     if pay in ("bank+days", "nobank+days", "direct-debit") and terms:
-        src.append("#payment-goal(days: 14)")
+        src.append("#payment-terms(days: 14)")
     if pay in ("bank+immediate", "card") and terms:
-        src.append("#payment-goal()")
+        src.append("#payment-terms()")
     if pay == "paid":
         src.append(f"#paid(method: {PAID[0]}, date: {PAID[1]})")
     account = _account(f, seller, buyer)

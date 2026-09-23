@@ -84,9 +84,15 @@
 }
 
 // --- 3. The printed title follows the document type ---
-// A theme that hands the title to `check`.
+// A theme whose `title` part hands the context and the frame view to
+// `check`, then renders as usual. The invoices have no line items, so
+// validation is off.
 #let title-test(check, ..args) = invoice(
-  theme: () => themes.blank() + (document: (ctx, body) => check(ctx)),
+  theme: theme.plain.with(theme.custom.wrap("title", (ctx, view, inner) => {
+    check(ctx, view)
+    inner(ctx, view)
+  })),
+  validation: none,
   sender: seller,
   recipient: buyer-fr,
   invoice-nr: "2026-17",
@@ -109,8 +115,10 @@
   (locale.de-de, "326", "Rechnung"),
   (locale.de-de, "396", "Rechnungskorrektur"),
 ) {
-  title-test(locale: locale, document-type: type, ctx => {
+  title-test(locale: locale, document-type: type, (ctx, view) => {
     assert.eq(ctx.subject, title + " 2026-17")
+    // the title word of the frame view is the one of the document type
+    assert.eq(view.document.title, title)
     []
   })
 }
@@ -123,14 +131,14 @@
   assert.eq(model.invoice.title, none)
 })[
   #line-items[#item([Bonus], price: 500)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #model-test(document-type: "credit-note", subject: [Gutschrift], model => {
   assert.eq(model.invoice.title, "Gutschrift")
 })[
   #line-items[#item([Bonus], price: 500)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #model-test(model => {
@@ -138,7 +146,7 @@
   assert.eq(model.invoice.type-code, "380")
 })[
   #line-items[#item([Bonus], price: 500)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -147,29 +155,26 @@
   locale: locale.de-de,
   document-type: "credit-note",
   subject: "Gutschrift",
-  ctx => {
+  (ctx, view) => {
     assert.eq(ctx.subject, "Gutschrift 2026-17")
     []
   },
 )
 
-// --- 4. The payment goal and the bank details of a credit note ---
+// --- 4. The payment terms and the bank details of a credit note ---
 // On a credit note, the sender pays the amount to the recipient: the payment
 // sentence says so, the bank details are the recipient's account (the
 // default account holder), and there is no EPC-QR code for the recipient to
 // scan.
-#let payment-theme(check-goal, check-bank) = () => (
-  themes.blank()
-    + (
-      payment-goal: (ctx, view) => {
-        check-goal(plain-text((themes.blank().payment-goal)(ctx, view)))
-        []
-      },
-      bank-details: (ctx, view) => {
-        check-bank(view)
-        []
-      },
-    )
+#let payment-theme(check-goal, check-bank) = theme.plain.with(
+  theme.custom.wrap("payment-terms", (ctx, view, inner) => {
+    check-goal(plain-text(inner(ctx, view)))
+    []
+  }),
+  theme.custom.part("bank-details", (ctx, view) => {
+    check-bank(view)
+    []
+  }),
 )
 
 #invoice(
@@ -196,7 +201,7 @@
   date: datetime(year: 2026, month: 9, day: 1),
 )[
   #line-items[#item([Bonus], price: 500, tax: tax.vat(19%))]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank-details(iban: "DE75512108001245126199")
 ]
 
@@ -216,7 +221,7 @@
   invoice-nr: "RK-2",
 )[
   #line-items[#item([Bonus], price: 500, tax: tax.vat(19%))]
-  #payment-goal()
+  #payment-terms()
   #bank-details(iban: "DE75512108001245126199")
 ]
 
@@ -225,7 +230,7 @@
 // transfers the amount promptly, not that it is due on receipt
 #let paid-at-once = [
   #line-items[#item([Bonus], price: 500, tax: tax.vat(19%))]
-  #payment-goal()
+  #payment-terms()
   #bank
 ]
 #model-test(document-type: "credit-note", model => {
@@ -260,7 +265,7 @@
   invoice-nr: "R-1",
 )[
   #line-items[#item([Beratung], price: 500, tax: tax.vat(19%))]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank-details(iban: "DE75512108001245126199")
 ]
 #invoice(
@@ -294,7 +299,7 @@
   ("self-billed", buyer-de, seller),
 ) {
   let message(body) = catch(() => invoice(
-    theme: themes.blank,
+    theme: theme.plain,
     locale: locale.de-de,
     document-type: document-type,
     sender: sender,
@@ -314,8 +319,8 @@
       "card-payment: a credit note or a self-billed invoice is paid by its sender",
     ),
     (
-      payment-goal(days: 30, discount: (days: 14, percent: 2%)),
-      "payment-goal: a cash discount (`discount`) is not supported on a credit note or a self-billed invoice",
+      payment-terms(days: 30, discount: (days: 14, percent: 2%)),
+      "payment-terms: a cash discount (`discount`) is not supported on a credit note or a self-billed invoice",
     ),
   ) {
     let got = message(body)
@@ -341,7 +346,7 @@
     assert.eq(rules(model), ())
   })[
     #line-items[#item([Consulting], price: 1000)]
-    #payment-goal(days: 14)
+    #payment-terms(days: 14)
     #bank
   ]
 }
@@ -389,7 +394,7 @@
   assert.eq(rules(m), ())
 })[
   #line-items[#item([Bonus], price: 500)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -400,7 +405,7 @@
   model => assert.eq(rules(model), ("IP-DOC-01",)),
 )[
   #line-items[#item([Muster], price: 500)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -417,27 +422,25 @@
   },
 )[
   #line-items[#item([Anzahlung Projekt], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
 // With `zugferd: auto`, the prepayment invoice is written as EN 16931
 #{
-  let theme = () => (
-    themes.blank()
-      + (
-        zugferd-report: (ctx, result) => {
-          assert.eq(result.profile.id, "en16931")
-          assert.eq(
-            result.diagnostics.map(d => (d.level, d.rule)),
-            (("warning", "BR-DE-17"),),
-          )
-          []
-        },
+  let report-theme = theme.plain.with(theme.custom.part(
+    "zugferd-report",
+    (ctx, result) => {
+      assert.eq(result.profile.id, "en16931")
+      assert.eq(
+        result.diagnostics.map(d => (d.level, d.rule)),
+        (("warning", "BR-DE-17"),),
       )
-  )
+      []
+    },
+  ))
   invoice(
-    theme: theme,
+    theme: report-theme,
     locale: locale.de-de,
     zugferd: auto,
     zugferd-errors: "report",
@@ -448,7 +451,7 @@
     date: datetime(year: 2026, month: 9, day: 1),
   )[
     #line-items[#item([Anzahlung Projekt], price: 1000)]
-    #payment-goal(days: 14)
+    #payment-terms(days: 14)
     #bank
   ]
 }
@@ -480,7 +483,7 @@
   process-zugferd(
     ctx,
     signal("line-items").item-data,
-    payment-goal: signal("payment-goal"),
+    payment-goal: signal("payment-terms"),
     bank: signal("bank-details"),
   )
 }
@@ -500,7 +503,7 @@
   },
 )[
   #line-items[#item([Provision], price: 1000, tax: tax.vat(19%))]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -524,7 +527,7 @@
 
 // The diagnostics name the inputs: the seller's are the recipient's
 #invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "xrechnung",
   zugferd-errors: "ignore",
@@ -546,7 +549,7 @@
     )
   })[
     #line-items[#item([Provision], price: 1000, tax: tax.vat(19%))]
-    #payment-goal(days: 14)
+    #payment-terms(days: 14)
     #bank
   ],
 )
@@ -560,7 +563,7 @@
   document-type: "self-billed",
   sender: buyer-de,
   recipient: seller,
-  ctx => {
+  (ctx, view) => {
     assert.eq(ctx.references.slice(0, 3), (
       ("Empfänger:in Steuernummer", "123/456/78901"),
       ("Empfänger:in USt-IdNr.", "DE123456789"),

@@ -71,7 +71,7 @@ Of the 196 business terms and groups of EN 16931, `invoice-pro` states 129 from 
 | `BT-6`  | VAT accounting currency code    | not supported | the VAT is stated in the invoice currency; a separate VAT accounting currency is not supported                            |
 | `BT-7`  | Value added tax point date      | not supported | the tax point is stated by the actual delivery date (BT-72) or the invoicing period (BG-14)                               |
 | `BT-8`  | Value added tax point date code | not supported | the tax point is stated by the actual delivery date (BT-72) or the invoicing period (BG-14)                               |
-| `BT-9`  | Payment due date                | input         | due-date (a date), payment-goal(date:) or payment-goal(days:)                                                             |
+| `BT-9`  | Payment due date                | input         | due-date (a date), payment-terms(date:) or payment-terms(days:)                                                           |
 | `BT-10` | Buyer reference                 | input         | recipient.buyer-reference or recipient.leitweg-id (text or id.leitweg(..))                                                |
 | `BT-11` | Project reference               | input         | project; EN 16931 and XRechnung only                                                                                      |
 | `BT-12` | Contract reference              | input         | contract-nr (or recipient.contract-nr)                                                                                    |
@@ -82,7 +82,7 @@ Of the 196 business terms and groups of EN 16931, `invoice-pro` states 129 from 
 | `BT-17` | Tender or lot reference         | not supported | no input for public procurement references                                                                                |
 | `BT-18` | Invoiced object identifier      | not supported | no input for invoiced objects (e.g. subscriptions, meters)                                                                |
 | `BT-19` | Buyer accounting reference      | not supported | no input for the buyer's booking account                                                                                  |
-| `BT-20` | Payment terms                   | input         | payment-goal (its text), due-date (a text) or paid (the printed sentence)                                                 |
+| `BT-20` | Payment terms                   | input         | payment-terms (its text), due-date (a text) or paid (the printed sentence)                                                |
 | `BG-1`  | INVOICE NOTE                    | input         | notes                                                                                                                     |
 | `BT-21` | Invoice note subject code       | input         | notes (subject-code of a note)                                                                                            |
 | `BT-22` | Invoice note                    | input         | notes (the text of a note)                                                                                                |

@@ -567,9 +567,9 @@ class Headers(unittest.TestCase):
                 return run.load_cases([file])[0]["id"]
 
             self.assertEqual(load("  ..setup,\n  zugferd: \"en16931\",\n"), "rg-case")
-            self.assertEqual(load("  ..setup,\n  theme: harness(themes.DIN-5008()),\n"), "rg-case")
+            self.assertEqual(load("  ..setup,\n  theme: harness(theme.classic),\n"), "rg-case")
             # Another theme or mode after `..setup` would lose the diagnostics.
-            for body in ("  ..setup,\n  theme: themes.DIN-5008(),\n", '  ..setup,\n  zugferd-errors: "panic",\n'):
+            for body in ("  ..setup,\n  theme: theme.classic,\n", '  ..setup,\n  zugferd-errors: "panic",\n'):
                 with self.assertRaises(common.ToolError):
                     load(body)
 
@@ -1147,7 +1147,7 @@ class Generator(unittest.TestCase):
         self.assertEqual((card["payment_means"], card["card"], card["due_date"]), (["54"], ["1234", "Erika Kunde"], None))
         src, paid = render(payment="paid")
         self.assertIn('#paid(method: "cash", date: datetime(year: 2026, month: 9, day: 1))', src)
-        self.assertNotIn("#payment-goal", src)
+        self.assertNotIn("#payment-terms", src)
         self.assertEqual((paid["payment_means"], paid["paid"], paid["due_date"]), (["10"], True, None))
         # A credit transfer or a direct debit outside the euro is no SEPA
         # payment (the random population has direct debits in other currencies).
@@ -1253,7 +1253,7 @@ class Generator(unittest.TestCase):
 
     def test_references(self):
         src, _ = gen.render("x", dict(gen.SIMPLE, theme="din-5008-refs"))
-        self.assertIn("theme: harness(themes.DIN-5008()),", src)
+        self.assertIn('theme: harness(theme.classic.with(theme.custom.area("footer", none))),', src)
         self.assertIn("  references: (references.invoice-nr(), references.invoice-date(), references.service-time(), "
                       "references.due-date(), references.seller-tax-nr(), references.seller-vat-id(), "
                       "references.buyer-vat-id()),", src)

@@ -24,5 +24,5 @@
 #line-items[
   #item([API-Aufrufe], price: 0.0001, quantity: 2000000000, tax: tax.vat(19%))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

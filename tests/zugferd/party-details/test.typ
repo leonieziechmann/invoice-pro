@@ -464,7 +464,7 @@
   #line-items[
     #item([Consulting], price: 100, quantity: 2, unit: unit.hour)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank-details(
     bank: "Musterbank",
     iban: "DE75512108001245126199",
@@ -496,7 +496,7 @@
     #item([Consulting], price: 100, tax: tax.outside-scope())
     #body
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
 ]
 #outside-scope-test(
   model => {

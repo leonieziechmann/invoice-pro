@@ -20,5 +20,5 @@
   #item-with(tax.outside-scope())
   #shipping
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

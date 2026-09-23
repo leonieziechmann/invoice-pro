@@ -20,5 +20,5 @@
   #item-s
   #rebate-with(tax.reverse-charge())
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

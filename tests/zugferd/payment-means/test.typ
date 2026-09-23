@@ -24,7 +24,7 @@
 #let items = line-items[
   #item([Consulting], price: 100, quantity: 2, unit: unit.hour)
 ]
-#let goal = payment-goal(days: 14)
+#let goal = payment-terms(days: 14)
 
 // A payment means of the model without details.
 #let means(type-code, kind, field, ..details) = (

@@ -19,5 +19,5 @@
 #line-items[
   #item([Montage], price: 100, quantity: 1, tax: tax.reverse-charge())
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

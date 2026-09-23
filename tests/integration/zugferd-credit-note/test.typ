@@ -7,7 +7,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(),
+  theme: theme.classic,
   locale: locale.de-de,
   zugferd: "xrechnung",
   document-type: "credit-note",
@@ -52,5 +52,5 @@
   #item([Returned monitor], price: 250, quantity: 2, tax: tax.vat(19%))
   #item([Goodwill discount], price: 50, quantity: 1, tax: tax.vat(19%))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(bank: "Kundenbank", iban: "DE75512108001245126199")

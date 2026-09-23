@@ -18,5 +18,5 @@
 #line-items[
   #item-with(tax.special.ceuta-melilla(0%))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

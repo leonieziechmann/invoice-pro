@@ -33,7 +33,7 @@
     #item([Wartung], price: 100, quantity: 0.125, unit: unit.hour)
     #item([Strom], price: 100, quantity: 0.12345, unit: "kWh")
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -48,7 +48,7 @@
   #line-items[
     #item([Kies], price: 30, quantity: 10, base-quantity: 1 / 3)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -67,13 +67,13 @@
       #item([B], price: 500)
     ]
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
 // --- 4. The printed quantity is the one the total is calculated with ---
 #invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   sender: (name: "Seller", address: "Street 1", city: "12345 City"),
   recipient: (name: "Buyer", address: "Street 2", city: "12345 City"),

@@ -25,5 +25,5 @@
 #line-items[
   #item([Ware], price: 100, quantity: 1, tax: tax.vat(19%))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

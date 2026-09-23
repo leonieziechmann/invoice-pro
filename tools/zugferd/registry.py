@@ -48,7 +48,7 @@ An entry (see tests/TESTING.md, "The Rule Registry", for its meaning):
     "scope": "payment",                   # document party line tax allowance-charge payment printed
     "terms": ["BT-9", "BT-20"],
     "level": "error",                     # or ["error", "warning"]: the first is the usual one
-    "field": "payment-goal",              # the input the diagnostic names
+    "field": "payment-terms",              # the input the diagnostic names
     "summary": "...",                     # what it checks (the documentation of IP rules)
     "legal": null                         # the legal basis of a rule of invoice-pro
   }

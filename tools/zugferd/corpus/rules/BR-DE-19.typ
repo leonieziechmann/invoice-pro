@@ -17,5 +17,5 @@
 #line-items[
   #item-s
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(bank: "Musterbank", iban: "DE89370400440532013001")

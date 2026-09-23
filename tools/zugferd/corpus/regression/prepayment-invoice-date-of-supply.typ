@@ -13,7 +13,12 @@
 
 #show: invoice.with(
   ..setup,
-  theme: harness(themes.DIN-5008(font: "libertinus serif")),
+  theme: harness(theme.classic.with(
+    theme.custom.fonts(body: "libertinus serif"),
+    // the DIN 5008 letter of 0.4 had no legal footer, which would print the
+    // seller's VAT ID and tax number
+    theme.custom.area("footer", none),
+  )),
   zugferd: "en16931",
   document-type: "prepayment",
   sender: seller-de,
@@ -24,5 +29,5 @@
 #line-items[
   #item([Anzahlung Dachsanierung], price: 3000)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

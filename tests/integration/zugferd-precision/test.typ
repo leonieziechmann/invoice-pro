@@ -8,7 +8,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "en16931",
   sender: (
@@ -49,7 +49,7 @@
   #item([Fuel], price: 1.789, quantity: 45.37, unit: unit.litre)
   #item([Returned toner], price: -39.90, quantity: 1)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(
   bank: "Musterbank",
   iban: "DE75512108001245126199",

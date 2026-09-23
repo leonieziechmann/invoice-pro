@@ -26,7 +26,7 @@
     "Bei Zahlung innerhalb von 14 Tagen gewähren wir 2% Skonto.",
   )
   assert.eq(model.payment.terms-xrechnung, "#SKONTO#TAGE=14#PROZENT=2.00#\n")
-  assert.eq(model.payment.terms-input, "payment-goal")
+  assert.eq(model.payment.terms-input, "payment-terms")
   assert.eq(rules(model), ())
   assert.eq(xml-values(model, "ram:Description"), (
     "#SKONTO#TAGE=14#PROZENT=2.00#\n",
@@ -42,7 +42,7 @@
   assert.eq(rules(m), ())
 })[
   #items
-  #payment-goal(days: 30, discount: (days: 14, percent: 2%))
+  #payment-terms(days: 30, discount: (days: 14, percent: 2%))
   #bank
 ]
 
@@ -63,10 +63,10 @@
   let m = model
   m.payment.discounts.at(0).basis = decimal("238.005")
   assert.eq(rules(m), ("BR-DE-18",))
-  assert.eq(diagnostic(m, "BR-DE-18").field, "payment-goal.discount")
+  assert.eq(diagnostic(m, "BR-DE-18").field, "payment-terms.discount")
 })[
   #items
-  #payment-goal(
+  #payment-terms(
     date: [Zahlbar innerhalb von 30 Tagen netto.],
     discount: (
       (days: 7, percent: 3%, basis: 238),
@@ -85,7 +85,7 @@
   )
 })[
   #items
-  #payment-goal(days: 30, discount: (days: 10, percent: 1.5%))
+  #payment-terms(days: 30, discount: (days: 10, percent: 1.5%))
   #bank
 ]
 
@@ -95,33 +95,33 @@
   assert.eq(rules(model, level: "warning"), ("IP-PROFILE-01",))
   assert.eq(
     diagnostic(model, "IP-PROFILE-01").field,
-    "payment-goal.discount",
+    "payment-terms.discount",
   )
 })[
   #items
-  #payment-goal(days: 30, discount: (days: 14, percent: 2%))
+  #payment-terms(days: 30, discount: (days: 14, percent: 2%))
   #bank
 ]
 
 // --- 3. Wrong input stops at once, naming the value ---
 #{
-  let message(discount) = catch(() => payment-goal(
+  let message(discount) = catch(() => payment-terms(
     days: 30,
     discount: discount,
   ))
   assert(
     message((days: 14, percent: 2%, rate: 2%)).contains(
-      "`payment-goal::discount` has the unknown key `rate`",
+      "`payment-terms::discount` has the unknown key `rate`",
     ),
   )
   assert(
     message((days: 0, percent: 2%)).contains(
-      "`payment-goal::discount.days` must be the number of days",
+      "`payment-terms::discount.days` must be the number of days",
     ),
   )
   assert(
     message(((days: 14, percent: 2%), (days: 7, percent: 2))).contains(
-      "`payment-goal::discount.at(1).percent` must be a percentage such as `2%`, got 2",
+      "`payment-terms::discount.at(1).percent` must be a percentage such as `2%`, got 2",
     ),
   )
   assert(

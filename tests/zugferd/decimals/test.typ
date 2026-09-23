@@ -42,7 +42,7 @@
     #item([B], price: 3.3333)
     #item([C], price: 3.3333)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -55,7 +55,7 @@
     #item([B], price: 3.3333)
     #item([C], price: 3.3333)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -85,7 +85,7 @@
     #item([A], price: 100, modifier: surcharge([Express], amount: 5))
     #discount([Coupon], amount: 10)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -96,7 +96,7 @@
     #item([B], price: 3.3333)
     #item([C], price: 3.3333)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #model-test(currency: "KWD", model => {

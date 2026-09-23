@@ -409,7 +409,7 @@
 }
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "xrechnung",
   sender: (
@@ -442,7 +442,7 @@
   let model = build-model(
     ctx,
     signal("line-items").item-data,
-    payment-goal: signal("payment-goal"),
+    payment-goal: signal("payment-terms"),
     bank: signal("bank-details"),
   )
   assert.eq(model.profile.id, "xrechnung")
@@ -451,7 +451,7 @@
   #line-items[
     #item([Consulting], price: 100, quantity: 2, unit: unit.hour)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank-details(
     bank: "Musterbank",
     iban: "DE75512108001245126199",

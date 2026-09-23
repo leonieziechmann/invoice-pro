@@ -15,7 +15,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
+  theme: theme.classic.with(theme.custom.fonts(body: "libertinus serif")),
   locale: locale.en-de,
   sender: (
     name: "Consulting Group LLC",

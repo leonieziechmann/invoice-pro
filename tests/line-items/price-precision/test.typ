@@ -14,10 +14,13 @@
 #import "/tests/test-locale.typ": test-locale
 
 #let check(test, printed, locale: test-locale, body) = invoice(
-  theme: themes.blank.with(line-items: (ctx, data, body) => {
-    printed(data.items.map(i => i.price))
-    body
-  }),
+  theme: theme.plain.with(theme.custom.wrap(
+    "line-items",
+    (ctx, data, inner) => {
+      printed(data.items.map(i => i.price))
+      inner(ctx, data)
+    },
+  )),
   locale: locale,
   sender: (name: "Seller", address: "Street 1", city: "City"),
   recipient: (name: "Buyer", address: "Street 2", city: "City"),

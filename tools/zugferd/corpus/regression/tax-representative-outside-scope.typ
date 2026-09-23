@@ -32,5 +32,5 @@
     tax: tax.outside-scope(grounds: "Nicht im Inland steuerbare Leistung"),
   )
 ]
-#payment-goal(days: 30)
+#payment-terms(days: 30)
 #bank

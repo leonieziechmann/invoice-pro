@@ -24,5 +24,5 @@
   #item([B], price: 3.3333, quantity: 1, tax: tax.vat(19%))
   #item([C], price: 3.3333, quantity: 1, tax: tax.vat(19%))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

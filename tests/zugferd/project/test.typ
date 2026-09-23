@@ -29,7 +29,7 @@
   }
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -39,6 +39,6 @@
   assert.eq(xml-elements(model, "ram:SpecifiedProcuringProject"), ())
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]

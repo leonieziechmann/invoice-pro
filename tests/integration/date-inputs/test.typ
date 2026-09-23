@@ -25,7 +25,7 @@
 
 // The message an invoice stops with, or `none`.
 #let message(zugferd: none, body: none, ..args) = catch(() => invoice(
-  theme: themes.DIN-5008(font: "libertinus serif"),
+  theme: theme.classic.with(theme.custom.fonts(body: "libertinus serif")),
   locale: locale.de-de,
   sender: seller,
   recipient: buyer,
@@ -38,7 +38,7 @@
     #item([Consulting], price: 100, quantity: 1, tax: tax.vat(19%))
     #body
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank-details(bank: "Musterbank", iban: "DE89370400440532013000")
 ])
 
@@ -89,7 +89,7 @@
   catch(() => prepayment(10, date: time-only)),
   "prepayment::date",
 )
-#stops(catch(() => payment-goal(date: time-only)), "payment-goal::date")
+#stops(catch(() => payment-terms(date: time-only)), "payment-terms::date")
 #stops(catch(() => paid(method: "cash", date: time-only)), "paid::date")
 
 // A dated item compiles.

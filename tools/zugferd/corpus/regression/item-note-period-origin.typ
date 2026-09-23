@@ -39,5 +39,5 @@
   )
   #item([Material], price: 60, tax: tax.vat(19%))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

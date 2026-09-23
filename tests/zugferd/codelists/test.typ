@@ -115,7 +115,7 @@
 // validation of the profile accepts it, with a warning where a validator
 // with the newest list rejects it (maintainer decision): only XRechnung
 // rejects it ---
-#import "/src/lib.typ": item, line-items, payment-goal
+#import "/src/lib.typ": item, line-items, payment-terms
 #import "/src/zugferd/profile.typ": resolve-profile
 #import "/src/zugferd/build.typ": build-tree
 #import "/tools/zugferd/guard/write.typ": write
@@ -203,7 +203,7 @@
   assert.eq(rules(m), ("BR-CL-04",))
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -234,7 +234,7 @@
   assert.eq(rules(m), ())
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -283,7 +283,7 @@
   )
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -322,7 +322,7 @@
   assert.eq(d.hint, not-yet-hint)
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -415,7 +415,7 @@
   )
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -456,6 +456,6 @@
   )
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]

@@ -1,9 +1,10 @@
-// The data `bank-details` prepares for the theme layout, and the base layout
-// drawing only these data. The component normalizes IBAN and BIC, decides
-// whether an EPC-QR code is generated (shown, invoice in EUR), prepares its
-// payload or the problems that prevent it, and stops the compilation for
-// such problems unless they are reported in the document. The layout draws
-// the code from the payload, or a placeholder naming the problems.
+// The data `bank-details` prepares for the `bank-details` part, and the
+// default part drawing only these data. The component normalizes IBAN and
+// BIC, decides whether an EPC-QR code is generated (shown, invoice in EUR),
+// prepares its payload or the problems that prevent it, which stop the
+// compilation under `validation: "strict"`, and draws the code from the
+// payload (`view.qr`), or a placeholder naming the problems in a draft or
+// when they are reported in the document. The part only places it.
 
 #import "/src/lib.typ": *
 #import "/src/locale/lang/base.typ": base-language
@@ -11,7 +12,6 @@
 #import "/src/logic/epc.typ"
 #import "/src/utils/bic.typ": bic-valid, normalize-bic
 #import "/src/utils/text.typ": plain-text
-#import "/src/themes/base-theme/bank-details.typ": render-bank-details
 #import "/tests/integration/payment-reference/harness.typ": find-all, plain
 
 #let valid = "DE75512108001245126199"
@@ -111,26 +111,30 @@
 
 // --- 4. The view of the layout ---
 
-// Records the view the layout receives and what the base layout draws.
-#let capturing-theme = themes.blank.with(
-  bank-details: (ctx, view) => {
-    let printed = render-bank-details(ctx, view)
+// Records the view the part receives and what the default part draws.
+#let capturing-theme = theme.plain.with(theme.custom.wrap(
+  "bank-details",
+  (ctx, view, inner) => {
+    let printed = inner(ctx, view)
     [#metadata((view: view, printed: printed))<bank-details>#printed]
   },
-)
+))
 
+// Strict by default: every problem stops the compilation with its message.
 #let test-invoice(
   theme: capturing-theme,
   sender-name: "Muster GmbH",
   region-locale: locale.de-de,
   zugferd: none,
   zugferd-errors: "panic",
+  validation: "strict",
   ..bank,
 ) = invoice(
   theme: theme,
   locale: region-locale,
   zugferd: zugferd,
   zugferd-errors: zugferd-errors,
+  validation: validation,
   sender: (
     name: sender-name,
     address: "Hauptstraße 1",
@@ -154,7 +158,7 @@
   date: datetime(year: 2026, month: 7, day: 1),
 )[
   #line-items[#item([Beratung], price: 100, tax: tax.vat(19%))]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank-details(bank: "Musterbank", ..bank)
 ]
 
@@ -164,13 +168,15 @@
 #test-invoice(region-locale: locale.de-ch, iban: valid, bic: "COBA22XXX")
 // No QR code wanted.
 #test-invoice(sender-name: long-name, iban: valid, qr-code: (display: false))
-// "report": the problems reach the layout, which draws a placeholder.
+// "report": the problems reach the part, which draws the placeholder of
+// `view.qr` (the checks of the invoice data are off, which would stop them).
 #test-invoice(
   sender-name: long-name,
   iban: valid,
   bic: "COBA22XXX",
   zugferd: "en16931",
   zugferd-errors: "report",
+  validation: none,
 )
 
 #context {
@@ -198,6 +204,12 @@
     "EUR119.00",
   ))
   assert(plain(euro.printed).contains("BIC: SOLADEST600"))
+  // v2: the IBAN grouped in fours (non-breaking), and the one reference
+  assert.eq(
+    euro.view.iban.text,
+    "DE75\u{A0}5121\u{A0}0800\u{A0}1245\u{A0}1261\u{A0}99",
+  )
+  assert.eq(euro.view.payment-reference, "RE-2026-001")
 
   for it in (franc, hidden) {
     assert.eq((it.view.qr-code.payload, it.view.qr-code.problems), (none, ()))
@@ -221,11 +233,12 @@
   )
 }
 
-// --- 5. The component stops, whatever the layout draws ---
+// --- 5. The component stops, whatever the part draws ---
 #{
-  let text-only = themes.blank.with(bank-details: (ctx, view) => [
-    #view.sender.iban
-  ])
+  let text-only = theme.plain.with(theme.custom.part(
+    "bank-details",
+    (ctx, view) => [#view.sender.iban],
+  ))
   assert.eq(
     catch(() => test-invoice(
       theme: text-only,
@@ -239,7 +252,7 @@
           + "\" is too long for the EPC-QR code (at most 70 bytes, non-ASCII characters count twice or more); set the account name as registered at the bank with `name` on `bank-details`. Hide it with `qr-code: (display: false)` on `bank-details` if it is not needed.",
       ),
   )
-  // Without the QR code, the layout gets the bank details.
+  // Without the QR code, the part gets the bank details.
   assert.eq(
     catch(() => test-invoice(
       theme: text-only,
@@ -251,9 +264,12 @@
   )
 }
 
-// --- 6. The base layout draws what the view holds, nothing else ---
+// --- 6. The default part draws what the view holds, nothing else ---
 #{
-  let ctx = (locale: (locale.de-de)(base-language, base-region))
+  let ctx = (
+    locale: (locale.de-de)(base-language, base-region),
+    theme: theme.resolve(theme.plain, validation: none),
+  )
   let view = (
     sender: (
       name: "Muster GmbH",
@@ -262,47 +278,35 @@
       iban-valid: true,
       bic: "",
     ),
-    qr-code: (size: 5em, display: true, payload: none, problems: ()),
+    iban: (value: valid, text: "DE75 5121 0800 1245 1261 99", valid: true),
+    qr-code: (size: auto, display: true, payload: none, problems: ()),
+    qr: none,
     reference: "RE-2026-001",
     text: none,
+    payment-reference: "RE-2026-001",
     show-reference: true,
     report-problems: false,
     payment-amount: decimal("119"),
   )
-  let draw(qr-code) = render-bank-details(
-    ctx,
-    view + (qr-code: view.qr-code + qr-code),
+  let draw(..fields) = theme.parts.bank-details(ctx, view + fields.named())
+
+  // No code in the view: none is drawn, although it is displayed.
+  assert.eq(find-all(draw(), image), ())
+  assert(plain(draw()).contains("IBAN: DE75 5121 0800 1245 1261 99"))
+  assert(plain(draw()).contains("Verwendungszweck: RE-2026-001"))
+
+  // The code of the view is drawn at the size of the theme (25 mm); the
+  // component builds it from the payload, or the placeholder naming the
+  // problems.
+  assert(
+    plain(draw(qr: size => [QR #repr(size)])).contains("QR " + repr(25mm)),
   )
 
-  // No payload, no problems: no code, although it is displayed.
-  assert.eq(find-all(draw((:)), image), ())
-
-  // The code shows exactly the payload.
-  let payload = (
-    beneficiary: "Beneficiary",
-    iban: valid,
-    bic: none,
-    amount: none,
-    reference: none,
-    text: "Text",
+  // An invalid IBAN is noted next to it only when the e-invoice reports its
+  // problems in the document; a draft lists it in its report.
+  let invalid = (value: "DE00", text: "DE00", valid: false)
+  assert(not plain(draw(iban: invalid)).contains("(invalid)"))
+  assert(
+    plain(draw(iban: invalid, report-problems: true)).contains("(invalid)"),
   )
-  let codes = find-all(draw((payload: payload)), image)
-  assert.eq(codes.len(), 1)
-  assert.eq(codes.first().alt.split("\n").slice(4, 11), (
-    "",
-    "Beneficiary",
-    valid,
-    "",
-    "",
-    "",
-    "Text",
-  ))
-
-  // Problems are named by the placeholder; the layout does not decide
-  // whether they stop the compilation.
-  let placeholder = draw((
-    problems: ((short: "invalid BIC", message: "the BIC is not valid"),),
-  ))
-  assert.eq(find-all(placeholder, image), ())
-  assert(plain(placeholder).contains("No EPC-QR code: invalid BIC"))
 }

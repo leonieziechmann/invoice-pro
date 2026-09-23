@@ -16,7 +16,7 @@
 #line-items[
   #item-s
 ]
-#payment-goal()
+#payment-terms()
 #card-payment(last4: "1234", holder: "Erika Kunde", kind: "credit")
 #direct-debit(
   mandate: "M-2026-017",

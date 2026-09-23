@@ -32,7 +32,7 @@
   )
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(
   bank: "Musterbank",
   iban: "DE75512108001245126199",

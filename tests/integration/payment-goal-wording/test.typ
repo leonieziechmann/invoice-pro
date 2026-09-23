@@ -1,10 +1,9 @@
-// The payment-goal sentence must describe the amount it prints: without
+// The payment-terms sentence must describe the amount it prints: without
 // prepayments it asks for the total amount (`payment.text`), with prepayments
 // it asks for the remaining amount due (`payment.text-due`).
 
 #import "/src/lib.typ": *
 #import "/src/locale/lang/lang.typ"
-#import "/src/themes/base-theme/payment-goal.typ": render-payment-goal
 #import "/tests/test-locale.typ": test-locale
 
 // Flattens rendered content into a plain string for exact comparisons.
@@ -18,22 +17,25 @@
   } else if it == [ ] { " " } else { "" }
 }
 
-// Tags each rendered payment goal with its view and sentence so the final
-// layout can be queried per scenario.
+// Tags each rendered payment-terms sentence with its view and text so the
+// final layout can be queried per scenario. The wrap renders the default part.
+// The invoices are bare fixtures (several in one document), so validation is
+// off.
 #let captured-invoice(scenario, loc: test-locale, body) = invoice(
-  theme: themes.blank.with(
-    payment-goal: (ctx, view) => {
-      let sentence = render-payment-goal(ctx, view)
+  theme: theme.plain.with(
+    theme.custom.wrap("payment-terms", (ctx, view, inner) => {
+      let sentence = inner(ctx, view)
       [#sentence#metadata((
           scenario: scenario,
           view: view,
           text: plain(sentence),
-        )) <payment-goal-wording>]
-    },
+        )) <payment-terms-wording>]
+    }),
   ),
   locale: loc,
   sender: (name: "Test Sender"),
   recipient: (name: "Test Recipient"),
+  validation: none,
   body,
 )
 
@@ -51,7 +53,7 @@
   #line-items[
     #item([Consulting], price: 1000.00, tax: tax.vat(19%))
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
 ]
 
 // 2. With prepayment: remaining amount due, "amount due" wording
@@ -60,7 +62,7 @@
     #item([Consulting], price: 1000.00, tax: tax.vat(19%))
     #prepayment(500)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
 ]
 
 // 3. A zero prepayment leaves the gross total payable, so the sentence keeps
@@ -70,7 +72,7 @@
     #item([Consulting], price: 1000.00, tax: tax.vat(19%))
     #prepayment(0)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
 ]
 
 // 4./5. German locale without and with prepayment
@@ -78,7 +80,7 @@
   #line-items[
     #item([Beratung], price: 1000.00, tax: tax.vat(19%))
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
 ]
 
 #captured-invoice("prepayment-de", loc: locale.de-de)[
@@ -86,7 +88,7 @@
     #item([Beratung], price: 1000.00, tax: tax.vat(19%))
     #prepayment(500)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
 ]
 
 // 6./7. `locale.custom.payment(text-due: ..)` overrides the prepayment wording
@@ -94,7 +96,7 @@
   #line-items[
     #item([Consulting], price: 1000.00, tax: tax.vat(19%))
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
 ]
 
 #captured-invoice("prepayment-custom", loc: custom-locale)[
@@ -102,94 +104,94 @@
     #item([Consulting], price: 1000.00, tax: tax.vat(19%))
     #prepayment(500)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
 ]
 
 #context {
   let captured(scenario) = {
-    let found = query(<payment-goal-wording>)
+    let found = query(<payment-terms-wording>)
       .map(m => m.value)
       .filter(v => v.scenario == scenario)
     assert.eq(
       found.len(),
       1,
       message: scenario
-        + ": expected 1 rendered payment goal, got "
+        + ": expected 1 rendered payment-terms sentence, got "
         + repr(found.len()),
     )
     found.first()
   }
 
-  let expect(scenario, has-prepayments, total, sentence) = {
-    let pg = captured(scenario)
+  let expect(scenario, amount-kind, amount, sentence) = {
+    let pt = captured(scenario)
     assert.eq(
-      pg.view.has-prepayments,
-      has-prepayments,
+      pt.view.amount-kind,
+      amount-kind,
       message: scenario
-        + ": has-prepayments: expected "
-        + repr(has-prepayments)
+        + ": amount-kind: expected "
+        + repr(amount-kind)
         + ", got "
-        + repr(pg.view.has-prepayments),
+        + repr(pt.view.amount-kind),
     )
     assert.eq(
-      pg.view.total,
-      total,
+      pt.view.amount.value,
+      amount,
       message: scenario
-        + ": total: expected "
-        + repr(total)
+        + ": amount: expected "
+        + repr(amount)
         + ", got "
-        + repr(pg.view.total),
+        + repr(pt.view.amount.value),
     )
     assert.eq(
-      pg.text,
+      pt.text,
       sentence,
       message: scenario
         + ": sentence: expected "
         + repr(sentence)
         + ", got "
-        + repr(pg.text),
+        + repr(pt.text),
     )
   }
 
   expect(
     "no-prepayment",
-    false,
+    "total",
     decimal("1190.00"),
     "Please transfer the total amount of 1.190,00\u{202f}€ within 14 days to the account listed below.",
   )
   expect(
     "prepayment",
-    true,
+    "amount-due",
     decimal("690.00"),
     "Please transfer the amount due of 690,00\u{202f}€ within 14 days to the account listed below.",
   )
   expect(
     "zero-prepayment",
-    false,
+    "total",
     decimal("1190.00"),
     "Please transfer the total amount of 1.190,00\u{202f}€ within 14 days to the account listed below.",
   )
   expect(
     "no-prepayment-de",
-    false,
+    "total",
     decimal("1190.00"),
     "Bitte überweisen Sie den Gesamtbetrag in Höhe von 1.190,00\u{202f}€ innerhalb von 14 Tagen auf das unten angegebene Konto.",
   )
   expect(
     "prepayment-de",
-    true,
+    "amount-due",
     decimal("690.00"),
     "Bitte überweisen Sie den fälligen Betrag in Höhe von 690,00\u{202f}€ innerhalb von 14 Tagen auf das unten angegebene Konto.",
   )
   expect(
     "no-prepayment-custom",
-    false,
+    "total",
     decimal("1190.00"),
     "Please pay 1.190,00\u{202f}€ within 14 days.",
   )
   expect(
     "prepayment-custom",
-    true,
+    "amount-due",
     decimal("690.00"),
     "Please pay the remaining 690,00\u{202f}€ within 14 days.",
   )

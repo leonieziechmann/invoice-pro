@@ -1,11 +1,12 @@
 // The IBAN of `bank-details` is checked independently of the theme and of the
-// EPC-QR code: a wrong IBAN stops the compilation with a message naming it,
-// or, with `zugferd-errors: "report"`, is marked in the document instead. The
-// EPC-QR code is only generated when it is shown, from the plain text of the
-// account holder, so styled or multi-line sender names work.
+// EPC-QR code: a wrong IBAN is a problem of the invoice data, which stops the
+// compilation with a message naming it under `validation: "strict"`, is
+// listed in the report of a draft, and, with `zugferd-errors: "report"`, is
+// marked in the document. The EPC-QR code is only generated when it is shown,
+// from the plain text of the account holder, so styled or multi-line sender
+// names work.
 
 #import "/src/lib.typ": *
-#import "/src/themes/base-theme/bank-details.typ": render-bank-details
 #import "/src/utils/iban.typ": format-iban, iban-valid, normalize-iban
 #import "/src/utils/text.typ": plain-text
 #import "/tests/integration/payment-reference/harness.typ": find-all, plain
@@ -47,28 +48,32 @@
   assert.eq(format-iban(""), "")
 }
 
-// Records the printed bank details and the rules of a report.
-#let capturing-theme = themes.blank.with(
-  bank-details: (ctx, view) => {
-    let printed = render-bank-details(ctx, view)
+// Records the printed bank details (the default part, wrapped) and the rules
+// of a report.
+#let capturing-theme = theme.plain.with(
+  theme.custom.wrap("bank-details", (ctx, view, inner) => {
+    let printed = inner(ctx, view)
     [#metadata(printed)<bank-details>#printed]
-  },
-  zugferd-report: (ctx, result) => [#metadata(
+  }),
+  theme.custom.part("zugferd-report", (ctx, result) => [#metadata(
     result.diagnostics.map(d => d.rule),
-  )<report>],
+  )<report>]),
 )
 
+// Strict by default: every problem stops the compilation with its message.
 #let test-invoice(
   sender-name: "Muster GmbH",
   region-locale: locale.de-de,
   zugferd: none,
   zugferd-errors: "panic",
+  validation: "strict",
   ..bank,
 ) = invoice(
   theme: capturing-theme,
   locale: region-locale,
   zugferd: zugferd,
   zugferd-errors: zugferd-errors,
+  validation: validation,
   sender: (
     name: sender-name,
     address: "Hauptstraße 1",
@@ -92,7 +97,7 @@
   date: datetime(year: 2026, month: 7, day: 1),
 )[
   #line-items[#item([Beratung], price: 100, tax: tax.vat(19%))]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank-details(bank: "Musterbank", ..bank)
 ]
 
@@ -126,6 +131,9 @@
       "bank-details: the IBAN is missing. Set `iban` on `bank-details`.",
     ),
   )
+  // A draft renders and lists them in its report instead.
+  assert.eq(error(iban: invalid, validation: "draft"), none)
+  assert.eq(error(validation: "draft"), none)
 }
 
 // --- 3. What the EPC-QR code cannot carry is named as well ---
@@ -182,11 +190,13 @@
   iban: valid,
   qr-code: (display: false),
 )
-// "report": the invalid IBAN is marked and reported instead of failing
+// "report": the invalid IBAN is marked and reported instead of failing (the
+// checks of the invoice data are off, which would withhold the XML)
 #test-invoice(
   iban: invalid,
   zugferd: "en16931",
   zugferd-errors: "report",
+  validation: none,
 )
 // "report": what the QR code cannot carry is named by its placeholder
 #test-invoice(
@@ -195,16 +205,22 @@
   bic: "COBA22XXX",
   zugferd: "en16931",
   zugferd-errors: "report",
+  validation: none,
 )
+// A draft prints the IBAN as given and the placeholder of the QR code
+#test-invoice(iban: invalid, validation: "draft")
 
 #context {
   let printed = query(<bank-details>).map(it => it.value)
-  assert.eq(printed.len(), 5)
-  let lines(it) = plain(it).split("\n").map(line => line.trim())
+  assert.eq(printed.len(), 6)
+  // The IBAN is printed with non-breaking spaces between its groups.
+  let lines(it) = (
+    plain(it).replace("\u{00A0}", " ").split("\n").map(line => line.trim())
+  )
   let payload(it) = find-all(it, image).map(qr => qr.alt.split("\n"))
 
   // The QR code carries the plain text of what is printed and of the XML.
-  let (first, second, hidden, reported, placeholder) = printed
+  let (first, second, hidden, reported, placeholder, draft) = printed
   assert(lines(first).contains("IBAN: DE89 3704 0044 0532 0130 00"))
   assert(lines(first).contains("BIC: COBADEFFXXX"))
   let epc = payload(first).first()
@@ -235,4 +251,9 @@
       "No EPC-QR code: account holder too long, invalid BIC",
     ),
   )
+
+  // The draft names the invalid IBAN in its report, not next to it.
+  assert.eq(payload(draft), ())
+  assert(lines(draft).contains("IBAN: DE00 3704 0044 0532 0130 00"))
+  assert(plain(draft).contains("No EPC-QR code: invalid IBAN"))
 }

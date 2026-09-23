@@ -41,5 +41,5 @@
     tax: tax.intra-community(),
   )
 ]
-#payment-goal(days: 30)
+#payment-terms(days: 30)
 #bank

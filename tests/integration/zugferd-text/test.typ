@@ -6,7 +6,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "en16931",
   sender: (
@@ -44,7 +44,7 @@
   )
   #surcharge(text(weight: "bold")[Express], amount: 5)
 ]
-#payment-goal(date: [within 14 days, "net"])
+#payment-terms(date: [within 14 days, "net"])
 #bank-details(
   name: "Müller & Söhne GmbH",
   bank: "Musterbank",

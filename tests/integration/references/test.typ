@@ -2,7 +2,7 @@
 #import "/tests/data-test.typ": data-test
 
 #show: invoice.with(
-  theme: themes.DIN-5008(),
+  theme: theme.classic,
   locale: locale.de-de,
   sender: (
     name: "Sender GmbH",
@@ -64,4 +64,4 @@
   )
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)

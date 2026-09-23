@@ -124,7 +124,7 @@
     #item([Hotel], price: 1, quantity: 3, unit: "Nacht")
     #item([Schrauben], price: 1, quantity: 5, unit: "STK")
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -141,6 +141,6 @@
       code: "STK",
     ))
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]

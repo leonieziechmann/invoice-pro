@@ -17,5 +17,5 @@
 #line-items[
   #item-with(tax.zero())
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

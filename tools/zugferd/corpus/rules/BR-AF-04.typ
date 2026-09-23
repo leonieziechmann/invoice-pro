@@ -19,5 +19,5 @@
   #item-with(tax.special.canary-islands(7%))
   #shipping
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

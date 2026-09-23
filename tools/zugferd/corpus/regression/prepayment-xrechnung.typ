@@ -19,5 +19,5 @@
 #line-items[
   #item([Anzahlung Projekt], price: 1000, quantity: 1, tax: tax.vat(19%))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

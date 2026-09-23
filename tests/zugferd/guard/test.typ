@@ -86,7 +86,7 @@
     #item([Consulting], price: 100, quantity: 2, unit: unit.hour)
     #item("Travel & <expenses>", price: 49.99, quantity: 1)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -120,7 +120,7 @@
       item([Position #i], price: 10 + i, quantity: calc.rem(i, 3) + 1)
     }
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -302,7 +302,7 @@
     #discount([Discount], amount: 10%)
     #surcharge([Travel], amount: 30)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -320,7 +320,7 @@
   zugferd: "basic-wl",
 )[
   #line-items[]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 

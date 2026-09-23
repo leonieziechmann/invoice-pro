@@ -18,8 +18,6 @@
 
 #import "/src/lib.typ": *
 
-#let default-line-items = themes.blank().line-items
-
 /// Plain text of rendered content.
 #let plain(it) = {
   if type(it) == str { return it }
@@ -183,11 +181,15 @@
 
 #for case in cases {
   invoice(
-    theme: themes.blank.with(line-items: (ctx, data, body) => {
-      let printed = default-line-items(ctx, data, body)
+    // The legal note is printed by the `notes` part below the line items.
+    theme: theme.plain.with(theme.custom.wrap("notes", (ctx, view, inner) => {
+      let printed = inner(ctx, view)
       [#metadata(plain(printed))<printed-line-items>#printed]
-    }),
+    })),
     locale: case.locale,
+    // Some sellers have no VAT ID or tax number: the checks of the invoice
+    // data would withhold their XML instead of validating it.
+    validation: none,
     zugferd: case.at("zugferd", default: "en16931"),
     tax-exempt-small-biz: true,
     sender: (
@@ -211,7 +213,7 @@
     #line-items[
       #item([Beratung], price: 100, quantity: 2)
     ]
-    #payment-goal(days: 14)
+    #payment-terms(days: 14)
     #bank-details(
       bank: "Musterbank",
       iban: "DE89370400440532013000",

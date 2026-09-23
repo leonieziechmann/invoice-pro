@@ -1,7 +1,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
+  theme: theme.classic.with(theme.custom.fonts(body: "libertinus serif")),
   locale: locale.de-de,
   zugferd: "en16931",
   sender: (
@@ -37,7 +37,7 @@
   #item([Support-Leistung], price: 50.00, quantity: 2, unit: "hrs")
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
   bank: "Musterbank",

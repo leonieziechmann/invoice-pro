@@ -18,5 +18,5 @@
 #line-items[
   #item([Beratung], price: 100, quantity: 10, tax: tax.vat(19%))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(iban: "DE00370400440532013000", qr-code: (display: false))

@@ -6,9 +6,11 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "basic",
+  // incomplete e-invoice data must fail the build, not withhold the XML
+  validation: "strict",
   sender: (
     name: "Seller GmbH",
     address: "Street 1",
@@ -43,7 +45,7 @@
   #discount([Loyalty discount], amount: 5%)
   #surcharge([Express surcharge], amount: 25.00)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(
   bank: "Musterbank",
   iban: "DE75512108001245126199",

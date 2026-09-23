@@ -53,7 +53,7 @@
     )
     #item([Material], price: 60)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #model-test(model => {
@@ -120,7 +120,7 @@
   assert(found.message.contains("2026-08-14 to 2026-08-10"))
 })[
   #line-items[#item([Wartung], price: 100, date: (day(8, 14), day(8, 10)))]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -137,7 +137,7 @@
     #item([September], price: 100, date: day(9, 1))
     #item([Juli bis September], price: 100, date: (day(7, 31), day(9, 1)))
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #model-test(
@@ -191,21 +191,19 @@
   },
 )[
   #line-items[#item([Lieferung], price: 100, date: day(8, 15))]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
 // --- 5. Printed below the description, each on a line of its own ---
 #let printed-test(check, body) = invoice(
-  theme: () => (
-    themes.blank()
-      + (
-        line-items: (ctx, view, body) => {
-          check(view.items)
-          []
-        },
-      )
-  ),
+  theme: theme.plain.with(theme.custom.wrap(
+    "line-items",
+    (ctx, view, inner) => {
+      check(view.items)
+      inner(ctx, view)
+    },
+  )),
   locale: locale.de-de,
   sender: seller,
   recipient: buyer-fr,
@@ -251,7 +249,7 @@
     [#bundle([Süßes])[#item([Pralinen], price: 10, ..args)]],
   ) {
     let message = catch(() => invoice(
-      theme: themes.blank,
+      theme: theme.plain,
       locale: locale.de-de,
       sender: seller,
       recipient: buyer-fr,
@@ -272,7 +270,7 @@
 }
 // Without them, and outside a bundle, an item is fine
 #invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   sender: seller,
   recipient: buyer-fr,

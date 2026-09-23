@@ -85,7 +85,7 @@
     #item([Buch], price: 24.95, quantity: 1, tax: tax.vat(7%))
     #discount([Rabatt], amount: 5%)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -402,7 +402,7 @@
       tax: tax.exempt(grounds: "Steuerfrei nach § 4 Nr. 14 UStG"),
     )
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 

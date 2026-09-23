@@ -27,5 +27,5 @@
 #line-items[
   #item([Wartung August], quantity: 2, unit: unit.hour, price: 95)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(bank: "Kundenbank", iban: "DE75512108001245126199")

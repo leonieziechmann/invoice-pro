@@ -24,5 +24,5 @@
     datetime(year: 2026, month: 9, day: 15),
   ))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

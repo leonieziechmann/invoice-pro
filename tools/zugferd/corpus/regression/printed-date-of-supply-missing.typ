@@ -11,7 +11,12 @@
 
 #show: invoice.with(
   ..setup,
-  theme: harness(themes.DIN-5008(font: "libertinus serif")),
+  theme: harness(theme.classic.with(
+    theme.custom.fonts(body: "libertinus serif"),
+    // the DIN 5008 letter of 0.4 had no legal footer, which would print the
+    // seller's VAT ID and tax number
+    theme.custom.area("footer", none),
+  )),
   zugferd: "xrechnung",
   sender: seller-de,
   recipient: buyer-de,
@@ -26,5 +31,5 @@
 #line-items[
   #item([Wartung], quantity: 4, unit: unit.hour, price: 95)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank
