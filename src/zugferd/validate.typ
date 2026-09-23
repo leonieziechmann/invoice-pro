@@ -194,6 +194,14 @@
 
 // Patterns of rare checks, compiled once on first use.
 #let _post-code-digits() = regex("[0-9]{3,}")
+// XR-TELEPHONE-REGEX (three digits, BR-DE-27) and XR-EMAIL-REGEX (BR-DE-28)
+// of the XRechnung 3.0 Schematron.
+#let _xr-patterns() = (
+  digit: regex("[0-9]"),
+  email: regex(
+    "^[a-zA-Z0-9!#$%&\"*+/=?^_`{|}~-]+(\\.[a-zA-Z0-9!#$%&\"*+/=?^_`{|}~-]+)*@([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$",
+  ),
+)
 
 // A city line whose post code the parser of the party's country does not
 // recognize stays whole: the post code is missing, and the number is written
@@ -836,27 +844,32 @@
           ))
         }
       }
+      // XRechnung only warns about BR-DE-27 and BR-DE-28, but validators such
+      // as Mustang reject the invoice, so invoice-pro reports errors.
       if (
         contact.phone != none
-          and contact.phone.matches(regex("[0-9]")).len() < 3
+          and contact.phone.matches(_xr-patterns().digit).len() < 3
       ) {
-        out.push(warning(
+        out.push(error(
           "BR-DE-27",
           "sender.contact.phone",
-          "The seller contact phone number (BT-42) should contain at least three digits.",
+          "The seller contact phone number (BT-42) "
+            + _quoted(contact.phone)
+            + " must contain at least three digits.",
+          hint: "Write the phone number with its digits, e.g. \"+49 89 1234567\".",
         ))
       }
       if (
         contact.email != none
-          and contact.email.match(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"))
-            == none
+          and contact.email.match(_xr-patterns().email) == none
       ) {
-        out.push(warning(
+        out.push(error(
           "BR-DE-28",
           "sender.contact.email",
           "The seller contact email address (BT-43) "
             + _quoted(contact.email)
-            + " does not look like an email address.",
+            + " does not have the format XRechnung requires.",
+          hint: "Write one address with a single \"@\", e.g. \"billing@example.de\", and internationalized domains in punycode (xn--...).",
         ))
       }
     }

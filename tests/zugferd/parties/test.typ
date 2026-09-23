@@ -353,6 +353,17 @@
   assert.eq(find(m, "IP-KEY-02").field, "sender.global-id.value")
   assert(find(m, "IP-KEY-02").message.contains("has no `id`"))
 
+  // XRechnung: the phone number and the email address of the seller contact
+  // with the patterns of the XRechnung Schematron (BR-DE-27, BR-DE-28)
+  let m = base
+  m.seller.contact.email = "max@müller.de"
+  assert.eq(rules(m), ("BR-DE-28",))
+  m.seller.contact.email = "max.muster+rechnung@xn--mller-kva.de"
+  assert.eq(rules(m), ())
+  m.seller.contact.email = "max@seller"
+  m.seller.contact.phone = "Tel. 12"
+  assert.eq(rules(m), ("BR-DE-27", "BR-DE-28"))
+
   // BR-CO-26 for an invoice not subject to VAT: the VAT ID is no way out
   let m = base
   m.outside-scope = true

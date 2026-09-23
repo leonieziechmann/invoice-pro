@@ -20,7 +20,8 @@
   // Errors are listed before warnings, each with a rule, field and message.
   let m = base
   m.invoice.number = none
-  m.seller.contact.phone = "12"
+  m.profile = resolve-profile("en16931", "DE")
+  m.buyer.electronic-address = none
   let diagnostics = validate(m)
   assert.eq(diagnostics.map(d => d.level), ("error", "warning"))
   assert.eq(diagnostics.first(), (
@@ -109,11 +110,12 @@
   m.seller.contact.phone = none
   m.seller.contact.email = none
   assert.eq(rules(m), ("BR-DE-5", "BR-DE-6", "BR-DE-7"))
+  // XRechnung only warns, but Mustang rejects the invoice: errors
   let m = base
   m.seller.contact.phone = "12"
   m.seller.contact.email = "seller.example.de"
-  assert.eq(rules(m), ())
-  assert.eq(rules(m, level: "warning"), ("BR-DE-27", "BR-DE-28"))
+  assert.eq(rules(m), ("BR-DE-27", "BR-DE-28"))
+  assert.eq(rules(m, level: "warning"), ())
   let m = base
   m.seller.address.city = none
   m.seller.address.post-code = none
