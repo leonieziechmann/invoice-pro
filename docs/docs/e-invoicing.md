@@ -9,7 +9,7 @@ sidebar_position: 3
 :::warning
 ZUGFeRD/Factur-X support in `invoice-pro` is currently **experimental**. Please note the following known limitations:
 
-- **XMP Profile Metadata:** The document's XMP profile does not yet correctly announce the attached `factur-x.xml` file. This can cause some strict validation tools to fail or hang up.
+- **Factur-X XMP Metadata (Typst limitation):** Typst cannot write custom XMP metadata yet, so the PDF lacks the Factur-X extension schema that announces the attached `factur-x.xml`. The embedded XML is valid, but validators that check the PDF itself reject the PDF. See [Factur-X XMP Metadata](#factur-x-xmp-metadata) for an optional post-processing step outside the package.
 - **Built-in Validation Is Not a Certification:** The template checks your invoice data against the business rules of the selected profile before embedding the XML (see [Validation and Error Reporting](#validation-and-error-reporting)). This catches missing or inconsistent data early, but it does not replace an official validator: verify the generated PDF and XML payload with an external validator (e.g., the [ZUGFeRD Community Validator](https://www.zugferd-community.net/) or other official portals) before using them in production.
 - **Reporting Issues:** If you encounter edge cases, schema validation failures, or formatting issues, please report them by opening an issue on our GitHub repository.
   :::
@@ -335,6 +335,49 @@ The `"basic"` profile only supports the standard identifier. See [The `item-id` 
 - **EAS Scheme Fallback:** If the prefix of a party's VAT ID has no known scheme and neither a custom `electronic-address` nor an email address is specified, the electronic address block is omitted from the XML payload.
 - **Invoice Type Code (BT-3):** Invoices are always written with type code `380` (commercial invoice). Credited lines and negative totals are supported, dedicated credit notes (`381`) are not.
 - **Plain Text:** Names, addresses and references given as content are written as their plain text; formatting is dropped.
+- **Factur-X XMP Metadata:** The PDF lacks the Factur-X XMP metadata, because Typst cannot write custom XMP metadata yet. The XML is not affected (see [Factur-X XMP Metadata](#factur-x-xmp-metadata)).
+
+---
+
+## Factur-X XMP Metadata
+
+A Factur-X / ZUGFeRD PDF announces its XML in the XMP metadata of the PDF, with the Factur-X extension schema (`fx:DocumentType`, `fx:DocumentFileName`, `fx:Version` and `fx:ConformanceLevel`). Typst cannot write custom XMP metadata yet, so `invoice-pro` cannot add these entries. This is a limitation of the Typst platform, not of the invoice data:
+
+- The embedded `factur-x.xml` is complete and valid for its profile. Most receiving systems only extract and process this XML.
+- Validators that check the PDF itself reject it. The Mustang validator, for example, reports `XMP Metadata: ConformanceLevel not found` together with the missing `DocumentType`, `DocumentFileName` and `Version`, and rates the PDF (not the XML) as invalid.
+
+`invoice-pro` will write the metadata as soon as Typst supports custom XMP metadata.
+
+:::info Optional post-processing, outside the package
+You do not need any of this to create an invoice, and `invoice-pro` does not run external tools. If a recipient requires a PDF that passes the Factur-X PDF check, you can add the metadata afterwards with the [Mustang](https://www.mustangproject.org/) command line tool (Java). The steps below were tested with Mustang CLI 2.14.0; the development shell of this repository provides it as `mustang-cli`, otherwise run the downloaded `Mustang-CLI-2.14.0.jar` with `java -jar`.
+:::
+
+```bash
+# 1. Compile the invoice as usual.
+typst compile --pdf-standard=a-3b invoice.typ invoice.pdf
+
+# 2. Extract the XML that invoice-pro embedded.
+mustang-cli --action extract --source invoice.pdf --out invoice.xml
+
+# 3. Embed it again together with the Factur-X XMP metadata. The profile
+#    letter must match the profile of the invoice (see the table below).
+mustang-cli --action combine --source invoice.pdf --source-xml invoice.xml \
+  --out invoice-facturx.pdf --format fx --version 1 --profile E \
+  --no-additional-attachments
+
+# 4. Check the result: PDF, XML and the summary must be "valid".
+mustang-cli --action validate --source invoice-facturx.pdf
+```
+
+| `zugferd` profile of the invoice | `--profile` |
+| :------------------------------- | :---------- |
+| `"minimum"`                      | `M`         |
+| `"basic-wl"`                     | `W`         |
+| `"basic"`                        | `B`         |
+| `"en16931"`                      | `E`         |
+| `"xrechnung"`                    | `X`         |
+
+With `zugferd: auto`, use the profile the invoice was written in: `X` if the guideline ID of the XML (BT-24) ends in `xrechnung_3.0`, otherwise `E`. `--format fx --version 1` writes the metadata of Factur-X 1.0, which is the same format as ZUGFeRD 2.x. For `X`, Mustang embeds the XML a second time under the name `xrechnung.xml`, next to the `factur-x.xml` of `invoice-pro`; both files are identical. XRechnung is primarily exchanged as the XML file itself: if a recipient asks for an XRechnung, you can send `invoice.xml` from step 2.
 
 ---
 

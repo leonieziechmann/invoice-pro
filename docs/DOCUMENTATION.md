@@ -89,6 +89,7 @@ No code blocks.
 | :---------------------- | :----------------------------------------------------- | :------ | :--------------------------- | :-------------------------------- |
 | `attach`                | How the XML is attached with `pdf.attach`              | —       | —                            | Illustration of the internals     |
 | `compile`               | PDF/A-3b compile command                               | —       | —                            | Bash command, not Typst           |
+| `facturx-recipe`        | Optional Mustang post-processing for the XMP metadata  | —       | —                            | Bash commands, not Typst          |
 | `error-output`          | Example of the compiler error listing all problems     | —       | —                            | Compiler output, not Typst        |
 | `zugferd-errors-report` | Enabling `zugferd-errors: "report"`                    | —       | —                            | Snippet (partial), no test needed |
 | `custom-report`         | Theme `zugferd-report` function for a custom list      | —       | `docs/e-invoicing-report/`   |                                   |
