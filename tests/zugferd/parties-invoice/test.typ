@@ -168,23 +168,29 @@
   },
 )
 // Keys invoices often carry are no misspellings, even where they look like
-// one ("fax-nr" and "tax-nr", "siret" and "street", "county" next to
-// `country`), and the buyer contact is printed only
+// one ("fax-nr" and "tax-nr", "county" next to `country`)
 #e-invoice(
-  sender: seller + (fax-nr: "+49 89 1234568", siret: "303 265 045 00014"),
-  recipient: buyer
-    + (
-      county: "Île-de-France",
-      contact: (name: "Mme Dupont", tel: "+33 1 23 45 67 89"),
-    ),
+  sender: seller + (fax-nr: "+49 89 1234568"),
+  recipient: buyer + (county: "Île-de-France"),
   result => {
     assert.eq(rules(result), ())
-    assert.eq(rules(result, level: "warning"), (
-      "IP-KEY-01",
-      "IP-KEY-01",
-      "IP-KEY-01",
-      "IP-KEY-01",
+    assert.eq(rules(result, level: "warning"), ("IP-KEY-01", "IP-KEY-01"))
+  },
+)
+// A SIRET is the legal registration identifier (`legal-id`, BT-30), and the
+// buyer contact is written (BG-9): their values would be missing without
+// notice
+#e-invoice(
+  sender: seller + (siret: "303 265 045 00014"),
+  recipient: buyer + (contact: (name: "Mme Dupont", tel: "+33 1 23 45 67 89")),
+  result => {
+    assert.eq(rules(result), ("IP-KEY-02", "IP-KEY-02"))
+    let siret = result.diagnostics.find(d => d.field == "sender.siret")
+    assert(siret.hint.contains("`legal-id: id.siret(..)`"), message: siret.hint)
+    let phone = result.diagnostics.find(d => (
+      d.field == "recipient.contact.tel"
     ))
+    assert.eq(phone.hint, "Rename it to `phone`.")
   },
 )
 

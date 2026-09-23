@@ -43,6 +43,8 @@ tests/
     ├── validate/          # Business rule checks (diagnostics)
     ├── parties/           # Parties: electronic addresses, identifiers, keys
     ├── parties-invoice/   # Party inputs of whole invoices, XML and diagnostics
+    ├── identifiers/       # Typed identifiers of the `id` module, check digits
+    ├── party-details/     # Legal IDs, trading names, contacts, tax representative, payee
     ├── report/            # Error message, "report" and "ignore" modes
     ├── country-codes/     # Country code list, EAS scheme of VAT IDs
     └── golden/            # Golden XML of the e-invoice test documents (no tests,
@@ -421,6 +423,9 @@ The automated `validate-all-zugferd` suite covers:
 - `tests/integration/zugferd-seller-id/test.typ` — Seller identifier (BT-29) without tax registration (#42).
 - `tests/integration/zugferd-auto/test.typ` — `zugferd: auto` between German parties with complete data, written as XRechnung.
 - `tests/integration/zugferd-parties/test.typ` — Party data from imported or copied text in an XRechnung not subject to VAT (category `O`): an empty electronic address and a VAT ID with a zero width space, electronic addresses derived from the VAT IDs, a buyer name of two lines and a delivery address identified by a GLN given as `id`.
+- `tests/integration/zugferd-party-details/test.typ` — XRechnung to a public buyer with the seller's register number (BT-30), trading name (BT-28) and legal information (BT-33), the buyer's Leitweg-ID of the `id` module as buyer reference and electronic address, the buyer contact (BG-9) and a factoring company as payee (BG-10).
+- `tests/integration/zugferd-tax-representative/test.typ` — Swiss seller identified by its UID (BT-30) with a fiscal representative in Germany (BG-11), whose VAT identifier satisfies the rules of an intra-community supply (category `K`).
+- `tests/integration/zugferd-minimum-legal-id/test.typ` — Factur-X MINIMUM of a French micro-entrepreneur identified by its SIRET (BT-30) instead of a VAT identifier.
 - `tests/docs/e-invoicing-complete/test.typ` — Complete example of the e-invoicing documentation.
 - `template/invoice.typ` — Default release invoice template.
 

@@ -297,15 +297,21 @@
 )
 
 /// The keys each party knows, by role: the seller (`sender`), the buyer
-/// (`recipient`) and the ship-to party (`delivery-address`). `true` marks the
-/// keys the e-invoice reads, `false` those only the printed invoice uses.
+/// (`recipient`), the ship-to party (`delivery-address`), the seller's tax
+/// representative (`sender.tax-representative`) and the payee (`payee`).
+/// `true` marks the keys the e-invoice reads, `false` those only the printed
+/// invoice uses.
 #let party-keys = (
   seller: _address-keys
     + (
       id: true,
       global-id: true,
+      legal-id: true,
+      trading-name: true,
+      legal-info: true,
       vat-id: true,
       tax-nr: true,
+      tax-representative: true,
       electronic-address: true,
       contact: true,
       contact-name: true,
@@ -316,9 +322,13 @@
     + (
       id: true,
       global-id: true,
+      legal-id: true,
+      trading-name: true,
       vat-id: true,
       electronic-address: true,
       contact: true,
+      contact-name: true,
+      phone: true,
       email: true,
       buyer-reference: true,
       leitweg-id: true,
@@ -328,8 +338,6 @@
       delivery-note-nr: true,
       delivery-address: true,
       tax-nr: false,
-      contact-name: false,
-      phone: false,
       customer-nr: false,
       customer-id: false,
       order-date: false,
@@ -337,19 +345,37 @@
       quote-nr: false,
     ),
   ship-to: _address-keys + (id: true, location-id: true, global-id: true),
+  tax-representative: _address-keys + (vat-id: true),
+  payee: (name: true, id: true, global-id: true, legal-id: true),
 )
 
 // The keys of a party's `contact`, by role. The e-invoice writes the seller
-// contact (BG-6); of the buyer contact it only reads the email address, from
-// which the buyer electronic address (BT-49) can be derived.
+// contact (BG-6) and the buyer contact (BG-9).
 #let _contact-keys = (
   seller: (name: true, phone: true, email: true),
-  buyer: (name: false, phone: false, email: true),
+  buyer: (name: true, phone: true, email: true),
 )
 
 // The keys of an identifier given as a dictionary (`id`, `global-id`,
-// `location-id`, `electronic-address`).
-#let _identifier-keys = (scheme: true, id: true)
+// `location-id`, `legal-id`, `electronic-address`), including those of a typed
+// identifier of the `id` module (`kind`, `problems`).
+#let _identifier-keys = (scheme: true, id: true, kind: true, problems: true)
+
+// The keys of each role that take an identifier, possibly a typed one of the
+// `id` module (`id.siret(..)`), whose problems the validator reports.
+#let _typed-id-keys = (
+  seller: ("id", "global-id", "legal-id", "electronic-address"),
+  buyer: (
+    "id",
+    "global-id",
+    "legal-id",
+    "electronic-address",
+    "leitweg-id",
+    "buyer-reference",
+  ),
+  ship-to: ("id", "location-id", "global-id"),
+  payee: ("id", "global-id", "legal-id"),
+)
 
 // Keys the normalization of a party adds (see `normalize-party`); they are
 // not part of the input. A `post-code`, `city-name` or `state` of the input is
@@ -423,8 +449,31 @@
   peppol-id: "electronic-address",
   gln: (
     "global-id",
-    "Pass the GLN as `global-id: (scheme: \"0088\", id: ..)`.",
+    "Pass the GLN as `global-id: id.gln(..)`.",
   ),
+  // The legal registration identifier (BT-30, BT-47) and the constructors of
+  // the `id` module for its schemes.
+  siret: ("legal-id", "Pass the SIRET as `legal-id: id.siret(..)`."),
+  siren: ("legal-id", "Pass the SIREN as `legal-id: id.siren(..)`."),
+  handelsregister: (
+    "legal-id",
+    "Pass the register number as `legal-id: id.register(\"HRB ..\", court: \"Amtsgericht ..\")`.",
+  ),
+  hrb: (
+    "legal-id",
+    "Pass the register number as `legal-id: id.register(\"HRB ..\", court: \"Amtsgericht ..\")`.",
+  ),
+  register-number: "legal-id",
+  registration-number: "legal-id",
+  company-number: "legal-id",
+  company-registration-number: "legal-id",
+  trade-name: "trading-name",
+  business-name: "trading-name",
+  legal-information: "legal-info",
+  fiscal-representative: "tax-representative",
+  tax-rep: "tax-representative",
+  vat-representative: "tax-representative",
+  fiskalvertreter: "tax-representative",
   leitweg: "leitweg-id",
   order: "order-nr",
   po: "po-nr",
@@ -450,15 +499,13 @@
 )
 
 // Keys invoices often carry that `invoice-pro` does not read, but which look
-// like misspellings of keys it knows ("fax-nr" and "tax-nr", "siret" and
-// "street"). Like any unknown key, they are not written into the e-invoice,
-// but they are never taken for a misspelling.
+// like misspellings of keys it knows ("fax-nr" and "tax-nr"). Like any
+// unknown key, they are not written into the e-invoice, but they are never
+// taken for a misspelling.
 #let _other-keys = (
   fax-nr: true,
   fax-no: true,
   faxnr: true,
-  siret: true,
-  siren: true,
 )
 
 // Patterns for unknown keys, compiled once on first use: unknown keys are rare.
@@ -606,7 +653,15 @@
   }
   // An identifier dictionary without `id` is left out, so any other key of it
   // loses the identifier.
-  for key in ("id", "global-id", "location-id", "electronic-address") {
+  for key in (
+    "id",
+    "global-id",
+    "location-id",
+    "legal-id",
+    "electronic-address",
+    "leitweg-id",
+    "buyer-reference",
+  ) {
     let value = party.at(key, default: none)
     if key not in known or type(value) != dictionary { continue }
     let lost = _is-unset(value.at("id", default: none))
@@ -646,11 +701,61 @@
   text-or-none(name)
 }
 
+// A typed identifier of the `id` module (e.g. `id.siret(..)`): a dictionary
+// with the `kind` of the identifier and the `problems` found when it was made.
+#let _is-typed-id(value) = (
+  type(value) == dictionary and "kind" in value and "problems" in value
+)
+
+// The typed identifiers a party gives for the identifier keys of its role,
+// with the key each was given for, for the validator (IP-ID-01, IP-ID-03).
+#let _typed-ids(party, role) = {
+  let found = ()
+  if role == none { return found }
+  for key in _typed-id-keys.at(role, default: ()) {
+    let value = party.at(key, default: none)
+    if not _is-typed-id(value) { continue }
+    found.push((
+      key: key,
+      scheme: value.at("scheme", default: none),
+      id: value.at("id", default: none),
+      kind: value.kind,
+      problems: if type(value.problems) == array { value.problems } else {
+        ()
+      },
+    ))
+  }
+  found
+}
+
+// The text of an identifier that may be given as a dictionary, e.g. the
+// Leitweg-ID `id.leitweg(..)` as buyer reference (BT-10), which states no
+// scheme.
+#let _id-text(value) = {
+  if type(value) == dictionary { value.at("id", default: none) } else { value }
+}
+
+// Whether a buyer states a contact point (BG-9): a `contact`, or a contact
+// name or phone number of its own. An email address alone is where the
+// invoice goes (it can be the electronic address, BT-49), not a contact.
+#let _states-contact(party) = (
+  not _is-unset(party.at("contact", default: none))
+    or not _is-unset(party.at("contact-name", default: none))
+    or not _is-unset(party.at("phone", default: none))
+)
+
 /// A seller, buyer or ship-to party (`role`: `"seller"`, `"buyer"` or
 /// `"ship-to"`). `vat-id` is the VAT identifier the party states;
 /// `use-vat-id: false` keeps it out of the XML (BR-O-02), but not out of the
 /// electronic address. With a `role`, the keys of the party dictionary are
 /// checked against those the role knows (`input-keys`).
+///
+/// `legal-id` is the legal registration identifier (BT-30, BT-47), a text or
+/// an identifier with scheme (`id.siret(..)`), `trading-name` the name the
+/// party trades under (BT-28, BT-45) and `legal-info` the additional legal
+/// information of the seller (BT-33). The contact of the buyer (BG-9) is only
+/// given when the buyer states a contact point (`contact`, `contact-name` or
+/// `phone`).
 ///
 /// -> dictionary
 #let party-model(party, role: none, use-vat-id: true) = {
@@ -665,26 +770,73 @@
   (
     (
       name: _party-name(party),
+      trading-name: text-or-none(_field(party, "trading-name")),
+      legal-id: _scheme-id(party.at("legal-id", default: none)),
+      legal-info: text-or-none(_field(party, "legal-info")),
       vat-id: if use-vat-id { vat-id } else { none },
       stated-vat-id: vat-id,
       tax-nr: _identifier(party.at("tax-nr", default: none)),
       address: _address-model(party),
       electronic-address: get-electronic-address(party),
-      contact: contact-model(party),
+      contact: if role != "buyer" or _states-contact(party) {
+        contact-model(party)
+      },
+      typed-ids: _typed-ids(party, role),
       input-keys: if role == none { () } else { _input-keys(party, role) },
     )
       + _party-ids(party, id-keys)
   )
 }
 
-// The seller (BG-4). Without an own identifier (BT-29) or a VAT identifier
-// (BT-31) in the XML, the tax number identifies the seller (BR-CO-26).
+// The seller (BG-4). Without an own identifier (BT-29), a legal registration
+// identifier (BT-30) or a VAT identifier (BT-31) in the XML, the tax number
+// identifies the seller (BR-CO-26).
 #let seller-model(party, use-vat-id: true) = {
   let seller = party-model(party, role: "seller", use-vat-id: use-vat-id)
-  if seller.id == none and seller.global-id == none and seller.vat-id == none {
+  if (
+    seller.id == none
+      and seller.global-id == none
+      and seller.legal-id == none
+      and seller.vat-id == none
+  ) {
     seller.id = seller.tax-nr
   }
   seller
+}
+
+/// The seller tax representative (BG-11), from `sender.tax-representative`
+/// normalized like a party (`normalize-party`): its name (BT-62), VAT
+/// identifier (BT-63) and postal address (BG-12); `none` without one.
+///
+/// -> none | dictionary
+#let tax-representative-model(party) = {
+  if type(party) != dictionary { return none }
+  let vat-id = compact(party.at("vat-id", default: none))
+  (
+    name: _party-name(party),
+    vat-id: if vat-id != none { upper(vat-id) },
+    address: _address-model(party),
+    input-keys: _input-keys(party, "tax-representative"),
+  )
+}
+
+/// The payee (BG-10), from `payee` of the invoice: who receives the payment
+/// instead of the seller, e.g. a factoring company. Its name (BT-59), its
+/// identifier (BT-60, `id` or `global-id`) and its legal registration
+/// identifier (BT-61); `none` without a payee.
+///
+/// -> none | dictionary
+#let payee-model(payee) = {
+  if type(payee) != dictionary { return none }
+  (
+    (
+      name: _party-name(payee),
+      legal-id: _scheme-id(payee.at("legal-id", default: none)),
+      typed-ids: _typed-ids(payee, "payee"),
+      input-keys: _input-keys(payee, "payee"),
+    )
+      + _party-ids(payee, ("id", "global-id"))
+  )
 }
 
 // The ship-to party of an intra-community supply without delivery address: the
@@ -1115,6 +1267,12 @@
     role: "buyer",
     use-vat-id: not outside-scope,
   )
+  // BG-11 and BG-10: the parties besides seller and buyer, if any.
+  let tax-representative = tax-representative-model(sender.at(
+    "tax-representative",
+    default: none,
+  ))
+  let payee = payee-model(ctx.at("payee", default: none))
 
   // `location-id` is another name of the deliver to location identifier
   // (BT-71), `id` of the delivery address.
@@ -1249,11 +1407,12 @@
       number: text-or-none(_field(ctx, "invoice-nr")),
       type-code: "380",
       issue-date: ctx.at("invoice-date", default: none),
-      buyer-reference: text-or-none(first-of(
+      // A Leitweg-ID of the `id` module is stated without its scheme.
+      buyer-reference: text-or-none(_id-text(first-of(
         ctx.at("buyer-reference", default: none),
         recipient.at("buyer-reference", default: none),
         recipient.at("leitweg-id", default: none),
-      )),
+      ))),
       order-nr: text-or-none(first-of(
         ctx.at("order-nr", default: none),
         recipient.at("order-nr", default: none),
@@ -1276,6 +1435,8 @@
     seller: seller,
     buyer: buyer,
     ship-to: ship-to,
+    tax-representative: tax-representative,
+    payee: payee,
     delivery: determine-delivery-dates(ctx, items),
     lines: lines,
     allowance-charges: allowance-charges,

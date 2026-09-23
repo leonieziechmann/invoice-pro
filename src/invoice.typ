@@ -32,6 +32,12 @@
   /// `country` of its own, it is in the recipient's country.
   /// -> none | dictionary
   delivery-address: none,
+  /// Who receives the payment instead of the seller, e.g. a factoring
+  /// company: `(name: .., id: .., global-id: .., legal-id: ..)`, of which
+  /// only `name` is required. Written into the e-invoice as the payee
+  /// (BG-10); not printed.
+  /// -> none | dictionary
+  payee: none,
 
   /// Your company's unique tax identifier / VAT ID (backwards compatibility).
   /// -> none | string | content (deprecated)
@@ -125,6 +131,13 @@
   types.require(
     recipient.at("delivery-address", default: none),
     "invoice::recipient.delivery-address",
+    none,
+    dictionary,
+  )
+  types.require(payee, "invoice::payee", none, dictionary)
+  types.require(
+    sender.at("tax-representative", default: none),
+    "invoice::sender.tax-representative",
     none,
     dictionary,
   )
@@ -235,6 +248,16 @@
     is-recipient: true,
     sender-country-code: normalized-sender.country.code,
   )
+  // The seller's tax representative has an address of its own; without a
+  // `country`, it is in the country of the locale.
+  let tax-representative = sender.at("tax-representative", default: none)
+  if tax-representative != none {
+    normalized-sender.insert("tax-representative", normalize-party(
+      tax-representative,
+      default-region,
+      field: "sender.tax-representative",
+    ))
+  }
 
   let raw-delivery-address = if delivery-address != none {
     delivery-address
@@ -320,6 +343,7 @@
     sender: normalized-sender,
     recipient: normalized-recipient,
     delivery-address: normalized-delivery-address,
+    payee: payee,
 
     invoice-date: date,
     subject: document-subject,

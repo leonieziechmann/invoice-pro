@@ -21,6 +21,19 @@
   buyer-vat-id: false,
   // BG-6: seller contact.
   seller-contact: false,
+  // BT-28: seller trading name. (The legal registration identifiers BT-30
+  // and BT-47 are part of every profile.)
+  seller-trading-name: false,
+  // BT-33: seller additional legal information.
+  seller-legal-info: false,
+  // BT-45: buyer trading name.
+  buyer-trading-name: false,
+  // BG-9: buyer contact.
+  buyer-contact: false,
+  // BG-10: payee.
+  payee: false,
+  // BG-11: seller tax representative.
+  tax-representative: false,
   // BT-86: BIC of the payment service provider.
   bic: false,
   // BT-155, BT-156: seller and buyer assigned item identifiers.
@@ -49,6 +62,9 @@
       settlement: true,
       party-ids: true,
       buyer-vat-id: true,
+      seller-trading-name: true,
+      payee: true,
+      tax-representative: true,
       document-references: true,
     ),
   // BASIC is a CIUS of EN 16931 and therefore carries the EN 16931 prefix.
@@ -61,6 +77,9 @@
       settlement: true,
       party-ids: true,
       buyer-vat-id: true,
+      seller-trading-name: true,
+      payee: true,
+      tax-representative: true,
       document-references: true,
       en16931: true,
     ),
@@ -75,6 +94,12 @@
       party-ids: true,
       buyer-vat-id: true,
       seller-contact: true,
+      seller-trading-name: true,
+      seller-legal-info: true,
+      buyer-trading-name: true,
+      buyer-contact: true,
+      payee: true,
+      tax-representative: true,
       bic: true,
       item-ids: true,
       item-description: true,
@@ -92,6 +117,12 @@
       party-ids: true,
       buyer-vat-id: true,
       seller-contact: true,
+      seller-trading-name: true,
+      seller-legal-info: true,
+      buyer-trading-name: true,
+      buyer-contact: true,
+      payee: true,
+      tax-representative: true,
       bic: true,
       item-ids: true,
       item-description: true,

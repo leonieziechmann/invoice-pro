@@ -217,14 +217,39 @@
     ("contract", "contract-nr", true),
   ))
   // Keys invoices often carry, which only look like misspellings of known
-  // keys ("tax-nr", "street")
-  assert.eq(
-    keys("seller", fax-nr: "+49 30 123457", siret: "303 265 045 00014"),
-    (
-      ("fax-nr", none, false),
-      ("siret", none, false),
-    ),
-  )
+  // keys ("tax-nr")
+  assert.eq(keys("seller", fax-nr: "+49 30 123457"), (
+    ("fax-nr", none, false),
+  ))
+  // Legal registration identifiers have a key of their own (BT-30, BT-47);
+  // the delivery address has none
+  assert.eq(keys("seller", siret: "303 265 045 00014"), (
+    ("siret", "legal-id", true),
+  ))
+  assert.eq(keys("buyer", Handelsregister: "HRB 4711", legal_id: "HRB 1"), (
+    ("Handelsregister", "legal-id", true),
+    ("legal_id", "legal-id", true),
+  ))
+  assert.eq(keys("ship-to", legal-id: "HRB 4711"), (
+    ("legal-id", none, false),
+  ))
+  assert.eq(keys("seller", trade-name: "Muster", legal-information: "GF"), (
+    ("trade-name", "trading-name", true),
+    ("legal-information", "legal-info", true),
+  ))
+  assert.eq(keys("seller", fiscal-representative: (name: "F")), (
+    ("fiscal-representative", "tax-representative", true),
+  ))
+  // The typed identifiers of the `id` module carry keys of their own
+  assert.eq(keys("seller", legal-id: id.siret("12345678200010")), ())
+  assert.eq(keys("buyer", leitweg-id: id.leitweg("991-33333TEST-33")), ())
+  // The tax representative and the payee have keys of their own
+  assert.eq(keys("tax-representative", name: "F", vat-id: "DE1", id: "1"), (
+    ("id", none, false),
+  ))
+  assert.eq(keys("payee", name: "F", legal-id: "1", address: "Weg 1"), (
+    ("address", none, false),
+  ))
   // Without `country`, a `county` is most likely a misspelled `country`; the
   // hint covers a county, which next to a `country` loses nothing
   let county = party-model((county: "Kent"), role: "buyer").input-keys.first()
@@ -233,13 +258,13 @@
   assert.eq(keys("buyer", county: "Kent", country: "GB"), (
     ("county", "country", false),
   ))
-  // Keys of `contact`; of the buyer contact, the e-invoice reads only the
-  // email address
+  // Keys of `contact`, which the e-invoice writes for the seller (BG-6) and
+  // the buyer (BG-9)
   assert.eq(keys("seller", contact: (name: "A", mail: "a@b.de")), (
     ("contact.mail", "email", true),
   ))
   assert.eq(keys("buyer", contact: (name: "A", tel: "1", mail: "a@b.de")), (
-    ("contact.tel", "phone", false),
+    ("contact.tel", "phone", true),
     ("contact.mail", "email", true),
   ))
   // Keys of identifiers: without `id`, the identifier would be lost

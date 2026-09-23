@@ -95,6 +95,12 @@
       </ram:SellerTradeParty>
       <ram:BuyerTradeParty>
         <ram:Name>Kunde AG</ram:Name>
+        <ram:DefinedTradeContact>
+          <ram:PersonName>Einkauf</ram:PersonName>
+          <ram:EmailURIUniversalCommunication>
+            <ram:URIID>accounting@kunde.de</ram:URIID>
+          </ram:EmailURIUniversalCommunication>
+        </ram:DefinedTradeContact>
         <ram:PostalTradeAddress>
           <ram:PostcodeCode>54321</ram:PostcodeCode>
           <ram:LineOne>Kundenweg 5</ram:LineOne>

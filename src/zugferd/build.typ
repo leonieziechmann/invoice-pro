@@ -92,30 +92,60 @@
   )
 }
 
+// Emits the contact of a party (BG-6, BG-9), or `none` without any details.
+#let _trade-contact(contact) = {
+  if contact == none { return none }
+  let details = (:)
+  if contact.name != none {
+    details.insert("ram:PersonName", contact.name)
+  }
+  if contact.phone != none {
+    details.insert("ram:TelephoneUniversalCommunication", (
+      "ram:CompleteNumber": contact.phone,
+    ))
+  }
+  if contact.email != none {
+    details.insert("ram:EmailURIUniversalCommunication", (
+      "ram:URIID": contact.email,
+    ))
+  }
+  if details.len() > 0 { details }
+}
+
+// Emits the legal organization of a party: its legal registration identifier
+// (BT-30, BT-47, BT-61), with a scheme only if it has one, and its trading
+// name (BT-28, BT-45); `none` without either.
+#let _legal-organization(legal-id, trading-name) = {
+  let organization = (:)
+  if legal-id != none {
+    organization.insert("ram:ID", (
+      "@schemeID": legal-id.scheme,
+      "": legal-id.id,
+    ))
+  }
+  if trading-name != none {
+    organization.insert("ram:TradingBusinessName", trading-name)
+  }
+  if organization.len() > 0 { organization }
+}
+
 // Emits the seller trade party details (BG-4)
 #let build-seller-trade-party(party, profile) = {
   let res = if profile.party-ids { _identifiers(party) } else { (:) }
   res.insert("ram:Name", party.name)
+  if profile.seller-legal-info {
+    res.insert("ram:Description", party.at("legal-info", default: none))
+  }
+  // The legal registration identifier (BT-30) is part of every profile.
+  res.insert("ram:SpecifiedLegalOrganization", _legal-organization(
+    party.at("legal-id", default: none),
+    if profile.seller-trading-name {
+      party.at("trading-name", default: none)
+    },
+  ))
 
-  let contact = party.contact
-  if profile.seller-contact and contact != none {
-    let details = (:)
-    if contact.name != none {
-      details.insert("ram:PersonName", contact.name)
-    }
-    if contact.phone != none {
-      details.insert("ram:TelephoneUniversalCommunication", (
-        "ram:CompleteNumber": contact.phone,
-      ))
-    }
-    if contact.email != none {
-      details.insert("ram:EmailURIUniversalCommunication", (
-        "ram:URIID": contact.email,
-      ))
-    }
-    if details.len() > 0 {
-      res.insert("ram:DefinedTradeContact", details)
-    }
+  if profile.seller-contact {
+    res.insert("ram:DefinedTradeContact", _trade-contact(party.contact))
   }
 
   if profile.addresses {
@@ -154,6 +184,19 @@
 #let build-buyer-trade-party(party, profile) = {
   let res = if profile.party-ids { _identifiers(party) } else { (:) }
   res.insert("ram:Name", party.name)
+  // The legal registration identifier (BT-47) is part of every profile.
+  res.insert("ram:SpecifiedLegalOrganization", _legal-organization(
+    party.at("legal-id", default: none),
+    if profile.buyer-trading-name {
+      party.at("trading-name", default: none)
+    },
+  ))
+  if profile.buyer-contact {
+    res.insert("ram:DefinedTradeContact", _trade-contact(party.at(
+      "contact",
+      default: none,
+    )))
+  }
   if profile.addresses {
     res.insert("ram:PostalTradeAddress", build-postal-address(party.address))
     res.insert(
@@ -166,6 +209,34 @@
       "ram:ID": ("@schemeID": "VA", "": party.vat-id),
     ))
   }
+  res
+}
+
+// Emits the seller tax representative party (BG-11): its name (BT-62), postal
+// address (BG-12) and VAT identifier (BT-63); EN 16931 has no other details
+// of it (CII-SR-283 to CII-SR-288).
+#let build-tax-representative-party(party) = {
+  let res = ("ram:Name": party.name)
+  res.insert("ram:PostalTradeAddress", build-postal-address(party.address))
+  if party.vat-id != none {
+    res.insert("ram:SpecifiedTaxRegistration", (
+      "ram:ID": ("@schemeID": "VA", "": party.vat-id),
+    ))
+  }
+  res
+}
+
+// Emits the payee party (BG-10): its identifier (BT-60, `ram:ID` or
+// `ram:GlobalID`), name (BT-59) and legal registration identifier (BT-61);
+// EN 16931 has no address or tax registration of the payee (CII-SR-360,
+// CII-SR-362).
+#let build-payee-party(party) = {
+  let res = _identifiers(party)
+  res.insert("ram:Name", party.name)
+  res.insert("ram:SpecifiedLegalOrganization", _legal-organization(
+    party.at("legal-id", default: none),
+    none,
+  ))
   res
 }
 
@@ -417,6 +488,13 @@
     "ram:BuyerTradeParty",
     build-buyer-trade-party(model.buyer, profile),
   )
+  let tax-representative = model.at("tax-representative", default: none)
+  if profile.tax-representative and tax-representative != none {
+    header-agreement.insert(
+      "ram:SellerTaxRepresentativeTradeParty",
+      build-tax-representative-party(tax-representative),
+    )
+  }
   if invoice.order-nr != none {
     header-agreement.insert("ram:BuyerOrderReferencedDocument", (
       "ram:IssuerAssignedID": invoice.order-nr,
@@ -454,6 +532,10 @@
     trade-settlement.insert("ram:PaymentReference", payment.reference)
   }
   trade-settlement.insert("ram:InvoiceCurrencyCode", model.currency)
+  let payee = model.at("payee", default: none)
+  if profile.payee and payee != none {
+    trade-settlement.insert("ram:PayeeTradeParty", build-payee-party(payee))
+  }
   if profile.settlement {
     trade-settlement.insert(
       "ram:SpecifiedTradeSettlementPaymentMeans",
