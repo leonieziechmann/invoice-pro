@@ -98,9 +98,10 @@ class Classification(unittest.TestCase):
         self.assertFalse(run.expectation_met({"expect": "AGREE"}, "FALSE_NEGATIVE", [])[0])
 
 
-def row(cid, cls="AGREE_VALID", expect="AGREE_VALID", oracle=(), missing=(), ours=(), official=()):
+def row(cid, cls="AGREE_VALID", expect="AGREE_VALID", oracle=(), missing=(), ours=(), official=(), population=None):
     return {
         "id": cid,
+        "population": population,
         "cls": cls,
         "expect": expect,
         "class_ok": cls == expect,
@@ -108,6 +109,12 @@ def row(cid, cls="AGREE_VALID", expect="AGREE_VALID", oracle=(), missing=(), our
         "ours": list(ours),
         "official": list(official),
         "oracle": list(oracle),
+        # what the report shows of a failure
+        "file": f"{cid}.typ",
+        "official_messages": {},
+        "diagnostics": [],
+        "xsd_errors": [],
+        "crash": None,
     }
 
 
@@ -139,6 +146,27 @@ class KnownIssues(unittest.TestCase):
         failures, hits, xpass = run.triage(rows, known, strict=True)
         self.assertEqual(len(failures), 3)
         self.assertEqual((hits, xpass), ([], []))
+
+    def test_hard_gates_are_never_known_issues(self):
+        known = [
+            {"finding": "f1", "signatures": ["FALSE_NEGATIVE ours=- official=BR-S-08"]},
+            {"finding": "f2", "signatures": ["AGREE_VALID oracle=O-BG14"]},
+        ]
+        rows = [
+            # The same signature is excused for a regression case, never on
+            # the legal population.
+            row("rg-a", cls="FALSE_NEGATIVE", official=["BR-S-08"], population="regression"),
+            row("pw001", cls="FALSE_NEGATIVE", official=["BR-S-08"], population="legal"),
+            # An oracle failure on the legal population can be a known issue.
+            row("pw002", oracle=["O-BG14: x"], population="legal"),
+        ]
+        failures, hits, xpass = run.triage(rows, known)
+        self.assertEqual([r["id"] for r in failures], ["pw001"])
+        self.assertEqual(sorted(ids[0] for _, _, ids in hits), ["pw002", "rg-a"])
+        self.assertEqual(xpass, [])
+        text, ok = run.report(rows, failures, hits, xpass, {"total_s": 0, "compile_s": 0, "mustang_wait_s": 0, "jobs": 1}, True)
+        self.assertFalse(ok)
+        self.assertIn("HARD GATE BROKEN", text)
 
     def test_known_issues_file(self):
         entries = run.load_known(HERE / "known-issues.toml")

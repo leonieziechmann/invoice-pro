@@ -509,7 +509,7 @@ export MUSTANG_JAR=~/Downloads/Mustang-CLI-2.14.0.jar
 
 The oracles compare the XML with the facts the generator put into the invoice (`O-BT1` invoice number, `O-BT3` document type, `O-BT5` currency, `O-BT27`/`O-BT44` party names, `O-BT29`/`O-BT31` seller identifiers, `O-BT37`/`O-BT38`/`O-BT52`/`O-BT53` city and post code, `O-BT40`/`O-BT55`/`O-BT80` countries, `O-BG23` VAT categories and rates, `O-BT120` exemption reasons, `O-BG20/21` and `O-BG27/28` allowances and charges with their amounts, `O-BG14` invoicing period, `O-BT9` due date, `O-BT84` IBAN, `O-BT130` units, `O-BT153` item names) and with the printed PDF (`O-PDF-BT112`/`O-PDF-BT115` totals, `O-PDF-BT120` exemption reasons). `O-META-*` are the relations between twins.
 
-**Hard gates.** The job fails when a case does not meet its expectation; on the legal population this means any class other than `AGREE_VALID`, so in particular any `FALSE_NEGATIVE`, `FALSE_POSITIVE`, `CRASH` or `GUARD_ONLY`. The only exceptions are the failure signatures listed in `tools/zugferd/known-issues.toml` (see below). The job also fails when a listed signature no longer occurs.
+**Hard gates.** The job fails when a case does not meet its expectation; on the legal population this means any class other than `AGREE_VALID`. The only exceptions are the failure signatures listed in `tools/zugferd/known-issues.toml` (see below), and they never cover the hard gates: a `FALSE_NEGATIVE`, `FALSE_POSITIVE`, `CRASH` or `GUARD_ONLY` on the legal population fails the job even when its signature is listed (the report says `HARD GATE BROKEN`). The job also fails when a listed signature no longer occurs.
 
 #### Regression Cases
 

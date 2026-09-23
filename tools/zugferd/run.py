@@ -20,7 +20,8 @@ For every case:
 Failures are grouped by signature. `known-issues.toml` lists the signatures
 of known bugs with their finding: a known signature does not fail the run,
 an unknown one does, and so does a known one that no longer occurs (xpass),
-so the list can only shrink. `--strict` ignores the list.
+so the list can only shrink. `--strict` ignores the list. The hard gates
+(HARD on the legal population) cannot be excused by the list.
 
 Exit code: 0 all green (or only known issues), 1 failures, 2 setup error.
 """
@@ -56,7 +57,8 @@ CLASSES = {
     "INPUT_ERROR": "the compilation stopped with the expected message about the input (a deliberate check)",
     "NO_XML": "no e-invoice XML attached",
 }
-# The hard gates: none of these may occur on the legal population.
+# The hard gates: none of these may occur on the legal population, and no
+# entry of known-issues.toml can excuse them.
 HARD = ("FALSE_NEGATIVE", "FALSE_POSITIVE", "CRASH", "GUARD_ONLY")
 STRUCTURAL = re.compile(r"^(XSD|\?|FX-SCH-.*|MUSTANG-CRASH)$")
 # How Typst reports a `panic(..)` or a failed `assert(..)` of the package.
@@ -448,6 +450,11 @@ def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass):
     return rows, failures, hits, xpass, timing
 
 
+def breaks_hard_gate(row):
+    """A hard class on the legal population: never excused by known issues."""
+    return row.get("population") == "legal" and row["cls"] in HARD
+
+
 def triage(rows, known, strict=False, check_xpass=True):
     """Sets verdict and signature of every row and sorts the failures into
     new ones and known issues. Returns (new failures, [(entry, signature,
@@ -455,10 +462,11 @@ def triage(rows, known, strict=False, check_xpass=True):
     """
     failures, known_hits = [], {}
     for row in rows:
-        row["verdict"] = "PASS" if row["class_ok"] and not row["missing_rules"] and not row["oracle"] else "FAIL"
+        passed = row["class_ok"] and not row["missing_rules"] and not row["oracle"] and not breaks_hard_gate(row)
+        row["verdict"] = "PASS" if passed else "FAIL"
         if row["verdict"] == "FAIL":
             row["signature"] = signature(row)
-            hit = None if strict else match_known(row, known)
+            hit = None if strict or breaks_hard_gate(row) else match_known(row, known)
             if hit:
                 row["known"] = known[hit[0]]["finding"]
                 known_hits.setdefault(hit, []).append(row["id"])
@@ -495,7 +503,9 @@ def report(rows, failures, known_hits, xpass, timing, use_mustang):
         lines.append(f"  {pop:12s} {sum(counts.values()):4d}: {shown}")
     legal = [r for r in rows if r["population"] == "legal"]
     hard = {c: sum(1 for r in legal if r["cls"] == c) for c in HARD}
-    lines.append("hard gates (legal population): " + ", ".join(f"{c} {n}" for c, n in hard.items())
+    broken = sum(hard.values())
+    lines.append(("HARD GATE BROKEN" if broken else "hard gates") + " (legal population, never a known issue): "
+                 + ", ".join(f"{c} {n}" for c, n in hard.items())
                  + f", not AGREE_VALID {sum(1 for r in legal if r['cls'] != 'AGREE_VALID')}")
     oracle_fail = sum(1 for r in rows if r["oracle"])
     lines.append(f"PASS {sum(r['verdict'] == 'PASS' for r in rows)}  FAIL {sum(r['verdict'] == 'FAIL' for r in rows)}"
