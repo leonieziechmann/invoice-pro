@@ -249,7 +249,9 @@
       is-recipient: true,
       sender-country-code: normalized-sender.country.code,
       default-country: normalized-recipient.country,
-      field: "delivery-address",
+      field: if delivery-address != none { "delivery-address" } else {
+        "recipient.delivery-address"
+      },
     )
   } else {
     none

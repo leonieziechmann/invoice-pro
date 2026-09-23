@@ -228,6 +228,22 @@
     message.contains("`delivery-address.city.post-code` must be a string"),
     message: message,
   )
+  // ... naming the key the delivery address was given in
+  let message = fails(
+    recipient: buyer
+      + (
+        delivery-address: (
+          name: "Lager",
+          city: (name: "Lyon", post-code: 69007),
+        ),
+      ),
+  )
+  assert(
+    message.contains(
+      "`recipient.delivery-address.city.post-code` must be a string",
+    ),
+    message: message,
+  )
 
   // A country that is not an ISO code is not replaced by the locale region
   let message = fails(recipient: buyer + (country: "Frankreich"))
