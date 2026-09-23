@@ -206,7 +206,7 @@ Both the `sender` and `recipient` dictionaries must include:
     |               |        | `IT`          | `0211` | `SK`          | `9950` |
     |               |        | `LT`          | `9937` |               |        |
 
-  - **Email Fallback:** Without a VAT ID (or for another country), the email address (`contact.email` or `email`) is used with the scheme `EM`.
+  - **Email Fallback:** Without a VAT ID, or with a VAT ID whose prefix is not in the table (e.g. a Danish `DK` VAT ID), the email address (`contact.email` or `email`) is used with the scheme `EM`. The scheme always follows the VAT ID prefix, never the country of the address.
   - **Manual Override:** You can manually specify a custom electronic address on the party dictionary. A plain email address is accepted as well:
     ```typst
     sender: (
@@ -288,7 +288,7 @@ The `"basic"` profile only supports the standard identifier. See [The `item-id` 
 ## Hardcoded Details & Limitations
 
 - **Business Process URN (BT-23):** Whenever using the `"en16931"` or `"xrechnung"` profiles, the Business Process context URN is hardcoded to `urn:fdc:peppol.eu:2017:poacc:billing:01:1.0` (standard billing transaction).
-- **EAS Scheme Fallback:** If a party's VAT ID has no known scheme and neither a custom `electronic-address` nor an email address is specified, the electronic address block is omitted from the XML payload.
+- **EAS Scheme Fallback:** If the prefix of a party's VAT ID has no known scheme and neither a custom `electronic-address` nor an email address is specified, the electronic address block is omitted from the XML payload.
 - **Invoice Type Code (BT-3):** Invoices are always written with type code `380` (commercial invoice). Credited lines and negative totals are supported, dedicated credit notes (`381`) are not.
 - **Plain Text:** Names, addresses and references given as content are written as their plain text; formatting is dropped.
 
