@@ -6,17 +6,19 @@
   "[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x{FFFE}\\x{FFFF}]",
 )
 #let _whitespace = regex("\\s+")
-// Whitespace within a line, i.e. any whitespace except a line break.
-#let _line-space = regex("[^\\S\\n]+")
 #let _carriage-return = regex("\\r\\n?")
 // Typst sets a hyphen in front of a digit as minus sign (U+2212) after an
 // expression or styled text, e.g. in `[#{2026}-001]`. The hyphens U+2010 and
 // U+2011 look the same. In plain text, e.g. an identifier, all of them are
 // the ASCII hyphen-minus.
 #let _hyphens = regex("[\\x{2010}\\x{2011}\\x{2212}]")
-// The text of a fraction's part that needs parentheses, e.g. "a+b" in
-// "(a+b)/2".
-#let _compound = regex("[^\\p{L}\\p{N}.,]")
+// A space or operator in a part of a fraction or root, which then needs
+// parentheses, e.g. "a+b" in "(a+b)/2". Spaces of math are collected as " ".
+// (No Unicode class such as all letters and numbers: compiling one takes up
+// to a millisecond on every compile.)
+#let _compound = regex(
+  "[ +*/=<>\\-\\x{2212}\\x{00B1}\\x{00B7}\\x{00D7}\\x{00F7}\\x{22C5}]",
+)
 #let _space = [ ].func()
 
 // Scripts of math as Unicode superscripts and subscripts, e.g. "m²".
@@ -183,7 +185,7 @@
   if not keep-newlines { return text.replace(_whitespace, " ").trim() }
   let lines = ()
   for line in text.replace(_carriage-return, "\n").split("\n") {
-    lines.push(line.replace(_line-space, " ").trim())
+    lines.push(line.replace(_whitespace, " ").trim())
   }
   lines.join("\n").trim("\n")
 }

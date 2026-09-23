@@ -27,6 +27,8 @@
   assert.eq(plain-text([Faktor $x^2 + sqrt(2)$]), "Faktor x² + √2")
   assert.eq(plain-text([Fläche 20 m$""^2$]), "Fläche 20 m²")
   assert.eq(plain-text($root(3, x)$), "∛x")
+  assert.eq(plain-text($sqrt(x+1) - 1/sqrt(2)$), "√(x+1) - 1/√2")
+  assert.eq(plain-text($(2 dot 3)/(a b)$), "(2 ⋅ 3)/(a b)")
   assert.eq(plain-text($x_1 + x^n + x^(n+1)$), "x₁ + x^n + x^(n+1)")
   assert.eq(plain-text($f'$), "f′")
   assert.eq(plain-text($sin x$), "sin x")
