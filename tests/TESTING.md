@@ -40,6 +40,8 @@ tests/
     ├── xml/               # Plain text, number formatting, XML serialization
     ├── model/             # E-invoice data model built from an invoice
     ├── validate/          # Business rule checks (diagnostics)
+    ├── parties/           # Parties: electronic addresses, identifiers, keys
+    ├── parties-invoice/   # Party inputs of whole invoices, XML and diagnostics
     ├── report/            # Error message, "report" and "ignore" modes
     └── country-codes/     # Country code list, EAS scheme of VAT IDs
 ```
@@ -415,6 +417,7 @@ The automated `validate-all-zugferd` suite covers:
 - `tests/integration/zugferd-text/test.typ` — Styled content, smart quotes and XML special characters in names, reasons and references.
 - `tests/integration/zugferd-seller-id/test.typ` — Seller identifier (BT-29) without tax registration (#42).
 - `tests/integration/zugferd-auto/test.typ` — `zugferd: auto` between German parties with complete data, written as XRechnung.
+- `tests/integration/zugferd-parties/test.typ` — Party data from imported or copied text in an XRechnung not subject to VAT (category `O`): an empty electronic address and a VAT ID with a zero width space, electronic addresses derived from the VAT IDs, a buyer name of two lines and a delivery address identified by a GLN given as `id`.
 - `tests/docs/e-invoicing-complete/test.typ` — Complete example of the e-invoicing documentation.
 - `template/invoice.typ` — Default release invoice template.
 

@@ -13,10 +13,13 @@
 //   )
 //
 // Errors make the XML invalid; warnings point out data that is valid but most
-// likely not intended.
+// likely not intended. Rules whose id starts with "IP-" are rules of
+// invoice-pro itself: where the official rules accept the XML, but the invoice
+// would still be wrong (e.g. required by law, or a value would be lost).
 
 #import "codelists.typ"
 #import "xml.typ": fmt-number
+#import "model.typ": vat-eas-codes, vat-id-country, vat-id-prefix
 
 #let _zero = decimal("0")
 
@@ -112,7 +115,17 @@
 
 // --- Parties --------------------------------------------------------------
 
-#let _check-country(code, rule, field, term) = {
+// Hints for country codes that are missing from the code list of EN 16931.
+#let _country-hints = (
+  EL: "Use \"GR\" (`country.gr`) for Greece; \"EL\" is only the prefix of Greek VAT identifiers.",
+  SS: "South Sudan (SS) is missing from the code list the EN 16931 validators apply, so only the \"minimum\" and \"basic-wl\" profiles can state it.",
+  UK: "Use \"GB\" (`country.uk`) for the United Kingdom.",
+)
+
+// `en16931`: whether the profile is checked with the rules of EN 16931. Its
+// code list lacks South Sudan ("SS"), which the Factur-X profiles MINIMUM and
+// BASIC WL accept.
+#let _check-country(code, rule, field, term, en16931) = {
   if code == none {
     return (
       error(
@@ -121,49 +134,171 @@
         "The " + term + " is missing.",
         hint: "Set `country` on the "
           + field.split(".").first()
-          + ", e.g. `country: country.de`.",
+          + ", e.g. `country: country.de` or `country: \"DE\"`.",
       ),
     )
   }
-  if code not in codelists.countries {
+  if code not in codelists.countries and (code != "SS" or en16931) {
     return (
       error(
         "BR-CL-14",
         field,
-        "The " + term + " " + _quoted(code) + " is not an ISO 3166-1 code.",
-        hint: if code == "UK" {
-          "Use \"GB\" (`country.uk`) for the United Kingdom."
-        } else {
-          "Use a country from the `country` module, e.g. `country: country.de`."
-        },
+        "The "
+          + term
+          + " "
+          + _quoted(code)
+          + " is not in the ISO 3166-1 code list of EN 16931.",
+        hint: _country-hints.at(
+          code,
+          default: "Use a country of the `country` module (e.g. `country.de`), an ISO code (e.g. \"DE\") or `country.custom(code: ..)`.",
+        ),
       ),
     )
   }
   ()
 }
 
-#let _check-electronic-address(address, required, rule, field, term) = {
+// A party without `country` is in the country of the locale. If the VAT ID it
+// states was issued by another country, that default is most likely wrong. An
+// explicit `country` always settles it, e.g. for a foreign VAT registration.
+#let _check-country-of-vat-id(party, field, term, bt) = {
+  let address = party.address
+  if (
+    address.at("country-explicit", default: true) or address.country == none
+  ) { return () }
+  let vat-id = party.at("stated-vat-id", default: party.vat-id)
+  let issuer = vat-id-country(vat-id)
+  if issuer == none or issuer == address.country { return () }
+  (
+    error(
+      "IP-COUNTRY-01",
+      field + ".country",
+      "The "
+        + term
+        + " country ("
+        + bt
+        + ") is not stated and defaults to "
+        + _quoted(address.country)
+        + ", the country of the locale, but the "
+        + term
+        + " VAT identifier "
+        + _quoted(vat-id)
+        + " was issued by "
+        + _quoted(issuer)
+        + ".",
+      hint: "Set `country` on the "
+        + field
+        + ", e.g. `country: "
+        + _quoted(issuer)
+        + "`.",
+    ),
+  )
+}
+
+// Patterns of rare checks, compiled once on first use.
+#let _post-code-digits() = regex("[0-9]{3,}")
+// XR-TELEPHONE-REGEX (three digits, BR-DE-27) and XR-EMAIL-REGEX (BR-DE-28)
+// of the XRechnung 3.0 Schematron.
+#let _xr-patterns() = (
+  digit: regex("[0-9]"),
+  email: regex(
+    "^[a-zA-Z0-9!#$%&\"*+/=?^_`{|}~-]+(\\.[a-zA-Z0-9!#$%&\"*+/=?^_`{|}~-]+)*@([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$",
+  ),
+)
+
+// A city line whose post code the parser of the party's country does not
+// recognize stays whole: the post code is missing, and the number is written
+// into the city name.
+#let _check-post-code(party, field, term, city-bt, code-bt) = {
+  let address = party.address
+  if (
+    address.post-code != none
+      or address.city == none
+      or address.country == none
+      or address.city.match(_post-code-digits()) == none
+  ) { return () }
+  (
+    error(
+      "IP-ADDR-01",
+      field + ".city",
+      "The "
+        + term
+        + " city "
+        + _quoted(address.city)
+        + " contains a number, but no post code in the format of "
+        + _quoted(address.country)
+        + ": the post code ("
+        + code-bt
+        + ") would be missing, and the number would be written into the city name ("
+        + city-bt
+        + ").",
+      hint: "Write the post code as the country expects it (e.g. \"1012 AB Amsterdam\"; `country.custom(code: .., post-code: \"999-9999\")` sets the format of other countries), check `country` on the "
+        + field
+        + ", or pass the parts, e.g. `city: (name: \"Amsterdam\", post-code: \"1012 AB\")`.",
+    ),
+  )
+}
+
+// `rules`: the rule for a missing address and the rule for a missing scheme.
+#let _check-electronic-address(party, required, rules, field, term) = {
+  let (missing-rule, scheme-rule) = rules
+  let address = party.electronic-address
   if address == none or address.id == none {
     if required == none { return () }
     let make = if required == "error" { error } else { warning }
-    return (
-      make(
-        rule,
-        field,
-        "The " + term + " is missing.",
-        hint: "Set `electronic-address`, `vat-id` or `email` on the "
+    // Name only the inputs that can still provide the address.
+    let vat-id = party.at("stated-vat-id", default: none)
+    let hint = if vat-id == none {
+      "Set `electronic-address`, `vat-id` or `email` on the " + field + "."
+    } else {
+      let prefix = vat-id-prefix(vat-id)
+      let reason = if prefix != none and prefix not in vat-eas-codes {
+        (
+          " (there is no electronic address scheme for its prefix "
+            + _quoted(prefix)
+            + ")"
+        )
+      } else { "" }
+      (
+        "No electronic address can be derived from the VAT identifier "
+          + _quoted(vat-id)
+          + reason
+          + ". Set `electronic-address` or `email` on the "
           + field
-          + ".",
-      ),
+          + "."
+      )
+    }
+    return (
+      make(missing-rule, field, "The " + term + " is missing.", hint: hint),
     )
   }
   if address.scheme == none {
+    // A Peppol participant identifier such as "0088:4000001123452" (also
+    // with the prefix "iso6523-actorid-upis::") carries its scheme in front
+    // of the identifier.
+    let (scheme, id) = ("0088", address.id)
+    let parts = address.id.split(":")
+    if (
+      parts.len() >= 2 and parts.at(-2) in codelists.eas and parts.last() != ""
+    ) {
+      (scheme, id) = (parts.at(-2), parts.last())
+    }
     return (
       error(
-        "BR-CL-25",
+        scheme-rule,
         field + ".electronic-address",
-        "The " + term + " has no scheme.",
-        hint: "Pass a dictionary such as `(scheme: \"EM\", id: \"invoice@example.com\")`.",
+        "The "
+          + term
+          + " "
+          + _quoted(address.id)
+          + " has no scheme identifier.",
+        hint: "Give the address with its scheme, e.g. `electronic-address: (scheme: "
+          + _quoted(scheme)
+          + ", id: "
+          + _quoted(id)
+          + ")`"
+          + if scheme == "0088" and id == address.id { " for a GLN" }
+          + ", or give an email address.",
       ),
     )
   }
@@ -184,14 +319,21 @@
   ()
 }
 
-#let _check-global-id(party, field) = {
+// The input key a party identifier came from (see `id-keys` and
+// `global-id-keys` of the model), for the field of a diagnostic.
+#let _id-key(party, slot) = {
+  party.at(slot + "-keys", default: ()).first(default: slot)
+}
+
+// `rule`: BR-CL-10 for the seller and buyer, BR-CL-26 for the ship-to party.
+#let _check-global-id(party, rule, field) = {
   let global-id = party.at("global-id", default: none)
   if global-id == none or global-id.scheme == none { return () }
   if global-id.scheme not in codelists.icd {
     return (
       error(
-        "BR-CL-10",
-        field + ".global-id",
+        rule,
+        field + "." + _id-key(party, "global-id"),
         "The scheme "
           + _quoted(global-id.scheme)
           + " of the global identifier is not an ISO/IEC 6523 code.",
@@ -202,10 +344,97 @@
   ()
 }
 
+// Two different values for one identifier of a party, of which only one can
+// be written: a `global-id` without scheme next to `id`, a `location-id` next
+// to `id` of the delivery address, or two identifiers with scheme.
+#let _check-identifiers(party, field, term) = {
+  let out = ()
+  let id-keys = party.at("id-keys", default: ())
+  if id-keys.len() > 1 {
+    let (first, second, ..) = id-keys
+    out.push(error(
+      "IP-ID-02",
+      field + "." + second,
+      if second == "global-id" {
+        (
+          "The global identifier of the "
+            + term
+            + " has no scheme, so it would be a second identifier next to `"
+            + first
+            + "`, and only one can be written."
+        )
+      } else {
+        (
+          "`"
+            + first
+            + "` and `"
+            + second
+            + "` give two different identifiers of the "
+            + term
+            + ", and only one can be written."
+        )
+      },
+      hint: if second == "global-id" {
+        "Give the ISO/IEC 6523 scheme of the global identifier, e.g. `global-id: (scheme: \"0088\", id: ..)` for a GLN."
+      } else { "`location-id` is another name of `id`: keep one of them." },
+    ))
+  }
+  let global-id-keys = party.at("global-id-keys", default: ())
+  if global-id-keys.len() > 1 {
+    out.push(error(
+      "IP-ID-02",
+      field + "." + global-id-keys.at(1),
+      "`"
+        + global-id-keys.at(0)
+        + "` and `"
+        + global-id-keys.at(1)
+        + "` both give an identifier with scheme of the "
+        + term
+        + ", and only one can be written.",
+      hint: "Keep one of them, or give `id` without scheme.",
+    ))
+  }
+  out
+}
+
+// The buyer (BT-46) and the deliver-to location (BT-71) have one identifier:
+// either `ram:ID` or `ram:GlobalID` (CII-SR-450, CII-SR-449).
+#let _check-single-identifier(party, rule, field, term) = {
+  if (
+    party.at("id", default: none) == none
+      or party.at("global-id", default: none) == none
+  ) { return () }
+  let id-key = _id-key(party, "id")
+  let global-id-key = _id-key(party, "global-id")
+  (
+    error(
+      rule,
+      field,
+      "The "
+        + term
+        + " can be stated only once, but `"
+        + id-key
+        + "` and `"
+        + global-id-key
+        + "` give one each.",
+      hint: "Keep either `"
+        + id-key
+        + "` or `"
+        + global-id-key
+        + "` on the "
+        + field
+        + ".",
+    ),
+  )
+}
+
 #let _check-vat-id-prefix(vat-id, field) = {
   if vat-id == none { return () }
-  let prefix = vat-id.slice(0, calc.min(2, vat-id.len()))
-  if prefix in codelists.countries or prefix in ("EL", "1A", "AN") {
+  let prefix = vat-id-prefix(vat-id)
+  if (
+    prefix != none
+      and (prefix in codelists.countries or prefix in ("EL", "1A", "AN"))
+  ) {
     return ()
   }
   (
@@ -220,10 +449,250 @@
   )
 }
 
+// Keys of a party dictionary that the party does not know (see `input-keys`
+// of the model). A misspelled key the e-invoice reads is an error, as its value
+// would be missing without notice; any other unknown key is a warning, as its
+// value is not written into the e-invoice.
+#let _check-input-keys(party, field, term) = {
+  let out = ()
+  for entry in party.at("input-keys", default: ()) {
+    let owner = if entry.within == none { "the " + term } else {
+      "`" + entry.within + "`"
+    }
+    if entry.einvoice and entry.like == none {
+      // A key of an identifier dictionary that has no `id`.
+      out.push(error(
+        "IP-KEY-02",
+        field + "." + entry.path,
+        "`"
+          + entry.key
+          + "` is not a key of "
+          + owner
+          + ", which has no `id`, so the identifier is missing from the e-invoice.",
+        hint: "Give the identifier as `(scheme: .., id: ..)`.",
+      ))
+    } else if entry.einvoice {
+      out.push(error(
+        "IP-KEY-02",
+        field + "." + entry.path,
+        "`"
+          + entry.key
+          + "` is not a key of "
+          + owner
+          + ". It looks like `"
+          + entry.like
+          + "`, so its value is missing from the e-invoice.",
+        hint: if entry.hint != none { entry.hint } else {
+          "Rename it to `" + entry.like + "`."
+        },
+      ))
+    } else {
+      out.push(warning(
+        "IP-KEY-01",
+        field + "." + entry.path,
+        "`"
+          + entry.key
+          + "` is not a key of "
+          + owner
+          + ", so its value is not written into the e-invoice.",
+        hint: if entry.hint != none { entry.hint } else if entry.like != none {
+          "Did you mean `" + entry.like + "`?"
+        } else {
+          "Check the spelling of the key, or keep it if only the printed invoice uses it (e.g. through `info.dynamic`)."
+        },
+      ))
+    }
+  }
+  out
+}
+
+// The VAT categories that require the buyer VAT identifier (BT-48), with the
+// rules for an invoice line, a document level allowance and charge.
+#let _buyer-vat-id-rules = (
+  K: (
+    line: "BR-IC-02",
+    allowance: "BR-IC-03",
+    charge: "BR-IC-04",
+    term: "An intra-community supply (K)",
+  ),
+  AE: (
+    line: "BR-AE-02",
+    allowance: "BR-AE-03",
+    charge: "BR-AE-04",
+    term: "Reverse charge (AE)",
+  ),
+)
+
+// The buyer VAT identifier (BT-48) of an intra-community supply (K) or a
+// reverse charge (AE). The official rules check invoice lines (BR-IC-02,
+// BR-AE-02) and document level allowances and charges (-03, -04). BASIC WL
+// writes no lines, yet the VAT Directive (Art. 226 No. 4) still requires the
+// buyer VAT ID for K and for a cross-border reverse charge; invoice-pro checks
+// that as IP-VAT-226. A domestic reverse charge (e.g. § 13b UStG) can do
+// without it.
+#let _check-buyer-vat-id(model) = {
+  let profile = model.profile
+  let buyer = model.buyer
+  if not profile.settlement or buyer.vat-id != none { return () }
+  let categories = ()
+  for tax in model.taxes {
+    let category = tax.category
+    if (
+      category != none
+        and category in _buyer-vat-id-rules
+        and category not in categories
+    ) {
+      categories.push(category)
+    }
+  }
+
+  let out = ()
+  for category in categories {
+    let rules = _buyer-vat-id-rules.at(category)
+    let on-line = false
+    if profile.lines {
+      for line in model.lines {
+        if line.category == category {
+          on-line = true
+          break
+        }
+      }
+    }
+    let on-allowance = false
+    let on-charge = false
+    for entry in model.allowance-charges {
+      if entry.category == category {
+        if entry.charge { on-charge = true } else { on-allowance = true }
+      }
+    }
+
+    let (rule, message) = if (
+      on-line or (profile.lines and not on-allowance and not on-charge)
+    ) {
+      (rules.line, rules.term + " requires the buyer VAT identifier (BT-48).")
+    } else if on-allowance or on-charge {
+      let (rule, kind) = if on-allowance {
+        (rules.allowance, "allowance (BG-20)")
+      } else { (rules.charge, "charge (BG-21)") }
+      (
+        rule,
+        "A document level "
+          + kind
+          + " of the VAT category "
+          + category
+          + " requires the buyer VAT identifier (BT-48).",
+      )
+    } else if (
+      category == "K" or model.seller.address.country != buyer.address.country
+    ) {
+      let subject = if category == "K" { rules.term } else {
+        "A cross-border reverse charge (AE)"
+      }
+      (
+        "IP-VAT-226",
+        subject
+          + " must state the buyer VAT identifier (BT-48) by law (Art. 226 No. 4 of the VAT Directive 2006/112/EC).",
+      )
+    } else { (none, none) }
+    if rule == none { continue }
+    out.push(error(
+      rule,
+      "recipient.vat-id",
+      message,
+      hint: if rule == "IP-VAT-226" {
+        "Set `vat-id` on the recipient. The BASIC WL profile has no invoice lines, so its validators do not check this."
+      } else { "Set `vat-id` on the recipient." },
+    ))
+  }
+  out
+}
+
+// VAT identifier prefixes of the EU member states (Greece: "EL") and of
+// Northern Ireland ("XI"), the buyers of an intra-community supply.
+#let _eu-vat-prefixes = (
+  AT: true,
+  BE: true,
+  BG: true,
+  CY: true,
+  CZ: true,
+  DE: true,
+  DK: true,
+  EE: true,
+  EL: true,
+  ES: true,
+  FI: true,
+  FR: true,
+  GR: true,
+  HR: true,
+  HU: true,
+  IE: true,
+  IT: true,
+  LT: true,
+  LU: true,
+  LV: true,
+  MT: true,
+  NL: true,
+  PL: true,
+  PT: true,
+  RO: true,
+  SE: true,
+  SI: true,
+  SK: true,
+  XI: true,
+)
+
+// Whether an intra-community supply (K) goes to another member state: the
+// deliver-to country (BR-IC-12) and the buyer VAT identifier. Picking up the
+// goods is legal, so both are warnings.
+#let _check-intra-community(model) = {
+  if not model.profile.settlement { return () }
+  let intra-community = false
+  for tax in model.taxes {
+    if tax.category == "K" {
+      intra-community = true
+      break
+    }
+  }
+  if not intra-community { return () }
+
+  let out = ()
+  let seller = model.seller
+  let home = vat-id-country(seller.at("stated-vat-id", default: seller.vat-id))
+  if home == none { home = seller.address.country }
+  if (
+    model.ship-to != none
+      and home != none
+      and model.ship-to.address.country == home
+  ) {
+    out.push(warning(
+      "BR-IC-12",
+      "delivery-address.country",
+      "The intra-community supply (K) states the seller's own country "
+        + _quoted(home)
+        + " as the deliver-to country (BT-80), but the goods must be dispatched to another member state.",
+      hint: "Set `country` on the delivery address or the recipient to the member state the goods are delivered to.",
+    ))
+  }
+  let buyer-vat-id = model.buyer.vat-id
+  let prefix = vat-id-prefix(buyer-vat-id)
+  if prefix != none and prefix not in _eu-vat-prefixes {
+    out.push(warning(
+      "IP-VAT-138",
+      "recipient.vat-id",
+      "The buyer VAT identifier "
+        + _quoted(buyer-vat-id)
+        + " was not issued by an EU member state, so the supply is not an intra-community supply (K).",
+      hint: "Use `tax.export()` for supplies to countries outside the EU. Goods for Northern Ireland are intra-community supplies to an \"XI\" VAT identifier.",
+    ))
+  }
+  out
+}
+
 #let check-parties(model) = {
   let profile = model.profile
   let seller = model.seller
   let buyer = model.buyer
+  let ship-to = model.ship-to
   let out = ()
 
   if seller.name == none {
@@ -243,25 +712,50 @@
     ))
   }
 
+  out += _check-input-keys(seller, "sender", "sender")
+  out += _check-input-keys(buyer, "recipient", "recipient")
+  if ship-to != none {
+    out += _check-input-keys(ship-to, "delivery-address", "delivery address")
+  }
+
+  // The seller country (BT-40) is written in every profile, the other
+  // addresses from BASIC WL on.
   out += _check-country(
     seller.address.country,
     "BR-09",
     "sender.country",
     "seller country code (BT-40)",
+    profile.en16931,
   )
+  out += _check-country-of-vat-id(seller, "sender", "seller", "BT-40")
   if profile.addresses {
     out += _check-country(
       buyer.address.country,
       "BR-11",
       "recipient.country",
       "buyer country code (BT-55)",
+      profile.en16931,
     )
-    if model.ship-to != none {
+    out += _check-country-of-vat-id(buyer, "recipient", "buyer", "BT-55")
+    if ship-to != none {
       out += _check-country(
-        model.ship-to.address.country,
+        ship-to.address.country,
         "BR-57",
         "delivery-address.country",
         "deliver-to country code (BT-80)",
+        profile.en16931,
+      )
+    }
+    out += _check-post-code(seller, "sender", "seller", "BT-37", "BT-38")
+    out += _check-post-code(buyer, "recipient", "buyer", "BT-52", "BT-53")
+    // Without a delivery address of its own, the buyer's address is checked.
+    if ship-to != none and not ship-to.at("from-buyer", default: false) {
+      out += _check-post-code(
+        ship-to,
+        "delivery-address",
+        "deliver-to",
+        "BT-77",
+        "BT-78",
       )
     }
   }
@@ -288,17 +782,38 @@
       "BR-CO-26",
       "sender",
       "The seller cannot be identified: neither a seller identifier (BT-29) nor a VAT identifier (BT-31) is given.",
-      hint: if model.outside-scope and seller.stated-vat-id != none {
-        "An invoice not subject to VAT leaves out the VAT identifier (BR-O-02). Set `tax-nr` or `id` on the sender."
+      hint: if model.outside-scope {
+        "An invoice not subject to VAT (O) states no VAT identifier (BR-O-02). Set `tax-nr` or `id` on the sender."
       } else { "Set `vat-id`, `tax-nr` or `id` on the sender." },
     ))
   }
 
+  // Party identifiers (BT-29, BT-46) from BASIC WL on; the ship-to party
+  // (BT-71) with the delivery information.
   if profile.party-ids {
-    out += _check-global-id(seller, "sender")
-    out += _check-global-id(buyer, "recipient")
-    if model.ship-to != none {
-      out += _check-global-id(model.ship-to, "delivery-address")
+    out += _check-identifiers(seller, "sender", "seller")
+    out += _check-identifiers(buyer, "recipient", "buyer")
+    out += _check-global-id(seller, "BR-CL-10", "sender")
+    out += _check-global-id(buyer, "BR-CL-10", "recipient")
+    if profile.en16931 {
+      out += _check-single-identifier(
+        buyer,
+        "CII-SR-450",
+        "recipient",
+        "buyer identifier (BT-46)",
+      )
+    }
+  }
+  if profile.addresses and ship-to != none {
+    out += _check-identifiers(ship-to, "delivery-address", "delivery address")
+    out += _check-global-id(ship-to, "BR-CL-26", "delivery-address")
+    if profile.en16931 {
+      out += _check-single-identifier(
+        ship-to,
+        "CII-SR-449",
+        "delivery-address",
+        "deliver-to location identifier (BT-71)",
+      )
     }
   }
 
@@ -308,16 +823,16 @@
       profile.id == "en16931"
     ) { "warning" } else { none }
     out += _check-electronic-address(
-      seller.electronic-address,
+      seller,
       required,
-      "PEPPOL-EN16931-R020",
+      ("PEPPOL-EN16931-R020", "BR-62"),
       "sender",
       "seller electronic address (BT-34)",
     )
     out += _check-electronic-address(
-      buyer.electronic-address,
+      buyer,
       required,
-      "PEPPOL-EN16931-R010",
+      ("PEPPOL-EN16931-R010", "BR-63"),
       "recipient",
       "buyer electronic address (BT-49)",
     )
@@ -351,27 +866,32 @@
           ))
         }
       }
+      // XRechnung only warns about BR-DE-27 and BR-DE-28, but validators such
+      // as Mustang reject the invoice, so invoice-pro reports errors.
       if (
         contact.phone != none
-          and contact.phone.matches(regex("[0-9]")).len() < 3
+          and contact.phone.matches(_xr-patterns().digit).len() < 3
       ) {
-        out.push(warning(
+        out.push(error(
           "BR-DE-27",
           "sender.contact.phone",
-          "The seller contact phone number (BT-42) should contain at least three digits.",
+          "The seller contact phone number (BT-42) "
+            + _quoted(contact.phone)
+            + " must contain at least three digits.",
+          hint: "Write the phone number with its digits, e.g. \"+49 89 1234567\".",
         ))
       }
       if (
         contact.email != none
-          and contact.email.match(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"))
-            == none
+          and contact.email.match(_xr-patterns().email) == none
       ) {
-        out.push(warning(
+        out.push(error(
           "BR-DE-28",
           "sender.contact.email",
           "The seller contact email address (BT-43) "
             + _quoted(contact.email)
-            + " does not look like an email address.",
+            + " does not have the format XRechnung requires.",
+          hint: "Write one address with a single \"@\", e.g. \"billing@example.de\", and internationalized domains in punycode (xn--...).",
         ))
       }
     }
@@ -379,7 +899,7 @@
     for (party, field, city-rule, code-rule, term) in (
       (seller, "sender", "BR-DE-3", "BR-DE-4", "seller"),
       (buyer, "recipient", "BR-DE-8", "BR-DE-9", "buyer"),
-      (model.ship-to, "delivery-address", "BR-DE-10", "BR-DE-11", "deliver-to"),
+      (ship-to, "delivery-address", "BR-DE-10", "BR-DE-11", "deliver-to"),
     ) {
       if party == none { continue }
       if party.address.city == none {
@@ -397,9 +917,9 @@
           code-rule,
           field + ".city",
           "XRechnung requires the " + term + " post code.",
-          hint: "Write the post code in `city` on the "
+          hint: "Write the post code in the format of the country of the "
             + field
-            + ", e.g. \"10115 Berlin\" or `(name: \"Berlin\", post-code: \"10115\")`.",
+            + " (e.g. \"10115 Berlin\") or pass `city: (name: .., post-code: ..)`.",
         ))
       }
     }
@@ -414,6 +934,8 @@
     }
   }
 
+  out += _check-buyer-vat-id(model)
+  out += _check-intra-community(model)
   out
 }
 
@@ -588,22 +1110,7 @@
       ))
     }
   }
-  if "K" in categories and buyer.vat-id == none {
-    out.push(error(
-      "BR-IC-02",
-      "recipient.vat-id",
-      "An intra-community supply (K) requires the buyer VAT identifier (BT-48).",
-      hint: "Set `vat-id` on the recipient.",
-    ))
-  }
-  if "AE" in categories and buyer.vat-id == none {
-    out.push(error(
-      "BR-AE-02",
-      "recipient.vat-id",
-      "Reverse charge (AE) requires the buyer VAT identifier (BT-48).",
-      hint: "Set `vat-id` on the recipient.",
-    ))
-  }
+  // The buyer VAT identifier (BT-48) of K and AE: see `_check-buyer-vat-id`.
   if "K" in categories and model.ship-to == none {
     out.push(error(
       "BR-IC-12",

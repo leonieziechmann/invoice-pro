@@ -3,7 +3,7 @@
 
 // The plain text of the city line as it reads on the page, the same text the
 // e-invoice writes.
-#import "../zugferd/xml.typ": plain-text
+#import "../utils/text.typ": plain-text
 
 // --- Regional Parsers and Formatters ---
 
