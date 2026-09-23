@@ -311,9 +311,13 @@
   let no = resolve-country("NO", "de")
   assert.eq((no.code, no.name), ("NO", ""))
   assert.eq((no.parse-city)("0154 Oslo"), (name: "Oslo", post-code: "0154"))
-  // `auto` and `none` are the country of the locale region
+  // `auto`, `none` and an empty value (e.g. an empty column of imported data)
+  // state no country: the country of the locale region
   assert.eq(resolve-country(auto, "at").code, "AT")
   assert.eq(resolve-country(none, "de").code, "DE")
+  assert.eq(resolve-country("", "at").code, "AT")
+  assert.eq(resolve-country(" ", "at").code, "AT")
+  assert.eq(resolve-country([], "ch").code, "CH")
 
   // Anything else is an error instead of a silently replaced country
   let message = catch(() => resolve-country(
@@ -351,8 +355,12 @@
       "has no `code`",
     ),
   )
-  // Codes of customized countries are checked and upper-cased
+  // Codes of customized countries are checked and upper-cased; "UK" is the
+  // United Kingdom's ISO code "GB" in every form, not only as a string
   assert.eq(resolve-country(country.de.with(code: "de"), "fr").code, "DE")
+  assert.eq(resolve-country((code: "UK", name: "Britain"), "de").code, "GB")
+  assert.eq(resolve-country(country.uk.with(code: "uk"), "de").code, "GB")
+  assert.eq(country.custom(code: "uk").code, "GB")
   assert(
     catch(() => resolve-country(
       country.de.with(code: "Deutschland"),

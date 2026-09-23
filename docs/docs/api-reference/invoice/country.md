@@ -13,12 +13,12 @@ The `country` of the `sender`, the `recipient` and a `delivery-address` sets the
 The `country` key accepts:
 
 - **A predefined country** of the `country` module, e.g. `country.fr` (see the table below).
-- **An ISO 3166-1 alpha-2 code** as string or content, e.g. `"FR"` or `"fr"`. A code of a predefined country gives that country (`"UK"` is accepted for `"GB"`); any other code gives a country without printed name, e.g. `"NO"`.
+- **An ISO 3166-1 alpha-2 code** as string or content, e.g. `"FR"` or `"fr"`. A code of a predefined country gives that country (`"UK"` is accepted for `"GB"`, here and in every other form of the code); any other code gives a country without printed name, e.g. `"NO"`.
 - **A custom country** created with [`country.custom`](#countries-outside-the-module), e.g. `country.custom(code: "NO", name: "Norge")`.
 
 Any other value, e.g. `"Germany"`, stops the compilation with an error instead of being replaced by another country.
 
-Without `country`, the sender and the recipient are in the country of the [locale](./index.md#locale) region (e.g. `DE` for `locale.de-de`), and a delivery address is in the recipient's country. For e-invoices, state the country of every party, above all for foreign parties.
+Without `country` (or with `none` or an empty string, e.g. from an empty column of imported data), the sender and the recipient are in the country of the [locale](./index.md#locale) region (e.g. `DE` for `locale.de-de`), and a delivery address is in the recipient's country. For e-invoices, state the country of every party, above all for foreign parties.
 
 **Example Usage:**
 
@@ -105,6 +105,8 @@ If you need to change the displayed name of a predefined country (e.g., if writi
 ```
 
 Set `show-always: true` to print the country line even for domestic addresses.
+
+`.with()` keeps the city line format of the country: `country.de.with(code: "NO")` would still expect German post codes of 5 digits, so that `"0154 Oslo"` is not split into post code and city. For another country, use its ISO code (`"NO"`), its predefined country or [`country.custom`](#countries-outside-the-module).
 
 ---
 

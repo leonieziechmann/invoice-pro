@@ -119,6 +119,20 @@
   },
 )
 
+// An empty country (e.g. an empty column of imported data) states no country,
+// like a missing key: the country of the locale
+#party-test(
+  recipient: (name: "Kunde GmbH", city: "80331 München", country: ""),
+  delivery-address: (name: "Lager", city: "04109 Leipzig", country: []),
+  (ctx, model) => {
+    assert.eq(ctx.recipient.country.code, "DE")
+    assert.eq(ctx.recipient.country-explicit, false)
+    assert.eq(model.buyer.address.country, "DE")
+    assert.eq(model.ship-to.address.country, "DE")
+    assert.eq(ctx.delivery-address.country-explicit, false)
+  },
+)
+
 // A delivery address without country is in the recipient's country
 #party-test(
   tax: tax.intra-community(),

@@ -313,6 +313,7 @@
 #let _code-pattern = regex("^[A-Za-z]{2}$")
 
 // The upper-case ISO 3166-1 alpha-2 code of `code` (a string or content).
+// "UK", reserved in ISO 3166-1 for the United Kingdom, is its code "GB".
 // `field` names the input in the error message.
 #let normalize-code(code, field) = {
   let text = if type(code) in (str, content) { plain-text(code) } else { none }
@@ -325,7 +326,8 @@
         + " is not an ISO 3166-1 alpha-2 country code (two letters such as \"DE\" or \"FR\").",
     )
   }
-  upper(text)
+  let code = upper(text)
+  if code == "UK" { "GB" } else { code }
 }
 
 // Turns a post code mask of `country.custom` into a regular expression:
@@ -743,16 +745,26 @@
   base + country + (code: code)
 }
 
+// Whether a `country` (or `region`) value states no country: `auto`, `none`,
+// or an empty string or content (e.g. an empty column of imported data), which
+// is the same as leaving the key out.
+#let _states-no-country(value) = (
+  value == auto
+    or value == none
+    or (type(value) in (str, content) and plain-text(value) == "")
+)
+
 /// Resolves the `country` of a party: a function of the `country` module
 /// (`country.fr`), a country dictionary (`country.custom(..)`,
 /// `(code: "NO", name: "Norge")`) or an ISO 3166-1 alpha-2 code as string or
-/// content (`"FR"`). `auto` and `none` give the country of `default-region`.
+/// content (`"FR"`). `auto`, `none` and an empty string give the country of
+/// `default-region`.
 ///
 /// Any other value is an error: a country must never be replaced silently.
 ///
 /// -> dictionary
 #let resolve-country(country-opt, default-region, field: "country") = {
-  if country-opt == auto or country-opt == none {
+  if _states-no-country(country-opt) {
     return country-from-region(default-region)
   }
   let kind = type(country-opt)
@@ -809,7 +821,7 @@
   field: "party",
 ) = {
   let country-opt = party.at("country", default: auto)
-  if country-opt not in (auto, none) {
+  if not _states-no-country(country-opt) {
     return (
       country: resolve-country(
         country-opt,
@@ -820,7 +832,7 @@
     )
   }
   let region-opt = party.at("region", default: none)
-  if region-opt not in (auto, none) {
+  if not _states-no-country(region-opt) {
     return (
       country: _resolve-region(region-opt, default-region, field + ".region"),
       explicit: true,
