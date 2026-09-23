@@ -60,8 +60,10 @@
 // --- Document -------------------------------------------------------------
 
 // The characters of a printed amount besides its currency: digits,
-// separators, signs and spaces.
-#let _amount-characters = regex("[\\d\\s.,'’+\\-()]")
+// separators, signs and spaces. The samples are plain text, whose spaces and
+// minus signs are ASCII. (ASCII classes: the Unicode classes `\d` and `\s`
+// take a fraction of a millisecond to compile on every compile.)
+#let _amount-characters = regex("[0-9 .,'’+\\-()]")
 
 #let check-document(model) = {
   let out = ()
@@ -913,7 +915,8 @@
 )
 #let _line-break = regex("\\r?\\n")
 #let _hash-block = regex("#.+#")
-#let _leading-line-break = regex("^\\s*\\n")
+// `\s` of XPath regular expressions is a space, tab or line break.
+#let _leading-line-break = regex("^[ \\t\\r\\n]*\\n")
 // Whitespace as XPath's normalize-space() collapses it.
 #let _xml-whitespace = regex("[ \\t\\r\\n]+")
 

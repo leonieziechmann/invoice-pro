@@ -83,6 +83,12 @@
     m.payment.terms = skonto
     assert.eq(rules(m), ("BR-DE-18",))
     assert(diagnostic(m, "BR-DE-18").message.ends-with("line break."))
+    // Spaces and tabs may end the line, as `\s` of the XRechnung validation
+    // allows, but not a no-break space
+    m.payment.terms = skonto + " \t\r\n"
+    assert.eq(rules(m), ())
+    m.payment.terms = skonto + "\u{a0}\n"
+    assert.eq(rules(m), ("BR-DE-18",))
     // Only lines that start with "#" are Skonto lines
     m.payment.terms = "Zahlbar sofort. " + skonto + "\n"
     assert.eq(rules(m), ())

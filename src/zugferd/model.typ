@@ -256,11 +256,16 @@
   "cubic-metre": "MTQ",
 )
 
-// Unit texts and the UN/ECE Recommendation 20 codes they stand for, by the
-// text in lower case without a trailing ".": the symbols and names of the
-// unit database, the unit names of every language of invoice-pro and common
-// abbreviations. Only whole texts match, never a part of one.
-#let _unit-aliases = {
+/// Unit texts and the UN/ECE Recommendation 20 codes they stand for, by the
+/// text in lower case without a trailing ".": the symbols and names of the
+/// unit database, the unit names of every language of invoice-pro and common
+/// abbreviations. Only whole texts match, never a part of one.
+///
+/// It is built when called, so an invoice without e-invoice does not build
+/// it: `build-model` builds it once for all lines.
+///
+/// -> dictionary
+#let unit-aliases() = {
   let table = (:)
   for (code, texts) in (
     HUR: ("hr", "hrs", "std", "stunde", "stunden"),
@@ -334,8 +339,10 @@
 /// invoice-pro does not guess what it means. Without a unit, the quantity
 /// is a number of "one" (C62).
 ///
+/// - aliases (auto, dictionary): The table of `unit-aliases`, built when
+///   `auto`; pass it when resolving many units.
 /// -> dictionary
-#let resolve-unit(unit) = {
+#let resolve-unit(unit, aliases: auto) = {
   if type(unit) == dictionary {
     let code = compact(unit.at("code", default: none))
     if code != none { return (code: code, issue: none) }
@@ -359,11 +366,12 @@
       },
     )
   }
+  if aliases == auto { aliases = unit-aliases() }
   let key = lower(text).trim(".", at: end)
-  let code = _unit-aliases.at(key, default: none)
+  let code = aliases.at(key, default: none)
   // A plural with "s" ("heures", "kgs"), but not "ms" for "m".
   if code == none and key.ends-with("s") and key.clusters().len() > 2 {
-    code = _unit-aliases.at(key.slice(0, -1), default: none)
+    code = aliases.at(key.slice(0, -1), default: none)
   }
   if code != none { return (code: code, issue: none) }
   (code: "C62", issue: (kind: "unknown", text: text))
@@ -372,7 +380,9 @@
 /// The UN/ECE Recommendation 20 code of a unit, see `resolve-unit`.
 ///
 /// -> str
-#let map-unit-code(unit) = resolve-unit(unit).code
+#let map-unit-code(unit, aliases: auto) = (
+  resolve-unit(unit, aliases: aliases).code
+)
 
 // Determine delivery date or period from items
 #let determine-delivery-dates(ctx, items) = {
@@ -436,12 +446,14 @@
 
 // An invoice line (BG-25) with net amounts.
 // With gross prices, `round-price` rounds the net price as the invoice
-// rounds unit prices (the `money-fine` rounding of the locale).
+// rounds unit prices (the `money-fine` rounding of the locale). `unit-aliases`
+// is the table of the function `unit-aliases`, built when `auto`.
 #let line-model(
   item,
   index,
   inclusive: false,
   round-price: price => calc.round(price, digits: 4),
+  unit-aliases: auto,
 ) = {
   let tax = item.at("tax", default: (:))
   if type(tax) != dictionary { tax = (:) }
@@ -478,7 +490,10 @@
   if type(item-id) == str { item-id = (seller: item-id) }
   if type(item-id) != dictionary { item-id = (:) }
 
-  let unit = resolve-unit(item.at("unit", default: none))
+  let unit = resolve-unit(
+    item.at("unit", default: none),
+    aliases: unit-aliases,
+  )
 
   (
     index: index,
@@ -619,6 +634,7 @@
     (name: none, id: none, global-id: none, address: buyer.address)
   } else { none }
 
+  let aliases = unit-aliases()
   let lines = items
     .enumerate()
     .map(((i, item)) => line-model(
@@ -626,6 +642,7 @@
       i,
       inclusive: inclusive,
       round-price: round-price,
+      unit-aliases: aliases,
     ))
   let allowance-charges = document-allowance-charges(
     item-data.at("discounts", default: ()),
