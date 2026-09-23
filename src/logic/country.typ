@@ -2,8 +2,9 @@
 // how the city line (post code and city name) is parsed and printed.
 
 // The plain text of the city line as it reads on the page, the same text the
-// e-invoice writes.
-#import "../zugferd/xml.typ": plain-text
+// e-invoice writes. Imported from the utilities rather than from the
+// e-invoice modules, which only e-invoices load.
+#import "../utils/text.typ": plain-text
 
 // --- Regional Parsers and Formatters ---
 
