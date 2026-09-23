@@ -525,6 +525,15 @@ def triage(rows, known, strict=False, check_xpass=True):
     return failures, hits, xpass
 
 
+def _stop_message(crash):
+    """The start of the message of a deliberate stop without its numbers,
+    e.g. `The modifier `Versand` (#.#) cannot be split over the VAT
+    categories`, so that stops of one kind form one group."""
+    first = next((line for line in (crash or "").splitlines() if line.startswith("error:")), crash or "")
+    first = _DELIBERATE.sub("", first).lstrip(': "')
+    return re.sub(r"\d+", "#", first)[:70].rstrip()
+
+
 def report(rows, failures, known_hits, xpass, timing, use_mustang):
     lines = []
     by_pop = {}
@@ -543,6 +552,12 @@ def report(rows, failures, known_hits, xpass, timing, use_mustang):
     broken = sum(1 for r in legal if breaks_hard_gate(r))
     lines.append(("HARD GATE BROKEN" if broken else "hard gate") + " (legal population, never a known issue): "
                  + ", ".join(f"{c} {n}" for c, n in hard.items()) + f", not AGREE_VALID {broken}")
+    # Deliberate stops are accepted in the random population; list their
+    # messages, so that a new kind (maybe a valid invoice it blocks) is seen.
+    stops = collections.Counter(_stop_message(r["crash"]) for r in rows if r["cls"] == "INPUT_ERROR")
+    if stops:
+        lines.append("deliberate stops (INPUT_ERROR) by message:")
+        lines += [f"  [{n:3d}] {message}" for message, n in stops.most_common()]
     oracle_fail = sum(1 for r in rows if r["oracle"])
     lines.append(f"PASS {sum(r['verdict'] == 'PASS' for r in rows)}  FAIL {sum(r['verdict'] == 'FAIL' for r in rows)}"
                  f"  (known issues {sum(len(ids) for _, _, ids in known_hits)}, oracle failures {oracle_fail})")

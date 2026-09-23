@@ -100,6 +100,23 @@ class Classification(unittest.TestCase):
         self.assertEqual((row["cls"], row["class_ok"]), ("AGREE_INVALID", True))
         self.assertEqual([p.split(":")[0] for p in row["oracle"]], ["O-DIAG"])
 
+    def test_deliberate_stops_are_listed_by_message(self):
+        def stop(cid, message):
+            return dict(row(cid, cls="INPUT_ERROR", expect="AGREE", population="random"),
+                        class_ok=True, crash=f'error: panicked with: "{message}"\n  ┌─ /src/x.typ:1:1')
+
+        rows = [
+            stop("ru0001", "The modifier `Versand` (5.9) cannot be split over the VAT categories 19% S, 7% S"),
+            stop("ru0002", "The modifier `Versand` (5.9) cannot be split over the VAT categories 20% S, 0% Z"),
+            stop("ru0003", "`sender.city.post-code` must be a string such as \"01067\""),
+        ]
+        failures, hits, xpass = run.triage(rows, [])
+        self.assertEqual(failures, [])
+        text, ok = run.report(rows, failures, hits, xpass, {"total_s": 0, "compile_s": 0, "mustang_wait_s": 0, "jobs": 1}, True)
+        self.assertTrue(ok)
+        self.assertIn("[  2] The modifier `Versand` (#.#) cannot be split over the VAT categories", text)
+        self.assertIn("[  1] `sender.city.post-code` must be a string", text)
+
     def test_expectations(self):
         case = {"expect": "REJECTED", "expect_rules": ["IP-DOC-01"]}
         self.assertEqual(run.expectation_met(case, "STRICTER", ["IP-DOC-01"]), (True, []))
