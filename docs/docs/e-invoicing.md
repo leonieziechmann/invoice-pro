@@ -285,10 +285,10 @@ With `tax-mode: "inclusive"`, the invoice prints gross prices, while the XML sta
 - **Cash Discount (Skonto):** XRechnung states a cash discount in the payment terms, as a line of its own in the syntax of the KoSIT: `#SKONTO#TAGE=` with the days, `#PROZENT=` with the percent and two decimals, optionally `#BASISBETRAG=` with the amount it applies to, and a closing `#`. In the `"xrechnung"` profile, every line of the payment terms that starts with `#` must follow this syntax, and a line after the last cash discount that contains `#` more than once must end with its last `#` (BR-DE-18). `invoice-pro` adds the line break that XRechnung requires after a closing `#` at the end of the terms:
 
   ```typst
-  due-date: "Zahlbar innerhalb von 30 Tagen netto.\n#SKONTO#TAGE=14#PROZENT=2.00#",
+  due-date: "Zahlbar innerhalb von 30 Tagen netto, innerhalb von 14 Tagen mit 2 % Skonto.\n#SKONTO#TAGE=14#PROZENT=2.00#",
   ```
 
-  A cash discount is no [`discount`](./api-reference/line-items/index.md#adjustments-modifier-discount--surcharge): a discount reduces the amounts of the invoice no matter when the buyer pays.
+  The printed invoice must state an agreed cash discount as well, but the themes do not print a textual `due-date` on their own: print it where you state the payment terms (e.g. with [`#info.due-date`](./api-reference/components.md#info-module)) or state the cash discount in your own words. A cash discount is no [`discount`](./api-reference/line-items/index.md#adjustments-modifier-discount--surcharge): a discount reduces the amounts of the invoice no matter when the buyer pays.
 
 - **Payment Instructions (BG-16):** [`bank-details`](./api-reference/components.md#bank-details) with an `iban` are written as credit transfer (SEPA for EUR invoices). XRechnung requires them (BR-DE-1). IBAN and BIC are written without spaces and in upper case; they are the same values the bank details print and the EPC-QR code carries. A missing or invalid IBAN stops the compilation.
 
