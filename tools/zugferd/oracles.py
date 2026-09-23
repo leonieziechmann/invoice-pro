@@ -38,6 +38,9 @@ Facts (all optional; an absent fact is not checked):
 Independent of the facts, the PDF text must contain the grand total and the
 amount due (O-PDF-BT112, O-PDF-BT115) and every exemption reason of the XML
 (O-PDF-BT120).
+
+`check_diagnostics` checks invoice-pro's own messages in every case: each
+error names its rule, the input field, what is wrong and a hint (O-DIAG).
 """
 
 import re
@@ -299,6 +302,19 @@ def check(facts, doc, pdf_text, profile):
             for reason in xtext(doc, SETTLEMENT + "/ram:ApplicableTradeTax/ram:ExemptionReason"):
                 for part in reason.split("; "):
                     check_("O-PDF-BT120", _nows(part) in text, f"exemption reason {part!r} is not printed")
+    return problems
+
+
+def check_diagnostics(diagnostics):
+    """Every error names the rule, the input field, the problem and a hint
+    how to fix it, so that a user can act on it (list of "O-DIAG: detail")."""
+    problems = []
+    for d in diagnostics:
+        if d.get("level") != "error":
+            continue
+        missing = [key for key in ("rule", "field", "message", "hint") if not d.get(key)]
+        if missing:
+            problems.append(f"O-DIAG: error [{d.get('rule') or '?'}] {d.get('field') or ''} has no {', '.join(missing)}")
     return problems
 
 

@@ -88,6 +88,18 @@ class Classification(unittest.TestCase):
         self.assertEqual(cls(panic, expect="INPUT_ERROR", expect_error="cannot be split"), "INPUT_ERROR")
         self.assertEqual(cls(panic, expect="INPUT_ERROR", expect_error="post-code"), "CRASH")
 
+    def test_errors_name_rule_field_and_hint(self):
+        good = {"level": "error", "rule": "BR-02", "field": "invoice-nr", "message": "missing", "hint": "Set it."}
+        self.assertEqual(oracles.check_diagnostics([good, {"level": "warning", "rule": "BR-DE-27"}]), [])
+        problems = oracles.check_diagnostics([dict(good, hint=None), dict(good, field="")])
+        self.assertEqual([p.split(":")[0] for p in problems], ["O-DIAG", "O-DIAG"])
+        self.assertIn("has no hint", problems[0])
+        # Checked in every case, not only in officially valid ones.
+        case = {"id": "mu-x", "population": "mutation", "expect": "AGREE_INVALID", "expect_rules": ["BR-02"], "file": "x.typ"}
+        row = run.make_row(case, result(ours=["BR-02"], official=["BR-02"]), None)  # no field, no hint
+        self.assertEqual((row["cls"], row["class_ok"]), ("AGREE_INVALID", True))
+        self.assertEqual([p.split(":")[0] for p in row["oracle"]], ["O-DIAG"])
+
     def test_expectations(self):
         case = {"expect": "REJECTED", "expect_rules": ["IP-DOC-01"]}
         self.assertEqual(run.expectation_met(case, "STRICTER", ["IP-DOC-01"]), (True, []))

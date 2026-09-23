@@ -15,7 +15,8 @@ For every case:
   3. Mustang 2.14 (EN 16931, Factur-X and XRechnung Schematron) in a single
      JVM for the whole run (java/MustangBatch.java, compiled on first use).
   4. Classification (see CLASSES), the case's expectation, the semantic
-     oracles (oracles.py) and the metamorphic relations between twins.
+     oracles (oracles.py), the metamorphic relations between twins, and
+     that every error of invoice-pro names its rule, field and a hint.
 
 Failures are grouped by signature. `known-issues.toml` lists the signatures
 of known bugs with their finding: a known signature does not fail the run,
@@ -405,9 +406,9 @@ def make_row(case, res, doc):
             cls = "INPUT_ERROR"
     ours = error_rules(res)
     class_ok, missing = expectation_met(case, cls, ours)
-    problems = []
+    problems = oracles.check_diagnostics(res.get("diagnostics", []))
     if cls == "AGREE_VALID" and doc is not None:
-        problems = oracles.check(case.get("facts") or {}, doc, res.get("pdf_text"), res.get("profile"))
+        problems += oracles.check(case.get("facts") or {}, doc, res.get("pdf_text"), res.get("profile"))
     mustang = res.get("mustang") or {}
     return {
         "id": case["id"],
