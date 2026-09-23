@@ -948,8 +948,7 @@
   // the last "#...#" reaches from the first to the last "#" of the last line
   // with two "#" and text between them. (No regular expression: compiling
   // this one takes a third of a millisecond on every compile.)
-  let i = lines.len() - 1
-  while i >= 0 {
+  for i in range(lines.len() - 1, -1, step: -1) {
     let parts = lines.at(i).split("#")
     if parts.len() >= 3 and parts.slice(1, -1).join("#") != "" {
       if (
@@ -959,7 +958,6 @@
       }
       return (after: lines.at(i).replace(_xml-whitespace, " ").trim(" "))
     }
-    i -= 1
   }
   none
 }
