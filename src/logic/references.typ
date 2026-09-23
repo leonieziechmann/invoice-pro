@@ -267,16 +267,13 @@
         "delivery-address",
         default: ctx.recipient.at("delivery-address", default: none),
       )
-      if da != none {
+      // The invoice only accepts a dictionary as delivery address and
+      // normalizes it into these inline parts.
+      if type(da) == dictionary {
         let parts = ()
-        if da.name-inline != none and da.name-inline != "" {
-          parts.push(da.name-inline)
-        }
-        if da.address-inline != none and da.address-inline != "" {
-          parts.push(da.address-inline)
-        }
-        if da.city-inline != none and da.city-inline != "" {
-          parts.push(da.city-inline)
+        for key in ("name-inline", "address-inline", "city-inline") {
+          let part = da.at(key, default: none)
+          if part != none and part != "" { parts.push(part) }
         }
         if parts.len() > 0 { parts.join(", ") } else { none }
       } else {

@@ -7,9 +7,7 @@
 #import "locale/locale.typ"
 #import "locale/lang/base.typ": base-language
 #import "locale/region/base.typ": base-region
-#import "logic/country.typ": (
-  normalize-party, normalize-region-to-string, resolve-country,
-)
+#import "logic/country.typ": normalize-party, resolve-party-country
 
 /// The main entry point for creating an invoice document.
 /// It orchestrates the theme, localization, and data calculation passes.
@@ -30,7 +28,8 @@
   /// -> dictionary
   recipient: (:),
   /// Separate delivery or shipping address (e.g. if different from billing address).
-  /// Can also be specified as `recipient.delivery-address`.
+  /// Can also be specified as `recipient.delivery-address`. Without a
+  /// `country` of its own, it is in the recipient's country.
   /// -> none | dictionary
   delivery-address: none,
 
@@ -116,6 +115,12 @@
   types.require(
     delivery-address,
     "invoice::delivery-address",
+    none,
+    dictionary,
+  )
+  types.require(
+    recipient.at("delivery-address", default: none),
+    "invoice::recipient.delivery-address",
     none,
     dictionary,
   )
@@ -208,14 +213,11 @@
     sender.insert("tax-nr", tax-nr)
   }
 
-  let recipient-region = normalize-region-to-string(
-    recipient.at("region", default: none),
+  let resolved-recipient-country = resolve-party-country(
+    recipient,
     default-region,
-  )
-  let resolved-recipient-country = resolve-country(
-    recipient.at("country", default: auto),
-    recipient-region,
-  )
+    field: "recipient",
+  ).country
 
   let normalized-sender = normalize-party(
     sender,
@@ -238,12 +240,18 @@
   } else {
     none
   }
+  // Without a country of its own, the delivery address is in the recipient's
+  // country, not in the country of the locale.
   let normalized-delivery-address = if raw-delivery-address != none {
     normalize-party(
       raw-delivery-address,
       default-region,
       is-recipient: true,
       sender-country-code: normalized-sender.country.code,
+      default-country: normalized-recipient.country,
+      field: if delivery-address != none { "delivery-address" } else {
+        "recipient.delivery-address"
+      },
     )
   } else {
     none

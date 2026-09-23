@@ -124,11 +124,15 @@
   city-type,
 )
 
+// A function or dictionary of the `country` module, or an ISO 3166-1 alpha-2
+// code (e.g. "FR").
 #let country-like = _matcher.choice(
   none,
   auto,
   function,
   dictionary,
+  str,
+  content,
 )
 
 #let party-type = (

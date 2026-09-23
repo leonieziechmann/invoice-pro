@@ -135,12 +135,10 @@
     compact(party.at("vat-id", default: none))
   }
   if vat-id != none and vat-id.len() > 2 {
-    // The prefix names the country that issued the VAT ID.
-    let country = country-code(party)
-    let scheme = vat-eas-codes.at(
-      upper(vat-id.slice(0, 2)),
-      default: if country != none { vat-eas-codes.at(country, default: none) },
-    )
+    // The prefix names the country that issued the VAT ID, and only that
+    // country's scheme fits: a Danish VAT ID of a German company is no German
+    // VAT endpoint. Without a scheme for the prefix, the email is used.
+    let scheme = vat-eas-codes.at(upper(vat-id.slice(0, 2)), default: none)
     if scheme != none {
       return (scheme: scheme, id: upper(vat-id))
     }
