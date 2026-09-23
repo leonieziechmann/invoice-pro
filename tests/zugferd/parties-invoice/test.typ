@@ -167,6 +167,21 @@
     assert.eq(rules(result, level: "warning"), ("IP-KEY-01",))
   },
 )
+// Keys invoices often carry are no misspellings, even where they look like
+// one ("fax-nr" and "tax-nr", "siret" and "street"), and the buyer contact is
+// printed only
+#e-invoice(
+  sender: seller + (fax-nr: "+49 89 1234568", siret: "303 265 045 00014"),
+  recipient: buyer + (contact: (name: "Mme Dupont", tel: "+33 1 23 45 67 89")),
+  result => {
+    assert.eq(rules(result), ())
+    assert.eq(rules(result, level: "warning"), (
+      "IP-KEY-01",
+      "IP-KEY-01",
+      "IP-KEY-01",
+    ))
+  },
+)
 
 // 7. BASIC WL: the buyer VAT ID of an intra-community supply and a
 //    cross-border reverse charge is required by law, not the one of a domestic

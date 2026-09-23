@@ -322,15 +322,21 @@
   ship-to: _address-keys + (id: true, location-id: true, global-id: true),
 )
 
-// The keys of a party's `contact`.
-#let _contact-keys = (name: true, phone: true, email: true)
+// The keys of a party's `contact`, by role. The e-invoice writes the seller
+// contact (BG-6); of the buyer contact it only reads the email address, from
+// which the buyer electronic address (BT-49) can be derived.
+#let _contact-keys = (
+  seller: (name: true, phone: true, email: true),
+  buyer: (name: false, phone: false, email: true),
+)
 
 // The keys of an identifier given as a dictionary (`id`, `global-id`,
 // `location-id`, `electronic-address`).
 #let _identifier-keys = (scheme: true, id: true)
 
 // Keys the normalization of a party adds (see `normalize-party`); they are
-// not part of the input.
+// not part of the input. A `post-code`, `city-name` or `state` of the input is
+// replaced by the parts of its `city`.
 #let _derived-keys = (
   name-inline: true,
   address-inline: true,
@@ -355,7 +361,10 @@
   ust-id: "vat-id",
   ustid: "vat-id",
   ust-idnr: "vat-id",
+  ustidnr: "vat-id",
   ust-id-nr: "vat-id",
+  uid: "vat-id",
+  uid-nr: "vat-id",
   tva: "vat-id",
   iva: "vat-id",
   btw: "vat-id",
@@ -376,8 +385,14 @@
   e-mail: "email",
   email-address: "email",
   tel: "phone",
+  tel-nr: "phone",
+  tel-no: "phone",
+  telnr: "phone",
   telephone: "phone",
   telefon: "phone",
+  telefon-nr: "phone",
+  phone-nr: "phone",
+  phone-no: "phone",
   phone-number: "phone",
   endpoint: "electronic-address",
   endpoint-id: "electronic-address",
@@ -387,18 +402,35 @@
     "Pass the GLN as `global-id: (scheme: \"0088\", id: ..)`.",
   ),
   leitweg: "leitweg-id",
+  order: "order-nr",
+  po: "po-nr",
+  contract: "contract-nr",
+  delivery-note: "delivery-note-nr",
   strasse: "street",
   straße: "street",
   ort: "city",
   zip: ("city", _post-code-hint),
   zip-code: ("city", _post-code-hint),
+  zipcode: ("city", _post-code-hint),
   postcode: ("city", _post-code-hint),
   postal-code: ("city", _post-code-hint),
-  post-code: ("city", _post-code-hint),
+  postalcode: ("city", _post-code-hint),
   plz: ("city", _post-code-hint),
-  city-name: ("city", _post-code-hint),
   land: "country",
   country-code: "country",
+)
+
+// Keys invoices often carry that `invoice-pro` does not read, but which look
+// like misspellings of keys it knows ("fax-nr" and "tax-nr", "siret" and
+// "street", "county" and "country"). Like any unknown key, they are not
+// written into the e-invoice, but they are never taken for a misspelling.
+#let _other-keys = (
+  fax-nr: true,
+  fax-no: true,
+  faxnr: true,
+  siret: true,
+  siren: true,
+  county: true,
 )
 
 // Patterns for unknown keys, compiled once on first use: unknown keys are rare.
@@ -478,7 +510,8 @@
 
 // An input key a party does not know: the known key it looks like (`like`),
 // whether the e-invoice reads that key, and a hint where renaming alone does
-// not fit. A key ending in a number (e.g. "email2") is taken as deliberate.
+// not fit. A key ending in a number (e.g. "email2") and the keys of
+// `_other-keys` are taken as deliberate.
 #let _unknown-key(key, known, path: none) = {
   let normalized = _normalize-key(key)
   let like = none
@@ -488,7 +521,10 @@
     if type(alias) == str { like = alias } else { (like, hint) = alias }
   } else if normalized in known {
     like = normalized
-  } else if normalized.match(_key-patterns().numbered) == none {
+  } else if (
+    normalized not in _other-keys
+      and normalized.match(_key-patterns().numbered) == none
+  ) {
     like = _closest-key(normalized, known)
   }
   if like != none and like not in known {
@@ -523,10 +559,11 @@
     result.push(entry)
   }
   let contact = party.at("contact", default: none)
-  if "contact" in known and type(contact) == dictionary {
+  let contact-keys = _contact-keys.at(role, default: none)
+  if contact-keys != none and type(contact) == dictionary {
     for (key, value) in contact.pairs() {
-      if key in _contact-keys or _is-unset(value) { continue }
-      result.push(_unknown-key(key, _contact-keys, path: "contact"))
+      if key in contact-keys or _is-unset(value) { continue }
+      result.push(_unknown-key(key, contact-keys, path: "contact"))
     }
   }
   // An identifier dictionary without `id` is left out, so any other key of it

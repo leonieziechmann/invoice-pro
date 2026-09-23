@@ -198,8 +198,37 @@
   assert.eq(keys("seller", zip: "10115", post-code: "10115"), (
     ("zip", "city", false),
   ))
-  // Keys of `contact`
+  // Other names of the VAT ID (the UID of Austria and Switzerland), of the
+  // phone number and of the references of the buyer
+  assert.eq(keys("seller", uid: "ATU12345678"), (("uid", "vat-id", true),))
+  assert.eq(keys("seller", tel-nr: "+49 30 123456"), (
+    ("tel-nr", "phone", true),
+  ))
+  assert.eq(keys("buyer", contract: "V-2026-01"), (
+    ("contract", "contract-nr", true),
+  ))
+  // Keys invoices often carry, which only look like misspellings of known
+  // keys ("tax-nr", "street", "country")
+  assert.eq(
+    keys(
+      "seller",
+      fax-nr: "+49 30 123457",
+      siret: "303 265 045 00014",
+      county: "Kent",
+    ),
+    (
+      ("fax-nr", none, false),
+      ("siret", none, false),
+      ("county", none, false),
+    ),
+  )
+  // Keys of `contact`; of the buyer contact, the e-invoice reads only the
+  // email address
   assert.eq(keys("seller", contact: (name: "A", mail: "a@b.de")), (
+    ("contact.mail", "email", true),
+  ))
+  assert.eq(keys("buyer", contact: (name: "A", tel: "1", mail: "a@b.de")), (
+    ("contact.tel", "phone", false),
     ("contact.mail", "email", true),
   ))
   // Keys of identifiers: without `id`, the identifier would be lost
