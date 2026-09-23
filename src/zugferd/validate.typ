@@ -925,29 +925,42 @@
 #let _skonto-line = regex(
   "#(SKONTO)#TAGE=([0-9]+#PROZENT=[0-9]+\\.[0-9]{2})(#BASISBETRAG=-?[0-9]+\\.[0-9]{2})?#$",
 )
-#let _line-break = regex("\\r?\\n")
-#let _hash-block = regex("#.+#")
-// `\s` of XPath regular expressions is a space, tab or line break.
-#let _leading-line-break = regex("^[ \\t\\r\\n]*\\n")
-// Whitespace as XPath's normalize-space() collapses it.
+// Whitespace as XPath's normalize-space() collapses it, and `\s` of XPath
+// regular expressions: a space, tab or line break.
 #let _xml-whitespace = regex("[ \\t\\r\\n]+")
 
-// The line of the payment terms that breaks the XRechnung Skonto syntax
-// (BR-DE-18): `none` if there is none, "" if only the line break after the
-// last Skonto line is missing.
+// What breaks the XRechnung Skonto syntax in the payment terms (BR-DE-18):
+// `none` if nothing does, `(line: ..)` for a line that starts with "#" but is
+// no cash discount, and `(after: ..)` for the line of the last "#...#" if no
+// line break follows it.
 #let _skonto-problem(terms) = {
+  let lines = terms.split("\n")
   let skonto = false
-  for line in terms.split(_line-break) {
+  for line in lines {
     let normalized = line.replace(_xml-whitespace, " ").trim(" ")
     if normalized.starts-with("#") {
-      if normalized.match(_skonto-line) == none { return normalized }
+      if normalized.match(_skonto-line) == none { return (line: normalized) }
       skonto = true
     }
   }
-  if (
-    skonto
-      and terms.split(_hash-block).last().match(_leading-line-break) == none
-  ) { return "" }
+  if not skonto { return none }
+  // The validation splits the terms at `#.+#`, whose `.` is no line break:
+  // the last "#...#" reaches from the first to the last "#" of the last line
+  // with two "#" and text between them. (No regular expression: compiling
+  // this one takes a third of a millisecond on every compile.)
+  let i = lines.len() - 1
+  while i >= 0 {
+    let parts = lines.at(i).split("#")
+    if parts.len() >= 3 and parts.slice(1, -1).join("#") != "" {
+      if (
+        i < lines.len() - 1 and parts.last().replace(_xml-whitespace, "") == ""
+      ) {
+        return none
+      }
+      return (after: lines.at(i).replace(_xml-whitespace, " ").trim(" "))
+    }
+    i -= 1
+  }
   none
 }
 
@@ -960,14 +973,25 @@
     let problem = _skonto-problem(payment.terms)
     if problem != none {
       let input = payment.at("terms-input", default: none)
+      let syntax = "every line that starts with \"#\" must be a cash discount in the XRechnung syntax, e.g. \"#SKONTO#TAGE=14#PROZENT=2.00#\", followed by a line break"
+      let line = problem.at("line", default: none)
+      let after = problem.at("after", default: none)
       out.push(error(
         "BR-DE-18",
         if input == none { "payment-goal" } else { input },
-        "In the payment terms (BT-20), every line that starts with \"#\" must be a cash discount in the XRechnung syntax, e.g. \"#SKONTO#TAGE=14#PROZENT=2.00#\", followed by a line break"
-          + if problem == "" { "." } else {
-            ", but " + _quoted(problem) + " is not."
+        "In the payment terms (BT-20), "
+          + if line != none {
+            syntax + ", but " + _quoted(line) + " is not."
+          } else if after.starts-with("#") {
+            syntax + "."
+          } else {
+            (
+              "XRechnung reads the text between the first and the last \"#\" of a line as a cash discount, which a line break must follow, but "
+                + _quoted(after)
+                + " goes on after its last \"#\"."
+            )
           },
-        hint: "Write each cash discount on a line of its own: `#SKONTO#TAGE=` with the days, `#PROZENT=` with the percent and two decimals, optionally `#BASISBETRAG=` with the amount it applies to, and a closing `#`, e.g. \"Zahlbar innerhalb von 30 Tagen.\\n#SKONTO#TAGE=14#PROZENT=2.00#\". Do not start other lines with \"#\".",
+        hint: "Write each cash discount on a line of its own: `#SKONTO#TAGE=` with the days, `#PROZENT=` with the percent and two decimals, optionally `#BASISBETRAG=` with the amount it applies to, and a closing `#`, e.g. \"Zahlbar innerhalb von 30 Tagen.\\n#SKONTO#TAGE=14#PROZENT=2.00#\". Do not start other lines with \"#\", and do not write text after the last \"#\" of a line that contains two.",
       ))
     }
   }

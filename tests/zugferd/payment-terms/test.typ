@@ -50,6 +50,16 @@
   #bank
 ]
 
+// A line of text that ends with its second "#" after the last Skonto line
+// gets the line break as well
+#model-test(..xrechnung, due-date: skonto + "\nRef. #A-1#", model => {
+  assert.eq(model.payment.terms, skonto + "\nRef. #A-1#\n")
+  assert.eq(rules(model), ())
+})[
+  #line-items[#item([Consulting], price: 100, quantity: 2, unit: unit.hour)]
+  #bank
+]
+
 // --- 3. A "#" in a line of text is no Skonto line ---
 #model-test(
   ..xrechnung,
@@ -94,6 +104,25 @@
     assert.eq(rules(m), ())
     m.payment.terms = "#TAGE=14#\n"
     assert.eq(rules(m), ("BR-DE-18",))
+
+    // XRechnung reads the text between the first and the last "#" of a line
+    // as a cash discount: after the last one, a line break must follow it
+    m.payment.terms = skonto + "\nBitte Ref. #A-1# angeben\n"
+    assert.eq(rules(m), ("BR-DE-18",))
+    assert(
+      diagnostic(m, "BR-DE-18")
+        .message
+        .ends-with(
+          "but \"Bitte Ref. #A-1# angeben\" goes on after its last \"#\".",
+        ),
+      message: diagnostic(m, "BR-DE-18").message,
+    )
+    m.payment.terms = "Bitte Ref. #A-1# angeben\n" + skonto + "\n"
+    assert.eq(rules(m), ())
+    m.payment.terms = skonto + "\nRef. #A-1#\n"
+    assert.eq(rules(m), ())
+    m.payment.terms = skonto + "\nRef. ## 12\n"
+    assert.eq(rules(m), ())
 
     // EN 16931 has no Skonto syntax: the terms are free text there
     m.profile = model.profile + (id: "en16931", xrechnung: false)
