@@ -169,7 +169,7 @@ Key details:
 - **`themes.blank`** — use the blank theme when you only care about data, not visual output.
 - Tax constructors — use `tax.vat(rate)` for standard or reduced rates, and `tax.zero()` for zero-rated items. Each produces a different tax category.
 - **Assertion messages** — always include both the expected and actual value in the message for fast debugging. Use the pattern: `"Field: expected <value>, got " + repr(actual)`. The `repr()` function ensures the actual value is displayed in a readable format.
-- **Valid IBAN/BIC** — when using `bank-details` in tests or docs, always use values that pass validation checks. Use IBAN `DE75512108001245126199` and a valid 9 or 11 character BIC (e.g., `SOLADEST600`). Fake values like `DE12 3456 7890...` or `EXAMPLEBICX` will fail IBAN/BIC validation.
+- **Valid IBAN/BIC** — when using `bank-details` in tests or docs, always use values that pass validation checks. Use IBAN `DE75512108001245126199` and a valid 8 or 11 character BIC (e.g., `SOLADEST600`). Fake values like `DE12 3456 7890...` or `EXAMPLEBICX` will fail IBAN/BIC validation.
 - Always combine `data-test` with `test-locale` for deterministic results.
 
 ---
@@ -266,6 +266,15 @@ When the documentation code and the test code diverge, use the following rule of
 - **The docs are the target** — if the docs show a different scenario, feature usage, or overall structure, update the test to match the docs.
 - **The tests are likely correct for syntax** — if the difference is small (renamed parameters, updated function signatures, changed API surface), the test has probably been updated to match a code change that the docs haven't caught up with yet. In this case, update the docs.
 - **Use context to decide** — if a parameter was renamed in the source but the docs still use the old name, the test is correct. If the docs intentionally demonstrate a new pattern, the docs are correct. Infer intent from the surrounding changes.
+
+**Compiling every documentation example:**
+
+`scripts/check-docs-examples` compiles every `typst` code block in `docs/docs/**/*.md` that is a complete document, i.e. imports the package (`#import "@preview/invoice-pro:<version>": ...`). The import is redirected to the working tree, so the examples are checked against the current code, including those without a test under `tests/docs/`. Snippets that cannot compile on their own (placeholders such as `invoice.with(..)`, imports of local files or other packages) are excluded by putting `<!-- check-docs-examples: skip -->` on the line before the block.
+
+```bash
+./scripts/check-docs-examples                  # all pages
+./scripts/check-docs-examples docs/docs/b2b.md # selected pages
+```
 
 ---
 

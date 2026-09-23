@@ -84,6 +84,13 @@
           exec ${pkgs.bash}/bin/bash ${./scripts/validate-all-zugferd} "$@"
         '';
 
+        check-docs-examples = pkgs.writeScriptBin "check-docs-examples" ''
+          #!/usr/bin/env bash
+          export TYPST_BIN="${typstEnv}/bin/typst"
+          export PATH="${pkgs.coreutils}/bin:${pkgs.findutils}/bin:${pkgs.gawk}/bin:${pkgs.gnused}/bin:$PATH"
+          exec ${pkgs.bash}/bin/bash ${./scripts/check-docs-examples} "$@"
+        '';
+
       in
       {
         apps.default = {
@@ -108,10 +115,16 @@
           program = "${validate-all-zugferd}/bin/validate-all-zugferd";
         };
 
+        apps.check-docs-examples = {
+          type = "app";
+          program = "${check-docs-examples}/bin/check-docs-examples";
+        };
+
         packages.default = invoice-proPackage;
 
         packages.validate-zugferd = validate-zugferd;
         packages.validate-all-zugferd = validate-all-zugferd;
+        packages.check-docs-examples = check-docs-examples;
         packages.poppler-utils = pkgs.poppler-utils;
 
         packages.documentation = pkgs.buildNpmPackage {
@@ -174,6 +187,7 @@
             self.packages.${system}.check-pr
             self.packages.${system}.validate-zugferd
             self.packages.${system}.validate-all-zugferd
+            self.packages.${system}.check-docs-examples
           ] ++ self.checks.${system}.pre-commit-check.enabledPackages;
 
           shellHook = ''

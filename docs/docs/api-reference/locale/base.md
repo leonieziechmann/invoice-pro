@@ -254,7 +254,7 @@ When building your own tools or customizing a layout, you can leverage the casca
 #show: invoice.with(
   locale: locale.build-locale(
     custom-lang,
-    locale.region.en
+    locale.region.de
   )
 )
 ```
