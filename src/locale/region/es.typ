@@ -36,8 +36,11 @@
     tax: (
       default-vat: tax.vat(21%),
 
-      // Exemption for small enterprises
-      small-enterprise-special-scheme: tax.outside-scope(
+      // Small business franchise (franquicia del IVA): the supplies are exempt.
+      // The note is printed and is the exemption reason (BT-120) of VAT
+      // category E in the e-invoice. It cites no statutory article; state the
+      // provision that applies with `locale.custom.tax(..)` where needed.
+      small-enterprise-special-scheme: tax.exempt(
         grounds: "Exento de IVA según el régimen especial de franquicia para pequeñas empresas.",
       ),
     ),

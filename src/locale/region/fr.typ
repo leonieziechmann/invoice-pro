@@ -34,7 +34,8 @@
           + "Examples:\n"
           + "`tax.reverse-charge()` -> Autoliquidation\n"
           + "`tax.intra-community()` -> Livraison intracommunautaire\n"
-          + "`tax.outside-scope()` -> Franchise en base de TVA (art. 293 B du CGI)",
+          + "`tax-exempt-small-biz: true` -> Franchise en base de TVA (art. 293 B du CGI)\n"
+          + "`tax.outside-scope()` -> Opération hors du champ d'application de la TVA",
       )
     } else {
       panic(
@@ -62,8 +63,11 @@
     tax: (
       default-vat: tax.vat(20%),
 
-      // Exemption for small enterprises (Auto-entrepreneur / Micro-entreprise)
-      small-enterprise-special-scheme: tax.outside-scope(
+      // Franchise en base de TVA (auto-entrepreneur / micro-entreprise): the
+      // supplies are exempt under art. 293 B du CGI, and the invoice must carry
+      // this mention. It is printed and is the exemption reason (BT-120) of
+      // VAT category E in the e-invoice.
+      small-enterprise-special-scheme: tax.exempt(
         grounds: "TVA non applicable, art. 293 B du CGI.",
       ),
     ),

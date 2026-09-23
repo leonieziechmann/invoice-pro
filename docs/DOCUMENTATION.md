@@ -94,6 +94,7 @@ No code blocks.
 | `custom-report`         | Theme `zugferd-report` function for a custom list      | —       | `docs/e-invoicing-report/`   |                                   |
 | `party-snippets`        | City, seller identifier, contact, buyer reference, EAS | —       | —                            | Snippets (partial)                |
 | `unit-snippets`         | Unit builder and dictionary units                      | —       | —                            | Snippets (partial)                |
+| `facturx-recipe`        | Optional Mustang post-processing for the XMP metadata  | —       | —                            | Bash commands, not Typst          |
 | `complete-example`      | Complete ZUGFeRD-compliant invoice                     | `0.4.2` | `docs/e-invoicing-complete/` |                                   |
 
 ### `api-reference/locale/index.md`

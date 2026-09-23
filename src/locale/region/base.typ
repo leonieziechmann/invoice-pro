@@ -89,8 +89,13 @@
       /// -> tax
       default-vat: tax.vat(21%),
 
-      /// The legal tax object/exemption text used for small businesses or
-      /// "Kleinunternehmer" schemes where VAT is not collected.
+      /// The tax of small businesses ("Kleinunternehmer") that charge no VAT
+      /// (`tax-exempt-small-biz: true`). Its `grounds` are the legal note the
+      /// invoice prints and the exemption reason (BT-120) of the e-invoice.
+      /// Use `tax.exempt(grounds: ..)` (VAT category E) where the law exempts
+      /// the turnover of small businesses (e.g. DE, AT, FR) and
+      /// `tax.outside-scope(grounds: ..)` (O) where they are not liable for
+      /// VAT (e.g. CH). This neutral fallback claims no exemption.
       /// -> tax
       small-enterprise-special-scheme: tax.outside-scope(),
     ),

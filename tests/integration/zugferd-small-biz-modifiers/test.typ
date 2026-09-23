@@ -1,7 +1,7 @@
-// Small business exemption (§ 19 UStG, VAT category O) with an item discount
-// and document level allowances/charges. Amounts not subject to VAT carry no
-// VAT rate (BR-O-05, BR-O-06, BR-O-07), and the seller is identified by its
-// tax number, since VAT identifiers are left out (BR-O-02). Validated by
+// Small business exemption (§ 19 Abs. 1 UStG, VAT category E) with an item
+// discount and document level allowances/charges. Exempt amounts carry the
+// VAT rate 0 (BR-E-05, BR-E-06, BR-E-07), and the seller keeps its VAT
+// identifier and tax number (BR-E-02, BR-E-03, BR-E-04). Validated by
 // validate-all-zugferd.
 
 #import "/src/lib.typ": *

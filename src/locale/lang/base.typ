@@ -197,8 +197,11 @@
 
   /// Standard legal texts that depend on the language
   legal: (
-    // This generic fallback text can be overridden by specific regional language files.
-    // E.g., The DE.typ region will fetch `lang.legal.vat-exemption` for the §19 UStG clause.
+    // The small business note in the invoice language. It is printed in front
+    // of the legal grounds of the region's small business scheme when the
+    // language differs from the region, and on its own when the scheme has no
+    // grounds. It is used with every region, so it must not cite the law of
+    // one country.
     vat-exemption: "No VAT is charged due to small business exemption.",
   ),
 

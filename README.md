@@ -103,6 +103,10 @@ With the major refactoring introduced in version 0.2.0, the package structure is
 - **Theming (`theme`):** **Under Construction**. The theming engine is still evolving and will most likely experience breaking changes in the next updates as we refine customization capabilities.
 - **Localization (`locale`):** **Under Construction**. The localization and internationalization systems are actively being worked on and are subject to change.
 
+## Known Limitations
+
+- **Factur-X XMP metadata:** Typst cannot write custom XMP metadata yet, so the PDF lacks the Factur-X extension schema that announces the embedded XML. The embedded XML is valid, but validators that check the PDF itself (Factur-X / ZUGFeRD PDF validation) reject the PDF. An optional post-processing step with the Mustang command line tool, outside the package, is described in the [e-invoicing documentation](https://leonieziechmann.github.io/invoice-pro/e-invoicing#factur-x-xmp-metadata).
+
 ## 🛠️ Development
 
 This project uses **Nix** to provide a reproducible, sandboxed development environment. You do not need to install Typst, linters, or formatters globally—the flake provides everything.

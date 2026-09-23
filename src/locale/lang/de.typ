@@ -154,7 +154,7 @@
   ),
 
   legal: (
-    vat-exemption: "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.",
+    vat-exemption: "Aufgrund der Kleinunternehmerregelung wird keine Umsatzsteuer berechnet.",
   ),
 
   errors: (

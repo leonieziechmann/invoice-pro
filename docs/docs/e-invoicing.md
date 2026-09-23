@@ -9,7 +9,7 @@ sidebar_position: 3
 :::warning
 ZUGFeRD/Factur-X support in `invoice-pro` is currently **experimental**. Please note the following known limitations:
 
-- **XMP Profile Metadata:** The document's XMP profile does not yet correctly announce the attached `factur-x.xml` file. This can cause some strict validation tools to fail or hang up.
+- **Factur-X XMP Metadata (Typst limitation):** Typst cannot write custom XMP metadata yet, so the PDF lacks the Factur-X extension schema that announces the attached `factur-x.xml`. The embedded XML is valid, but validators that check the PDF itself reject the PDF. See [Factur-X XMP Metadata](#factur-x-xmp-metadata) for an optional post-processing step outside the package.
 - **Built-in Validation Is Not a Certification:** The template checks your invoice data against the business rules of the selected profile before embedding the XML (see [Validation and Error Reporting](#validation-and-error-reporting)). This catches missing or inconsistent data early, but it does not replace an official validator: verify the generated PDF and XML payload with an external validator (e.g., the [ZUGFeRD Community Validator](https://www.zugferd-community.net/) or other official portals) before using them in production.
 - **Reporting Issues:** If you encounter edge cases, schema validation failures, or formatting issues, please report them by opening an issue on our GitHub repository.
   :::
@@ -287,7 +287,8 @@ Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the 
 - Reverse Charge: `tax.reverse-charge()` (maps to category **AE**). Requires the VAT identifier of the buyer.
 - Intra-community Supply: `tax.intra-community()` (maps to category **K**). Requires the VAT identifiers of both parties. Without a `delivery-address`, the buyer's country is stated as deliver-to country; a `delivery-address` without its own `country` is in the buyer's country as well. A deliver-to country that is the seller's own country (`BR-IC-12`), or a buyer VAT identifier not issued by an EU member state (`IP-VAT-138`), is reported as a warning.
 - Export: `tax.export()` (maps to category **G**). Requires the seller VAT identifier.
-- Outside Scope / Small Business: `tax.outside-scope()` and `tax-exempt-small-biz: true` (map to category **O**). An invoice not subject to VAT carries no VAT identifiers, so the seller is identified by `tax-nr` or `id`. Items of category `O` cannot be mixed with other categories on one invoice.
+- Outside Scope: `tax.outside-scope()` (maps to category **O**). An invoice not subject to VAT carries no VAT identifiers, so the seller is identified by `tax-nr` or `id`. Items of category `O` cannot be mixed with other categories on one invoice.
+- Small Business: `tax-exempt-small-biz: true` uses the small business scheme of the locale's region, category **E** in Germany, Austria, France and Spain and **O** in Italy and Switzerland (see [Small Business Exemption](#small-business-exemption)).
 
 EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `M`. The special constructors in `tax.special` that map to other categories (e.g. `lower-rate`, the margin schemes or split payment `B`) cannot be used for e-invoices. Items under a margin scheme are written as exempt with the note the law requires, e.g. `tax.exempt(grounds: "Margin scheme - second-hand goods")` (in Germany "Gebrauchtgegenstände/Sonderregelung"). `tax.special.ceuta-melilla(..)` (`M`) needs a rate above 0%, and items not subject to VAT (`O`) have none.
 
@@ -298,6 +299,30 @@ Where EN 16931 requires an exemption reason (`AE`, `K`, `G`, `O`) and the items 
 Document level discounts and surcharges (BG-20, BG-21) belong to a VAT category as well. An absolute amount is split over the categories of the items (see [VAT categories of modifiers](./api-reference/line-items/index.md#vat-categories-of-document-and-bundle-modifiers)); pin it to one with `tax`, e.g. `surcharge([Shipping], amount: 4.90, tax: tax.vat(19%))`.
 
 Avoid using raw percentages (e.g., `19%`) directly on items if you need strict validation, as using the `tax` module functions guarantees the category codes are assigned correctly.
+
+#### Small Business Exemption
+
+With `tax-exempt-small-biz: true`, all items and pinned modifiers use the small business scheme of the locale's region. Its legal note is printed below the line items, and the XML states the same text as exemption reason (BT-120):
+
+| Region | Category | Legal note (printed and BT-120)                                                                  |
+| :----- | :------- | :----------------------------------------------------------------------------------------------- |
+| DE     | `E`      | Umsatzsteuerfrei aufgrund der Kleinunternehmerregelung gemäß § 19 Abs. 1 UStG.                   |
+| AT     | `E`      | Umsatzsteuerfrei aufgrund der Kleinunternehmerregelung gem. § 6 Abs. 1 Z 27 UStG.                |
+| FR     | `E`      | TVA non applicable, art. 293 B du CGI.                                                           |
+| ES     | `E`      | Exento de IVA según el régimen especial de franquicia para pequeñas empresas.                    |
+| IT     | `O`      | Operazione in franchigia da IVA ai sensi dell'art. 1, commi da 54 a 89, della Legge n. 190/2014. |
+| CH     | `O`      | Nicht MWST-pflichtig / Non soumis à la TVA / Non assoggettato all'IVA                            |
+
+If the language of the invoice differs from the region (e.g. `locale.en-de`), a translated note comes first and the legal note follows in parentheses. The note is one of the annotations below the line items, which `line-items(show-information: false)` hides; keep them shown, since the note is mandatory on the invoice (e.g. § 34a UStDV in Germany).
+
+- **Exempt (`E`), in Germany, Austria, France and Spain:** the scheme exempts the turnover of small businesses. In Germany, § 19 Abs. 1 UStG declares it tax exempt ("steuerfrei") since 2025 (Jahressteuergesetz 2024), and the invoice must note that the small business exemption applies (§ 34a UStDV). The Spanish note refers to the franchise of the EU small business scheme (Directive (EU) 2020/285) and cites no provision of Spanish law; where one applies, state it with an override (see below). An exempt invoice needs the seller's VAT identifier or tax number (BR-E-02): set `tax-nr` (e.g. the Steuernummer) or `vat-id` on the sender. Both are written to the XML, and the buyer's electronic address is derived from its VAT identifier as on any other invoice. A French micro-entrepreneur without an intra-community VAT number can state its SIREN as `tax-nr`, which is written as the seller's tax registration (BT-32).
+- **Not subject to VAT (`O`), in Italy and Switzerland:** supplies under the Italian _regime forfettario_ are not subject to VAT, and Swiss businesses below the turnover threshold are not liable for VAT. As with `tax.outside-scope()`, the XML carries no VAT identifiers (BR-O-02), and the seller is identified by `tax-nr` or `id`.
+
+:::warning Breaking change of the XML
+Earlier versions wrote the small business exemption of every region as category `O` ("not subject to VAT") and left out the VAT identifiers. Invoices with `tax-exempt-small-biz: true` in the regions DE, AT, FR and ES are now written as category `E` and keep the VAT identifiers of seller and buyer, from which the electronic addresses (BT-34, BT-49) are derived, and the German note follows the wording of the amended § 19 UStG. A sender with neither `tax-nr` nor `vat-id` (only an `id`) is now reported as BR-E-02. German-language invoices of other regions (e.g. `locale.de-at`) no longer cite the German § 19 UStG in front of the region's note.
+:::
+
+To state another note or category, override the scheme of the region, e.g. `locale: locale.de-de.with(locale.custom.tax(small-enterprise-special-scheme: tax.exempt(grounds: "...")))`.
 
 ### 4. Gross Prices
 
@@ -348,6 +373,50 @@ The `"basic"` profile only supports the standard identifier. See [The `item-id` 
 - **EAS Scheme Fallback:** If the prefix of a party's VAT ID has no known scheme and neither a custom `electronic-address` nor an email address is specified, the electronic address block is omitted from the XML payload.
 - **Invoice Type Code (BT-3):** Invoices are always written with type code `380` (commercial invoice). Credited lines and negative totals are supported, dedicated credit notes (`381`) are not.
 - **Plain Text:** Names, addresses and references given as content are written as their plain text; formatting is dropped.
+- **Factur-X XMP Metadata:** The PDF lacks the Factur-X XMP metadata, because Typst cannot write custom XMP metadata yet. The XML is not affected (see [Factur-X XMP Metadata](#factur-x-xmp-metadata)).
+
+---
+
+## Factur-X XMP Metadata
+
+A Factur-X / ZUGFeRD PDF announces its XML in the XMP metadata of the PDF, with the Factur-X extension schema (`fx:DocumentType`, `fx:DocumentFileName`, `fx:Version` and `fx:ConformanceLevel`). Typst cannot write custom XMP metadata yet, so `invoice-pro` cannot add these entries. This is a limitation of the Typst platform, not of the invoice data:
+
+- The embedded `factur-x.xml` is complete and valid for its profile. Most receiving systems only extract and process this XML.
+- Validators that check the PDF itself reject it. The Mustang validator, for example, reports `XMP Metadata: ConformanceLevel not found` together with the missing `DocumentType`, `DocumentFileName` and `Version`, and rates the PDF (not the XML) as invalid.
+
+`invoice-pro` will write the metadata as soon as Typst supports custom XMP metadata.
+
+:::info Optional post-processing, outside the package
+You do not need any of this to create an invoice, and `invoice-pro` does not run external tools. If a recipient requires a PDF that passes the Factur-X PDF check, you can add the metadata afterwards with the [Mustang](https://www.mustangproject.org/) command line tool, which needs Java: download `Mustang-CLI-2.14.0.jar` from the [Mustang releases](https://github.com/ZUGFeRD/mustangproject/releases) and run it with `java -jar`. The steps below were tested with Mustang CLI 2.14.0.
+:::
+
+```bash
+# 1. Compile the invoice as usual.
+typst compile --pdf-standard=a-3b invoice.typ invoice.pdf
+
+# 2. Extract the XML that invoice-pro embedded.
+java -jar Mustang-CLI-2.14.0.jar --action extract \
+  --source invoice.pdf --out invoice.xml
+
+# 3. Embed it again together with the Factur-X XMP metadata. The profile
+#    letter must match the profile of the invoice (see the table below).
+java -jar Mustang-CLI-2.14.0.jar --action combine \
+  --source invoice.pdf --source-xml invoice.xml --out invoice-facturx.pdf \
+  --format fx --version 1 --profile E --no-additional-attachments
+
+# 4. Check the result: PDF, XML and the summary must be "valid".
+java -jar Mustang-CLI-2.14.0.jar --action validate --source invoice-facturx.pdf
+```
+
+| `zugferd` profile of the invoice | `--profile` |
+| :------------------------------- | :---------- |
+| `"minimum"`                      | `M`         |
+| `"basic-wl"`                     | `W`         |
+| `"basic"`                        | `B`         |
+| `"en16931"`                      | `E`         |
+| `"xrechnung"`                    | `X`         |
+
+With `zugferd: auto`, use the profile the invoice was written in: `X` if the guideline ID of the XML (BT-24) ends in `xrechnung_3.0`, otherwise `E`. `--format fx --version 1` writes the metadata of Factur-X 1.0, which ZUGFeRD 2.1 and later use as well. For `X`, Mustang embeds the XML a second time under the name `xrechnung.xml`, next to the `factur-x.xml` of `invoice-pro`; both files are identical. XRechnung is primarily exchanged as the XML file itself: if a recipient asks for an XRechnung, you can send `invoice.xml` from step 2.
 
 ---
 
