@@ -70,6 +70,10 @@
 // is removed separately. (ASCII only: a class with other characters, or a
 // Unicode class such as `\d` or `\s`, takes a fraction of a millisecond to
 // compile on every compile.)
+// The highest total of a small-amount invoice in euros, which needs fewer
+// details (§ 33 UStDV).
+#let _small-amount = decimal("250")
+
 #let _amount-characters = regex("[0-9 .,'+\\-()]")
 
 #let check-document(model) = {
@@ -462,37 +466,108 @@
     }
   }
 
-  // IP-PERIOD-01: a service period printed as a text of its own (e.g.
-  // `references.service-time(value: "Juni 2026")`) cannot reach the XML,
-  // which states the service period of the items or the invoice date. The
-  // delivery information exists from BASIC WL on.
+  // IP-PERIOD-01: the service period the invoice prints is the one the XML
+  // states (BT-72 or BG-14). Another date or period (e.g.
+  // `references.service-time(value: datetime(..))`) contradicts it, and so
+  // does a text of its own (e.g. `references.service-time(value: "Juni
+  // 2026")`) when the XML states the invoice date for want of any date. A
+  // text of its own besides dates of the items or the invoice's
+  // `service-period` may name the same period in other words: a warning.
+  // The delivery information exists from BASIC WL on.
   let delivery = model.at("delivery", default: (:))
   let printed = delivery.at("printed", default: none)
   let stated = delivery.at("text", default: none)
+  let source = delivery.at("source", default: none)
+  let term = if delivery.at("period", default: none) != none { "BG-14" } else {
+    "BT-72"
+  }
   if (
     profile.settlement
       and printed != none
       and stated != none
       and printed != stated
   ) {
-    out.push(warning(
+    let own = delivery.at("printed-own", default: true)
+    let contradicts = not own or source == "invoice-date"
+    let report = if contradicts { error } else { warning }
+    out.push(report(
       "IP-PERIOD-01",
       "references",
       "The invoice prints the service period "
         + _quoted(printed)
+        + if contradicts { "" } else { " as a text of its own" }
         + ", but the e-invoice states "
         + _quoted(stated)
         + " ("
-        + if delivery.at("period", default: none) != none { "BG-14" } else {
-          "BT-72"
-        }
+        + term
         + ")"
-        + if delivery.at("source", default: none) == "invoice-date" {
+        + if source == "invoice-date" {
           ", the invoice date, as no item has a date"
-        }
-        + ".",
-      hint: "Set `service-period` on the invoice, e.g. `service-period: (datetime(year: 2026, month: 6, day: 1), datetime(year: 2026, month: 6, day: 30))`, and print it with `references.service-time()`.",
+        } else if source == "items" { ", from the dates of the items" }
+        + if contradicts { "." } else {
+          ". Make sure that both name the same period."
+        },
+      hint: "Set `service-period` on the invoice, e.g. `service-period: (datetime(year: 2026, month: 6, day: 1), datetime(year: 2026, month: 6, day: 30))`, and print it with `references.service-time()` without `value`, which prints the service period of the e-invoice.",
     ))
+  }
+
+  // IP-PERIOD-03: the invoice prints the date of the supply: by its
+  // references, with the dates of the items or in its text (see
+  // `_period-shown` of the model). German law requires it on
+  // every invoice, also when it is the date of the invoice (§ 14 Abs. 4
+  // Satz 1 Nr. 6 UStG, UStAE 14.5 Abs. 16), except on a small-amount invoice
+  // of at most 250 euros that is no intra-community supply or reverse charge
+  // (§ 33 UStDV); the VAT Directive where it differs from the date of the
+  // invoice (Art. 226 No. 7). A credit note amends an invoice that states
+  // it. Only known for a theme that prints the references (e.g. DIN 5008),
+  // not for the blank theme.
+  let document = model.invoice.at("document", default: none)
+  let credit = (
+    type(document) == dictionary and document.at("credit", default: false)
+  )
+  if delivery.at("shown", default: none) == false and not credit {
+    let issue-date = model.invoice.at("issue-date", default: none)
+    let differs = (
+      delivery.at("period", default: none) != none
+        or delivery.at("date", default: none) != issue-date
+    )
+    let german = model.seller.address.country == "DE"
+    let totals = model.at("totals", default: (:))
+    let small-amount = (
+      german
+        and model.at("currency", default: none) == "EUR"
+        and totals.at("gross", default: none) != none
+        and totals.gross <= _small-amount
+        and model
+          .at("taxes", default: ())
+          .all(tax => tax.at("category", default: none) not in ("K", "AE"))
+    )
+    if german and not small-amount {
+      out.push(error(
+        "IP-PERIOD-03",
+        "references",
+        "The printed invoice does not show the date of the supply"
+          + if profile.settlement and stated != none {
+            " (" + _quoted(stated) + " in the e-invoice, " + term + ")"
+          }
+          + ", which German law requires on the invoice, also when it is the date of the invoice (§ 14 Abs. 4 Satz 1 Nr. 6 UStG).",
+        hint: "Print it with `references.service-time()`, which the default `references` and every preset include, and set `service-period` if the supply was not on the date of the invoice.",
+      ))
+    } else if profile.settlement and stated != none and differs {
+      out.push(warning(
+        "IP-PERIOD-03",
+        "references",
+        "The e-invoice states the date of the supply "
+          + _quoted(stated)
+          + " ("
+          + term
+          + "), which is not the date of the invoice, but the printed invoice does not show it"
+          + if small-amount {
+            " (a small-amount invoice of at most 250 euros need not show it, § 33 UStDV)."
+          } else { " (Art. 226 No. 7 of the VAT Directive)." },
+        hint: "Print it with `references.service-time()`, which every preset includes.",
+      ))
+    }
   }
   out
 }
@@ -1503,6 +1578,31 @@
       } else if model.outside-scope {
         "An invoice not subject to VAT (O) states no VAT identifier (BR-O-02). Set `tax-nr`, `id` or `legal-id` on the sender."
       } else { "Set `vat-id`, `tax-nr`, `id` or `legal-id` on the sender." },
+    ))
+  }
+
+  // IP-PRINT-03: the printed invoice shows the seller's VAT ID or tax number
+  // the XML states (BT-31, BT-32), one of which the law requires on the
+  // invoice (§ 14 Abs. 4 Satz 1 Nr. 2 UStG; Art. 226 No. 3 of the VAT
+  // Directive). Only known for a theme that prints the references and no
+  // content of its own on every page, see `logic/printed.typ`.
+  if seller.at("printed-tax-id", default: none) == false {
+    let stated = ()
+    if seller.vat-id != none {
+      stated.push("VAT identifier " + _quoted(seller.vat-id) + " (BT-31)")
+    }
+    if seller.tax-nr != none {
+      stated.push("tax number " + _quoted(seller.tax-nr) + " (BT-32)")
+    }
+    out.push(error(
+      "IP-PRINT-03",
+      "references",
+      "The e-invoice states the seller's "
+        + stated.join(" and ")
+        + ", but the printed invoice shows "
+        + if stated.len() > 1 { "neither" } else { "it nowhere" }
+        + ". The printed invoice and the e-invoice must state the same details, and the law requires the seller's tax number or VAT identifier on every invoice but a small-amount invoice (§ 14 Abs. 4 Satz 1 Nr. 2 UStG, § 33 UStDV; Art. 226 No. 3 of the VAT Directive).",
+      hint: "Print it with the reference signs: keep `references: auto`, use a preset such as `references.preset-b2b()`, or add `references.seller-vat-id()` or `references.seller-tax-nr()` to your references. The `extra` details of the sender and the text of the invoice work as well.",
     ))
   }
 

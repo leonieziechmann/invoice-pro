@@ -547,6 +547,17 @@
           tax-mode: ctx.tax-mode,
           discounts: modifier-applicator.modifier.discounts,
           surcharges: modifier-applicator.modifier.surcharges,
+          // Whether the dates of the items are printed: with each item, or
+          // below the items when they share one date. They state the date of
+          // the supply (BT-72, BG-14) the law requires on the invoice.
+          dates-printed: layout-information.has-dates
+            and (
+              layout-information.show-dates
+                or (
+                  not layout-information.multiple-dates
+                    and layout-information.show-global-information
+                )
+            ),
         ),
       )
 

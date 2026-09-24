@@ -40,7 +40,13 @@
   theme: capturing-theme,
   locale: locale.de-de,
   zugferd: "en16931",
-  references: (references.payment-reference(),),
+  references: (
+    references.payment-reference(),
+    // What the law requires on the invoice (IP-PRINT-03, IP-PERIOD-03)
+    references.seller-tax-nr(),
+    references.seller-vat-id(),
+    references.service-time(),
+  ),
   sender: (
     name: "Test GmbH",
     address: "Musterstraße 1",

@@ -880,10 +880,21 @@
     "Custom Date Label",
     "2026-7-15",
   ))
-  assert.eq(service-time(value: "Custom Service Time"), (
-    "Mock Service Time",
-    "Custom Service Time",
-  ))
+  // A text of its own is marked apart from dates
+  let (title, custom) = (references.service-time(value: "Custom Service Time"))(
+    mock-ctx,
+  )
+  assert.eq(
+    (title, plain-text(custom)),
+    (
+      "Mock Service Time",
+      "Custom Service Time",
+    ),
+  )
+  assert.eq(
+    custom.at("label", default: none),
+    <invoice-pro:service-period-text>,
+  )
 
   // 3. Test service-time fallback to invoice-date when no items/dates are present
   let mock-ctx-no-dates = mock-ctx

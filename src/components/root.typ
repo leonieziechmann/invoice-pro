@@ -335,9 +335,19 @@
         // validator, serializer) at all.
         import "../zugferd/zugferd.typ": process-zugferd
         import "../zugferd/report.typ": format-report, render-zugferd-report
+        import "../logic/printed.typ": printed-record
 
+        // What the printed invoice shows besides the components, for the
+        // checks that it states what the e-invoice states.
+        let printed = printed-record(
+          ctx.theme,
+          ctx.references,
+          ctx.sender,
+          ctx.recipient,
+          body,
+        )
         let result = process-zugferd(
-          ctx,
+          ctx + (printed: printed),
           view.item-data,
           payment-goal: view.payment-goal,
           bank: view.bank,

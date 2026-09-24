@@ -118,8 +118,10 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | `IP-DOC-03`     | error   | A credit note with a negative total: it states the credited amounts as positive amounts, so it would ask the buyer to pay.                                                                                                                                                         |
 | `IP-DOC-04`     | warning | An invoice with a negative total: valid, but a credit note (`document-type: "credit-note"`) is the document for a credit.                                                                                                                                                          |
 | `IP-PROFILE-01` | warning | An input the chosen profile cannot state, e.g. `notes` in `"minimum"`: it is printed, but not written into the e-invoice.                                                                                                                                                          |
-| `IP-PERIOD-01`  | warning | A service period printed as a text of its own (e.g. `references.service-time(value: "Juni 2026")`), which the XML cannot state. See [Service Period](#10-service-period-bt-72--bg-14).                                                                                             |
+| `IP-PERIOD-01`  | error   | A printed service period that is not the one the XML states: another date, or a text of its own where the XML states the invoice date. A text of its own besides dated items or a `service-period` is a warning. See [Service Period](#10-service-period-bt-72--bg-14).            |
 | `IP-PERIOD-02`  | warning | The date of an item outside the `service-period` of the invoice. XRechnung checks it for an invoicing period (BG-14) as `PEPPOL-EN16931-R110` and `R111`. See [Item Notes, Periods and Country of Origin](#12-item-notes-periods-and-country-of-origin).                           |
+| `IP-PERIOD-03`  | error   | The printed invoice does not show the date of the supply, which German law requires on every invoice but a small-amount invoice; for a seller elsewhere a warning where it is not the invoice date. See [Printed Details](#printed-details).                                       |
+| `IP-PRINT-03`   | error   | The XML states the seller's VAT identifier (BT-31) or tax number (BT-32), one of which the law requires on the invoice, but the printed invoice shows neither. See [Printed Details](#printed-details).                                                                            |
 
 ### The `zugferd-errors` Parameter
 
@@ -165,6 +167,66 @@ In `"report"` mode, the list is rendered by the theme function `zugferd-report`,
 ```
 
 Whatever the function returns is placed above the invoice body as content (a string works as well). A theme can do without the list with `zugferd-report: none`. Errors must not go unnoticed, though: if the theme shows no report (`none`, or a function that returns `none` or empty content), errors stop the compilation as with `"panic"`, and only warnings are left out. Any other value is rejected with an error naming `theme::zugferd-report`.
+
+### Printed Details
+
+The printed invoice and its XML are one invoice, so the printed invoice shows what the XML states and the law requires on an invoice:
+
+- **The seller's tax number or VAT identifier** (`IP-PRINT-03`, § 14 Abs. 4 Satz 1 Nr. 2 UStG, Art. 226 No. 3 of the VAT Directive): an error if the XML states the seller's VAT identifier (BT-31) or tax number (BT-32), but the printed invoice shows neither. A small-amount invoice of at most 250 euros needs neither by German law (§ 33 UStDV), but it shows what its XML states as well.
+- **The date of the supply** (`IP-PERIOD-03`): for a seller in Germany an error, as the law requires it on every invoice, also when it is the date of the invoice (§ 14 Abs. 4 Satz 1 Nr. 6 UStG), except on a small-amount invoice of at most 250 euros that is no intra-community supply or reverse charge (§ 33 UStDV). For a seller elsewhere, and on a small-amount invoice, it is a warning where the date of the supply is not the date of the invoice (Art. 226 No. 7 of the VAT Directive). A credit note, which amends an invoice, is not checked.
+
+The default `references` and every [preset](./api-reference/invoice/references.md#preset-packages) print both. A detail counts as shown in a reference sign of any title (e.g. `references.seller-vat-id()`, `references.service-time()` or `("Lieferdatum", "01.09.2026")`), in the `extra` of the sender or the recipient, in the text of the invoice (e.g. `#info.sender.vat-id`) and, for the date of the supply, with the dates of the items. Identifiers are compared without spaces, and the date of the supply as the XML states it, in the date format of the locale: a sentence such as "Leistungsdatum entspricht Rechnungsdatum" is not recognized, so print the date with `references.service-time()`. The invoice date does not count as the date of the supply.
+
+`invoice-pro` knows what the page shows only for a theme that says what it prints (`prints`, see [What the Theme Prints](./api-reference/theme.md#what-the-theme-prints)): the DIN-5008 theme prints the reference signs and the `extra` of the parties. The blank theme and themes without `prints` are not checked, and neither is `IP-PRINT-03` with a `header` or `footer` of the theme, which may show the tax number.
+
+```typst
+#import "@preview/invoice-pro:0.4.2": *
+
+#show: invoice.with(
+  theme: themes.DIN-5008(font: "libertinus serif"),
+  zugferd: "en16931",
+  sender: (
+    name: "Consulting Group GmbH",
+    address: "Tech Avenue 42",
+    city: "80331 München",
+    country: country.de,
+    vat-id: "DE123456789",
+    contact: (
+      name: "Max Mustermann",
+      phone: "+49 89 1234567",
+      email: "max@consultinggroup.de",
+    ),
+  ),
+  recipient: (
+    name: "Acme Corp",
+    address: "Industrial Road 1",
+    city: (name: "Stuttgart", post-code: "70173"),
+    country: country.de,
+    vat-id: "DE987654321",
+  ),
+  invoice-nr: "INV-2026-103",
+  date: datetime(year: 2026, month: 7, day: 8),
+  service-period: datetime(year: 2026, month: 7, day: 2),
+  references: (
+    references.invoice-nr(),
+    references.invoice-date(),
+    references.service-time(), // the date of the supply: 02.07.2026
+    references.seller-vat-id(), // or references.seller-tax-nr()
+  ),
+)
+
+#line-items[
+  #item([On-site Workshop], quantity: 8, unit: unit.hour, price: 120.00)
+]
+
+#payment-goal(days: 14)
+
+#bank-details(
+  bank: "Global Business Bank",
+  iban: "DE89370400440532013000",
+  bic: "GBBADEFFXXX",
+)
+```
 
 ---
 
@@ -628,7 +690,7 @@ A single date is written as the actual delivery date (BT-72), a period as the in
 )
 ```
 
-A service period printed as a text of its own, e.g. `references.service-time(value: "Juni 2026")` or a reference `("Leistungszeitraum", "Juni 2026")`, cannot reach the XML, which would state another date: `invoice-pro` warns about it (`IP-PERIOD-01`). Set `service-period` instead.
+The printed service period must be the one the XML states (`IP-PERIOD-01`). `references.service-time(value: ..)` prints a date or a period `(start, end)` given as `value` in the date format of the locale, and another date than the one the XML states is an error. A text of its own, e.g. `references.service-time(value: "Juni 2026")` or a reference `("Leistungszeitraum", "Juni 2026")`, cannot reach the XML: without dates on the items or a `service-period`, the XML states the invoice date, which the text contradicts, so it is an error; besides them, the text may name the same period in other words, so it is a warning. Set `service-period` instead, and print it with `references.service-time()`. A printed invoice without the date of the supply is reported as well (`IP-PERIOD-03`, see [Printed Details](#printed-details)).
 
 ### 11. Notes (BT-22)
 

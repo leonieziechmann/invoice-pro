@@ -42,6 +42,9 @@
     references.preceding-invoice-nr(),
     references.preceding-invoice-date(),
     references.invoice-date(),
+    // The seller's tax number and VAT ID the e-invoice states (IP-PRINT-03)
+    references.seller-tax-nr(),
+    references.seller-vat-id(),
   ),
 )
 

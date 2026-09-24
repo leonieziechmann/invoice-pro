@@ -74,6 +74,11 @@
 /// (BT-72, BG-14, IP-PERIOD-01).
 #let service-period-label = label("invoice-pro:service-period")
 
+/// The label of a service period printed as a text of its own (`value` of
+/// `references.service-time` that is no date), which the e-invoice cannot
+/// compare date by date.
+#let service-period-text-label = label("invoice-pro:service-period-text")
+
 #let service-time(label: auto, value: auto) = {
   ctx => {
     let title = if label == auto {
@@ -82,34 +87,33 @@
     let format-date = ctx.locale.format.date
     // The service period the e-invoice states as well (BT-72, BG-14), or a
     // date or period `(start, end)` given as `value`, in the date format of
-    // the locale, as any date the invoice prints.
-    let val = if value == auto {
+    // the locale, as any date the invoice prints; else a text of its own.
+    let (val, own-text) = if value == auto {
       let items = ctx.at("items", default: none)
-      format-service-period(
-        resolve-service-period(
-          if items == none { () } else { items },
-          ctx.invoice-date,
-          service-period: ctx.at("service-period", default: none),
-        ),
-        format-date,
+      let period = resolve-service-period(
+        if items == none { () } else { items },
+        ctx.invoice-date,
+        service-period: ctx.at("service-period", default: none),
       )
+      (format-service-period(period, format-date), false)
     } else if type(value) == datetime {
-      format-date(value)
+      (format-date(value), false)
     } else if (
       type(value) == array
         and value.len() == 2
         and type(value.first()) == datetime
         and type(value.last()) == datetime
     ) {
-      format-service-period(
-        (start: value.first(), end: value.last()),
-        format-date,
-      )
+      let period = (start: value.first(), end: value.last())
+      (format-service-period(period, format-date), false)
     } else {
-      value
+      (value, true)
     }
     if val in (none, "", []) { return (title, none) }
-    (title, [#val<invoice-pro:service-period>])
+    // Marked, so that the e-invoice finds it whatever its title.
+    if own-text { (title, [#val<invoice-pro:service-period-text>]) } else {
+      (title, [#val<invoice-pro:service-period>])
+    }
   }
 }
 

@@ -139,3 +139,33 @@ The `line-items` layout, `(ctx, data, body) => content`, receives the legal note
 The VAT lines carry the same markers (`marker` of each entry of `data.taxes`), as do the items of a VAT category with several exemption grounds (`tax.marker` of each entry of `data.items`). With exemption notes, the built-in layout leaves out the standard tax statement (e.g. "All items are excl. 19% Tax.").
 
 `data.exemption-notes` also lists the notes of the invoice (`invoice(notes: ..)`, kind `"note"`) after the exemption notes. The built-in layout prints all of them even when `data.layout-information.show-global-information` is `false` (`line-items(show-information: false)`), which only hides the information about what the items share: the law requires the exemption notes on the invoice, and the e-invoice states them and the notes (BT-120, BT-22). A custom layout should print them as well.
+
+### What the Theme Prints
+
+A theme says what its `document` layout prints of the invoice data besides the components as `prints`, a dictionary of flags that are all `false` unless set:
+
+| Key            | Description                                                                                                                                   |
+| :------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- |
+| `references`   | It prints the reference signs, `ctx.references`.                                                                                              |
+| `party-extra`  | It prints the `extra` details of the sender and the recipient.                                                                                |
+| `page-content` | It prints content of its own on every page, e.g. a footer, whose text `invoice-pro` cannot read. A `header` or `footer` of the theme sets it. |
+
+For a theme that prints the reference signs, the e-invoice checks that the printed invoice shows the seller's tax number or VAT identifier (`IP-PRINT-03`) and the date of the supply (`IP-PERIOD-03`), see [Printed Details](../e-invoicing.md#printed-details). The DIN-5008 theme prints the reference signs and the `extra` of the parties; the blank theme says nothing, so nothing is checked. A `document` layout of your own that prints the reference signs can say so:
+
+```typst
+#import "@preview/invoice-pro:0.4.2": invoice, themes
+
+#show: invoice.with(
+  theme: themes.blank.with(
+    document: (ctx, body) => {
+      for (title, value) in ctx.references [#title: #value \ ]
+      body
+    },
+    prints: (references: true),
+  ),
+  sender: (name: "Acme Corp"),
+  recipient: (name: "Jane Doe"),
+)
+```
+
+A `document` layout of your own in place of the one of the DIN-5008 theme that does not print them sets `prints: (references: false)`.
