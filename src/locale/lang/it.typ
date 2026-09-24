@@ -173,6 +173,10 @@
       sum,
       date,
     ) => [L'importo dovuto di *#sum* è stato pagato#if date != none [ il #date].],
+    paid-credit: (
+      sum,
+      date,
+    ) => [Vi abbiamo versato l'importo di *#sum*#if date != none [ il #date].],
   ),
 
   /// Blocchi di testo per i termini di pagamento

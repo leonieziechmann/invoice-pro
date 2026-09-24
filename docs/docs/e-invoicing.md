@@ -546,7 +546,11 @@ A card payment or a direct debit adds its details with its own component. XRechn
 #card-payment(last4: "4242", holder: "Claire Martin", kind: "credit")
 ```
 
-With prepayments, the printed sentence states the remaining amount that was paid; the e-invoice states the total as paid amount either way. An invoice that is paid has no payment goal: `paid` next to `payment-goal` stops the compilation.
+With prepayments, the printed sentence states the remaining amount that was paid; the e-invoice states the total as paid amount either way. An invoice that is paid has no payment goal and no payment terms: `paid` next to `payment-goal`, or next to a text as `due-date` of the invoice, which would be the payment terms (BT-20) instead of the sentence that it is paid, stops the compilation. A `datetime` as `due-date` is the due date (BT-9) the payment met.
+
+A payment means code of its own must be the code of the component that details its kind, as the invoice states one (BT-81): `paid(method: (code: "54", name: [Visa]))` next to `card-payment(kind: "credit")` states 54 with the card details and prints its name, but next to `card-payment()` (48, a card of any kind) it stops the compilation, as one of the codes would be lost.
+
+On a credit note or a self-billed invoice, the sender paid the amount to the recipient: the sentence says so (e.g. "Den Betrag in Höhe von 119,00 € haben wir Ihnen am 01.09.2026 ausgezahlt."), and the e-invoice states it as payment terms (BT-20).
 
 #### Cash Discount (Skonto)
 

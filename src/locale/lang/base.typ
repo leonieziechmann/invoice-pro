@@ -209,6 +209,15 @@
       date,
     ) => if date
       == none [The amount due of *#sum* has been paid.] else [The amount due of *#sum* was paid on #date.],
+    /// `paid` on a credit note or a self-billed invoice, whose sender pays
+    /// the amount to the recipient: the paid amount and the date of the
+    /// payment (`none` if not given).
+    /// -> (content|str, none|content|str) => content
+    paid-credit: (
+      sum,
+      date,
+    ) => if date
+      == none [We have paid the amount of *#sum* to you.] else [We paid the amount of *#sum* to you on #date.],
   ),
 
   /// Text blocks for payment terms

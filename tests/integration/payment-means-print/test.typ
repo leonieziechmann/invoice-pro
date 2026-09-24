@@ -97,6 +97,34 @@
   #debit
   #bank-details(iban: "DE89370400440532013000", qr-code: (display: true))
 ]
+// A credit note or a self-billed invoice is paid by its sender: the amount
+// was paid to the recipient
+#test-invoice("paid-credit", document-type: "credit-note")[
+  #items
+  #paid(method: "transfer", date: datetime(year: 2026, month: 9, day: 1))
+  #bank
+]
+#test-invoice(
+  "paid-self-billed-en",
+  lang: locale.en-de,
+  document-type: "self-billed",
+)[#items #paid(method: "cash")]
+#for (name, lang) in (
+  ("fr", locale.fr-fr),
+  ("it", locale.it-it),
+  ("es", locale.es-es),
+) {
+  test-invoice("paid-credit-" + name, lang: lang, document-type: "credit-note")[
+    #items
+    #paid(method: "cash", date: datetime(year: 2026, month: 9, day: 1))
+  ]
+}
+// A method of its own is printed next to the details of its component
+#test-invoice("paid-card-name")[
+  #items
+  #paid(method: (code: "54", name: [Visa]))
+  #card-payment(last4: "1234", kind: "credit")
+]
 // The currency code of the locale is read as the e-invoice reads it (BT-5):
 // "eur" is the euro, so the direct debit is a SEPA direct debit
 #let lower-case-euro = locale.de-de.with((region: (currency: (code: "eur"))))
@@ -195,6 +223,44 @@
     "Der Gesamtbetrag in Höhe von 119,00 € wurde bezahlt.\nFälliger Betrag: 0,00 €",
   )
 
+  // Paid by the sender of a credit note or a self-billed invoice
+  expect(
+    "paid-credit/paid",
+    "Den Betrag in Höhe von 119,00 € haben wir Ihnen am 01.09.2026 ausgezahlt.\nZahlungsart: Überweisung\nFälliger Betrag: 0,00 €",
+  )
+  expect(
+    "paid-self-billed-en/paid",
+    "We have paid the amount of 119,00 € to you.\nPayment method: Cash\nAmount Due: 0,00 €",
+  )
+  for (key, sentence) in (
+    (
+      "paid-credit-fr/paid",
+      "Nous vous avons versé le montant de 119,00 € le 01.09.2026.",
+    ),
+    (
+      "paid-credit-it/paid",
+      "Vi abbiamo versato l'importo di 119,00 € il 01.09.2026.",
+    ),
+    (
+      "paid-credit-es/paid",
+      "Le hemos pagado el importe de 119,00 € el 01.09.2026.",
+    ),
+  ) {
+    assert.eq(
+      printed.at(key, default: "").split("\n").first(),
+      sentence,
+      message: key + ": " + repr(printed.at(key, default: none)),
+    )
+  }
+  // The name of a method of its own next to the card details
+  expect(
+    "paid-card-name/paid",
+    "Der Gesamtbetrag in Höhe von 119,00 € wurde bezahlt.\nZahlungsart: Visa\nFälliger Betrag: 0,00 €",
+  )
+  expect(
+    "paid-card-name/card",
+    "Zahlungsart: Kreditkarte\nKartennummer: **** 1234",
+  )
   // "eur": a SEPA direct debit, and the bank details show the EPC-QR code
   assert(
     printed
@@ -225,6 +291,37 @@
   assert.eq(
     error[#items #payment-goal(days: 14) #paid(method: "cash")],
     "assertion failed: An invoice that is `paid` has no `payment-goal`: nothing is left to pay. Remove the `payment-goal`.",
+  )
+  // Nor payment terms of its own
+  assert.eq(
+    catch(() => test-invoice("error", due-date: "sofort")[
+      #items #paid(method: "cash")
+    ]),
+    "assertion failed: An invoice that is `paid` has no payment terms: nothing is left to pay, but `due-date` is a text of payment terms. Remove `due-date`, or give the date the payment was due as a `datetime`.",
+  )
+  // A due date is the date the payment met
+  assert.eq(
+    type(test-invoice("error", due-date: datetime(
+      year: 2026,
+      month: 9,
+      day: 15,
+    ))[
+      #items #paid(method: "cash")
+    ]),
+    content,
+  )
+  // A payment means code of its own that its component states otherwise
+  assert.eq(
+    error[#items #paid(method: (code: "54", name: [Visa])) #card],
+    "panicked with: \"paid: `method` names the payment means code \\\"54\\\", but the `card-payment` of the invoice states the code \\\"48\\\". An invoice states one payment means code (BT-81). Set the kind of the card on `card-payment` (`kind: \\\"credit\\\"` for 54, `kind: \\\"debit\\\"` for 55, `auto` for 48) and use a `method` of that code, or leave out `method`.\"",
+  )
+  assert(
+    error[#items #paid(method: (
+        code: "30",
+        name: [Überweisung],
+      )) #bank].contains(
+      "the `bank-details` of the invoice states the code \\\"58\\\"",
+    ),
   )
   // "eur" is the euro: the creditor identifier of a SEPA direct debit is
   // checked

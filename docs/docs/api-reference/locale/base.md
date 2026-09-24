@@ -164,6 +164,7 @@ Texts of the payment means besides the bank details: [`direct-debit`](../compone
 | `card-number`, `card-holder`                                                                                     | `str`                           | Labels of the details of a payment card (e.g., `"Card number"`).                                             |
 | `paid`                                                                                                           | `(content, content) => content` | Sentence of a paid invoice. Parameters map to `(sum, date)`; `date` is `none` if not given.                  |
 | `paid-due`                                                                                                       | `(content, content) => content` | Replaces `paid` when prepayments reduced the payable amount, so `sum` is the remaining amount that was paid. |
+| `paid-credit`                                                                                                    | `(content, content) => content` | Replaces `paid` on a credit note or a self-billed invoice, whose sender paid the amount to the recipient.    |
 
 ### `payment`
 

@@ -133,6 +133,21 @@
         payment-means-signals.paid == none or payment-goal-signal == none,
         message: "An invoice that is `paid` has no `payment-goal`: nothing is left to pay. Remove the `payment-goal`.",
       )
+      // Nor payment terms of its own: a text as `due-date` (e.g. "sofort")
+      // would be printed and stated as the payment terms (BT-20) instead of
+      // the sentence that the invoice is paid. A date is the due date the
+      // payment met.
+      let due-date = ctx.at("due-date", default: none)
+      if (
+        payment-means-signals.paid != none
+          and type(due-date) in (str, content)
+          and due-date not in ("", [])
+      ) {
+        assert(
+          false,
+          message: "An invoice that is `paid` has no payment terms: nothing is left to pay, but `due-date` is a text of payment terms. Remove `due-date`, or give the date the payment was due as a `datetime`.",
+        )
+      }
       let payment-means = resolve-payment-means(
         bank-signals,
         payment-means-signals.direct-debit,

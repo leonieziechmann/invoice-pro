@@ -282,6 +282,8 @@
 /// - paid (auto, fn): sentence of a paid invoice: (sum, date) => content,
 ///   `date` is `none` if not given
 /// - paid-due (auto, fn): `paid` after prepayments: (sum, date) => content
+/// - paid-credit (auto, fn): `paid` on a credit note or a self-billed
+///   invoice, whose sender pays the amount: (sum, date) => content
 /// -> array
 #let payment-means(
   method: auto,
@@ -301,6 +303,7 @@
   card-holder: auto,
   paid: auto,
   paid-due: auto,
+  paid-credit: auto,
 ) = (
   {
     let payload = _clean-auto((
@@ -321,6 +324,7 @@
       card-holder: card-holder,
       paid: paid,
       paid-due: paid-due,
+      paid-credit: paid-credit,
     ))
     (strings: (payment-means: payload))
   },

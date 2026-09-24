@@ -187,7 +187,7 @@ On a credit note or a self-billed invoice, whose sender pays the amount, `card-p
 
 ## `paid`
 
-States that the invoice is paid already, e.g. in cash or by card at the counter. It prints that the amount was paid, and how, and that nothing is due. An invoice that is paid has no [`payment-goal`](#payment-goal): the two together stop the compilation. In an e-invoice, the total is the paid amount (BT-113), nothing is due (BT-115), the payment means is the one it was paid with (BT-81), and the printed sentence is the payment terms (BT-20).
+States that the invoice is paid already, e.g. in cash or by card at the counter. It prints that the amount was paid, and how, and that nothing is due. An invoice that is paid has no [`payment-goal`](#payment-goal) and no payment terms: `paid` together with a `payment-goal` or with a text as `due-date` of the invoice (e.g. `due-date: "sofort"`) stops the compilation, while a `datetime` as `due-date` is the date the payment was due. In an e-invoice, the total is the paid amount (BT-113), nothing is due (BT-115), the payment means is the one it was paid with (BT-81), and the printed sentence is the payment terms (BT-20).
 
 ```typst
 #paid(method: "cash", date: datetime(year: 2026, month: 9, day: 1))
@@ -209,7 +209,9 @@ A payment by card, direct debit or transfer adds its details with [`card-payment
 #card-payment(last4: "4242", kind: "credit")
 ```
 
-With prepayments, the sentence states the remaining amount that was paid ("The amount due of ... has been paid.").
+A payment means code of its own (`(code: .., name: ..)`) of a kind that one of these components states as well must be the code of the component, as an invoice states one payment means code (BT-81): `paid(method: (code: "54", name: [Visa]))` next to `card-payment(kind: "credit")` (54) prints its name next to the card details, while next to `card-payment()`, which states a card of any kind (48), it stops the compilation.
+
+With prepayments, the sentence states the remaining amount that was paid ("The amount due of ... has been paid."). On a credit note or a self-billed invoice, the sender pays the amount to the recipient, so the sentence says so ("We paid the amount of ... to you on ...", `paid-credit` of the [language strings](./locale/base.md#payment-means)), and the e-invoice states it as payment terms (BT-20).
 
 ---
 

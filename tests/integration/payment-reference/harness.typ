@@ -93,7 +93,9 @@
   let func = it.func()
   if func == text { it.text } else if func in (linebreak, parbreak) {
     "\n"
-  } else if func == [ ].func() { " " } else if it.has("children") {
+  } else if func == [ ].func() { " " } else if func == smartquote {
+    if it.at("double", default: true) { "\"" } else { "'" }
+  } else if it.has("children") {
     it.children.map(plain).join(default: "")
   } else if it.has("child") { plain(it.child) } else if it.has("body") {
     plain(it.body)

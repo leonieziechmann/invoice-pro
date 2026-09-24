@@ -9,7 +9,8 @@
 #import "../utils/iban.typ": format-iban, iban-valid, normalize-iban
 #import "../utils/creditor-id.typ": creditor-id-valid, normalize-creditor-id
 #import "../logic/payment-means.typ": (
-  method-kind, method-kinds, of-context, report-problems,
+  card-code, direct-debit-code, method-kind, method-kinds, of-context,
+  report-problems, transfer-code,
 )
 #import "../logic/document-type.typ": sender-pays
 #import "../logic/currency.typ": currency-code
@@ -240,11 +241,12 @@
 
 /// States that the invoice is paid already: the paid amount (BT-113) is the
 /// total, and nothing is due (BT-115). An invoice that is paid has no
-/// payment goal.
+/// payment goal and no text as `due-date`.
 ///
-/// Prints that the amount was paid, and how, and that nothing is due. The
-/// e-invoice states the payment means the invoice was paid with (BT-81) and
-/// the printed sentence as payment terms (BT-20).
+/// Prints that the amount was paid, and how, and that nothing is due; on a
+/// credit note or a self-billed invoice, that the sender paid it to the
+/// recipient. The e-invoice states the payment means the invoice was paid
+/// with (BT-81) and the printed sentence as payment terms (BT-20).
 ///
 /// -> content
 #let paid(
@@ -254,7 +256,10 @@
   /// `"direct-debit"` (by the `direct-debit`, 59 or 49), `"cheque"` (20),
   /// `"online"` (an online payment service, 68), or another payment means
   /// code of UNTDID 4461 with its printed name, e.g.
-  /// `(code: "97", name: [Verrechnung])`. `auto` names no method: the
+  /// `(code: "97", name: [Verrechnung])`. A code of a kind that the
+  /// `card-payment`, `direct-debit` or `bank-details` of the invoice state
+  /// must be their code (e.g. 54 next to `card-payment(kind: "credit")`);
+  /// its name is printed next to their details. `auto` names no method: the
   /// payment means of the invoice (`bank-details`, `direct-debit` or
   /// `card-payment`) is the one it was paid with.
   /// -> auto | str | dictionary
@@ -284,21 +289,69 @@
       let names = strings.payment-means
       let format = ctx.locale.format
       let total = ctx.global.total
+      let currency = currency-code(ctx.locale)
       // With prepayments, the amount paid now is the remaining amount due.
+      // The sender of a credit note or a self-billed invoice paid the amount
+      // to the recipient.
       let has-prepayments = total.prepaid > 0
       let amount = total.at("due", default: total.gross)
-      let sentence = if has-prepayments { names.paid-due } else { names.paid }
+      let sentence = if sender-pays(ctx.at("document-type", default: none)) {
+        names.paid-credit
+      } else if has-prepayments { names.paid-due } else { names.paid }
       let text = sentence(
         (format.currency)(amount),
         if type(date) == datetime { (format.date)(date) } else { date },
       )
 
-      // The method, unless the details of the direct debit or the payment
-      // card it names print it already.
+      // A payment means code of its own (`(code: .., name: ..)`) of a kind
+      // that a component of the invoice details (the bank details of a
+      // credit transfer, the direct debit, the payment card) must be the
+      // code of that component: an invoice states one (BT-81), and the other
+      // would be lost.
       let kind = method-kind(method)
       let means = of-context(ctx)
+      if type(method) == dictionary and means != none {
+        let (component, stated, hint) = if (
+          kind == "card" and means.card != none
+        ) {
+          (
+            "card-payment",
+            card-code(means.card.at("kind", default: auto)),
+            "Set the kind of the card on `card-payment` (`kind: \"credit\"` for 54, `kind: \"debit\"` for 55, `auto` for 48) and use a `method` of that code, or leave out `method`.",
+          )
+        } else if kind == "direct-debit" and means.direct-debit != none {
+          (
+            "direct-debit",
+            direct-debit-code(currency),
+            "A direct debit is stated as 59 (SEPA direct debit) in euro and as 49 otherwise: use `method: \"direct-debit\"`, or leave out `method`.",
+          )
+        } else if kind == "transfer" and means.transfers.len() > 0 {
+          (
+            "bank-details",
+            transfer-code(currency),
+            "A credit transfer is stated as 58 (SEPA credit transfer) in euro and as 30 otherwise: use `method: \"transfer\"`, or leave out `method`.",
+          )
+        } else { (none, none, none) }
+        if stated != none and stated != method.code {
+          panic(
+            "paid: `method` names the payment means code \""
+              + method.code
+              + "\", but the `"
+              + component
+              + "` of the invoice states the code \""
+              + stated
+              + "\". An invoice states one payment means code (BT-81). "
+              + hint,
+          )
+        }
+      }
+
+      // The method, unless the details of the direct debit or the payment
+      // card it names print it already. A name of its own is printed in any
+      // case.
       let detailed = (
         means != none
+          and type(method) != dictionary
           and (
             (kind == "direct-debit" and means.direct-debit != none)
               or (kind == "card" and means.card != none)
@@ -307,9 +360,9 @@
       let method-name = if detailed or method == auto { none } else if (
         type(method) == dictionary
       ) { method.name } else if method == "direct-debit" {
-        if currency-code(ctx.locale) == "EUR" {
-          names.sepa-direct-debit
-        } else { names.direct-debit }
+        if currency == "EUR" { names.sepa-direct-debit } else {
+          names.direct-debit
+        }
       } else { names.at(_method-names.at(method)) }
 
       // What the invoice prints about the payment: the sentence and the

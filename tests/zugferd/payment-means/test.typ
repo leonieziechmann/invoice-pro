@@ -292,6 +292,29 @@
   assert.eq(rules(m), ("BR-CL-16",))
 })[#items #paid(method: (code: "97", name: [Verrechnung]))]
 
+// A credit note is paid by its sender: the terms state that the amount was
+// paid to the recipient
+#model-test(..xrechnung, document-type: "credit-note", model => {
+  assert.eq(
+    model.payment.terms,
+    "Den Betrag in Höhe von 238,00 € haben wir Ihnen am 01.09.2026 ausgezahlt.\nZahlungsart: Barzahlung",
+  )
+  assert.eq(model.payment.terms-input, "paid")
+})[
+  #items
+  #paid(method: "cash", date: datetime(year: 2026, month: 9, day: 1))
+]
+
+// A payment means code of its own that its component states as well: the
+// code is stated once, with the details of the component, and the terms
+// state its name
+#model-test(..xrechnung, model => {
+  assert.eq(model.payment.means.map(m => m.type-code), ("54",))
+  assert.eq(model.payment.means.first().card.id, "1234")
+  assert(model.payment.terms.ends-with("Zahlungsart: Visa"))
+  assert.eq(rules(model), ())
+})[#items #paid(method: (code: "54", name: [Visa])) #card]
+
 // --- 4. One kind of payment means per invoice (BT-81) ---
 #model-test(..xrechnung, model => {
   // Both are written, as stated, and reported
