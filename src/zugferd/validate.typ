@@ -22,6 +22,7 @@
 #import "model.typ": profile-terms, vat-eas-codes, vat-id-country, vat-id-prefix
 #import "document.typ": note-subject-code-valid, title-kind
 #import "../utils/iban.typ": format-iban, iban-valid
+#import "../logic/service-period.typ": supply-dated
 #import "../utils/creditor-id.typ": creditor-id-valid
 
 #let _zero = decimal("0")
@@ -89,6 +90,14 @@
 // The highest total of a small-amount invoice in euros, which needs fewer
 // details (§ 33 UStDV).
 #let _small-amount = decimal("250")
+
+// Why the e-invoice of a document states no date of the supply when nothing
+// dates it (see `supply-dated`): a credit note or a prepayment invoice.
+#let _undated-reason(document) = if (
+  type(document) == dictionary and document.at("prepayment", default: false)
+) { "a prepayment invoice precedes the supply" } else {
+  "the date of a credit note is not the date of the supply"
+}
 
 #let _amount-characters = regex("[0-9 .,'+\\-()]")
 
@@ -489,9 +498,10 @@
   let term = if delivery.at("period", default: none) != none { "BG-14" } else {
     "BT-72"
   }
-  // A credit note without dates states none (see `service-period-of`):
-  // a date printed there is missing from the e-invoice, a text of its own
-  // may be a warning only.
+  // A credit note or a prepayment invoice without dates states none (see
+  // `service-period-of`): a date printed there is missing from the
+  // e-invoice, a text of its own may be a warning only.
+  let document = model.invoice.at("document", default: none)
   if profile.settlement and printed != none and printed != stated {
     let own = delivery.at("printed-own", default: true)
     let contradicts = not own or source == "invoice-date"
@@ -503,9 +513,7 @@
         + _quoted(printed)
         + if contradicts { "" } else { " as a text of its own" }
         + ", but the e-invoice states "
-        + if stated == none {
-          "none, as the date of a credit note is not the date of the supply"
-        } else {
+        + if stated == none { "none, as " + _undated-reason(document) } else {
           (
             _quoted(stated)
               + " ("
@@ -536,8 +544,10 @@
     out.push(warning(
       "BR-DE-TMP-32",
       "service-period",
-      "XRechnung recommends the date of the supply (BT-72) or the invoicing period (BG-14), which the e-invoice does not state: a credit note without dates states none, as its own date is not the date of the supply.",
-      hint: "Set `service-period` to the date or period of the supply the credit note refers to, e.g. the one of the preceding invoice, or give the items their `date`.",
+      "XRechnung recommends the date of the supply (BT-72) or the invoicing period (BG-14), which the e-invoice does not state without dates, as "
+        + _undated-reason(document)
+        + ".",
+      hint: "Set `service-period` to the date or period of the supply the document refers to, e.g. the one of the preceding invoice, or give the items their `date`.",
     ))
   }
 
@@ -549,13 +559,11 @@
   // of at most 250 euros that is no intra-community supply or reverse charge
   // (§ 33 UStDV); the VAT Directive where it differs from the date of the
   // invoice (Art. 226 No. 7). A credit note amends an invoice that states
-  // it. Only known for a theme that prints the references (e.g. DIN 5008),
-  // not for the blank theme.
-  let document = model.invoice.at("document", default: none)
-  let credit = (
-    type(document) == dictionary and document.at("credit", default: false)
-  )
-  if delivery.at("shown", default: none) == false and not credit {
+  // it, and a prepayment invoice precedes the supply (§ 14 Abs. 5 UStG asks
+  // for the date of the payment only if it is known), see `supply-dated`.
+  // Only known for a theme that prints the references (e.g. DIN 5008), not
+  // for the blank theme.
+  if delivery.at("shown", default: none) == false and supply-dated(document) {
     let issue-date = model.invoice.at("issue-date", default: none)
     let differs = (
       delivery.at("period", default: none) != none

@@ -122,7 +122,7 @@
 "BG-13" = { name = "DELIVERY INFORMATION", disposition = "input", input = "delivery-address (or recipient.delivery-address)", note = "an intra-community supply without delivery address states the buyer's address (BR-IC-12)" }
 "BT-70" = { name = "Deliver to party name", disposition = "input", input = "delivery-address.name" }
 "BT-71" = { name = "Deliver to location identifier", disposition = "input", input = "delivery-address.id, .location-id or .global-id" }
-"BT-72" = { name = "Actual delivery date", disposition = "derived", source = "service-period (a date), else the date of the items (`date` of `item`, `bundle`, `group`) when they share one, else the invoice date", note = "a credit note without service-period and dates states none: its own date is not the date of the supply" }
+"BT-72" = { name = "Actual delivery date", disposition = "derived", source = "service-period (a date), else the date of the items (`date` of `item`, `bundle`, `group`) when they share one, else the invoice date", note = "a credit note or a prepayment invoice without service-period and dates states none: its own date is not the date of the supply" }
 # ---------------------------------------------------------------- BG-14 Invoicing period
 "BG-14" = { name = "DELIVERY OR INVOICE PERIOD", disposition = "derived", source = "service-period (a period), else the dates of the items (`date` of `item`, `bundle`, `group`) when they span a period" }
 "BT-73" = { name = "Invoicing period start date", disposition = "derived", source = "the earliest date of the items" }

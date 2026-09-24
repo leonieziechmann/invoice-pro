@@ -278,6 +278,13 @@
   references: signs + (references.seller-vat-id(),),
   (rules, _) => assert.eq(rules, ()),
 )[#items()]
+// ... and a prepayment invoice precedes the supply, whose date § 14 Abs. 5
+// UStG does not ask for
+#report-test(
+  document-type: "prepayment",
+  references: signs + (references.seller-vat-id(),),
+  (rules, _) => assert.eq(rules, ()),
+)[#items()]
 
 // --- 6. A self-billed invoice: the seller is the recipient ---
 #report-test(
@@ -306,4 +313,4 @@
 )[#items()]
 
 // Every report above was shown and checked.
-#context assert.eq(query(<report-checked>).len(), 28)
+#context assert.eq(query(<report-checked>).len(), 29)

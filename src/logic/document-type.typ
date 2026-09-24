@@ -104,7 +104,9 @@
 /// - `self-billed`: whether the buyer issues the document, i.e. the sender
 ///   of the document is the buyer and its recipient the seller,
 /// - `sender-pays`: whether the sender of the document pays the amount to
-///   its recipient (credit notes and self-billed invoices).
+///   its recipient (credit notes and self-billed invoices),
+/// - `prepayment`: whether it is a prepayment invoice (386), which asks for
+///   an advance payment before the supply.
 ///
 /// -> dictionary
 #let resolve-document-type(value) = {
@@ -139,6 +141,7 @@
     credit: credit,
     self-billed: self-billed,
     sender-pays: credit != self-billed,
+    prepayment: kind == "prepayment",
   )
 }
 

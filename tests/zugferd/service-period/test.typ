@@ -1,9 +1,9 @@
 // The service period is resolved once for the printed invoice
 // (`references.service-time`) and the e-invoice (BT-72 or BG-14): the
 // invoice's `service-period`, else the dates of the items (items without a
-// date do not count), else the invoice date, except on a credit note, which
-// then states none. A service period printed as a text of its own cannot
-// reach the XML (IP-PERIOD-01).
+// date do not count), else the invoice date, except on a credit note or a
+// prepayment invoice, which then state none. A service period printed as a
+// text of its own cannot reach the XML (IP-PERIOD-01).
 
 #import "/src/lib.typ": *
 #import "/src/utils/text.typ": plain-text
@@ -200,6 +200,18 @@
     []
   },
 )[#undated]
+// ... nor on a prepayment invoice, which asks for an advance payment before
+// the supply
+#model-test(date: invoice-date, document-type: "prepayment", model => {
+  assert.eq(model.delivery.date, none)
+  assert.eq(model.delivery.source, none)
+  assert.eq(xml-elements(model, "ram:ActualDeliverySupplyChainEvent"), ())
+  assert.eq(rules(model), ())
+})[#undated]
+#printed-test(references: auto, document-type: "prepayment", refs => {
+  assert("Leistungszeitraum" not in refs.map(ref => ref.first()))
+  []
+})[#undated]
 // ... unless its items are dated
 #model-test(
   date: invoice-date,
@@ -536,5 +548,17 @@
   },
 )[#undated]
 
+#report-test(
+  document-type: "prepayment",
+  references: (references.service-time(value: day(10, 1)),),
+  result => {
+    assert.eq(errors(result), ("IP-PERIOD-01",))
+    assert.eq(
+      result.diagnostics.find(d => d.rule == "IP-PERIOD-01").message,
+      "The invoice prints the service period \"01.10.2026\", but the e-invoice states none, as a prepayment invoice precedes the supply.",
+    )
+  },
+)[#undated]
+
 // Every report above was shown and checked.
-#context assert.eq(query(<report-checked>).len(), 11)
+#context assert.eq(query(<report-checked>).len(), 12)

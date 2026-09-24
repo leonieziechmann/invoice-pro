@@ -58,25 +58,38 @@
   none
 }
 
+/// Whether the date of a document (the resolved `document-type` of the
+/// context, `none` for an invoice) is the date of its supply when nothing
+/// else dates it: not for a credit note, which amends an invoice, nor for a
+/// prepayment invoice, which precedes the supply.
+///
+/// -> bool
+#let supply-dated(document) = (
+  type(document) != dictionary
+    or not (
+      document.at("credit", default: false)
+        or document.at("prepayment", default: false)
+    )
+)
+
 /// Resolves the service period of the invoice of the root context `ctx`
 /// with its computed `items`, see `resolve-service-period`: the one source
 /// of the printed service period (`references.service-time`) and the
 /// e-invoice (BT-72, BG-14).
 ///
-/// A credit note (`document-type`, e.g. `"credit-note"`, 381) amends an
-/// invoice: its own date is not the date of the supply, so it falls back to
-/// no date at all rather than to the invoice date. Its `service-period` and
-/// the dates of its items still count.
+/// The date of a credit note (`document-type`, e.g. `"credit-note"`, 381),
+/// which amends an invoice, and of a prepayment invoice (`"prepayment"`,
+/// 386), which asks for an advance payment before the supply, is not the
+/// date of a supply: they fall back to no date at all rather than to the
+/// invoice date (see `supply-dated`). Their `service-period` and the dates
+/// of their items still count.
 ///
 /// -> none | dictionary
 #let service-period-of(ctx, items) = {
   let document = ctx.at("document-type", default: none)
-  let credit = (
-    type(document) == dictionary and document.at("credit", default: false)
-  )
   resolve-service-period(
     items,
-    if credit { none } else { ctx.at("invoice-date", default: none) },
+    if supply-dated(document) { ctx.at("invoice-date", default: none) },
     service-period: ctx.at("service-period", default: none),
   )
 }
