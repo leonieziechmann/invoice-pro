@@ -410,17 +410,12 @@ def compiled_rules(jar, profiles, kosit):
 
 def all_codes(jar):
     """Every code of every list of the tables, sorted: candidates for code
-    mutants that some list knows. The codes are the literals of the calls
-    that build the lists (`_codes(..)`, `_derive(..)` in lists.typ)."""
-    text = (common.REPO / "src" / "zugferd" / "guard" / "lists.typ").read_text(encoding="utf-8")
+    mutants that some list knows (the lines of codes in lists.json)."""
+    data = json.loads((common.REPO / "src" / "zugferd" / "guard" / "lists.json").read_text(encoding="utf-8"))
     codes = set()
-    for call in re.finditer(r"= _(?:codes|derive)\(", text):
-        depth, end = 1, call.end()
-        while depth:
-            depth += {"(": 1, ")": -1}.get(text[end], 0)
-            end += 1
-        for literal in re.findall(r'"([^"\n]*)"', text[call.end():end]):
-            codes.update(c for c in literal.split() if re.fullmatch(r"[A-Za-z0-9.-]+", c))
+    for lines in data["lists"].values():
+        for line in lines:
+            codes.update(c for c in line.split() if re.fullmatch(r"[A-Za-z0-9.-]+", c))
     return sorted(codes)
 
 
