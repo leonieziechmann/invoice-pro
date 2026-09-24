@@ -21,6 +21,7 @@ fastest); the tools read it here:
                       {official id: [key, ..]}
   docs_tables(..)     the tables of the rules of invoice-pro in
                       docs/docs/e-invoicing.md, generated from the registry
+                      and sorted by rule id
   fx_aliases(jar)     the Factur-X rules that implement an official rule of
                       EN 16931 (from the Mustang jar)
 
@@ -284,11 +285,21 @@ def table(rows, header):
     return lines
 
 
+def rule_order(key):
+    """A sort key that orders rule ids by their parts, numbers by value (so
+    that IP-VAT-138 comes before IP-VAT-226 and IP-DOC-02 before IP-DOC-10)."""
+    return [int(part) if part.isdigit() else part for part in re.split(r"(\d+)", key)]
+
+
 def docs_tables(registry):
-    """The generated tables, in the order of DOC_TABLES."""
+    """The generated tables, in the order of DOC_TABLES, each sorted by rule
+    id (see `rule_order`) so that a reader finds a rule by its id."""
     out = []
     for _, level, select in DOC_TABLES:
-        entries = [(key, entry) for key, entry in registry["rules"].items() if select(key, entry)]
+        entries = sorted(
+            ((key, entry) for key, entry in registry["rules"].items() if select(key, entry)),
+            key=lambda item: rule_order(item[0]),
+        )
         if level:
             header = ["Rule", "Level", "Checks"]
             rows = [[f"`{key}`", levels(entry)[0], entry["summary"]] for key, entry in entries]

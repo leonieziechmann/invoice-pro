@@ -54,7 +54,7 @@
       "terms": ["BT-5"],
       "level": "error",
       "field": "currency",
-      "summary": "The invoice currency code (BT-5) is in the ISO 4217 code list of every validation of the profile: of Factur-X, and in the profiles based on EN 16931 also of both versions of the EN 16931 code list (1.3.12 of Mustang, 1.3.16 of KoSIT).",
+      "summary": "The invoice currency code (BT-5) is in the ISO 4217 code list of Factur-X and, in the profiles based on EN 16931, also in both versions of the EN 16931 code list (1.3.12 of Mustang, 1.3.16 of KoSIT).",
       "legal": null,
       "note": "The field is `locale` when the currency comes from the locale. A code only the newest EN 16931 code list has is named as such."
     },
@@ -331,7 +331,7 @@
       "terms": ["BT-40", "BT-55", "BT-69", "BT-80"],
       "level": "error",
       "field": "sender.country",
-      "summary": "A country code of an address is in the ISO 3166-1 code list of every validation of the profile (the profiles based on EN 16931 lack South Sudan, SS).",
+      "summary": "A country code of an address is in the ISO 3166-1 code lists of Factur-X and of both versions of EN 16931; MINIMUM and BASIC WL take the Factur-X list alone, which has South Sudan (SS).",
       "legal": null
     },
     "IP-COUNTRY-01": {

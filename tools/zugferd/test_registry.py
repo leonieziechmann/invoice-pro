@@ -175,6 +175,16 @@ class Docs(unittest.TestCase):
     def test_the_tables_are_the_generated_ones(self):
         self.assertEqual(r.docs_problems(r.load()), [])
 
+    def test_the_tables_are_sorted_by_rule_id(self):
+        self.assertEqual(
+            sorted(["IP-VAT-226", "IP-DOC-10", "IP-VAT-138", "IP-DOC-02", "IP-ADDR-01"], key=r.rule_order),
+            ["IP-ADDR-01", "IP-DOC-02", "IP-DOC-10", "IP-VAT-138", "IP-VAT-226"],
+        )
+        for rows in r.docs_tables(r.load()):
+            keys = [row.split("`")[1] for row in rows[2:]]
+            self.assertGreater(len(keys), 5)
+            self.assertEqual(keys, sorted(keys, key=r.rule_order))
+
     def test_the_layout_of_a_table(self):
         self.assertEqual(
             r.table([["`IP-X-01`", "error", "A check."]], ["Rule", "Level", "Checks"]),
