@@ -1,0 +1,62 @@
+name: Upstream Check
+on:
+  # Weekly: are the pinned e-invoice tools still the latest releases?
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  # Compares the tools flake.nix pins (Mustang CLI, KoSIT validator, its
+  # XRechnung configuration, and Typst from the pinned nixpkgs) with their
+  # latest releases (tools/zugferd/upstream.py). When one is newer, it opens
+  # or updates one issue with what to do; when all are current again, it
+  # closes that issue.
+  upstream:
+    name: Pinned upstream tools
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE_TITLE: Upstream updates of the e-invoice tools
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare the pins with the latest releases
+        id: check
+        run: |
+          pinned() { nix eval --raw --accept-flake-config ".#packages.x86_64-linux.$1.version"; }
+          status=0
+          python3 tools/zugferd/upstream.py \
+            --pinned "mustang-cli=$(pinned mustang-cli)" \
+            --pinned "kosit-validator=$(pinned kosit-validator)" \
+            --pinned "xrechnung-configuration=$(pinned xrechnung-configuration)" \
+            --pinned "typst=$(nix eval --raw --accept-flake-config --inputs-from . nixpkgs#typst.version)" \
+            --markdown upstream.md || status=$?
+          if [ "$status" -gt 1 ]; then
+            exit "$status"
+          fi
+          echo "updates=$([ "$status" -eq 1 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Open, update or close the issue
+        run: |
+          number="$(gh issue list --state open --search "\"$ISSUE_TITLE\" in:title" --json number,title \
+            --jq '.[] | select(.title == env.ISSUE_TITLE) | .number' | head -n 1)"
+          if [ "${{ steps.check.outputs.updates }}" = "true" ]; then
+            if [ -n "$number" ]; then
+              gh issue edit "$number" --body-file upstream.md
+            else
+              gh issue create --title "$ISSUE_TITLE" --body-file upstream.md
+            fi
+          elif [ -n "$number" ]; then
+            gh issue close "$number" --comment "All pinned e-invoice tools are at their latest release."
+          fi

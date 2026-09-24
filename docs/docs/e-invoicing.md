@@ -405,7 +405,7 @@ Both the `sender` and `recipient` dictionaries must include:
       // or: electronic-address: "invoices@example.com"
     )
     ```
-    An address without identifier, such as `""` (e.g. an empty field of imported data), `auto` or a dictionary without `id`, counts as not given: the address is derived as described above. An address without scheme must be an email address; any other identifier needs its scheme, otherwise the e-invoice stops (BR-62 for the sender, BR-63 for the recipient).
+    An address without identifier, such as `""` (e.g. an empty field of imported data), `auto` or a dictionary without `id`, counts as not given: the address is derived as described above. An address without scheme must be an email address; any other identifier needs its scheme, otherwise the e-invoice stops (BR-62 for the sender, BR-63 for the recipient). The scheme must be in the EAS code list of every official validator (BR-CL-25): a scheme the list has withdrawn, such as `9901`, stops the e-invoice, and so does one that only its newest version has, such as `0240`.
 
 ### 2. Standardized Unit Codes
 
@@ -839,6 +839,8 @@ The invoice currency (BT-5) is the currency of the locale (`EUR`, or `CHF` for t
 
 The EPC-QR code of the [bank details](./api-reference/components.md#bank-details) transfers euros only, so it is shown for invoices in euro only, and a credit transfer in another currency is written as a credit transfer (BT-81 `30`) instead of a SEPA credit transfer (`58`). An e-invoice whose printed amounts show another currency than the one it states stops with `IP-PRINT-02`, e.g. with a currency formatter of a custom locale that prints "zł" while the locale states `EUR`. The profiles based on EN 16931 accept only the currencies of its code list (`BR-CL-04`). The printed invoice reads the currency code as the e-invoice states it, in upper case and without spaces: a custom locale with the code `"eur"` invoices in euro, so its bank details show the EPC-QR code, and a direct debit is a SEPA direct debit whose creditor identifier is checked. A currency with more than 2 decimals, such as `KWD`, rounds its amounts to them, which the XML cannot state (`BR-DEC-*`, reported for `currency`): create such an invoice without e-invoice, or with a locale of your own whose currency has 2 decimals, e.g. `locale.en-de.with((region: (currency: (code: "KWD", symbol: "KWD", decimals: 2))))`.
 
+In the profiles based on EN 16931, the currency must be in the code lists of both official validators (`BR-CL-04`): a currency that is newer than the list of one of them (e.g. `VES`) stops the e-invoice, and so does one that the current list has withdrawn (e.g. `BGN` and `HRK`, replaced by the euro).
+
 **VAT in the national currency (BT-6, BT-111).** Within the EU, an invoice in another currency must also state the VAT amount in the national currency of the member state where the supply is taxed (Art. 230 VAT Directive), e.g. in euro for a supply taxed in Germany. `invoice-pro` does not support the VAT accounting currency (BT-6) and the VAT total in it (BT-111) yet: state the VAT amount in the national currency and the exchange rate in a note (`notes`), which is printed and written into the e-invoice (BT-22).
 
 ---
@@ -860,7 +862,7 @@ A Factur-X / ZUGFeRD PDF announces its XML in the XMP metadata of the PDF, with 
 - The embedded XML (`factur-x.xml`, or `xrechnung.xml` in the XRechnung profile) is complete and valid for its profile. Most receiving systems only extract and process this XML.
 - Validators that check the PDF itself reject it. The Mustang validator, for example, reports `XMP Metadata: ConformanceLevel not found` together with the missing `DocumentType`, `DocumentFileName` and `Version`, and rates the PDF (not the XML) as invalid.
 
-`invoice-pro` will write the metadata as soon as Typst supports custom XMP metadata.
+`invoice-pro` will write the metadata as soon as Typst supports custom XMP metadata ([typst/typst#5667](https://github.com/typst/typst/issues/5667)). It is prepared already: `src/zugferd/xmp.typ` builds the Factur-X metadata of every profile (the document type `INVOICE`, the name of the attached XML, the version `1.0` and the conformance level `MINIMUM`, `BASIC WL`, `BASIC`, `EN 16931` or `XRECHNUNG`) together with the PDF/A description of its extension schema, and a test compares it with the metadata that Mustang writes (see below). Until Typst can write it, the package does not load this module, so it costs no compile time.
 
 :::info Optional post-processing, outside the package
 You do not need any of this to create an invoice, and `invoice-pro` does not run external tools. If a recipient requires a PDF that passes the Factur-X PDF check, you can add the metadata afterwards with the [Mustang](https://www.mustangproject.org/) command line tool, which needs Java: download `Mustang-CLI-2.14.0.jar` from the [Mustang releases](https://github.com/ZUGFeRD/mustangproject/releases) and run it with `java -jar`. The steps below were tested with Mustang CLI 2.14.0.

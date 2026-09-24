@@ -11,6 +11,11 @@ if ! command -v "$VALIDATE_ZUGFERD" &> /dev/null && [ ! -x "$VALIDATE_ZUGFERD" ]
   VALIDATE_ZUGFERD="validate-zugferd"
 fi
 
+# validate-zugferd keeps the compiled PDFs here for KoSIT (end of this script).
+ZUGFERD_PDF_DIR="$(mktemp -d)"
+export ZUGFERD_PDF_DIR
+trap 'rm -rf "$ZUGFERD_PDF_DIR"' EXIT
+
 echo "========================"
 echo " Running all ZUGFeRD validations... "
 echo "========================"
@@ -53,3 +58,27 @@ done
 
 echo ""
 echo "✔ All ZUGFeRD validations passed!"
+
+# KoSIT, the reference validator for XRechnung, checks the XML of the EN 16931
+# and XRechnung documents above in one JVM (tools/zugferd/kosit.py); it has no
+# scenario for MINIMUM, BASIC WL and BASIC. It needs Python 3.11+ with lxml and
+# pypdf ($PYTHON, default python3), Java and $KOSIT_JAR / $KOSIT_CONFIG (see
+# tests/TESTING.md); `nix run .#validate-all-zugferd` provides them. Without
+# them, KoSIT is skipped with a notice, but never in CI.
+echo ""
+echo "========================"
+echo " Running KoSIT... "
+echo "========================"
+if [ -n "${KOSIT_JAR:-}" ] && [ -n "${KOSIT_CONFIG:-}" ]; then
+  "${PYTHON:-python3}" tools/zugferd/kosit.py "$ZUGFERD_PDF_DIR"/*.pdf
+  echo ""
+  echo "✔ KoSIT accepts every EN 16931 and XRechnung document!"
+else
+  case "${CI:-}" in
+    1 | true | TRUE | yes)
+      echo "Error: KOSIT_JAR and KOSIT_CONFIG are not set; CI must validate with KoSIT (nix run .#validate-all-zugferd sets them)." >&2
+      exit 1
+      ;;
+  esac
+  echo "Notice: KoSIT skipped: set KOSIT_JAR and KOSIT_CONFIG (see tests/TESTING.md), or run nix run .#validate-all-zugferd."
+fi

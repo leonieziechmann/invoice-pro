@@ -1,0 +1,187 @@
+# Rules on which the two official validators of the conformance corpus
+# disagree (tools/zugferd/run.py, tests/TESTING.md):
+#
+#   Mustang 2.14.0: the XSD and Schematron of Factur-X 1.0.07 (ZUGFeRD 2.3),
+#     the EN 16931 Schematron it bundles and the XRechnung Schematron.
+#   KoSIT 1.6.3 with the XRechnung configuration 2026-08-31: CEN Schematron
+#     1.3.16 and XRechnung Schematron 2.6.0, the reference for XRechnung. It
+#     has no scenario for MINIMUM, BASIC WL and BASIC.
+#
+# An e-invoice is officially valid only when the XSD, Mustang and KoSIT all
+# accept it, and invoice-pro must report an error whenever one of them
+# rejects it: otherwise the case is a FALSE_NEGATIVE. When only one of them
+# rejects a document, every rule behind the disagreement is listed here with
+# the validator that rejects it, what the other one reports and why they
+# differ. An unlisted rule fails the run (OFFICIAL_DISAGREE), and so does a
+# listed rule that no case shows any more in a run of all regression cases,
+# so that the list stays true. Every entry has a regression case that shows
+# it (tools/zugferd/corpus/regression/); a run without all of them (`--only`,
+# `--population` or single case files) does not check the list.
+#
+#   rejected-by  the validator that reports an error: "mustang" or "kosit",
+#                or a list of both when it depends on the document (e.g. on
+#                a code that only the code list of one of them has)
+#   other        what the other validator reports: "warning" or "nothing",
+#                or a list of both when it depends on the document
+#   reason       why they differ, and what invoice-pro does
+
+# ---- Mustang rejects, KoSIT warns (or, for BR-DE-28, may report nothing)
+
+["BR-DE-17"]
+rejected-by = "mustang"
+other = "warning"
+reason = """XRechnung allows the document types (BT-3) 326, 380, 381, 384, 389, 875, 876 and 877 only. \
+The XRechnung Schematron states the rule as a recommendation, which KoSIT reports as a warning; \
+Mustang reports an error. invoice-pro reports an error; with `zugferd: auto` such an invoice is \
+written as EN 16931."""
+
+["BR-DE-19"]
+rejected-by = "mustang"
+other = "warning"
+reason = """The IBAN of a SEPA credit transfer (BT-84) must be valid. A warning in the XRechnung \
+Schematron and in KoSIT, an error in Mustang. invoice-pro reports an error: the amount could not be \
+paid."""
+
+["BR-DE-20"]
+rejected-by = "mustang"
+other = "warning"
+reason = """The IBAN of the account a SEPA direct debit collects from (BT-91) must be valid. A \
+warning in the XRechnung Schematron and in KoSIT, an error in Mustang. invoice-pro reports an error: \
+the amount could not be collected."""
+
+["BR-DE-26"]
+rejected-by = "mustang"
+other = "warning"
+reason = """A corrected invoice (BT-3 = 384) names the invoice it corrects (BG-3). A warning in the \
+XRechnung Schematron and in KoSIT, an error in Mustang. invoice-pro reports an error, as the VAT \
+Directive (Art. 219) requires the reference."""
+
+["BR-DE-27"]
+rejected-by = "mustang"
+other = "warning"
+reason = """The phone number of the seller contact (BT-42) has at least three digits. A warning in \
+the XRechnung Schematron and in KoSIT, an error in Mustang. invoice-pro reports an error (maintainer \
+decision): stricter than KoSIT."""
+
+["BR-DE-28"]
+rejected-by = "mustang"
+other = ["nothing", "warning"]
+reason = """The e-mail address of the seller contact (BT-43) matches the pattern of the XRechnung \
+Schematron. The older XRechnung Schematron in Mustang has a pattern of ASCII characters and reports \
+an error. The XRechnung Schematron 2.6.0 in KoSIT has a pattern that accepts internationalized \
+domains, so it reports nothing for a domain with umlauts, and it only warns about an address that \
+fails its pattern as well, e.g. one without a domain name. invoice-pro applies the ASCII pattern as \
+an error (maintainer decision): stricter than KoSIT; a domain with umlauts is written in punycode."""
+
+["CII-SR-449"]
+rejected-by = "mustang"
+other = "warning"
+reason = """The deliver-to location has one identifier (BT-71): `ram:ID` or `ram:GlobalID`. The CEN \
+Schematron flags the rule as a warning, which KoSIT reports as such; Mustang reports every failed \
+assertion of the CEN Schematron as an error. invoice-pro reports an error: it cannot tell which of \
+the two identifiers to state."""
+
+["CII-SR-450"]
+rejected-by = "mustang"
+other = "warning"
+reason = """The buyer has one identifier (BT-46): `ram:ID` or `ram:GlobalID`. A warning in the CEN \
+Schematron and in KoSIT, an error in Mustang (see CII-SR-449). invoice-pro reports an error."""
+
+# ---- Mustang rejects, KoSIT reports nothing
+
+["BR-AG-05"]
+rejected-by = "mustang"
+other = "nothing"
+reason = """The rate of an IPSI line (category M): CEN Schematron 1.3.12 in Mustang requires a rate \
+above zero, CEN 1.3.16 in KoSIT accepts zero as well. invoice-pro reports an error, like Mustang."""
+
+["BR-CO-25"]
+rejected-by = "mustang"
+other = "nothing"
+reason = """An amount due needs a payment due date (BT-9) or payment terms (BT-20). The CII \
+Schematron of CEN 1.3.16 in KoSIT no longer checks BR-CO-25 \
+(https://github.com/ConnectingEurope/eInvoicing-EN16931/issues/477); CEN 1.3.12 and the Factur-X \
+1.0.07 Schematron in Mustang still do (the latter as FX-SCH-A-000155, whose message names \
+BR-CO-25). invoice-pro follows Factur-X and reports an error."""
+
+# ---- KoSIT rejects, Mustang reports nothing
+
+["CII-SR-467"]
+rejected-by = "kosit"
+other = "nothing"
+reason = """All payment means of an invoice have the same type code (BT-81). The rule is newer than \
+CEN Schematron 1.3.12 in Mustang; KoSIT (CEN 1.3.16) reports an error. invoice-pro states one \
+payment means and reports two different ones as IP-PAY-03."""
+
+["CII-SR-470"]
+rejected-by = "kosit"
+other = "nothing"
+reason = """A credit transfer names the account by its IBAN or a proprietary ID (BT-84). The rule is \
+newer than CEN Schematron 1.3.12 in Mustang, whose CII variant of BR-61 tests the debited account \
+instead; KoSIT (CEN 1.3.16) reports an error. invoice-pro reports BR-61."""
+
+# ---- Code lists: the lists of the validators differ, so either one may
+# ---- reject a code that the other one accepts without a message
+#
+# Mustang checks the codes with the lists of CEN Schematron 1.3.12 and of
+# Factur-X 1.0.07, KoSIT with those of CEN Schematron 1.3.16. The newer lists
+# have codes the older ones lack, and have withdrawn codes the older ones
+# still have. invoice-pro accepts only the codes that every list the
+# validation of a profile applies contains (src/zugferd/codelists.typ), and
+# reports an error for any other.
+
+["BR-CL-03"]
+rejected-by = ["mustang", "kosit"]
+other = "nothing"
+reason = """The currency of an amount (currencyID) is in the ISO 4217 list of the EN 16931 \
+Schematron. CEN 1.3.12 in Mustang lacks newer codes such as the current bolivar (VES), which CEN \
+1.3.16 in KoSIT has; CEN 1.3.16 has withdrawn codes such as the Bulgarian lev (BGN, the euro since \
+2026) and the Croatian kuna (HRK), which CEN 1.3.12 still has. invoice-pro reports both kinds in \
+the profiles based on EN 16931 as BR-CL-04 (`cen-rejected-currencies`)."""
+
+["BR-CL-04"]
+rejected-by = ["mustang", "kosit"]
+other = "nothing"
+reason = """The invoice currency (BT-5): the same difference of the code lists as BR-CL-03. \
+invoice-pro reports an error."""
+
+["BR-CL-10"]
+rejected-by = "mustang"
+other = "nothing"
+reason = """The scheme of a party identifier (BT-29, BT-46) is in the ISO/IEC 6523 ICD list. CEN \
+1.3.16 in KoSIT has newer codes (0231 to 0248) that the lists of CEN 1.3.12 and Factur-X 1.0.07 in \
+Mustang lack. invoice-pro follows Mustang and reports an error."""
+
+["BR-CL-11"]
+rejected-by = "mustang"
+other = "nothing"
+reason = """The scheme of a legal registration identifier (BT-30, BT-47): the same difference of \
+the ICD lists as BR-CL-10. invoice-pro reports an error."""
+
+["BR-CL-25"]
+rejected-by = ["mustang", "kosit"]
+other = "nothing"
+reason = """The scheme of an electronic address (BT-34, BT-49) is in the EAS code list. CEN 1.3.16 \
+in KoSIT has newer schemes (e.g. 0240) that CEN 1.3.12 and Factur-X 1.0.07 in Mustang lack, and it \
+has withdrawn 9901, which they still have. invoice-pro reports both kinds as an error."""
+
+["FX-SCH-A-000031"]
+rejected-by = "mustang"
+other = "nothing"
+reason = """The Factur-X 1.0.07 Schematron in Mustang checks every scheme identifier (`@schemeID`) \
+with its own lists, which lack the newer ICD and EAS codes of CEN 1.3.16 (see BR-CL-10 and \
+BR-CL-25); KoSIT has no Factur-X rules. invoice-pro reports the rule of the list: BR-CL-10, \
+BR-CL-11 or BR-CL-25."""
+
+["FX-SCH-A-000040"]
+rejected-by = "mustang"
+other = "nothing"
+reason = """The invoice currency (BT-5) is in the Factur-X 1.0.07 list, which lacks the newest ISO \
+4217 codes that CEN 1.3.16 in KoSIT has, e.g. the Caribbean guilder (XCG), Zimbabwe Gold (ZWG) \
+and the digital bolivar (VED); KoSIT has no Factur-X rules. invoice-pro reports BR-CL-04."""
+
+["FX-SCH-A-000045"]
+rejected-by = "mustang"
+other = "nothing"
+reason = """The currency of an amount (`@currencyID`): the same Factur-X list as FX-SCH-A-000040. \
+invoice-pro reports BR-CL-04."""

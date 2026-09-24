@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Factur-X PDF check: an expected failure until Typst can write custom XMP
+# metadata (https://github.com/typst/typst/issues/5667). Compiles one e-invoice
+# per profile and validates the PDF with Mustang: its only problems must be
+# the missing Factur-X XMP metadata, and with the metadata Mustang adds, the
+# PDF must be valid (tools/zugferd/xmp.py). See tests/TESTING.md.
+#
+# Usage: zugferd-xmp [--update]   (--update rewrites tests/zugferd/xmp/mustang-*.xmp)
+#
+# Needs Python 3.11+ with lxml and pypdf ($PYTHON, default python3), Typst
+# ($TYPST_BIN, default typst), a JDK ($JAVA_BIN/$JAVAC_BIN or $JAVA_HOME,
+# default java/javac) and the Mustang CLI jar 2.14.0 ($MUSTANG_JAR). The Nix
+# app `nix run .#zugferd-xmp` provides all of them.
+set -euo pipefail
+
+if [ ! -f "typst.toml" ]; then
+  echo "Error: zugferd-xmp must be run from the root of the invoice-pro repository." >&2
+  exit 1
+fi
+
+PYTHON="${PYTHON:-python3}"
+exec "$PYTHON" tools/zugferd/xmp.py "$@"

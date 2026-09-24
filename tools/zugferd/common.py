@@ -1,8 +1,9 @@
 """Shared helpers of the e-invoice conformance tools (tools/zugferd).
 
 Everything that talks to the outside world lives here: compiling Typst,
-reading PDF attachments and text, XSD validation with lxml, and the official
-Mustang validator running in one long-lived JVM.
+reading PDF attachments and text, XSD validation with lxml, the official
+Mustang validator running in one long-lived JVM, and the KoSIT validator,
+the reference for XRechnung, validating a batch of files in one JVM.
 
 Configuration comes from the environment, so the tools run the same inside
 and outside of Nix:
@@ -10,6 +11,12 @@ and outside of Nix:
   TYPST_BIN    Typst executable (default: `typst`)
   MUSTANG_JAR  Mustang-CLI jar, needed for the official validation
                (https://github.com/ZUGFeRD/mustangproject, version 2.14.0)
+  KOSIT_JAR    KoSIT validator, standalone jar
+               (https://github.com/itplr-kosit/validator, version 1.6.3)
+  KOSIT_CONFIG the unpacked XRechnung configuration of the KoSIT validator,
+               the directory with `scenarios.xml`
+               (https://github.com/itplr-kosit/validator-configuration-xrechnung,
+               release 2026-08-31: XRechnung 3.0.2, CEN Schematron 1.3.16)
   JAVA_BIN     `java` executable (default: $JAVA_HOME/bin/java or `java`)
   JAVAC_BIN    `javac` executable (default: $JAVA_HOME/bin/javac or `javac`)
   ZUGFERD_BUILD_DIR  where generated files go (default: <repo>/build/zugferd)
@@ -59,10 +66,30 @@ GUIDELINES = {
     ),
 }
 GUIDELINE_PATH = "rsm:ExchangedDocumentContext/ram:GuidelineSpecifiedDocumentContextParameter/ram:ID"
+# Profiles the XRechnung configuration of KoSIT has scenarios for: EN 16931
+# (CII) and XRechnung (CII). MINIMUM, BASIC WL and BASIC match none of them.
+KOSIT_PROFILES = ("en16931", "xrechnung")
 
 
 class ToolError(Exception):
     """A setup problem (missing tool or file) with a message for the user."""
+
+
+def in_ci():
+    """Whether the tools run in CI (GitHub Actions sets CI=true), where an
+    official validator must never be skipped."""
+    return os.environ.get("CI", "").strip().lower() in ("1", "true", "yes")
+
+
+def jar_version(jar, pom):
+    """The version in META-INF/maven/<pom>/pom.properties of a jar, or None."""
+    try:
+        with zipfile.ZipFile(jar) as archive:
+            text = archive.read(f"META-INF/maven/{pom}/pom.properties").decode("utf-8", "replace")
+    except (KeyError, OSError, zipfile.BadZipFile):
+        return None
+    m = re.search(r"^version=(.+)$", text, re.M)
+    return m.group(1).strip() if m else None
 
 
 # ---------------------------------------------------------------- environment
@@ -106,6 +133,26 @@ def mustang_jar():
     if not Path(jar).is_file():
         raise ToolError(f"MUSTANG_JAR={jar} does not exist")
     return Path(jar).resolve()
+
+
+def kosit_setup():
+    """(jar, configuration directory) of the KoSIT validator from KOSIT_JAR
+    and KOSIT_CONFIG; a ToolError says what is missing and where to get it."""
+    jar, config = os.environ.get("KOSIT_JAR"), os.environ.get("KOSIT_CONFIG")
+    if not jar or not config:
+        missing = " and ".join(name for name, value in (("KOSIT_JAR", jar), ("KOSIT_CONFIG", config)) if not value)
+        raise ToolError(
+            f"{missing} {'is' if ' and ' not in missing else 'are'} not set. KOSIT_JAR is the KoSIT validator "
+            "validator-1.6.3-standalone.jar (https://github.com/itplr-kosit/validator/releases), KOSIT_CONFIG "
+            "the unpacked XRechnung configuration xrechnung-3.0.2-validator-configuration-2026-08-31.zip "
+            "(https://github.com/itplr-kosit/validator-configuration-xrechnung/releases), the directory with "
+            "scenarios.xml. The Nix apps set both (see tests/TESTING.md)."
+        )
+    if not Path(jar).is_file():
+        raise ToolError(f"KOSIT_JAR={jar} does not exist")
+    if not (Path(config) / "scenarios.xml").is_file():
+        raise ToolError(f"KOSIT_CONFIG={config} has no scenarios.xml; point it to the unpacked XRechnung configuration")
+    return Path(jar).resolve(), Path(config).resolve()
 
 
 def sha256_file(path, chunk=1 << 20):
@@ -286,6 +333,35 @@ def parse_mustang_report(report):
     return {"status": status[-1] if status else "?", "errors": errors, "warnings": warnings}
 
 
+_PDF_PART = re.compile(r"<pdf>(.*?)</pdf>", re.S)
+_XML_PART = re.compile(r"<xml>(.*?)</xml>", re.S)
+_PDF_ERROR = re.compile(r'<error\b[^>]*?type="(\d+)"[^>]*>(.*?)</error>', re.S)
+
+
+def parse_mustang_pdf_report(report):
+    """The parts of Mustang's report on a PDF (rather than an XML file).
+
+    `pdf`: the check of the PDF itself, `status` ("valid"/"invalid"),
+    `compliant` (the PDF/A check of veraPDF) and `errors`, a list of (type,
+    text), e.g. (11, "XMP Metadata: ConformanceLevel not found") for missing
+    Factur-X XMP metadata. `xml`: the attached XML as parse_mustang_report
+    reads it. `status`: the overall verdict (the last summary).
+    """
+    pdf_part = _PDF_PART.search(report)
+    xml_part = _XML_PART.search(report)
+    pdf = {"status": "?", "compliant": None, "errors": []}
+    if pdf_part:
+        body = pdf_part.group(1)
+        compliant = re.search(r"isCompliant=(true|false)", body)
+        pdf["compliant"] = compliant.group(1) == "true" if compliant else None
+        status = _STATUS.findall(body)
+        pdf["status"] = status[-1] if status else "?"
+        pdf["errors"] = [(int(t), re.sub(r"\s+", " ", _unescape(text)).strip()) for t, text in _PDF_ERROR.findall(body)]
+    xml = parse_mustang_report(xml_part.group(1)) if xml_part else {"status": "?", "errors": {}, "warnings": []}
+    status = _STATUS.findall(report)
+    return {"pdf": pdf, "xml": xml, "status": status[-1] if status else "?"}
+
+
 class Mustang:
     """Mustang's validator in one long-lived JVM (tools/zugferd/java).
 
@@ -352,6 +428,7 @@ class Mustang:
                 path, millis = current
                 result = parse_mustang_report("".join(body))
                 result["ms"] = millis
+                result["report"] = "".join(body)
                 with self.lock:
                     future = self.pending.pop(path, None)
                 if future:
@@ -388,3 +465,131 @@ class Mustang:
             self.proc.wait()
         self.reader.join(timeout=10)
         self.log.close()
+
+
+# ---------------------------------------------------------------- KoSIT
+
+VARL = "http://www.xoev.de/de/validator/varl/1"
+SCENARIOS = "http://www.xoev.de/de/validator/framework/1/scenarios"
+# Longest run of one KoSIT batch: the nightly corpus has a few thousand files.
+KOSIT_TIMEOUT = 1800
+
+
+def parse_kosit_report(report):
+    """Verdict and messages of a KoSIT validation report (VARL, the
+    `<file>-report.xml` the validator writes for every file).
+
+    `status` is "accept" or "reject", the assessment of the scenario that
+    matched the document, or "no-scenario" when none did: the XRechnung
+    configuration has scenarios for EN 16931 and XRechnung only, not for
+    MINIMUM, BASIC WL and BASIC. A document KoSIT cannot read matches no
+    scenario either; it is rejected with the rule "XML".
+
+    `errors` and `warnings` map each rule to its message. The rule is the
+    code of the message, "XSD" for the schema validation (whose codes are the
+    `cvc-*` ids of XML Schema) and "XML" for a document that is not
+    well-formed. Messages of the level "information" are left out; `scenario`
+    is the name of the matched scenario.
+    """
+    from lxml import etree
+
+    if isinstance(report, str):
+        report = report.encode("utf-8")
+    try:
+        root = etree.fromstring(report, etree.XMLParser(resolve_entities=False, no_network=True, huge_tree=True))
+    except etree.XMLSyntaxError as e:
+        return {"status": "crash", "scenario": None, "errors": {"KOSIT-CRASH": f"unreadable report: {e}"}, "warnings": {}}
+    ns = {"rep": VARL, "s": SCENARIOS}
+    errors, warnings = {}, {}
+    for step in root.iter(f"{{{VARL}}}validationStepResult"):
+        kind = step.get("id", "")
+        for message in step.findall("rep:message", ns):
+            level = message.get("level")
+            if level not in ("error", "warning"):
+                continue
+            if kind == "val-xsd":
+                rule = "XSD"
+            elif kind == "val-xml":
+                rule = "XML"
+            else:
+                rule = message.get("code") or "?"
+            text = " ".join((message.text or "").split())
+            (errors if level == "error" else warnings).setdefault(rule, text[:400])
+    scenario = root.findtext("rep:scenarioMatched/s:scenario/s:name", namespaces=ns)
+    if root.find("rep:noScenarioMatched", ns) is not None and not errors:
+        status = "no-scenario"
+    elif root.find("rep:assessment/rep:accept", ns) is not None:
+        status = "accept"
+    else:
+        status = "reject"
+        if not errors:  # a rejection must name a reason
+            errors["KOSIT-REJECT"] = "rejected without an error message; see the report"
+    return {"status": status, "scenario": scenario, "errors": errors, "warnings": warnings}
+
+
+def _configuration_name(config):
+    """Name and date of a KoSIT configuration, from its scenarios.xml."""
+    text = (Path(config) / "scenarios.xml").read_text(encoding="utf-8", errors="replace")
+    name = re.search(r"<name>([^<]+)</name>", text)
+    date = re.search(r"<date>([^<]+)</date>", text)
+    name = name.group(1).strip() if name else "unknown configuration"
+    return f"{name} of {date.group(1).strip()}" if date else name
+
+
+class Kosit:
+    """The KoSIT validator with the XRechnung configuration.
+
+    `validate(paths)` checks a batch of XML files in a single JVM (the command
+    line of the standalone jar) and returns {path: parsed report}. Starting
+    the JVM and loading the Schematron of the configuration takes a few
+    seconds; every further file costs a few dozen milliseconds, so the tools
+    validate all files of a run in one batch.
+    """
+
+    def __init__(self, jar, config, work_dir):
+        self.jar, self.config = Path(jar), Path(config)
+        self.work = Path(work_dir)
+        self.version = jar_version(self.jar, "org.kosit/validator")
+        self.configuration = _configuration_name(self.config)
+
+    def describe(self):
+        return f"KoSIT {self.version or '(unknown version)'} with the {self.configuration}"
+
+    def validate(self, paths, timeout=KOSIT_TIMEOUT):
+        paths = [Path(p).resolve() for p in paths]
+        if not paths:
+            return {}
+        # KoSIT names every report after its file, so the names must differ.
+        seen = set()
+        for path in paths:
+            if path.stem in seen:
+                raise ToolError(f"KoSIT batch: two files named {path.stem}; their reports would collide")
+            seen.add(path.stem)
+        out = self.work / "kosit"
+        shutil.rmtree(out, ignore_errors=True)
+        out.mkdir(parents=True)
+        log_path = self.work / "kosit.log"
+        # Relative names keep the command line short for thousands of files.
+        cwd = Path(os.path.commonpath([str(p.parent) for p in paths]))
+        java = _java_tool("JAVA_BIN", "java")
+        cmd = [java, "-jar", str(self.jar), "-r", str(self.config), "-s", str(self.config / "scenarios.xml"),
+               "-o", str(out), *(str(p.relative_to(cwd)) for p in paths)]
+        with open(log_path, "w", encoding="utf-8") as log:
+            try:
+                subprocess.run(cmd, cwd=cwd, stdout=log, stderr=subprocess.STDOUT, timeout=timeout)
+            except FileNotFoundError:
+                raise ToolError(f"java not found ({java}); set JAVA_BIN or JAVA_HOME")
+            except subprocess.TimeoutExpired:
+                raise ToolError(f"KoSIT took longer than {timeout} s for {len(paths)} files; see {log_path}")
+        reports = {path: out / f"{path.stem}-report.xml" for path in paths}
+        if not any(report.exists() for report in reports.values()):
+            tail = log_path.read_text(encoding="utf-8", errors="replace").strip().splitlines()[-15:]
+            raise ToolError(f"KoSIT wrote no report ({log_path}):\n  " + "\n  ".join(tail))
+        results = {}
+        for path, report in reports.items():
+            if report.exists():
+                results[str(path)] = parse_kosit_report(report.read_bytes())
+            else:
+                results[str(path)] = {"status": "crash", "scenario": None, "warnings": {},
+                                      "errors": {"KOSIT-CRASH": f"no report for this file; see {log_path}"}}
+        return results

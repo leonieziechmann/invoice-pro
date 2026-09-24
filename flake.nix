@@ -70,6 +70,44 @@
           '';
         };
 
+        # KoSIT, the reference validator for XRechnung, and its XRechnung
+        # configuration (KOSIT_JAR and KOSIT_CONFIG of tools/zugferd).
+        kosit-validator = pkgs.stdenv.mkDerivation rec {
+          pname = "kosit-validator";
+          version = "1.6.3";
+
+          src = pkgs.fetchurl {
+            url = "https://github.com/itplr-kosit/validator/releases/download/v${version}/validator-${version}-standalone.jar";
+            hash = "sha256-eZ5kvvypfUCA4DYIyAuF3VpezF9K5PNdERbsKFW5p8k=";
+          };
+
+          dontUnpack = true;
+
+          installPhase = ''
+            mkdir -p $out/share/java
+            cp $src $out/share/java/kosit-validator.jar
+          '';
+        };
+
+        xrechnung-configuration = pkgs.stdenv.mkDerivation rec {
+          pname = "xrechnung-configuration";
+          version = "2026-08-31";
+
+          src = pkgs.fetchurl {
+            url = "https://github.com/itplr-kosit/validator-configuration-xrechnung/releases/download/v${version}/xrechnung-3.0.2-validator-configuration-${version}.zip";
+            hash = "sha256-JTDNEHxBRRHF0EYuwQ+IaRA5Wr/Kgg24LoPXC/ASIag=";
+          };
+
+          dontUnpack = true;
+
+          nativeBuildInputs = [ pkgs.unzip ];
+
+          installPhase = ''
+            mkdir -p $out/share/kosit/xrechnung
+            unzip -q $src -d $out/share/kosit/xrechnung
+          '';
+        };
+
         validate-zugferd = pkgs.writeScriptBin "validate-zugferd" ''
           #!/usr/bin/env bash
           export TYPST_BIN="${typstEnv}/bin/typst"
@@ -81,6 +119,10 @@
         validate-all-zugferd = pkgs.writeScriptBin "validate-all-zugferd" ''
           #!/usr/bin/env bash
           export VALIDATE_ZUGFERD_BIN="${validate-zugferd}/bin/validate-zugferd"
+          export PYTHON="${toolsPython}/bin/python3"
+          export JAVA_BIN="${pkgs.jre_headless}/bin/java"
+          export KOSIT_JAR="${kosit-validator}/share/java/kosit-validator.jar"
+          export KOSIT_CONFIG="${xrechnung-configuration}/share/kosit/xrechnung"
           exec ${pkgs.bash}/bin/bash ${./scripts/validate-all-zugferd} "$@"
         '';
 
@@ -104,7 +146,28 @@
           export JAVA_BIN="${pkgs.jdk_headless}/bin/java"
           export JAVAC_BIN="${pkgs.jdk_headless}/bin/javac"
           export MUSTANG_JAR="${mustang-cli}/share/java/mustang-cli.jar"
+          export KOSIT_JAR="${kosit-validator}/share/java/kosit-validator.jar"
+          export KOSIT_CONFIG="${xrechnung-configuration}/share/kosit/xrechnung"
           exec ${pkgs.bash}/bin/bash ${./scripts/zugferd-corpus} "$@"
+        '';
+
+        zugferd-xmp = pkgs.writeScriptBin "zugferd-xmp" ''
+          #!/usr/bin/env bash
+          export TYPST_BIN="${typstEnv}/bin/typst"
+          export PYTHON="${toolsPython}/bin/python3"
+          export JAVA_BIN="${pkgs.jdk_headless}/bin/java"
+          export JAVAC_BIN="${pkgs.jdk_headless}/bin/javac"
+          export MUSTANG_JAR="${mustang-cli}/share/java/mustang-cli.jar"
+          exec ${pkgs.bash}/bin/bash ${./scripts/zugferd-xmp} "$@"
+        '';
+
+        # The plain Typst: the check provides the packages itself, so it must
+        # not see the package path of typstEnv.
+        check-package-bundle = pkgs.writeScriptBin "check-package-bundle" ''
+          #!/usr/bin/env bash
+          export TYPST_BIN="${pkgs.typst}/bin/typst"
+          export PATH="${pkgs.coreutils}/bin:${pkgs.findutils}/bin:${pkgs.gawk}/bin:${pkgs.gnused}/bin:${pkgs.gnugrep}/bin:$PATH"
+          exec ${pkgs.bash}/bin/bash ${./scripts/check-package-bundle} "$@"
         '';
 
         zugferd-golden = pkgs.writeScriptBin "zugferd-golden" ''
@@ -165,6 +228,16 @@
           program = "${perf-gate}/bin/perf-gate";
         };
 
+        apps.zugferd-xmp = {
+          type = "app";
+          program = "${zugferd-xmp}/bin/zugferd-xmp";
+        };
+
+        apps.check-package-bundle = {
+          type = "app";
+          program = "${check-package-bundle}/bin/check-package-bundle";
+        };
+
         packages.default = invoice-proPackage;
 
         packages.validate-zugferd = validate-zugferd;
@@ -173,7 +246,14 @@
         packages.zugferd-corpus = zugferd-corpus;
         packages.zugferd-golden = zugferd-golden;
         packages.perf-gate = perf-gate;
+        packages.zugferd-xmp = zugferd-xmp;
+        packages.check-package-bundle = check-package-bundle;
         packages.poppler-utils = pkgs.poppler-utils;
+        # The pinned validators; .github/workflows/upstream-check.yaml reads
+        # their versions.
+        packages.mustang-cli = mustang-cli;
+        packages.kosit-validator = kosit-validator;
+        packages.xrechnung-configuration = xrechnung-configuration;
 
         packages.documentation = pkgs.buildNpmPackage {
           pname = "invoice-pro-documentation";
@@ -208,6 +288,8 @@
 
         packages.check-pr = pkgs.writeScriptBin "check-pr" ''
           #!/usr/bin/env bash
+          export KOSIT_JAR="${kosit-validator}/share/java/kosit-validator.jar"
+          export KOSIT_CONFIG="${xrechnung-configuration}/share/kosit/xrechnung"
           exec ${pkgs.bash}/bin/bash ${./scripts/check-pr} "$@"
         '';
 
@@ -239,6 +321,8 @@
             self.packages.${system}.zugferd-corpus
             self.packages.${system}.zugferd-golden
             self.packages.${system}.perf-gate
+            self.packages.${system}.zugferd-xmp
+            self.packages.${system}.check-package-bundle
           ] ++ self.checks.${system}.pre-commit-check.enabledPackages;
 
           shellHook = ''

@@ -52,3 +52,54 @@
     assert(code not in codelists.payment-means, message: code)
   }
 }
+
+// --- 4. A code that the validation of a profile rejects is an error in that
+// profile, also when only the newest official validation rejects it: the
+// EN 16931 Schematron 1.3.16 of the KoSIT validator, whose lists have
+// withdrawn codes that the older lists of Mustang still have ---
+#import "/src/lib.typ": item, line-items, payment-goal
+#import "/src/zugferd/profile.typ": resolve-profile
+#import "/tests/zugferd/harness.typ": bank, diagnostic, model-test, rules
+
+// Currencies the EN 16931 validation has withdrawn: the Netherlands Antillean
+// guilder (ANG, the Caribbean guilder XCG since 2025), the Bulgarian lev
+// (BGN, the euro since 2026), the Cuban convertible peso (CUC), the Croatian
+// kuna (HRK, the euro since 2023) and the Zimbabwe dollar (ZWL, Zimbabwe Gold
+// since 2024). The Factur-X list of MINIMUM and BASIC WL still has them.
+#model-test(model => {
+  let m = model
+  m.printed-currency = (symbol: none, amount: none, price: none)
+  for code in ("ANG", "BGN", "CUC", "HRK", "ZWL") {
+    assert(code in codelists.currencies, message: code)
+    m.currency = code
+    for id in ("basic", "en16931") {
+      m.profile = resolve-profile(id, "FR")
+      assert.eq(rules(m), ("BR-CL-04",), message: code + " in " + id)
+    }
+    assert(
+      diagnostic(m, "BR-CL-04").message.contains("\"" + code + "\""),
+      message: code,
+    )
+    m.profile = resolve-profile("basic-wl", "FR")
+    assert.eq(rules(m), (), message: code + " in basic-wl")
+  }
+})[
+  #line-items[#item([Consulting], price: 1000)]
+  #payment-goal(days: 14)
+  #bank
+]
+
+// --- 5. Electronic address schemes the EAS code list has withdrawn: 9901
+// is no longer in the list of the EN 16931 Schematron 1.3.16 ---
+#model-test(model => {
+  assert("9901" not in codelists.eas)
+  let m = model
+  m.buyer.electronic-address = (scheme: "9901", id: "12345678")
+  assert.eq(rules(m), ("BR-CL-25",))
+  m.buyer.electronic-address = (scheme: "0088", id: "4000001123452")
+  assert.eq(rules(m), ())
+})[
+  #line-items[#item([Consulting], price: 1000)]
+  #payment-goal(days: 14)
+  #bank
+]

@@ -60,6 +60,8 @@ jobs:
             pdfdetach -saveall -o /tmp/extracted/invoice /tmp/extracted/invoice.pdf
           "
 
+      # Mustang for every document, then KoSIT for the EN 16931 and
+      # XRechnung ones.
       - name: Validate all ZUGFeRD test documents
         run: nix run .#validate-all-zugferd --accept-flake-config
 
@@ -72,9 +74,12 @@ jobs:
           retention-days: 5
 
   # Every generated and regression invoice against the official validators
-  # (XSD, Mustang) and the semantic oracles. Hard gates: no FALSE_NEGATIVE,
-  # FALSE_POSITIVE or CRASH on the legal population, no failure outside
-  # tools/zugferd/known-issues.toml, no known issue that no longer occurs.
+  # (XSD, Mustang, KoSIT) and the semantic oracles. Hard gates: no
+  # FALSE_NEGATIVE, FALSE_POSITIVE or CRASH on the legal population, no
+  # failure outside tools/zugferd/known-issues.toml, no known issue that no
+  # longer occurs, no undocumented disagreement of Mustang and KoSIT
+  # (tools/zugferd/validator-differences.toml). Pull requests run the PR
+  # population, the nightly run the larger one with random invoices.
   corpus:
     name: Conformance corpus
     runs-on: ubuntu-latest
@@ -97,6 +102,13 @@ jobs:
       - name: Run the conformance corpus
         run: nix run .#zugferd-corpus --accept-flake-config -- --population ${{ github.event_name == 'schedule' && 'nightly' || 'pr' }}
 
+      # An expected failure until Typst can write custom XMP metadata
+      # (typst/typst#5667): the PDFs lack only the Factur-X XMP metadata.
+      # It fails when that changes, e.g. with a Typst that can write it.
+      - name: Check the Factur-X PDF (expected failure)
+        if: success() || failure()
+        run: nix run .#zugferd-xmp --accept-flake-config
+
       - name: Archive results
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
@@ -106,6 +118,8 @@ jobs:
             build/zugferd/results.json
             build/zugferd/corpus/
             build/zugferd/out/*.xml
+            build/zugferd/kosit.log
+            build/zugferd/xmp/
           retention-days: 7
 
   # The e-invoice test documents compile to bit-identical PDFs and their XML
