@@ -105,14 +105,11 @@
     assert.eq(ours.values.at(name), mustang.values.at(name), message: id)
   }
   // The file name is the name of the attached XML: `file-name` of the
-  // profile, else factur-x.xml. Mustang names the XML of the XRECHNUNG
-  // profile xrechnung.xml, as ZUGFeRD 2.3 does; the profile table decides
-  // which name invoice-pro attaches.
+  // profile, else factur-x.xml. It equals Mustang's, which names the XML of
+  // the XRECHNUNG profile xrechnung.xml, as ZUGFeRD 2.3 does.
   let file-name = profiles.at(id).at("file-name", default: default-file-name)
   assert.eq(ours.values.DocumentFileName, (file-name,))
-  if id != "xrechnung" {
-    assert.eq(ours.values.DocumentFileName, mustang.values.DocumentFileName)
-  }
+  assert.eq(ours.values.DocumentFileName, mustang.values.DocumentFileName)
 }
 
 // --- 3. The data equals the packet ---

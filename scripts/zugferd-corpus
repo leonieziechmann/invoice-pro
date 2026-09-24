@@ -3,7 +3,7 @@
 # has a disposition (tools/zugferd/bt_disposition.py), generates the corpus of
 # invoices (tools/zugferd/corpus/gen.py), then compiles every case once and
 # compares invoice-pro's own verdict and the XML with the official validators
-# (XSD and Mustang) and the semantic oracles (tools/zugferd/run.py).
+# (XSD, Mustang and KoSIT) and the semantic oracles (tools/zugferd/run.py).
 # See tests/TESTING.md, "E-invoice conformance and performance (CI)".
 #
 # Usage: zugferd-corpus [--population pr|nightly|legal] [run.py options ...]
@@ -11,8 +11,9 @@
 #
 # Needs Python 3.11+ with lxml and pypdf ($PYTHON, default python3), Typst
 # ($TYPST_BIN, default typst), a JDK ($JAVA_BIN/$JAVAC_BIN or $JAVA_HOME,
-# default java/javac) and the Mustang CLI jar 2.14.0 ($MUSTANG_JAR). The Nix
-# app `nix run .#zugferd-corpus` provides all of them.
+# default java/javac), the Mustang CLI jar 2.14.0 ($MUSTANG_JAR), the KoSIT
+# validator jar 1.6.3 ($KOSIT_JAR) and its unpacked XRechnung configuration
+# ($KOSIT_CONFIG). The Nix app `nix run .#zugferd-corpus` provides all of them.
 set -euo pipefail
 
 if [ ! -f "typst.toml" ]; then
