@@ -65,7 +65,14 @@ for file in $files; do
   fi
   cp -R "$file" "$bundle/"
 done
-excludes="$(sed -nE 's/^exclude[[:space:]]*=[[:space:]]*\[(.*)\].*/\1/p' typst.toml | tr ',' '\n' |
+# The `exclude` list is read from its line; a list over several lines would
+# be read as empty and leave excluded files in the bundle, so it stops here.
+exclude_line="$(grep -E '^exclude[[:space:]]*=' typst.toml || true)"
+if [ -n "$exclude_line" ] && [ "${exclude_line%]*}" = "$exclude_line" ]; then
+  echo "Error: the \`exclude\` list of typst.toml spans several lines; write it on one line so that this check can read it." >&2
+  exit 1
+fi
+excludes="$(printf '%s\n' "$exclude_line" | sed -nE 's/^exclude[[:space:]]*=[[:space:]]*\[(.*)\].*/\1/p' | tr ',' '\n' |
   sed -E 's/^[[:space:]]*"//; s/"[[:space:]]*$//' | sed '/^$/d')"
 (
   cd "$bundle"
