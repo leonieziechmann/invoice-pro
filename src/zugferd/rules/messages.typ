@@ -1274,21 +1274,11 @@
     )
   },
   "IP-CALC-01": f => (
-    if f.signs {
-      (
-        "The parts of this allowance or charge per VAT category add up to "
-          + str(f.parts)
-          + ", but it amounts to "
-          + str(f.amount)
-          + "."
-      )
-    } else {
-      (
-        "A part of this allowance or charge per VAT category has the other sign, so the e-invoice would state it as "
-          + if f.amount < 0 { "a charge" } else { "an allowance" }
-          + "."
-      )
-    },
+    "The parts of this allowance or charge per VAT category add up to "
+      + str(f.parts)
+      + ", but it amounts to "
+      + str(f.amount)
+      + ".",
     _bug-hint,
   ),
   "IP-CALC-02": f => (

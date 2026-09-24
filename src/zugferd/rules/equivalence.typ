@@ -18,7 +18,9 @@
 //   of logic/net-amounts.typ: less than a unit of the currency, plus the
 //   rounding of the printed taxable amount of its VAT group.
 // - IP-CALC-01: the parts of a document level allowance or charge per VAT
-//   group add up to its printed amount and have its sign.
+//   group add up to its printed amount. A part may have the other sign: a
+//   discount on a VAT group whose lines add up to a credit is stated as a
+//   charge of that group (IP-PRINT-01 compares each part).
 // - IP-CALC-02: the printed amounts of a VAT group add up to its printed
 //   taxable amount (with gross prices: to its gross total).
 // - PEPPOL-EN16931-R120 (XRechnung): a line's net amount is its quantity
@@ -305,11 +307,9 @@
   ) {
     let absolute = modifier.at("absolute", default: _zero)
     let parts = _zero
-    let signs = true
     for (key, part) in modifier.at("split", default: (:)) {
       let amount = part.at("absolute", default: _zero)
       parts += amount
-      if amount * absolute < _zero { signs = false }
       if key in sums { sums.at(key) += amount }
       if amount == _zero { continue }
       let entry = entries.at(next, default: none)
@@ -337,13 +337,12 @@
         ))
       }
     }
-    if parts != absolute or not signs {
+    if parts != absolute {
       out.push((
         key: "IP-CALC-01",
         field: _modifier-field(modifier),
         parts: parts,
         amount: absolute,
-        signs: signs,
       ))
     }
   }

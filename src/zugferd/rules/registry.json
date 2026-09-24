@@ -1457,7 +1457,7 @@
       "terms": ["BT-92", "BT-99"],
       "level": "error",
       "field": "discount (<name>) or surcharge (<name>)",
-      "summary": "The parts of an allowance or charge per VAT category (BG-20, BG-21) do not add up to its printed amount, or one has the other sign, which the XML would state as a charge instead of an allowance (or the other way round). A failure is a bug of invoice-pro.",
+      "summary": "The parts of an allowance or charge per VAT category (BG-20, BG-21) do not add up to its printed amount. A failure is a bug of invoice-pro.",
       "legal": "§ 14 Abs. 4 Satz 1 Nr. 7 UStG; Art. 226 No. 8 of the VAT Directive 2006/112/EC (the taxable amount per rate, with its reductions)"
     },
     "IP-CALC-02": {

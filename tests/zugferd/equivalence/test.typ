@@ -243,18 +243,15 @@
 // --- 3. IP-CALC-01 and IP-CALC-02: the printed amounts add up ---
 #invariant-test((model, item-data, printed, _) => {
   // A part of the document level discount per VAT rate that does not add up
-  // to the discount, and one of the other sign.
+  // to the discount.
   let data = item-data
   let key = data.discounts.first().split.keys().first()
   data.discounts.at(0).split.at(key).absolute -= decimal("0.01")
-  assert("IP-CALC-01" in rules(model, data, printed))
-  let data = item-data
-  let part = data.discounts.first().split.at(key)
-  data.discounts.at(0).split.at(key).absolute = -part.absolute
   let calc01 = findings(model, data, printed).filter(f => f.key == "IP-CALC-01")
-  assert.eq(calc01.map(f => (f.field, f.signs)), (
-    ("discount (Projektrabatt)", false),
+  assert.eq(calc01.map(f => (f.field, f.amount - f.parts)), (
+    ("discount (Projektrabatt)", decimal("0.01")),
   ))
+  assert(diagnostics(calc01).first().message.contains("add up to"))
 
   // A taxable amount the lines, allowances and charges of its VAT group do
   // not add up to.
@@ -265,6 +262,22 @@
   assert.eq(calc02.first().expected - calc02.first().sum, one)
   assert(diagnostics(calc02).first().message.contains("taxable amount"))
 })[#rich]
+
+// A discount on a VAT group whose lines add up to a credit is a charge of
+// that group, with the sign of its part: nothing to report.
+#invariant-test((model, item-data, printed, _) => {
+  assert.eq(found(model, item-data, printed), ())
+  let parts = model.allowance-charges.map(e => (e.charge, e.rate))
+  assert.eq(parts, ((false, decimal("0.19")), (true, decimal("0.07"))))
+})[
+  #line-items[
+    #item([Beratung], price: 100, quantity: 1)
+    #item([Gutschrift], price: -40, quantity: 2, tax: tax.vat(7%))
+    #discount([Treuerabatt], amount: 3%)
+  ]
+  #payment-goal(days: 14)
+  #bank
+]
 
 // --- 4. PEPPOL-EN16931-R120 (XRechnung): the quantity times the price is
 // the line's net amount, within 0.02; 100.40 yen round to whole yen ---

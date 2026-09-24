@@ -699,7 +699,7 @@ tests = ["tests/zugferd/equivalence/test.typ"]
 
 [ip."IP-CALC-01"]
 level = "error"
-summary = "The parts of a document level allowance or charge per VAT category do not add up to its printed amount, or have the other sign."
+summary = "The parts of a document level allowance or charge per VAT category do not add up to its printed amount."
 basis = "§ 14 Abs. 4 Satz 1 Nr. 7 UStG; Art. 226 No. 8 of the VAT Directive 2006/112/EC (the taxable amount per rate, with its reductions)."
 tests = ["tests/zugferd/equivalence/test.typ"]
 
