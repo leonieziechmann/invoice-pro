@@ -5,11 +5,11 @@
 
 Greedy delta debugging over the generator's feature vector: every dimension
 is set to its simplest value (corpus/gen.py SIMPLE) and `lines` is lowered,
-as long as the failure signature (class, rules of both sides, oracle ids)
-stays the same. Legal cases stay legal (`gen.allowed`). One Mustang JVM
-serves all trials; KoSIT validates each trial in a JVM of its own, which
-costs a few seconds (`--no-kosit` skips it when the signature does not
-depend on KoSIT).
+as long as the failure signature (class, rules of both sides, oracle ids,
+undocumented disagreement of Mustang and KoSIT) stays the same. Legal cases
+stay legal (`gen.allowed`). One Mustang JVM serves all trials; KoSIT
+validates each trial in a JVM of its own, which costs a few seconds
+(`--no-kosit` skips it when the signature does not depend on KoSIT).
 
 The minimal case is written to <build dir>/min/<CASE_ID>.typ; add a
 `// expect:` header and move it to tools/zugferd/corpus/regression/ to keep
@@ -31,7 +31,24 @@ import gen  # noqa: E402
 import run  # noqa: E402
 
 
-def evaluate(case, features, work, checker):
+def failure(row, differences):
+    """(signature, failing) of a trial, as run.triage judges it: the class,
+    the rules of both sides, the failed oracles and the disagreement of
+    Mustang and KoSIT that validator-differences.toml does not document; and
+    whether the case fails at all."""
+    dis = row.get("disagreement")
+    if dis:
+        dis["undocumented"] = [rule for rule in dis["rules"]
+                               if not run.documented(rule, dis["rejected_by"], dis["other"][rule], differences)]
+    undocumented = tuple((dis or {}).get("undocumented", ()))
+    oracle_ids = tuple(sorted({p.split(":")[0] for p in row["oracle"]}))
+    signature = (row["cls"], tuple(row["ours"]), tuple(row["official"]), oracle_ids, undocumented)
+    failing = (not row["class_ok"] or bool(row["missing_rules"]) or bool(row["oracle"])
+               or run.breaks_hard_gate(row) or bool(undocumented))
+    return signature, failing
+
+
+def evaluate(case, features, work, checker, differences):
     """(signature, row) of `case` with other features."""
     src, facts = gen.render(case["id"], features, case.get("mutation"), case.get("opts"))
     file = work / f"{case['id']}.typ"
@@ -42,8 +59,7 @@ def evaluate(case, features, work, checker):
     checker.validate_kosit([res])
     checker.collect(res)
     row = run.make_row(trial, res, doc)
-    oracle_ids = sorted({p.split(":")[0] for p in row["oracle"]})
-    return (row["cls"], tuple(row["ours"]), tuple(row["official"]), tuple(oracle_ids)), row
+    return failure(row, differences)[0], row
 
 
 def main(argv=None):
@@ -64,15 +80,16 @@ def main(argv=None):
     work.mkdir(parents=True, exist_ok=True)
     started = time.perf_counter()
     try:
+        differences = run.load_differences(run.HERE / "validator-differences.toml")
         checker = run.Checker(build, use_kosit=not args.no_kosit)
     except common.ToolError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
     try:
         features = dict(case["features"])
-        target, row = evaluate(case, features, work, checker)
+        target, row = evaluate(case, features, work, checker, differences)
         print(f"signature: {run.signature(row)}")
-        if row["class_ok"] and not row["missing_rules"] and not row["oracle"]:
+        if not failure(row, differences)[1]:
             print("the case passes: nothing to minimize")
             return 0
         runs, changed = 1, True
@@ -87,11 +104,11 @@ def main(argv=None):
                     if case["population"] == "legal" and not gen.allowed(trial):
                         continue
                     runs += 1
-                    if evaluate(case, trial, work, checker)[0] == target:
+                    if evaluate(case, trial, work, checker, differences)[0] == target:
                         features, changed = trial, True
                         break
         # Leave the minimal case (not the last trial) on disk.
-        evaluate(case, features, work, checker)
+        evaluate(case, features, work, checker, differences)
     finally:
         checker.close()
     kept = {k: v for k, v in features.items() if gen.SIMPLE.get(k) != v}

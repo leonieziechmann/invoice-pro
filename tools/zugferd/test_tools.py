@@ -20,6 +20,7 @@ sys.path.insert(0, str(HERE / "corpus"))
 
 import common  # noqa: E402
 import gen  # noqa: E402
+import minimize  # noqa: E402
 import oracles  # noqa: E402
 import run  # noqa: E402
 
@@ -280,6 +281,25 @@ class OfficialVerdict(unittest.TestCase):
         # Only the documented level of the other validator counts.
         entries = {"BR-DE-27": {"rejected-by": ["mustang"], "other": ["warning"], "reason": "r"}}
         self.assertFalse(run.documented("BR-DE-27", "mustang", "nothing", entries))
+
+
+class Minimizer(unittest.TestCase):
+    def test_undocumented_disagreements_are_failures(self):
+        # A random case on which Mustang and KoSIT disagree: its class is as
+        # expected, only the disagreement makes it fail (run.triage), so the
+        # minimizer must see the failure and keep it in the signature.
+        case = {"id": "ru0001", "population": "random", "expect": "AGREE", "file": "x.typ"}
+        res = collected(mustang_report("BR-DE-27"), kosit_report(warnings=["BR-DE-27"]), ours=["BR-DE-27"])
+        documented = {"BR-DE-27": {"rejected-by": ["mustang"], "other": ["warning"], "reason": "r"}}
+        signature, failing = minimize.failure(run.make_row(case, res, None), documented)
+        self.assertEqual((signature, failing), (("AGREE_INVALID", ("BR-DE-27",), ("BR-DE-27",), (), ()), False))
+        row = run.make_row(case, res, None)
+        signature, failing = minimize.failure(row, {})
+        self.assertEqual((signature[-1], failing), (("BR-DE-27",), True))
+        self.assertIn("OFFICIAL_DISAGREE only-mustang=BR-DE-27", run.signature(row))
+        # The other failures, as before.
+        wrong = dict(case, expect="AGREE_VALID")
+        self.assertTrue(minimize.failure(run.make_row(wrong, res, None), documented)[1])
 
 
 def result(ours=(), official=(), valid=None, crash=None, source=None):
