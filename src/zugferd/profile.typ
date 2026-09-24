@@ -59,16 +59,20 @@
   xrechnung: false,
 )
 
+// `xmp-level` is the conformance level the Factur-X XMP metadata of the PDF
+// states for the profile (`fx:ConformanceLevel`, see xmp.typ).
 #let profiles = (
   minimum: _base
     + (
       name: "MINIMUM",
       guideline: "urn:factur-x.eu:1p0:minimum",
+      xmp-level: "MINIMUM",
     ),
   basic-wl: _base
     + (
       name: "BASIC WL",
       guideline: "urn:factur-x.eu:1p0:basicwl",
+      xmp-level: "BASIC WL",
       addresses: true,
       settlement: true,
       party-ids: true,
@@ -84,6 +88,7 @@
     + (
       name: "BASIC",
       guideline: "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic",
+      xmp-level: "BASIC",
       lines: true,
       addresses: true,
       settlement: true,
@@ -100,6 +105,7 @@
     + (
       name: "EN 16931 (COMFORT)",
       guideline: "urn:cen.eu:en16931:2017",
+      xmp-level: "EN 16931",
       business-process: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
       lines: true,
       addresses: true,
@@ -128,6 +134,7 @@
     + (
       name: "XRechnung 3.0",
       guideline: "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0",
+      xmp-level: "XRECHNUNG",
       business-process: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
       lines: true,
       addresses: true,
