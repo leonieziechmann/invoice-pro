@@ -295,6 +295,8 @@ The default `references` and every [preset](./api-reference/invoice/references.m
 
 For the generated XML payload to be valid, your input data must satisfy strict standard requirements:
 
+Every date input is a calendar date: a `datetime` of a time only, such as `datetime(hour: 9, minute: 0, second: 0)`, stops the compilation with an error that names the input (e.g. `` `service-period` is a time without a day ``), for the dates of the invoice (`date`, `service-period`, `order-date`, `preceding-invoice-date`, `due-date`), of the items (`item`, `bundle`, `group`), of `payment-goal`, `paid` and `prepayment`, and the `value` of the date references. Earlier versions failed in the date format of the locale with a message that named no input.
+
 ### 1. Party Information
 
 Both the `sender` and `recipient` dictionaries must include:
