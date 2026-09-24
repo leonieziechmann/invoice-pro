@@ -1,9 +1,10 @@
 // Factur-X EN 16931 with gross prices (`tax-mode: "inclusive"`): the XML
-// states net amounts. Every line and allowance is converted to net on its own,
-// and the rounding difference moves onto the largest line of its VAT category,
-// so the lines add up to the printed taxable amounts (BR-S-08, BR-CO-10,
-// BR-CO-13) and the XML totals equal the printed ones. Validated by
-// validate-all-zugferd.
+// states net amounts (src/logic/net-amounts.typ). Every line and allowance is
+// converted to net, and the cents the separately rounded amounts lack go to
+// the amounts closest to the next cent, so the lines add up to the printed
+// taxable amounts (BR-S-08, BR-CO-10, BR-CO-13) and the XML totals equal the
+// printed ones. The net prices keep 6 decimals (PEPPOL-EN16931-R120).
+// Validated by validate-all-zugferd.
 
 #import "/src/lib.typ": *
 

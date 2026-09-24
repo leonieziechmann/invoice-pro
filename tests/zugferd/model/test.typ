@@ -68,7 +68,9 @@
     decimal("11.21"),
     decimal("7.56"),
   ))
-  assert.eq(lines.first().price, decimal("16.7983"))
+  // The net price of 19.99 incl. 19 % VAT keeps 6 decimals, so that the
+  // quantity times the price is the line's amount (PEPPOL-EN16931-R120).
+  assert.eq(lines.first().price, decimal("16.798319"))
   assert.eq(lines.at(2).allowances.map(a => a.amount), (decimal("0.84"),))
   assert.eq(
     model.allowance-charges.map(e => (e.category, e.rate, e.amount)),

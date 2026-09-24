@@ -328,9 +328,20 @@
     ("10.00", "5.00").sorted(),
   )
 
-  // 5. Gross amounts (tax-mode "inclusive") are converted to net per category.
+  // 5. With gross amounts (tax-mode "inclusive"), the parts are stated with
+  //    the net amounts of logic/net-amounts.typ, which add up to the taxable
+  //    amount of each category.
+  import "/src/logic/net-amounts.typ": net-amounts
+  let nets = net-amounts(
+    (),
+    (
+      "19-S": (basis: decimal("-8.40")),
+      "7-S": (basis: decimal("-4.67")),
+    ),
+    discounts,
+  )
   assert.eq(
-    document-allowance-charges(discounts, (), inclusive: true).map(e => {
+    document-allowance-charges(discounts, (), nets: nets.modifiers).map(e => {
       e.amount
     }),
     (decimal("8.40"), decimal("4.67")),

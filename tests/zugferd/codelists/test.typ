@@ -7,7 +7,6 @@
 
 #import "/src/zugferd/guard/lists.typ": validator as lists
 #import "/src/zugferd/rules/engine.typ": in-list
-#import "/src/zugferd/codelists.typ"
 
 #let codes(list) = list.trim().split(" ")
 
@@ -92,17 +91,7 @@
   assert(in-list(lists.vatex.newer, "VATEX-EU-144"))
 }
 
-// --- 5. The arrays the data model reads (src/zugferd/codelists.typ) ---
-#{
-  assert.eq(codelists.countries, codes(lists.country.every))
-  assert.eq(codelists.units, codes(lists.unit.every))
-  assert("DE" in codelists.countries)
-  assert("SS" not in codelists.countries)
-  assert("C62" in codelists.units)
-  assert("C6" not in codelists.units)
-}
-
-// --- 6. A code that the validation of a profile rejects is an error in that
+// --- 5. A code that the validation of a profile rejects is an error in that
 // profile, also when only the newest official validation rejects it: the
 // EN 16931 Schematron 1.3.16 of the KoSIT validator, whose lists have
 // withdrawn codes that the older lists of Mustang still have ---
@@ -139,7 +128,7 @@
   #bank
 ]
 
-// --- 7. Electronic address schemes the EAS code list has withdrawn: 9901
+// --- 6. Electronic address schemes the EAS code list has withdrawn: 9901
 // is no longer in the list of the EN 16931 Schematron 1.3.16 ---
 #model-test(model => {
   assert(not in-list(lists.eas.every, "9901"))
@@ -154,7 +143,7 @@
   #bank
 ]
 
-// --- 8. A code only the newest EN 16931 list has is named as such: the
+// --- 7. A code only the newest EN 16931 list has is named as such: the
 // validation of the profile does not know it yet, in every profile ---
 #let not-yet(subject) = (
   subject
