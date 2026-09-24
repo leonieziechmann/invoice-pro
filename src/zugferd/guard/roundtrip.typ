@@ -1,64 +1,44 @@
-// G3, the round trip of the write guard (concept 4.4): the XML states
-// exactly what the data model states. It compares the XML as Typst's XML
-// parser reads it back (the document G4 parses anyway, ../zugferd.typ) with
-// the model, through a binding table of its own (bindings.json): the syntax
-// binding of EN 16931 to CII, business term by business term, independent
-// of the builder (build.typ), so that a mistake of the builder cannot hide
-// in both.
+// G3, the round trip of the write guard (concept 4.4): the XML, as Typst's
+// parser reads it back for G4 (../zugferd.typ), states exactly what the data
+// model states. The binding table (bindings.json) is the syntax binding of
+// EN 16931 to CII, maintained apart from the builder (build.typ) so that a
+// mistake of the builder cannot hide in both;
+// tools/zugferd/test_roundtrip.py checks it against the schemas of the
+// profiles.
 //
-// The table lists the bindings of the children of an element (`header`,
-// from the root element, and `line`, from an invoice line), each for the
-// child element of the local name `e`:
+// The table lists the bindings of the children of the root element
+// (`header`) and of an invoice line (`line`), each for the child element of
+// the local name `e`:
 //
 // - a leaf `(e, t: term, m: key, k: kind, p: level)` compares the text of
-//   the element with the value `m` (a key or an index) of the model part
-//   the walk is at, or of its part `g` if given; `a` maps attributes of the
-//   element to the paths of their values below that part;
-// - `(e, c: bindings)` is an element that occurs once and whose children
-//   the bindings `c` describe, at the model part `g` if given;
-// - `(e, r: path, t: term, p: level, c: bindings)` is a repeated group: one
+//   the element (with `w`, of the element `w` it wraps) with the value `m`
+//   (a key or an index) of the model part at hand, or of its part `g`; `a`
+//   maps attributes to the paths of their values below that part;
+// - `(e, c: bindings)` is an element whose children `c` describe, at the
+//   model part `g` if given (a part the model does not have is skipped);
+// - `(e, r: path, t: term, p: level, c: bindings)` a repeated group: an
 //   element per entry of the array at `path`;
-// - `(e, s: (scheme: leaf))` are the tax registrations of a party, an
-//   identifier per scheme.
+// - `(e, s: (scheme: leaf))` the tax registrations of a party.
 //
-// `p` is the first profile (by `levels`) whose schema has the element and
-// whose Factur-X Schematron uses it (tools/zugferd/test_roundtrip.py checks
-// every binding against the guard tables of every profile, which
-// gen_guard.py compiles from the pinned XSDs and Schematrons). Findings:
+// `p` is the first profile (by `levels`) that can state the element. Kinds:
+// "t" text, "d" date (format 102), "b" indicator; decimals: "a" amount, "q"
+// quantity or price, "p" rate in percent ("19.00" is 0.19 in the model),
+// "a0" and "q1" an amount 0 and a quantity 1 the XML leaves out, "po" a
+// rate it leaves out for the VAT category O.
 //
-// - differs: the XML states another value than the model;
-// - dropped: the model has a value the XML does not state, although the
-//   profile can state it;
-// - extra: the XML states a value the model does not have;
-// - count: an element occurs more often than the model has values for it,
-//   or a repeated group (e.g. the VAT breakdown) has another number of
-//   entries than the model.
+// Findings (errors, see report.typ): "differs", another value; "dropped", a
+// value of the model the XML leaves out although the profile can state it;
+// "extra", a value the model does not have; "count", an element more often
+// than the model has values for it, or another number of entries of a
+// repeated group.
 //
-// Values compare by their kind: "t" texts and codes as they are; amounts
-// "a", quantities and prices "q" and rates "p" (in percent) as decimals, so
-// "19.00" is 0.19 in the model; "a0" an amount and "q1" a quantity the XML
-// leaves out when it is 0 or 1, "po" a rate it leaves out for the VAT
-// category O (BR-O-05 to BR-O-07); "d" dates in the format 102; "b"
-// indicators. Every finding is an error of the guard (report.typ names its
-// rule and input field, and merges it with the validator's diagnostics).
-//
-// In the standard mode, the bindings of the header run: document, parties,
-// references, delivery, payment, VAT breakdown, allowances and charges, and
-// the totals; of the lines, only their number. The bindings of every line
-// and the arithmetic of the written amounts run in the strict mode
-// (`zugferd-strict: true`, strict.typ), which CI uses: comparing a line
-// takes about 1.6 million instructions (0.4 ms), twenty times the budget of
-// 0.02 ms for a check per line (tools/perf/README.md). The header takes
-// about 7.5 million, whatever the number of lines.
-//
-// Performance: one call walks the whole document, with a stack instead of a
-// call per element; an element and a binding cost a handful of operations
-// when the values agree, and texts compare as strings first. A part of the
-// model the invoice does not have (a payee, a ship-to party) is skipped
-// with its elements, and the lines are counted without a step per line.
+// The standard mode compares the header and counts the lines; the strict
+// mode (`zugferd-strict`, which CI uses) compares every line as well: that
+// takes about 1.6 million instructions (0.4 ms) per line, twenty times the
+// budget of a check per line (tools/perf/README.md). One call walks the
+// document with a stack, without a call per element.
 
 #let _table = json("bindings.json")
-#let _levels = _table.levels
 
 #let _zero = decimal("0")
 #let _one = decimal("1")
@@ -67,12 +47,11 @@
 // The element of an invoice line.
 #let _line = "IncludedSupplyChainTradeLineItem"
 
-// Lexical space of xs:decimal (as write.typ checks it).
-#let _decimal = regex("^[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)$")
-
-// Whether `text` (`none`: the XML leaves the element out) states the model
-// value `value` of the kind `kind` (see the top of this file). `category` is
-// the VAT category of the entry, for the kind "po".
+// Whether `text` (`none`: the element is left out) states the model value
+// `value` of the kind `kind`; `category` is the VAT category of the entry
+// (for "po"). Decimals compare by value: the round trip runs on a document
+// the serializer wrote without findings, so every number of it has the
+// lexical form of a decimal (G2).
 #let _same(kind, text, value, category) = {
   if kind == "t" {
     return (
@@ -98,19 +77,20 @@
         } else { value }
     )
   }
-  if kind == "po" and category == "O" { value = none }
   if value != none {
-    if kind in ("p", "po") { value = value * _hundred } else if (
-      kind == "a0" and value == _zero
-    ) { value = none } else if kind == "q1" and value == _one { value = none }
+    if kind == "po" and category == "O" { value = none } else if (
+      kind in ("p", "po")
+    ) { value = value * _hundred } else if kind == "a0" and value == _zero {
+      value = none
+    } else if kind == "q1" and value == _one { value = none }
   }
   if value == none or text == none { return value == text }
-  type(text) == str and _decimal in text and decimal(text) == value
+  type(text) == str and decimal(text) == value
 }
 
-// A finding (see the top of this file): `path` of local names, an entry of
-// a repeated group as `(name, number)`, `expected` the value of the model,
-// of the kind `k`. report.typ qualifies the path and shows the value.
+// A finding: `path` of local names, an entry of a repeated group as
+// `(name, number)`; `expected` the value of the model, of the kind `k`.
+// report.typ qualifies the path and shows the values.
 #let _found(kind, path, term, stated, expected, k: none) = (
   kind: kind,
   rule: none,
@@ -122,22 +102,19 @@
 )
 
 /// G3: compares the parsed XML (`root`, its root element) with the data
-/// model `model`, through the bindings of its header and, with `strict`,
-/// of every line (see the top of this file). `terms` are the payment terms
-/// the profile states (`profile-terms` of model.typ), which the model holds
-/// in two forms; the date of a preceding invoice (BT-26) is stated only
-/// with its number (BT-25). Returns the findings.
+/// model `model` through the bindings of its header and, with `strict`, of
+/// every line (see the top of this file). `terms` are the payment terms the
+/// profile states (`profile-terms` of model.typ); the date of a preceding
+/// invoice (BT-26) is stated only with its number (BT-25). Returns the
+/// findings.
 ///
-/// The caller runs it only on a document the serializer wrote without text
-/// between elements (G1 reports that as "text"), so every child of an
-/// element with children is an element.
-///
-/// One call walks the whole document, with a stack instead of a call per
-/// element (a call hashes its arguments: the document and the model).
+/// The caller runs it on a document the serializer wrote without findings
+/// (G1, G2): every element is known at its position and every value has its
+/// lexical form.
 ///
 /// -> array
 #let round-trip(root, model, terms, strict: false) = {
-  let level = _levels.at(model.profile.id, default: 3)
+  let level = _table.levels.at(model.profile.id, default: 3)
   let invoice = model.invoice
   let derived = (
     terms: terms,
@@ -151,16 +128,15 @@
   )
   while stack != () {
     let (node, spec, base, path) = stack.pop()
-    // The elements below `node` by name; those that occur more than once
-    // also in `many`.
+    // The child elements by name; those that occur more than once also in
+    // `many`.
     let children = (:)
     let many = (:)
     if node != none {
       let all = node.children
       if node.tag == "SupplyChainTradeTransaction" {
-        // The lines (BG-25) precede the other elements of the transaction,
-        // in the order of the schema that G1 checks: counted from the end,
-        // without a step per line, and compared in the strict mode only.
+        // The lines (BG-25) come first, in schema order (G1): counted from
+        // the end, without a step per line, and compared in the strict mode.
         let k = 0
         for child in all.rev() {
           if child.tag == _line { break }
@@ -169,9 +145,14 @@
         let lines = all.slice(0, all.len() - k)
         all = all.slice(all.len() - k)
         let entries = if level >= 2 { base.lines } else { () }
-        let here = path + (_line,)
         if lines.len() != entries.len() {
-          found.push(_found("count", here, "BG-25", lines.len(), entries.len()))
+          found.push(_found(
+            "count",
+            path + (_line,),
+            "BG-25",
+            lines.len(),
+            entries.len(),
+          ))
         }
         if strict {
           let n = 0
@@ -197,8 +178,6 @@
       }
       for child in all { children.insert(child.tag, child) }
       if children.len() != all.len() {
-        // Some element occurs more than once: the first one in `children`,
-        // all of them in `many`.
         children = (:)
         for child in all {
           let tag = child.tag
@@ -218,6 +197,38 @@
           let part = base.at(b.g, default: none)
           if part != none { part.at(b.m, default: none) }
         }
+        if element != none {
+          if b.e in many {
+            found.push(_found(
+              "count",
+              path + (b.e,),
+              b.t,
+              many.at(b.e).len(),
+              1,
+            ))
+          }
+          if "w" in b {
+            // The element the wrapper holds, its only child.
+            let inner = element.children
+            element = inner.first(default: none)
+            if inner.len() != 1 or element.tag != b.w {
+              let named = ()
+              for child in inner {
+                if child.tag == b.w { named.push(child) }
+              }
+              if named.len() > 1 {
+                found.push(_found(
+                  "count",
+                  path + (b.e, b.w),
+                  b.t,
+                  named.len(),
+                  1,
+                ))
+              }
+              element = named.first(default: none)
+            }
+          }
+        }
         if element == none {
           // Lost, unless the profile cannot state it, or the XML leaves the
           // value out by its kind.
@@ -230,7 +241,7 @@
           ) {
             found.push(_found(
               "dropped",
-              path + (b.e,),
+              path + (b.e,) + if "w" in b { (b.w,) } else { () },
               b.t,
               none,
               value,
@@ -246,22 +257,13 @@
             let extra = _same(b.k, none, value, category)
             found.push(_found(
               if extra { "extra" } else { "differs" },
-              path + (b.e,),
+              path + (b.e,) + if "w" in b { (b.w,) } else { () },
               b.t,
               if type(text) == str { text } else { "" },
               if not extra { value },
               k: b.k,
             ))
           }
-        }
-        if b.e in many {
-          found.push(_found(
-            "count",
-            path + (b.e,),
-            b.t,
-            many.at(b.e).len(),
-            1,
-          ))
         }
         if "a" not in b { continue }
         // The attributes of the element.
@@ -279,33 +281,18 @@
               if stated == none { "dropped" } else if expected == none {
                 "extra"
               } else { "differs" },
-              path + (b.e, "@" + attribute),
+              path
+                + (b.e,)
+                + if "w" in b { (b.w,) } else { () }
+                + ("@" + attribute,),
               b.t,
               stated,
               expected,
             ))
           }
         }
-      } else if "c" in b and "r" not in b {
-        // An element that occurs once. A part of the model the invoice does
-        // not have (e.g. a payee) is skipped unless the XML states it.
-        let part = if "g" in b { base.at(b.g, default: none) } else { base }
-        if part == none {
-          if element == none { continue }
-          part = (:)
-        }
-        stack.push((element, b.c, part, path + (b.e,)))
-        if b.e in many {
-          found.push(_found(
-            "count",
-            path + (b.e,),
-            none,
-            many.at(b.e).len(),
-            1,
-          ))
-        }
       } else if "r" in b {
-        // A repeated group: one element per entry of the model.
+        // A repeated group: an element per entry of the model.
         let entries = base
         for key in b.r {
           if entries != none { entries = entries.at(key, default: none) }
@@ -327,6 +314,24 @@
         for (element, entry) in elements.zip(entries) {
           n += 1
           stack.push((element, b.c, entry, path + ((b.e, n),)))
+        }
+      } else if "c" in b {
+        // An element that occurs once. A part of the model the invoice does
+        // not have (e.g. a payee) is skipped unless the XML states it.
+        let part = if "g" in b { base.at(b.g, default: none) } else { base }
+        if part == none {
+          if element == none { continue }
+          part = (:)
+        }
+        stack.push((element, b.c, part, path + (b.e,)))
+        if b.e in many {
+          found.push(_found(
+            "count",
+            path + (b.e,),
+            none,
+            many.at(b.e).len(),
+            1,
+          ))
         }
       } else {
         // Tax registrations: an identifier per scheme.

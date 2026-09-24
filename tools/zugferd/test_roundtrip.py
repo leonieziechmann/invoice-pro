@@ -9,7 +9,10 @@ A binding says from which profile on the XML can state its element (`p`, by
 position in their schema and use it; every poorer profile must not, so that
 the round trip calls a value "dropped" exactly where the profile could have
 stated it. Every element and attribute of a binding exists in the schema of
-EN 16931, so no binding names an element the XML can never have.
+EN 16931, so no binding names an element the XML can never have. A binding
+compared as a decimal (an amount, a quantity, a rate) is a decimal leaf of
+the schema, whose lexical form the write guard checks (G2) before the round
+trip reads it as a decimal.
 """
 
 import json
@@ -21,6 +24,10 @@ GUARD = REPO / "src" / "zugferd" / "guard"
 PROFILES = ("minimum", "basic-wl", "basic", "en16931", "xrechnung")
 PREFIXES = ("ram:", "rsm:", "udt:", "qdt:")
 KINDS = {"t", "a", "a0", "q", "q1", "p", "po", "d", "b"}
+# The kinds that compare as decimals: the round trip reads their text as a
+# decimal, which only the write guard's check of a decimal leaf (G2) makes
+# safe.
+DECIMALS = {"a", "a0", "q", "q1", "p", "po"}
 LINE = "IncludedSupplyChainTradeLineItem"
 
 
@@ -70,6 +77,17 @@ def scheme_used(table, index, scheme):
     return isinstance(value, int)
 
 
+def leaf_kind(table, index):
+    """The kind of a leaf node ("s" text, "d" decimal, "b" indicator, "x"
+    binary), or None for a node that is no leaf."""
+    node = table["nodes"][index]
+    if isinstance(node, str):
+        return node
+    if isinstance(node, list):
+        return node[0]
+    return None
+
+
 def attributes(table, index):
     """The attributes a leaf node allows, with whether the profile uses them."""
     if index is None:
@@ -88,6 +106,11 @@ def problems_of(spec, table, index, level, path, out):
         here = f"{path}/{name}"
         node, used = child(table, index, name)
         stated = node is not None and used
+        if "w" in b:
+            # A leaf in a wrapper element: the element it wraps.
+            here = f"{here}/{b['w']}"
+            node, used = child(table, node if stated else None, b["w"])
+            stated = node is not None and used
         if "s" in b:
             for scheme, leaf in b["s"].items():
                 can = stated and scheme_used(table, node, scheme)
@@ -99,6 +122,8 @@ def problems_of(spec, table, index, level, path, out):
             if stated != (b["p"] <= level):
                 out.append(f"{here} ({b['t']}): stated from level {b['p']}, the profile "
                            f"{'can' if stated else 'cannot'} state it")
+        if "m" in b and stated and (b["k"] in DECIMALS) != (leaf_kind(table, node) == "d"):
+            out.append(f"{here} ({b['t']}): the kind {b['k']!r} does not fit the leaf {leaf_kind(table, node)!r}")
         if "m" in b and stated:
             allowed = attributes(table, node)
             for attribute in b.get("a", {}):
@@ -137,6 +162,8 @@ def shape_problems(bindings):
                     out.append(f"{here}: no term or level")
                 if not isinstance(b["m"], (str, int)) or not isinstance(b.get("g", ""), (str, int)):
                     out.append(f"{here}: a model key is a text or an index")
+                if not isinstance(b.get("w", ""), str):
+                    out.append(f"{here}: the element a wrapper holds is a name")
             elif "s" in b:
                 for scheme, leaf in b["s"].items():
                     if leaf.get("k") != "t" or leaf.get("p") not in levels or not isinstance(leaf.get("m"), str):
@@ -178,6 +205,16 @@ class Bindings(unittest.TestCase):
         self.assertEqual(len(problems), 2)
         self.assertIn("CrossIndustryInvoice/ExchangedDocument/ID (BT-1)", problems[0])
         self.assertIn("Unknown", problems[1])
+
+    def test_a_decimal_binds_a_decimal_leaf(self):
+        # The round trip reads the text of an amount as a decimal, which the
+        # write guard checks it is; a text is compared as it is.
+        wrong = json.loads(json.dumps(self.bindings))
+        document = next(b for b in wrong["header"] if b["e"] == "ExchangedDocument")
+        next(b for b in document["c"] if b["e"] == "ID")["k"] = "a"
+        problems = binding_problems(wrong, "minimum")
+        self.assertEqual(len(problems), 1)
+        self.assertIn("ExchangedDocument/ID (BT-1): the kind 'a'", problems[0])
 
 
 if __name__ == "__main__":

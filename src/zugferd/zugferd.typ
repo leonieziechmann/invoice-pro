@@ -185,12 +185,13 @@
     }
     if roots != ("CrossIndustryInvoice",) {
       findings.push((kind: "well-formed", rule: none, path: (root-tag,)))
-    } else if findings.all(f => f.kind != "text") {
+    } else if findings == () {
       // G3: the XML states what the model states (guard/roundtrip.typ); in
-      // the strict mode every line, and the arithmetic of the amounts. Text
-      // between elements (a finding of G1) is no document of the schema to
-      // compare.
-      findings += round-trip(
+      // the strict mode every line, and the arithmetic of the amounts. It
+      // compares a document of the schema whose values have their lexical
+      // form, so only one without findings of G1 and G2, which are errors
+      // anyway.
+      findings = round-trip(
         root,
         model,
         profile-terms(model.payment, model.profile),

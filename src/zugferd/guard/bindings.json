@@ -12,18 +12,8 @@
       "e": "ExchangedDocumentContext",
       "g": "profile",
       "c": [
-        {
-          "e": "BusinessProcessSpecifiedDocumentContextParameter",
-          "c": [
-            {"e": "ID", "t": "BT-23", "m": "business-process", "k": "t", "p": 0}
-          ]
-        },
-        {
-          "e": "GuidelineSpecifiedDocumentContextParameter",
-          "c": [
-            {"e": "ID", "t": "BT-24", "m": "guideline", "k": "t", "p": 0}
-          ]
-        }
+        {"e": "BusinessProcessSpecifiedDocumentContextParameter", "w": "ID", "t": "BT-23", "m": "business-process", "k": "t", "p": 0},
+        {"e": "GuidelineSpecifiedDocumentContextParameter", "w": "ID", "t": "BT-24", "m": "guideline", "k": "t", "p": 0}
       ]
     },
     {
@@ -32,12 +22,7 @@
       "c": [
         {"e": "ID", "t": "BT-1", "m": "number", "k": "t", "p": 0},
         {"e": "TypeCode", "t": "BT-3", "m": "type-code", "k": "t", "p": 0},
-        {
-          "e": "IssueDateTime",
-          "c": [
-            {"e": "DateTimeString", "t": "BT-2", "m": "issue-date", "k": "d", "p": 0}
-          ]
-        },
+        {"e": "IssueDateTime", "w": "DateTimeString", "t": "BT-2", "m": "issue-date", "k": "d", "p": 0},
         {
           "e": "IncludedNote",
           "r": ["notes"],
@@ -77,18 +62,8 @@
                   "g": "contact",
                   "c": [
                     {"e": "PersonName", "t": "BT-41", "m": "name", "k": "t", "p": 3},
-                    {
-                      "e": "TelephoneUniversalCommunication",
-                      "c": [
-                        {"e": "CompleteNumber", "t": "BT-42", "m": "phone", "k": "t", "p": 3}
-                      ]
-                    },
-                    {
-                      "e": "EmailURIUniversalCommunication",
-                      "c": [
-                        {"e": "URIID", "t": "BT-43", "m": "email", "k": "t", "p": 3}
-                      ]
-                    }
+                    {"e": "TelephoneUniversalCommunication", "w": "CompleteNumber", "t": "BT-42", "m": "phone", "k": "t", "p": 3},
+                    {"e": "EmailURIUniversalCommunication", "w": "URIID", "t": "BT-43", "m": "email", "k": "t", "p": 3}
                   ]
                 },
                 {
@@ -104,12 +79,7 @@
                     {"e": "CountrySubDivisionName", "t": "BT-39", "m": "state", "k": "t", "p": 1}
                   ]
                 },
-                {
-                  "e": "URIUniversalCommunication",
-                  "c": [
-                    {"e": "URIID", "t": "BT-34", "g": "electronic-address", "m": "id", "k": "t", "p": 1, "a": {"schemeID": ["electronic-address", "scheme"]}}
-                  ]
-                },
+                {"e": "URIUniversalCommunication", "w": "URIID", "t": "BT-34", "g": "electronic-address", "m": "id", "k": "t", "p": 1, "a": {"schemeID": ["electronic-address", "scheme"]}},
                 {
                   "e": "SpecifiedTaxRegistration",
                   "s": {
@@ -138,18 +108,8 @@
                   "g": "contact",
                   "c": [
                     {"e": "PersonName", "t": "BT-56", "m": "name", "k": "t", "p": 3},
-                    {
-                      "e": "TelephoneUniversalCommunication",
-                      "c": [
-                        {"e": "CompleteNumber", "t": "BT-57", "m": "phone", "k": "t", "p": 3}
-                      ]
-                    },
-                    {
-                      "e": "EmailURIUniversalCommunication",
-                      "c": [
-                        {"e": "URIID", "t": "BT-58", "m": "email", "k": "t", "p": 3}
-                      ]
-                    }
+                    {"e": "TelephoneUniversalCommunication", "w": "CompleteNumber", "t": "BT-57", "m": "phone", "k": "t", "p": 3},
+                    {"e": "EmailURIUniversalCommunication", "w": "URIID", "t": "BT-58", "m": "email", "k": "t", "p": 3}
                   ]
                 },
                 {
@@ -165,12 +125,7 @@
                     {"e": "CountrySubDivisionName", "t": "BT-54", "m": "state", "k": "t", "p": 1}
                   ]
                 },
-                {
-                  "e": "URIUniversalCommunication",
-                  "c": [
-                    {"e": "URIID", "t": "BT-49", "g": "electronic-address", "m": "id", "k": "t", "p": 1, "a": {"schemeID": ["electronic-address", "scheme"]}}
-                  ]
-                },
+                {"e": "URIUniversalCommunication", "w": "URIID", "t": "BT-49", "g": "electronic-address", "m": "id", "k": "t", "p": 1, "a": {"schemeID": ["electronic-address", "scheme"]}},
                 {
                   "e": "SpecifiedTaxRegistration",
                   "s": {
@@ -205,18 +160,8 @@
                 }
               ]
             },
-            {
-              "e": "BuyerOrderReferencedDocument",
-              "c": [
-                {"e": "IssuerAssignedID", "t": "BT-13", "g": "invoice", "m": "order-nr", "k": "t", "p": 0}
-              ]
-            },
-            {
-              "e": "ContractReferencedDocument",
-              "c": [
-                {"e": "IssuerAssignedID", "t": "BT-12", "g": "invoice", "m": "contract-nr", "k": "t", "p": 1}
-              ]
-            },
+            {"e": "BuyerOrderReferencedDocument", "w": "IssuerAssignedID", "t": "BT-13", "g": "invoice", "m": "order-nr", "k": "t", "p": 0},
+            {"e": "ContractReferencedDocument", "w": "IssuerAssignedID", "t": "BT-12", "g": "invoice", "m": "contract-nr", "k": "t", "p": 1},
             {
               "e": "SpecifiedProcuringProject",
               "c": [
@@ -254,20 +199,10 @@
             {
               "e": "ActualDeliverySupplyChainEvent",
               "c": [
-                {
-                  "e": "OccurrenceDateTime",
-                  "c": [
-                    {"e": "DateTimeString", "t": "BT-72", "g": "delivery", "m": "date", "k": "d", "p": 1}
-                  ]
-                }
+                {"e": "OccurrenceDateTime", "w": "DateTimeString", "t": "BT-72", "g": "delivery", "m": "date", "k": "d", "p": 1}
               ]
             },
-            {
-              "e": "DespatchAdviceReferencedDocument",
-              "c": [
-                {"e": "IssuerAssignedID", "t": "BT-16", "g": "invoice", "m": "despatch-nr", "k": "t", "p": 1}
-              ]
-            }
+            {"e": "DespatchAdviceReferencedDocument", "w": "IssuerAssignedID", "t": "BT-16", "g": "invoice", "m": "despatch-nr", "k": "t", "p": 1}
           ]
         },
         {
@@ -283,12 +218,7 @@
                 {"e": "ID", "t": "BT-60", "m": "id", "k": "t", "p": 1},
                 {"e": "GlobalID", "t": "BT-60", "g": "global-id", "m": "id", "k": "t", "p": 1, "a": {"schemeID": ["global-id", "scheme"]}},
                 {"e": "Name", "t": "BT-59", "m": "name", "k": "t", "p": 1},
-                {
-                  "e": "SpecifiedLegalOrganization",
-                  "c": [
-                    {"e": "ID", "t": "BT-61", "g": "legal-id", "m": "id", "k": "t", "p": 1, "a": {"schemeID": ["legal-id", "scheme"]}}
-                  ]
-                }
+                {"e": "SpecifiedLegalOrganization", "w": "ID", "t": "BT-61", "g": "legal-id", "m": "id", "k": "t", "p": 1, "a": {"schemeID": ["legal-id", "scheme"]}}
               ]
             },
             {
@@ -306,12 +236,7 @@
                     {"e": "CardholderName", "t": "BT-88", "m": "holder", "k": "t", "p": 3}
                   ]
                 },
-                {
-                  "e": "PayerPartyDebtorFinancialAccount",
-                  "c": [
-                    {"e": "IBANID", "t": "BT-91", "m": "debtor-iban", "k": "t", "p": 1}
-                  ]
-                },
+                {"e": "PayerPartyDebtorFinancialAccount", "w": "IBANID", "t": "BT-91", "m": "debtor-iban", "k": "t", "p": 1},
                 {
                   "e": "PayeePartyCreditorFinancialAccount",
                   "c": [
@@ -319,12 +244,7 @@
                     {"e": "AccountName", "t": "BT-85", "m": "account-name", "k": "t", "p": 3}
                   ]
                 },
-                {
-                  "e": "PayeeSpecifiedCreditorFinancialInstitution",
-                  "c": [
-                    {"e": "BICID", "t": "BT-86", "m": "bic", "k": "t", "p": 3}
-                  ]
-                }
+                {"e": "PayeeSpecifiedCreditorFinancialInstitution", "w": "BICID", "t": "BT-86", "m": "bic", "k": "t", "p": 3}
               ]
             },
             {
@@ -345,18 +265,8 @@
               "e": "BillingSpecifiedPeriod",
               "g": "delivery",
               "c": [
-                {
-                  "e": "StartDateTime",
-                  "c": [
-                    {"e": "DateTimeString", "t": "BT-73", "g": "period", "m": 0, "k": "d", "p": 1}
-                  ]
-                },
-                {
-                  "e": "EndDateTime",
-                  "c": [
-                    {"e": "DateTimeString", "t": "BT-74", "g": "period", "m": 1, "k": "d", "p": 1}
-                  ]
-                }
+                {"e": "StartDateTime", "w": "DateTimeString", "t": "BT-73", "g": "period", "m": 0, "k": "d", "p": 1},
+                {"e": "EndDateTime", "w": "DateTimeString", "t": "BT-74", "g": "period", "m": 1, "k": "d", "p": 1}
               ]
             },
             {
@@ -365,12 +275,7 @@
               "t": "BG-20",
               "p": 1,
               "c": [
-                {
-                  "e": "ChargeIndicator",
-                  "c": [
-                    {"e": "Indicator", "t": "BT-99", "m": "charge", "k": "b", "p": 1}
-                  ]
-                },
+                {"e": "ChargeIndicator", "w": "Indicator", "t": "BT-99", "m": "charge", "k": "b", "p": 1},
                 {"e": "ActualAmount", "t": "BT-92", "m": "amount", "k": "a", "p": 1},
                 {"e": "Reason", "t": "BT-97", "m": "reason", "k": "t", "p": 1},
                 {
@@ -386,12 +291,7 @@
               "e": "SpecifiedTradePaymentTerms",
               "c": [
                 {"e": "Description", "t": "BT-20", "g": "round-trip", "m": "terms", "k": "t", "p": 1},
-                {
-                  "e": "DueDateDateTime",
-                  "c": [
-                    {"e": "DateTimeString", "t": "BT-9", "g": "payment", "m": "due-date", "k": "d", "p": 1}
-                  ]
-                },
+                {"e": "DueDateDateTime", "w": "DateTimeString", "t": "BT-9", "g": "payment", "m": "due-date", "k": "d", "p": 1},
                 {"e": "DirectDebitMandateID", "t": "BT-89", "g": "payment", "m": "mandate", "k": "t", "p": 1}
               ]
             },
@@ -412,12 +312,7 @@
               "e": "InvoiceReferencedDocument",
               "c": [
                 {"e": "IssuerAssignedID", "t": "BT-25", "g": "invoice", "m": "preceding-invoice-nr", "k": "t", "p": 1},
-                {
-                  "e": "FormattedIssueDateTime",
-                  "c": [
-                    {"e": "DateTimeString", "t": "BT-26", "g": "round-trip", "m": "preceding-date", "k": "d", "p": 1}
-                  ]
-                }
+                {"e": "FormattedIssueDateTime", "w": "DateTimeString", "t": "BT-26", "g": "round-trip", "m": "preceding-date", "k": "d", "p": 1}
               ]
             }
           ]
@@ -430,12 +325,7 @@
       "e": "AssociatedDocumentLineDocument",
       "c": [
         {"e": "LineID", "t": "BT-126", "m": "id", "k": "t", "p": 2},
-        {
-          "e": "IncludedNote",
-          "c": [
-            {"e": "Content", "t": "BT-127", "m": "note", "k": "t", "p": 2}
-          ]
-        }
+        {"e": "IncludedNote", "w": "Content", "t": "BT-127", "m": "note", "k": "t", "p": 2}
       ]
     },
     {
@@ -446,12 +336,7 @@
         {"e": "BuyerAssignedID", "t": "BT-156", "m": "buyer-id", "k": "t", "p": 3},
         {"e": "Name", "t": "BT-153", "m": "name", "k": "t", "p": 2},
         {"e": "Description", "t": "BT-154", "m": "description", "k": "t", "p": 3},
-        {
-          "e": "OriginTradeCountry",
-          "c": [
-            {"e": "ID", "t": "BT-159", "m": "origin", "k": "t", "p": 3}
-          ]
-        }
+        {"e": "OriginTradeCountry", "w": "ID", "t": "BT-159", "m": "origin", "k": "t", "p": 3}
       ]
     },
     {
@@ -466,12 +351,7 @@
         }
       ]
     },
-    {
-      "e": "SpecifiedLineTradeDelivery",
-      "c": [
-        {"e": "BilledQuantity", "t": "BT-129", "m": "quantity", "k": "q", "p": 2, "a": {"unitCode": ["unit-code"]}}
-      ]
-    },
+    {"e": "SpecifiedLineTradeDelivery", "w": "BilledQuantity", "t": "BT-129", "m": "quantity", "k": "q", "p": 2, "a": {"unitCode": ["unit-code"]}},
     {
       "e": "SpecifiedLineTradeSettlement",
       "c": [
@@ -485,18 +365,8 @@
         {
           "e": "BillingSpecifiedPeriod",
           "c": [
-            {
-              "e": "StartDateTime",
-              "c": [
-                {"e": "DateTimeString", "t": "BT-134", "g": "period", "m": 0, "k": "d", "p": 2}
-              ]
-            },
-            {
-              "e": "EndDateTime",
-              "c": [
-                {"e": "DateTimeString", "t": "BT-135", "g": "period", "m": 1, "k": "d", "p": 2}
-              ]
-            }
+            {"e": "StartDateTime", "w": "DateTimeString", "t": "BT-134", "g": "period", "m": 0, "k": "d", "p": 2},
+            {"e": "EndDateTime", "w": "DateTimeString", "t": "BT-135", "g": "period", "m": 1, "k": "d", "p": 2}
           ]
         },
         {
@@ -505,22 +375,12 @@
           "t": "BG-27",
           "p": 2,
           "c": [
-            {
-              "e": "ChargeIndicator",
-              "c": [
-                {"e": "Indicator", "t": "BT-141", "m": "charge", "k": "b", "p": 2}
-              ]
-            },
+            {"e": "ChargeIndicator", "w": "Indicator", "t": "BT-141", "m": "charge", "k": "b", "p": 2},
             {"e": "ActualAmount", "t": "BT-136", "m": "amount", "k": "a", "p": 2},
             {"e": "Reason", "t": "BT-139", "m": "reason", "k": "t", "p": 2}
           ]
         },
-        {
-          "e": "SpecifiedTradeSettlementLineMonetarySummation",
-          "c": [
-            {"e": "LineTotalAmount", "t": "BT-131", "m": "net", "k": "a", "p": 2}
-          ]
-        }
+        {"e": "SpecifiedTradeSettlementLineMonetarySummation", "w": "LineTotalAmount", "t": "BT-131", "m": "net", "k": "a", "p": 2}
       ]
     }
   ]
