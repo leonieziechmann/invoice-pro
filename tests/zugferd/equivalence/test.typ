@@ -342,3 +342,35 @@
   #payment-goal(days: 14)
   #bank
 ]
+
+// --- 5. Gross prices: the cents the rounded net amounts of a VAT group
+// exceed go to the lines rounded furthest up, a line of 0.01 (0.0084 net)
+// included, which turns to 0; they do not pile up on the one line that
+// stays above 0 (83.99 for 100.00 including 19 % VAT, 0.04 off) ---
+#invariant-test(
+  zugferd: "xrechnung",
+  tax-mode: "inclusive",
+  (model, item-data, printed, _) => {
+    assert.eq(found(model, item-data, printed), ())
+    let divisor = decimal("1.19")
+    for (line, item) in model.lines.zip(item-data.items) {
+      assert(
+        calc.abs(line.net - item.total / divisor) < decimal("0.01"),
+        message: "line " + line.id + ": " + str(line.net),
+      )
+    }
+    assert.eq(model.lines.first().net, decimal("84.03"))
+    let zero = model.lines.filter(line => line.net == decimal("0"))
+    assert.eq(zero.len(), 4)
+    // The lines add up to the printed taxable amount.
+    let sum = model.lines.map(line => line.net).sum()
+    assert.eq(sum, model.taxes.first().basis)
+  },
+)[
+  #line-items[
+    #item([Gerät], price: 100, quantity: 1)
+    #for i in range(30) { item([Kleinteil #(i + 1)], price: 0.01) }
+  ]
+  #payment-goal(days: 14)
+  #bank
+]

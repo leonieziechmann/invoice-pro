@@ -14,7 +14,9 @@
 //   up exactly to the printed taxable amount (BR-S-08 and the like), so the
 //   units the separately rounded amounts lack or exceed are distributed by
 //   the largest remainder method: the amounts whose rounding moved them
-//   furthest the other way take one unit each. Every net amount then
+//   furthest the other way take one unit each. A line may turn to 0 that
+//   way (e.g. a line of 0.01 including 19 % VAT, 0.0084 net), an allowance
+//   or charge may not, as the XML would leave it out. Every net amount then
 //   differs from its exact value by less than one unit, plus the rounding of
 //   the printed taxable amount where the invoice rounds money more coarsely
 //   than to the unit (e.g. with a custom `money` rounding to 0.05).
@@ -60,10 +62,12 @@
 /// to the nearest unit (`10^-digits`), and the units the rounded amounts
 /// lack or exceed go to the amounts whose rounding moved them furthest the
 /// other way, one each (in turn, if there are more units than amounts). No
-/// amount turns to 0 or changes its sign. The amounts keep their order.
+/// amount changes its sign, no amount of 0 gets a unit, and the amounts
+/// `nonzero` marks (`auto`: all) do not turn to 0 either, e.g. an allowance
+/// or charge, which the XML would leave out. The amounts keep their order.
 ///
 /// -> array
-#let allocate(exact, total, digits: 2) = {
+#let allocate(exact, total, digits: 2, nonzero: auto) = {
   let rounded = ()
   let sum = _zero
   for value in exact {
@@ -77,12 +81,24 @@
   let step = if difference > _zero { unit } else { -unit }
   // The amounts that were rounded furthest against the direction of the
   // difference first (`sorted` keeps the order of equal ones), but none
-  // that one unit more would turn to 0 or the other sign.
+  // that one unit more would turn to the other sign, or to 0 where it must
+  // not. An amount that may turn to 0 (a line) takes its unit like any other,
+  // so that the units do not pile up on the few other amounts, e.g. next to
+  // many lines of 0.01.
   let order = ()
   for i in range(exact.len()).sorted(key: i => (
     (rounded.at(i) - exact.at(i)) * step
   )) {
-    if (rounded.at(i) + step) * exact.at(i) > _zero { order.push(i) }
+    let moved = (rounded.at(i) + step) * exact.at(i)
+    if (
+      moved > _zero
+        or (
+          moved == _zero
+            and exact.at(i) != _zero
+            and nonzero != auto
+            and not nonzero.at(i)
+        )
+    ) { order.push(i) }
   }
   if order == () { order = range(exact.len()) }
   let count = calc.floor(calc.abs(difference) / unit)
@@ -220,13 +236,19 @@
   }
 
   // The net amounts of each VAT group add up to its printed taxable amount.
+  // A line may turn to 0 (the XML states it all the same), a part of an
+  // allowance or charge may not.
   for (key, values) in exact {
     let basis = taxes.at(key, default: (:)).at("basis", default: none)
     let rounded = if basis == none {
       let out = ()
       for value in values { out.push(calc.round(value, digits: digits)) }
       out
-    } else { allocate(values, basis, digits: digits) }
+    } else {
+      let nonzero = ()
+      for (_, part) in slots.at(key) { nonzero.push(part != none) }
+      allocate(values, basis, digits: digits, nonzero: nonzero)
+    }
     for ((index, part), net) in slots.at(key).zip(rounded) {
       if part == none { lines.at(index).net = net } else {
         parts.at(index).insert(part, net)
