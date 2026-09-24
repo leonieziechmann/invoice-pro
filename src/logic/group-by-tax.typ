@@ -3,13 +3,16 @@
 // The tax of a VAT group: rate, category and every distinct exemption ground
 // of its items. `grounds` joins them into the one exemption reason of the
 // category (BT-120). With several grounds, `grounds-list` keeps each of them
-// for the printed notes. `implicit` marks a group with an item whose tax was
-// never set (`tax: none`), see `tax.implicit-zero`.
-#let group-tax(first-tax, grounds-list, implicit) = (
+// for the printed notes. The exemption reason codes of the items (BT-121)
+// are `code`, or `codes` if they differ. `implicit` marks a group with an
+// item whose tax was never set (`tax: none`), see `tax.implicit-zero`.
+#let group-tax(first-tax, grounds-list, implicit, codes: ()) = (
   rate: first-tax.rate,
   category: first-tax.category,
   grounds: tax.join-grounds(grounds-list),
   ..if grounds-list.len() > 1 { (grounds-list: grounds-list) },
+  ..if codes.len() == 1 { (code: codes.first()) },
+  ..if codes.len() > 1 { (codes: codes) },
   ..if implicit { (implicit: true) },
 )
 
@@ -36,6 +39,7 @@
     group.tax,
     grounds-list,
     tax.is-implicit(group.tax) or tax.is-implicit(pinned-tax),
+    codes: tax.merge-codes(tax.codes-of(group.tax), tax.codes-of(pinned-tax)),
   )
   tax-groups.groups.insert(key, group)
   tax-groups.keys = tax-groups.groups.keys()
@@ -62,6 +66,7 @@
         first-tax: item.tax,
         grounds-list: (),
         missing-grounds: 0,
+        codes: (),
         implicit: false,
         ..if include-items { (items: ()) },
       ))
@@ -80,13 +85,26 @@
       )
     }
     if tax.is-implicit(item.tax) { groups.at(tax-key).implicit = true }
+    // Most taxes have no exemption reason code: only those are merged.
+    if "code" in item.tax or "codes" in item.tax {
+      groups.at(tax-key).codes = tax.merge-codes(
+        groups.at(tax-key).codes,
+        tax.codes-of(item.tax),
+      )
+    }
     if include-items { groups.at(tax-key).items.push(item) }
   }
 
   for (key, group) in groups {
     let first-tax = group.remove("first-tax")
     let implicit = group.remove("implicit")
-    group.insert("tax", group-tax(first-tax, group.grounds-list, implicit))
+    let codes = group.remove("codes")
+    group.insert("tax", group-tax(
+      first-tax,
+      group.grounds-list,
+      implicit,
+      codes: codes,
+    ))
     groups.insert(key, group)
   }
 

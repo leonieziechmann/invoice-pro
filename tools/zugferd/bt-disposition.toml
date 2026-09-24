@@ -192,7 +192,7 @@
 "BT-118" = { name = "VAT category code", disposition = "input", input = "tax (constructors of the `tax` module) of the invoice, the items or the modifiers" }
 "BT-119" = { name = "VAT category rate", disposition = "input", input = "tax (constructors of the `tax` module)" }
 "BT-120" = { name = "VAT exemption reason text", disposition = "input", input = "the grounds of the tax (e.g. tax.exempt(grounds:))", note = "without grounds, the note of the invoice language for AE, K, G and O, as printed" }
-"BT-121" = { name = "VAT exemption reason code", disposition = "unsupported", reason = "no input for VATEX codes yet; the reason is stated as text (BT-120)" }
+"BT-121" = { name = "VAT exemption reason code", disposition = "input", input = "tax.exempt(code:) and the other constructors of the `tax` module without VAT", note = "without code, VATEX-EU-AE, -IC, -G and -O for AE, K, G and O, and VATEX-FR-FRANCHISE for the small business scheme of France" }
 # ---------------------------------------------------------------- BG-24 Additional supporting documents
 "BG-24" = { name = "ADDITIONAL SUPPORTING DOCUMENTS", disposition = "unsupported", reason = "no input for supporting documents or attachments" }
 "BT-122" = { name = "Supporting document reference", disposition = "unsupported", reason = "no input for supporting documents or attachments" }

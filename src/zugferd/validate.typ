@@ -2034,6 +2034,95 @@
     + str(number)
 )
 
+// The VAT category of the VAT exemption reason codes (BT-121) that have one
+// of their own; every other code of the VATEX list is an exemption (E).
+#let _code-categories = (
+  "VATEX-EU-AE": "AE",
+  "VATEX-EU-IC": "K",
+  "VATEX-EU-G": "G",
+  "VATEX-EU-O": "O",
+)
+
+// The exemption reason codes (BT-121) of a VAT group: BR-CL-22 (a code of
+// the VATEX list), IP-TAX-02 (a code of another VAT category, or of a taxed
+// one), IP-TAX-03 (several codes, which EN 16931 cannot state for one VAT
+// category and rate) and IP-TAX-04 (an exemption with a code but no text,
+// which the printed invoice needs).
+#let _check-exemption-codes(tax, field) = {
+  let out = ()
+  let category = tax.category
+  let codes = tax.at("codes", default: ())
+  for code in codes {
+    if code not in codelists.vatex {
+      out.push(error(
+        "BR-CL-22",
+        field,
+        "The VAT exemption reason code (BT-121) "
+          + _quoted(code)
+          + " is not a code of the VATEX code list.",
+        hint: "Use a code of the CEF VATEX list, e.g. \"VATEX-EU-132-1A\" for an exemption of Art. 132 (1) (a) of the VAT Directive, or leave out `code`: the grounds are stated as text (BT-120).",
+      ))
+      continue
+    }
+    let fits = _code-categories.at(code, default: "E")
+    if category in ("S", "Z", "L", "M") or fits != category {
+      out.push(error(
+        "IP-TAX-02",
+        field,
+        "The VAT exemption reason code (BT-121) "
+          + _quoted(code)
+          + if category in ("S", "Z", "L", "M") {
+            (
+              " cannot be stated for the VAT category "
+                + category
+                + ", which is not exempt: it has no exemption reason."
+            )
+          } else {
+            (
+              " is a code of the VAT category "
+                + fits
+                + ", not of "
+                + category
+                + ", so the e-invoice would state another reason than its category."
+            )
+          },
+        hint: if category in ("S", "Z", "L", "M") {
+          "Leave out `code`."
+        } else {
+          "Use the constructor of the `tax` module that fits the code, e.g. `tax.intra-community()` for \"VATEX-EU-IC\" or `tax.exempt(code: ..)` for an exemption, or leave out `code`."
+        },
+      ))
+    }
+  }
+  if codes.len() > 1 {
+    out.push(warning(
+      "IP-TAX-03",
+      field,
+      "The items of the VAT category "
+        + category
+        + " give the VAT exemption reason codes "
+        + codes.map(_quoted).join(", ")
+        + ", but the e-invoice states one code (BT-121) per VAT category and rate, so it states the reasons as text only (BT-120).",
+      hint: "Give the items of one VAT category and rate the same `code`, or invoice them separately.",
+    ))
+  }
+  if (
+    category == "E"
+      and tax.reason == none
+      and tax.at("code", default: none) != none
+  ) {
+    out.push(error(
+      "IP-TAX-04",
+      field,
+      "Exempt items (E) with the VAT exemption reason code "
+        + _quoted(tax.code)
+        + " (BT-121) need the exemption reason as text as well: the printed invoice states why no VAT is charged (§ 14 Abs. 4 Satz 1 Nr. 8 UStG, Art. 226 No. 11 of the VAT Directive).",
+      hint: "State the legal reason next to the code, e.g. `tax.exempt(grounds: \"Steuerfrei nach § 4 Nr. 14 UStG\", code: \"VATEX-EU-132-1C\")`.",
+    ))
+  }
+  out
+}
+
 // The categories that need a seller VAT identifier or tax number (BR-x-02,
 // -03, -04); K and G need the VAT identifier.
 #let _taxed-categories = ("S", "Z", "E", "AE", "L", "M")
@@ -2212,14 +2301,19 @@
         hint: "Use `tax.outside-scope()`, which has none.",
       ))
     }
-    if category == "E" and tax.reason == none {
+    if (
+      category == "E"
+        and tax.reason == none
+        and tax.at("code", default: none) == none
+    ) {
       out.push(error(
         "BR-E-10",
         field,
         "Exempt items (E) need the VAT exemption reason (BT-120).",
-        hint: "State the legal reason, e.g. `tax.exempt(grounds: \"Steuerfrei nach § 4 Nr. 21 UStG\")`.",
+        hint: "State the legal reason, e.g. `tax.exempt(grounds: \"Steuerfrei nach § 4 Nr. 21 UStG\")`, and its VATEX code if you know it, e.g. `code: \"VATEX-EU-132-1G\"`.",
       ))
     }
+    out += _check-exemption-codes(tax, field)
   }
 
   // The identifiers of the parties each category requires where it occurs:

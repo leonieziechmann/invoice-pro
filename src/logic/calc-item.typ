@@ -167,6 +167,8 @@
     rate: ctx.tax.rate,
     category: ctx.tax.category,
     grounds: ctx.tax.at("grounds", default: none),
+    // The VAT exemption reason code (BT-121), if the tax has one.
+    ..if "code" in ctx.tax { (code: ctx.tax.code) },
     // No tax was set anywhere (`tax: none`), see `tax.implicit-zero`.
     ..if m-tax.is-implicit(ctx.tax) { (implicit: true) },
   )

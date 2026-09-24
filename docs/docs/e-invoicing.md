@@ -107,6 +107,9 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | `IP-VAT-226`    | error   | An intra-community supply (`K`) or a cross-border reverse charge (`AE`) without the buyer VAT identifier (Art. 226 No. 4 VAT Directive), which the official rules miss: in BASIC WL (no invoice lines) and with a buyer `legal-id`; a tax representative without address (No. 15). |
 | `IP-VAT-138`    | warning | An intra-community supply (`K`) to a buyer whose VAT identifier was not issued by an EU member state (or "XI" for Northern Ireland).                                                                                                                                               |
 | `IP-TAX-01`     | error   | `tax: none` in an e-invoice: the items would be declared as zero rated (`Z`). Use `tax.zero()`, `tax.exempt(grounds: ..)`, `tax.outside-scope()` or `tax-exempt-small-biz`.                                                                                                        |
+| `IP-TAX-02`     | error   | A VAT exemption reason code (BT-121, `code` of the `tax` module) of another VAT category, e.g. `"VATEX-EU-IC"` on an exemption (`E`), or on a taxed category (`S`, `Z`, `L`, `M`). See [Tax Category Codes](#3-tax-category-codes).                                                |
+| `IP-TAX-03`     | warning | Items of one VAT category and rate with different exemption reason codes: EN 16931 states one code per VAT group, so the reasons are stated as text (BT-120) only.                                                                                                                 |
+| `IP-TAX-04`     | error   | An exemption (`E`) with an exemption reason code but without `grounds`: the printed invoice must state why no VAT is charged (§ 14 Abs. 4 Satz 1 Nr. 8 UStG, Art. 226 No. 11 of the VAT Directive).                                                                                |
 | `IP-PRINT-02`   | error   | Amounts printed in another currency than the invoice currency (BT-5), e.g. a custom locale that prints "zł" while the XML states EUR.                                                                                                                                              |
 | `IP-DEC-01`     | error   | A VAT rate with more than 4 decimals, which the XML cannot state exactly (and which could collide with another VAT group).                                                                                                                                                         |
 | `IP-PAY-01`     | error   | An IBAN with wrong check digits or format in `bank-details` or as `debtor-iban` of `direct-debit`, where `BR-DE-19` and `BR-DE-20` do not check it (outside XRechnung, or an invoice not in euro).                                                                                 |
@@ -425,6 +428,21 @@ Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the 
 EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `M`. The special constructors in `tax.special` that map to other categories (e.g. `lower-rate`, the margin schemes or split payment `B`) cannot be used for e-invoices. Items under a margin scheme are written as exempt with the note the law requires, e.g. `tax.exempt(grounds: "Margin scheme - second-hand goods")` (in Germany "Gebrauchtgegenstände/Sonderregelung"). `tax.special.ceuta-melilla(..)` (`M`) needs a rate above 0%, and items not subject to VAT (`O`) have none.
 
 Where EN 16931 requires an exemption reason (`AE`, `K`, `G`, `O`) and the items give no `grounds` of their own, the note of the invoice language (`tax-exemption` in the [language schema](./api-reference/locale/base.md#tax-exemption), e.g. "Steuerfreie innergemeinschaftliche Lieferung" for `tax.intra-community()` in German) is printed below the line items and written as exemption reason, so the invoice and the XML state the same note. With `tax-exempt-small-biz: true`, the small business note of the invoice is the exemption reason. For the taxed categories (`S`, `Z`, `L`, `M`), `grounds` are printed on the invoice but left out of the XML, which does not allow them there. If the items of one category have different `grounds`, each of them is printed, and the XML joins them with `; ` into the one exemption reason (BT-120) of the category.
+
+**Exemption reason code (BT-121).** Next to the text, the XML states the VAT exemption reason code of the CEF VATEX code list, from the `"basic-wl"` profile on: `VATEX-EU-AE` for a reverse charge, `VATEX-EU-IC` for an intra-community supply, `VATEX-EU-G` for an export, `VATEX-EU-O` for items not subject to VAT, and `VATEX-FR-FRANCHISE` for the small business scheme of France. The code of an exemption depends on its legal basis, so state it with `code`; without one, only the text is stated, which EN 16931 accepts (`BR-E-10`):
+
+```typst
+#item(
+  [Physiotherapie],
+  price: 80,
+  tax: tax.exempt(
+    grounds: "Steuerfrei nach § 4 Nr. 14 UStG",
+    code: "VATEX-EU-132-1C", // Art. 132 (1) (c) of the VAT Directive
+  ),
+)
+```
+
+The code must be one of the VATEX list the Factur-X and EN 16931 validators apply (`BR-CL-22`; the newer list of the KoSIT validator knows a few more, e.g. `VATEX-EU-144`, which Mustang rejects), in upper or lower case, and fit the category (`IP-TAX-02`): `VATEX-EU-AE`, `VATEX-EU-IC`, `VATEX-EU-G` and `VATEX-EU-O` belong to their categories, every other code to an exemption (`E`), and the taxed categories (`S`, `Z`, `L`, `M`) have none. An exemption with a code needs its `grounds` as well, which the printed invoice states (`IP-TAX-04`). EN 16931 states one code per VAT category and rate, so items of one group with different codes are stated with their grounds only (`IP-TAX-03`, a warning). Earlier versions stated no code at all.
 
 `tax: none` on the invoice is not a tax category: the items are printed with 0%, but an e-invoice must say why no VAT is charged, so it stops with the error `IP-TAX-01`. Choose one of the functions above instead.
 

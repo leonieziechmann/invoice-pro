@@ -1161,6 +1161,46 @@
 // (BR-S-10, BR-Z-10, BR-AF-10, BR-AG-10).
 #let _taxed-categories = ("S", "Z", "L", "M")
 
+// The VAT exemption reason code (BT-121) of the categories that have one
+// meaning (BR-AE-10, BR-IC-10, BR-G-10, BR-O-10).
+#let _category-codes = (
+  AE: "VATEX-EU-AE",
+  K: "VATEX-EU-IC",
+  G: "VATEX-EU-G",
+  O: "VATEX-EU-O",
+)
+
+/// The VAT exemption reason codes (BT-121) the items of a VAT group give
+/// (`code` of the constructors of the `tax` module): distinct, without
+/// whitespace and in upper case, as the validator checks them.
+///
+/// -> array
+#let exemption-codes(codes) = {
+  let result = ()
+  for code in codes {
+    let text = compact(code)
+    if text == none { continue }
+    text = upper(text)
+    if text not in result { result.push(text) }
+  }
+  result
+}
+
+/// The VAT exemption reason code (BT-121) of a VAT category: the one code its
+/// items give, else the code of the category for AE, K, G and O (e.g.
+/// "VATEX-EU-IC" for an intra-community supply). A taxed category (S, Z, L,
+/// M) has none, and neither has a group whose items give different codes:
+/// EN 16931 states one per VAT category and rate, so the reasons are stated
+/// as text (BT-120) only; the validator reports both.
+///
+/// -> none | str
+#let exemption-code(category, codes) = {
+  if category in _taxed-categories or codes.len() > 1 { return none }
+  if codes.len() == 1 { codes.first() } else {
+    _category-codes.at(category, default: none)
+  }
+}
+
 /// The exemption reason (BT-120) of a VAT category: the plain text of its
 /// grounds. The VAT groups of the line items state the note of the language
 /// for the categories that need a reason (AE, K, G, O) when their items give
@@ -1569,6 +1609,7 @@
     .pairs()
     .map(((key, tax)) => {
       let category = text-or-none(tax.at("category", default: none))
+      let codes = exemption-codes(tax.at("codes", default: ()))
       (
         key: key,
         category: category,
@@ -1580,6 +1621,9 @@
           tax.at("grounds", default: none),
           strings: ctx.at("locale", default: (:)).at("strings", default: (:)),
         ),
+        // BT-121, and the codes the items give (for the validator).
+        code: exemption-code(category, codes),
+        codes: codes,
         // Some item of the group has no tax (`tax: none`).
         implicit: tax.at("implicit", default: false),
       )

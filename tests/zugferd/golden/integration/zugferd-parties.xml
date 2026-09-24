@@ -116,6 +116,7 @@
         <ram:ExemptionReason>Nicht steuerbarer Schadensersatz.</ram:ExemptionReason>
         <ram:BasisAmount>450.00</ram:BasisAmount>
         <ram:CategoryCode>O</ram:CategoryCode>
+        <ram:ExemptionReasonCode>VATEX-EU-O</ram:ExemptionReasonCode>
         <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>
       <ram:SpecifiedTradePaymentTerms>
