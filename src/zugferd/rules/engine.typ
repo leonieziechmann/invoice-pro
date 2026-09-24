@@ -1189,9 +1189,12 @@
     }
   }
   // The buyer VAT identifier (BT-48) of K and AE: see `buyer-vat-id` of
-  // rare.typ.
+  // rare.typ. BR-IC-12: an intra-community supply states the deliver-to
+  // country (BT-80), which the model derives from the buyer without a
+  // delivery address (a safety net; see `intra-community` of rare.typ for
+  // the country itself).
   if "K" in categories and model.ship-to == none {
-    out.push((key: "BR-IC-12", level: "error", field: "delivery-address"))
+    out.push((key: "BR-IC-12", field: "delivery-address"))
   }
   // BR-IC-11: an intra-community supply states the date of the supply
   // (BT-72) or the invoicing period (BG-14). A credit note or a prepayment
@@ -1371,8 +1374,11 @@
 
   out += _payment-means(model)
 
+  // IP-PREPAID-01: prepayments above the total leave a negative amount due
+  // (BT-115). BR-CO-16 (the amount due is the total minus the prepaid
+  // amount) holds: the model computes it so.
   if model.totals.prepaid > model.totals.gross and model.totals.gross >= _zero {
-    out.push((key: "BR-CO-16", field: "prepayment"))
+    out.push((key: "IP-PREPAID-01", field: "prepayment"))
   }
   out
 }

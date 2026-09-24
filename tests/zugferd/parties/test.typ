@@ -522,7 +522,8 @@
   assert(find(m, "IP-VAT-226").message.contains("Art. 226 No. 4"))
 
   // An intra-community supply to the seller's own country or to a buyer
-  // outside the EU is a warning
+  // outside the EU is a warning (Art. 138 of the VAT Directive; the official
+  // BR-IC-12 only requires a deliver-to country)
   let m = with-category(base, "K", lines: true)
   m.buyer.vat-id = "GB123456789"
   m.ship-to = (
@@ -531,7 +532,10 @@
     global-id: none,
     address: m.buyer.address,
   )
-  assert.eq(rules(m, level: "warning"), ("BR-IC-12", "IP-VAT-138"))
+  assert.eq(rules(m, level: "warning"), ("IP-VAT-138", "IP-VAT-138"))
+  let fields = ()
+  for d in checked(m) { fields.push(d.field) }
+  assert.eq(fields, ("delivery-address.country", "recipient.vat-id"))
   m.buyer.vat-id = "XI123456789"
   m.ship-to.address.country = "GB"
   assert.eq(rules(m, level: "warning"), ())

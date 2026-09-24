@@ -325,8 +325,8 @@
   }
   // A seller without VAT identifier of its own, e.g. from Switzerland,
   // dispatches the goods of an intra-community supply from the member state
-  // of its representative (BR-IC-12), and no hint takes the representative's
-  // VAT identifier for the seller's `vat-id`
+  // of its representative (IP-VAT-138), and no hint takes the
+  // representative's VAT identifier for the seller's `vat-id`
   let m = base
   m.taxes.at(0).category = "K"
   m.taxes.at(0).rate = decimal("0")
@@ -349,8 +349,9 @@
     role: "ship-to",
     use-vat-id: false,
   )
-  let dispatch = diagnostic(m, "BR-IC-12")
+  let dispatch = diagnostic(m, "IP-VAT-138")
   assert.ne(dispatch, none)
+  assert.eq(dispatch.field, "delivery-address.country")
   assert(
     dispatch.message.contains("seller's tax representative \"DE\""),
     message: dispatch.message,

@@ -834,10 +834,11 @@
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "tax",
       "terms": ["BT-80"],
-      "level": ["error", "warning"],
+      "level": "error",
       "field": "delivery-address",
-      "summary": "An intra-community supply (K) states the deliver-to country (BT-80); a warning where it is the seller's own country, as the goods must be dispatched to another member state.",
-      "legal": null
+      "summary": "An intra-community supply (K) states the deliver-to country (BT-80).",
+      "legal": null,
+      "note": "A safety net: without a delivery address, the model states the buyer's country as the deliver-to country."
     },
     "IP-VAT-138": {
       "covers": [],
@@ -845,10 +846,10 @@
       "versions": [],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "tax",
-      "terms": ["BT-48"],
+      "terms": ["BT-48", "BT-80"],
       "level": "warning",
       "field": "recipient.vat-id",
-      "summary": "An intra-community supply (`K`) to a buyer whose VAT identifier was not issued by an EU member state (or \"XI\" for Northern Ireland).",
+      "summary": "An intra-community supply (`K`) that does not go to another member state: a deliver-to country (BT-80) that is the seller's own country (or, for a seller without VAT identifier of its own, the country of its tax representative), or a buyer VAT identifier not issued by an EU member state (or \"XI\" for Northern Ireland).",
       "legal": "Art. 138 of the VAT Directive 2006/112/EC"
     },
     "BR-16": {
@@ -1474,16 +1475,16 @@
       "summary": "A SEPA creditor identifier (BT-90) of `direct-debit` with wrong check digits or format.",
       "legal": null
     },
-    "BR-CO-16": {
-      "covers": ["BR-CO-16", "FX-SCH-A-000122"],
-      "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+    "IP-PREPAID-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "payment",
       "terms": ["BT-113", "BT-115"],
       "level": "warning",
       "field": "prepayment",
-      "summary": "The prepaid amount (BT-113) does not exceed the invoice total: the amount due (BT-115) would be negative. A warning: such an invoice is valid.",
+      "summary": "Prepayments (BT-113) above the invoice total, so that the amount due (BT-115) is negative: valid, but most likely not intended.",
       "legal": null
     },
     "decimals": {

@@ -631,11 +631,10 @@ official rules cannot fail: the validators report the sums that no longer add up
 nothing (MINIMUM). The guard enforces the decimals of the XML."""
 
 [[without-fixture]]
-ids = ["BR-IC-12", "BR-CO-16"]
-reason = """Warnings for other conditions: a deliver-to country of an intra-community supply that \
-is the seller's own (the official BR-IC-12 requires a deliver-to country, which the builder always \
-writes, so the error of that name cannot fire), and a prepaid amount above the total (the official \
-BR-CO-16 is arithmetic that holds by construction)."""
+ids = ["BR-IC-12"]
+reason = """A safety net that cannot fire: an intra-community supply without `delivery-address` is \
+delivered to the buyer's address, so the deliver-to country (BT-80) is always written (see its \
+construction entry)."""
 
 # ======================================================================
 # invoice-pro's own rules (IP-*): stricter than the official validators
@@ -802,9 +801,10 @@ tests = ["tests/zugferd/vat-categories/test.typ", "tests/zugferd/parties/test.ty
 
 [ip."IP-VAT-138"]
 level = "warning"
-summary = "An intra-community supply (K) to a buyer whose VAT identifier was not issued by an EU member state."
+summary = """An intra-community supply (K) delivered to the member state it is dispatched from, or to \
+a buyer whose VAT identifier was not issued by an EU member state."""
 basis = "Art. 138 of the VAT Directive 2006/112/EC."
-tests = ["tests/zugferd/parties/test.typ"]
+tests = ["tests/zugferd/parties/test.typ", "tests/zugferd/parties-invoice/test.typ"]
 
 [ip."IP-UNIT-01"]
 level = "warning"
@@ -856,6 +856,13 @@ basis = """EN 16931 BR-17: the payee (BG-10) is someone other than the seller; t
 of BASIC WL compares it with a path of the seller that never matches, so its validation does not \
 check it."""
 tests = ["tests/zugferd/party-details/test.typ", "tools/zugferd/corpus/regression/payee-is-seller-basic-wl.typ"]
+
+[ip."IP-PREPAID-01"]
+level = "warning"
+summary = "Prepayments above the invoice total, so that the amount due (BT-115) is negative."
+basis = """Plausibility: EN 16931 BR-CO-16 (amount due = total - paid amount) holds, but a negative \
+amount due asks the seller to pay the difference."""
+tests = ["tests/zugferd/validate/test.typ"]
 
 [ip."IP-GUARD-00"]
 level = "error"

@@ -243,11 +243,13 @@
   assert.eq(rules(m), ("BR-DE-19",))
   m.profile = resolve-profile("en16931", "FR")
   assert.eq(rules(m), ("IP-PAY-01",))
+  // Prepayments above the total: BR-CO-16 holds (the amount due is the total
+  // minus the prepaid amount), but it is negative (IP-PREPAID-01)
   let m = base
   m.totals.prepaid = m.totals.gross + 1
   m.totals.due = decimal("-1")
   assert.eq(rules(m), ())
-  assert.eq(rules(m, level: "warning"), ("BR-CO-16",))
+  assert.eq(rules(m, level: "warning"), ("IP-PREPAID-01",))
 
   // --- Consistency with the printed invoice ---
   let m = base

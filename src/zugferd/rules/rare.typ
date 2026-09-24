@@ -597,9 +597,12 @@
     + " RO SE SI SK XI"
 ).split(" ")
 
-/// Whether an intra-community supply (K) goes to another member state: the
-/// deliver-to country (BR-IC-12) and the buyer VAT identifier. Picking up the
-/// goods is legal, so both are warnings.
+/// IP-VAT-138: whether an intra-community supply (K) goes to another member
+/// state (Art. 138 of the VAT Directive): the deliver-to country (BT-80) is
+/// not the member state the goods are dispatched from, and the buyer VAT
+/// identifier was issued by a member state. Picking up the goods is legal,
+/// so both are warnings. (The official BR-IC-12 only requires a deliver-to
+/// country, which the model always states for K.)
 ///
 /// -> array
 #let intra-community(model) = {
@@ -635,9 +638,9 @@
       and model.ship-to.address.country == home
   ) {
     out.push((
-      key: "BR-IC-12",
-      level: "warning",
+      key: "IP-VAT-138",
       field: "delivery-address.country",
+      kind: "deliver-to",
       home: home,
       whose: whose,
     ))
@@ -648,6 +651,7 @@
     out.push((
       key: "IP-VAT-138",
       field: "recipient.vat-id",
+      kind: "buyer-vat-id",
       vat-id: buyer-vat-id,
     ))
   }

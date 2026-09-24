@@ -922,12 +922,11 @@
       } else { "Set `vat-id` on the recipient." },
     )
   },
-  "BR-IC-12": f => if f.level == "error" {
-    (
-      "An intra-community supply (K) requires the deliver-to country (BT-80).",
-      "Set `country` on the recipient or pass a `delivery-address`.",
-    )
-  } else {
+  "BR-IC-12": f => (
+    "An intra-community supply (K) requires the deliver-to country (BT-80).",
+    "Set `country` on the recipient or pass a `delivery-address`.",
+  ),
+  "IP-VAT-138": f => if f.kind == "deliver-to" {
     (
       "The intra-community supply (K) states "
         + if f.whose == "representative" {
@@ -937,13 +936,14 @@
         + " as the deliver-to country (BT-80), but the goods must be dispatched to another member state.",
       "Set `country` on the delivery address or the recipient to the member state the goods are delivered to.",
     )
+  } else {
+    (
+      "The buyer VAT identifier "
+        + _quoted(f.vat-id)
+        + " was not issued by an EU member state, so the supply is not an intra-community supply (K).",
+      "Use `tax.export()` for supplies to countries outside the EU. Goods for Northern Ireland are intra-community supplies to an \"XI\" VAT identifier.",
+    )
   },
-  "IP-VAT-138": f => (
-    "The buyer VAT identifier "
-      + _quoted(f.vat-id)
-      + " was not issued by an EU member state, so the supply is not an intra-community supply (K).",
-    "Use `tax.export()` for supplies to countries outside the EU. Goods for Northern Ireland are intra-community supplies to an \"XI\" VAT identifier.",
-  ),
 
   // Lines
   "BR-16": f => (
@@ -1189,7 +1189,7 @@
       + " is not a valid SEPA creditor identifier (wrong check digits or format).",
     "Check the creditor identifier for typos, e.g. \"DE98ZZZ09999999999\".",
   ),
-  "BR-CO-16": f => (
+  "IP-PREPAID-01": f => (
     "The prepaid amount (BT-113) exceeds the invoice total, so the amount due (BT-115) is negative.",
     none,
   ),
