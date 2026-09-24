@@ -2,7 +2,7 @@
 """Measure the compile time of invoices and the cost of the e-invoice path.
 
 Compiles every document several times, round-robin (so that load from other
-processes hits all documents alike), and reports medians. Three methods:
+processes hits all documents alike), and reports medians. Four methods:
 
   trace (default)  `typst compile --timings`: the whole compile (`compile
                    once`: evaluation, layout, PDF export) and the time spent
@@ -17,14 +17,23 @@ processes hits all documents alike), and reports medians. Three methods:
                    document tells changes far below the noise of a trace
                    apart. It misses what the CPU waits for (page faults,
                    cache misses): confirm a change with traces as well.
+  --watch          The recompile time of a live preview: `typst watch` of a
+                   copy of each document, which changes the price of its
+                   first item to a new value before each run (as someone
+                   typing it; nothing of an earlier compile fits it), and the
+                   time Typst reports for the recompile. Typst reuses what
+                   the edit does not touch, so this is what an edit costs in
+                   an editor's preview, not a cold compile.
 
 Documents named `<name>-zf.typ` and `<name>-plain.typ` (see gen_bench.py) form
 a pair. For a pair, the cost of the e-invoice path is
 
   trace:         e-invoice time of the zf compile / total time of the plain
                  compile
-  wall:          wall time of the zf compile / wall time of the plain
-                 compile - 1
+  wall, watch:   (re)compile time of the zf compile / that of the plain
+                 compile - 1; for watch also the median of the differences
+                 of the recompiles of each round (a pair recompiles one
+                 after the other), which cancels more of the machine's load
   instructions:  instructions of the zf compile / those of the plain
                  compile - 1 (the e-invoice path and embedding its XML)
 
@@ -38,8 +47,9 @@ Limits turn the measurement into a check (exit status 1 when exceeded):
                         code (trace method only)
 
 Usage:
-  tools/perf/measure.py [--root DIR] [--runs 5] [--wall | --instructions]
-                        [--jobs N] [--json FILE] [--limit NAME=PERCENT ...]
+  tools/perf/measure.py [--root DIR] [--runs 5]
+                        [--wall | --instructions | --watch] [--jobs N]
+                        [--json FILE] [--limit NAME=PERCENT ...]
                         [--plain-limit-ms MS] documents...
 
 Example (budget of the concept, section 6):
@@ -55,17 +65,23 @@ in a second checkout; see tools/perf/README.md):
   tools/perf/measure.py --instructions --jobs 2 tools/perf/out/bench/b-5-*.typ
   tools/perf/measure.py --instructions --jobs 2 --root /tmp/base \\
       /tmp/base/tools/perf/out/bench/b-5-*.typ
+
+Example (the live preview of the benchmark invoices):
+  tools/perf/measure.py --watch --runs 11 tools/perf/out/bench/[br]-*.typ
 """
 
 import argparse
 import concurrent.futures
 import json
 import os
+import queue
+import re
 import shutil
 import statistics
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -156,15 +172,120 @@ def measure_instructions(args, documents, names):
     return report
 
 
-def measure(args):
-    documents = [os.path.abspath(d) for d in args.documents]
-    names = [_name(d) for d in documents]
-    if len(set(names)) != len(names):
-        raise SystemExit("documents must have distinct file names")
-    if args.instructions:
-        return measure_instructions(args, documents, names)
-    samples = {name: [] for name in names}
+# The edit of the live preview (--watch): the price of the first item, a new
+# value before every recompile.
+_PRICE = re.compile(r"price: *([0-9]+)(?:\.[0-9]+)?")
+# The line `typst watch` prints after each compile, with its time.
+_COMPILED = re.compile(r"compiled (successfully|with warnings|with errors) in ([0-9.]+) *(µs|ms|s)\b")
+_MILLISECONDS = {"µs": 0.001, "ms": 1.0, "s": 1000.0}
 
+
+class Watcher:
+    """`typst watch` of a copy of `document` next to it (so that its
+    relative imports resolve), which `edit` changes. The copy is a hidden
+    file, so that a copy an interrupted run leaves behind does not match
+    the patterns of the documents (e.g. `b-5-*.typ`)."""
+
+    def __init__(self, typst, root, document, out_dir):
+        with open(document, encoding="utf-8") as f:
+            self.source = f.read()
+        if not _PRICE.search(self.source):
+            raise SystemExit(f"--watch changes the price of an item, but {document} has none")
+        self.copy = os.path.join(os.path.dirname(document), "." + _name(document) + ".watch.typ")
+        self.text = self.source
+        self._write(self.text)
+        self.lines = queue.Queue()
+        self.process = subprocess.Popen(
+            [typst, "watch", "--root", root, self.copy, os.path.join(out_dir, _name(document) + ".pdf")],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+        )
+        threading.Thread(target=self._read, daemon=True).start()
+
+    def _read(self):
+        for line in self.process.stderr:
+            self.lines.put(line)
+        self.lines.put(None)
+
+    def _write(self, text):
+        # Replaced at once, so that the watcher never compiles half a file.
+        temporary = self.copy + ".tmp"
+        with open(temporary, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(temporary, self.copy)
+
+    def compiled(self, timeout=600, again=60):
+        """The time of the next compile that `typst watch` reports, in ms.
+        Without a report for `again` seconds, the last edit is written once
+        more, in case it came before the watcher watched the file again."""
+        deadline = time.monotonic() + timeout
+        rewritten = False
+        while True:
+            try:
+                line = self.lines.get(timeout=again)
+            except queue.Empty:
+                if time.monotonic() > deadline:
+                    raise SystemExit(f"typst watch reported no compile within {timeout} s: {self.copy}")
+                if not rewritten:
+                    self._write(self.text)
+                    rewritten = True
+                continue
+            if line is None:
+                raise SystemExit(f"typst watch stopped: {self.copy}")
+            match = _COMPILED.search(line)
+            if match is None:
+                continue
+            if match.group(1) == "with errors":
+                raise SystemExit(f"the live preview does not compile: {self.copy}")
+            return float(match.group(2)) * _MILLISECONDS[match.group(3)]
+
+    def edit(self, n):
+        """Changes the price of the first item to its `n`-th new value."""
+        self.text = _PRICE.sub(
+            lambda m: f"price: {int(m.group(1)) + 1000 + n}.{n % 100:02d}", self.source, count=1
+        )
+        self._write(self.text)
+
+    def close(self):
+        self.process.terminate()
+        try:
+            self.process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            self.process.kill()
+        for path in (self.copy, self.copy + ".tmp"):
+            if os.path.exists(path):
+                os.remove(path)
+
+
+def watch_samples(args, documents, names):
+    """The recompile times of --watch: one watcher per document, which
+    compile one at a time (round-robin); the first recompile of each is a
+    warm-up."""
+    samples = {name: [] for name in names}
+    watchers = []
+    with tempfile.TemporaryDirectory(prefix="invoice-pro-perf-") as out_dir:
+        try:
+            for document in documents:
+                watchers.append(Watcher(args.typst, args.root, document, out_dir))
+                watchers[-1].compiled()
+            for n in range(args.runs + 1):
+                for name, watcher in zip(names, watchers):
+                    watcher.edit(n)
+                    milliseconds = watcher.compiled()
+                    if n > 0:
+                        samples[name].append({"total": milliseconds * 1000})
+        finally:
+            for watcher in watchers:
+                watcher.close()
+    return samples
+
+
+def compile_samples(args, documents, names):
+    """The times of the trace and wall methods: `args.runs` compiles per
+    document, round-robin, after a warm-up."""
+    samples = {name: [] for name in names}
     with tempfile.TemporaryDirectory(prefix="invoice-pro-perf-") as out_dir:
         for document in documents:  # warm-up: file cache, fonts, packages
             compile_once(args.typst, args.root, document, out_dir, False)
@@ -183,9 +304,23 @@ def measure(args):
                             for key in ("total", "einvoice", "einvoice_import")
                         }
                     )
+    return samples
+
+
+def measure(args):
+    documents = [os.path.abspath(d) for d in args.documents]
+    names = [_name(d) for d in documents]
+    if len(set(names)) != len(names):
+        raise SystemExit("documents must have distinct file names")
+    if args.instructions:
+        return measure_instructions(args, documents, names)
+    if args.watch:
+        samples = watch_samples(args, documents, names)
+    else:
+        samples = compile_samples(args, documents, names)
 
     report = {
-        "method": "wall" if args.wall else "trace",
+        "method": "watch" if args.watch else "wall" if args.wall else "trace",
         "runs": args.runs,
         "typst": subprocess.run(
             [args.typst, "--version"], capture_output=True, text=True
@@ -215,8 +350,16 @@ def measure(args):
             "zf_total_ms": zf["total_ms"],
             "total_diff_pct": 100 * (zf["total_ms"] / plain["total_ms"] - 1),
         }
-        if args.wall:
+        if args.wall or args.watch:
             entry["overhead_pct"] = entry["total_diff_pct"]
+        if args.watch:
+            # The two documents of a pair recompile one after the other in
+            # each round, so the differences of the rounds cancel most of
+            # the load of the machine.
+            entry["einvoice_ms"] = statistics.median(
+                (z["total"] - p["total"]) / 1000
+                for z, p in zip(samples[name], samples[pair + "-plain"])
+            )
         else:
             entry["einvoice_ms"] = zf["einvoice_ms"]
             entry["einvoice_import_ms"] = zf["einvoice_import_ms"]
@@ -240,7 +383,8 @@ def print_report(report):
                 f" e-invoice {entry['einvoice_instructions'] / 1e6:.3f})"
             )
         return
-    print(f"{report['typst']}, {report['method']}, median of {report['runs']} runs")
+    runs = "recompiles after an edit" if report["method"] == "watch" else "runs"
+    print(f"{report['typst']}, {report['method']}, median of {report['runs']} {runs}")
     trace = report["method"] == "trace"
     header = f"{'document':16s} {'total':>10s}"
     if trace:
@@ -265,6 +409,8 @@ def print_report(report):
                     f", e-invoice {entry['einvoice_ms']:.1f} ms"
                     f", total difference {entry['total_diff_pct']:+.1f} %"
                 )
+            elif report["method"] == "watch":
+                line += f", paired difference {entry['einvoice_ms']:+.1f} ms"
             print(line + ")")
 
 
@@ -303,6 +449,11 @@ def main(argv=None):
         "--instructions",
         action="store_true",
         help="count the instructions of one compile per document (valgrind)",
+    )
+    method.add_argument(
+        "--watch",
+        action="store_true",
+        help="recompile time of a live preview (typst watch) after an edit",
     )
     parser.add_argument(
         "--jobs", type=int, default=1, help="compiles counted in parallel (--instructions)"
