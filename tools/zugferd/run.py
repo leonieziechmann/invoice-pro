@@ -677,9 +677,11 @@ def triage(rows, known, strict=False, check_xpass=True, differences=None):
             for sig in entry["signatures"]:
                 if (index, sig) not in seen:
                     xpass.append((entry, sig))
-    # Every documented difference is shown by a case of a full run (both
-    # validators ran), so that the documentation stays true.
-    if check_xpass and any(len(row.get("validators") or {}) == len(VALIDATORS) for row in rows):
+    # Every documented difference is shown by a case of a full run, so that
+    # the documentation stays true: a run of the regression cases, which have
+    # a case for every difference, with both validators.
+    if check_xpass and any(row.get("population") == "regression" and len(row.get("validators") or {}) == len(VALIDATORS)
+                           for row in rows):
         stale = sorted(rule for rule in differences if rule not in shown)
     hits = [(known[index], sig, ids) for (index, sig), ids in known_hits.items()]
     return failures, hits, xpass, stale

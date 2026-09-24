@@ -217,8 +217,11 @@ class OfficialVerdict(unittest.TestCase):
         rows = [run.make_row(case, collected(mustang_report("BR-DE-27"), kosit_report(warnings=["BR-DE-27"]),
                                              ours=["BR-DE-27"]), None)]
         self.assertEqual(run.triage(rows, [], differences=differences)[3], ["BR-CO-25"])
-        # Not on a subset (--only), nor without KoSIT.
+        # Not on a subset (--only), not without the regression cases, which
+        # show every difference, nor without KoSIT.
         self.assertEqual(run.triage(rows, [], check_xpass=False, differences=differences)[3], [])
+        generated = [dict(rows[0], population="random")]
+        self.assertEqual(run.triage(generated, [], differences=differences)[3], [])
         rows = [run.make_row(case, collected(mustang_report("BR-DE-27"), ours=["BR-DE-27"]), None)]
         self.assertEqual(run.triage(rows, [], differences=differences)[3], [])
 
