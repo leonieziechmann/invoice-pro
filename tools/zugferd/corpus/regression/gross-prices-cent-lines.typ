@@ -1,4 +1,5 @@
 // expect: AGREE_VALID
+// finding: review-wave-3c-net-amounts-cent-lines
 // facts: {"tax_mode": "inclusive"}
 //
 // Gross prices: one line of 100.00 and 30 lines of 0.01 including 19 % VAT.

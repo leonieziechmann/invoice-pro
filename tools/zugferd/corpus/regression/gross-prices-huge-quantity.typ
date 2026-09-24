@@ -1,4 +1,5 @@
 // expect: AGREE_VALID
+// finding: review-wave-3c-net-price-13-decimals
 // facts: {"tax_mode": "inclusive"}
 //
 // Gross prices with a quantity of billions: 2 000 000 000 calls at 0.0001
