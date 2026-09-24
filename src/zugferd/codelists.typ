@@ -53,9 +53,10 @@
 /// 1.3.12 in Mustang lacks MRU, STN, UYW and VES (it still lists the codes
 /// they replaced, MRO, STD and VEF); its version 1.3.16 in the KoSIT
 /// validator has withdrawn ANG, BGN, CUC, HRK and ZWL and lacks STN as well.
-/// The validators apply that list to BASIC, EN 16931 and XRechnung invoices
-/// in addition to the Factur-X one, so an invoice in these currencies cannot
-/// be valid there.
+/// Mustang applies its list to BASIC, EN 16931 and XRechnung invoices, KoSIT
+/// its list to EN 16931 and XRechnung invoices, in addition to the Factur-X
+/// one; an invoice of these profiles in these currencies is rejected, BASIC
+/// included, as the current list of EN 16931 lacks them.
 #let cen-rejected-currencies = _to-set(("ANG BGN CUC HRK MRU STN UYW VES ZWL",))
 
 /// UN/ECE Recommendation 20 and 21 unit codes (BT-130, BT-150; BR-CL-23)
