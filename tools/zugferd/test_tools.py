@@ -242,6 +242,10 @@ class OfficialVerdict(unittest.TestCase):
         differences = run.load_differences(HERE / "validator-differences.toml")
         for rule, entry in differences.items():
             self.assertIn(entry["rejected-by"], run.VALIDATORS, rule)
+        # KoSIT reports nothing for a domain with umlauts and warns about an
+        # address without a domain name (BR-DE-28); Mustang rejects both.
+        self.assertTrue(run.documented("BR-DE-28", "mustang", "nothing", differences))
+        self.assertTrue(run.documented("BR-DE-28", "mustang", "warning", differences))
         with tempfile.TemporaryDirectory() as tmp:
             bad = Path(tmp) / "differences.toml"
             bad.write_text('[BR-DE-27]\nrejected-by = "kosit"\nother = "error"\nreason = "r"\n', encoding="utf-8")
