@@ -9,7 +9,7 @@ sidebar_position: 3
 :::warning
 ZUGFeRD/Factur-X support in `invoice-pro` is currently **experimental**. Please note the following known limitations:
 
-- **Factur-X XMP Metadata (Typst limitation):** Typst cannot write custom XMP metadata yet, so the PDF lacks the Factur-X extension schema that announces the attached `factur-x.xml`. The embedded XML is valid, but validators that check the PDF itself reject the PDF. See [Factur-X XMP Metadata](#factur-x-xmp-metadata) for an optional post-processing step outside the package.
+- **Factur-X XMP Metadata (Typst limitation):** Typst cannot write custom XMP metadata yet, so the PDF lacks the Factur-X extension schema that announces the attached XML (`factur-x.xml`, or `xrechnung.xml` in the XRechnung profile). The embedded XML is valid, but validators that check the PDF itself reject the PDF. See [Factur-X XMP Metadata](#factur-x-xmp-metadata) for an optional post-processing step outside the package.
 - **Built-in Validation Is Not a Certification:** The template checks your invoice data against the business rules of the selected profile before embedding the XML (see [Validation and Error Reporting](#validation-and-error-reporting)). This catches missing or inconsistent data early, but it does not replace an official validator: verify the generated PDF and XML payload with an external validator (e.g., the [ZUGFeRD Community Validator](https://www.zugferd-community.net/) or other official portals) before using them in production.
 - **Reporting Issues:** If you encounter edge cases, schema validation failures, or formatting issues, please report them by opening an issue on our GitHub repository.
   :::
@@ -30,7 +30,7 @@ pdf.attach(
 )
 ```
 
-The recipient's software detects this embedded `/factur-x.xml` file and extracts all metadata without needing optical character recognition (OCR) on the visual layout.
+The recipient's software detects this embedded `/factur-x.xml` file and extracts all metadata without needing optical character recognition (OCR) on the visual layout. In the `"xrechnung"` profile, the file is named `/xrechnung.xml`, as ZUGFeRD 2.3 names the XML of its XRECHNUNG profile (and as Mustang embeds it). Earlier versions named it `factur-x.xml` in every profile.
 
 If the XML has errors and you let the invoice compile anyway with `zugferd-errors: "report"`, the XML is attached as a draft instead: named `invoice-draft.xml` and with the relationship `"data"` (see [The `zugferd-errors` Parameter](#the-zugferd-errors-parameter)).
 
@@ -130,11 +130,11 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 
 The `zugferd-errors` parameter of `invoice` decides what happens with the problems:
 
-| Value               | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| :------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"panic"` (default) | Errors stop the compilation with the list shown above (including any warnings). An invoice with warnings only compiles.                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `"report"`          | Errors and warnings are listed in a box at the top of the invoice instead of stopping the compilation, which is handy while filling in the data in the preview. If the theme shows no report, errors stop the compilation as with `"panic"` (see [Custom Report Layout](#custom-report-layout)). The XML of an invoice with errors is attached as a draft: as `invoice-draft.xml` instead of `factur-x.xml` and with the relationship `"data"`, so that no receiving software takes it for the e-invoice. With warnings only, the XML is attached as usual. |
-| `"ignore"`          | The check is skipped on purpose: the XML is attached as usual (`factur-x.xml`, relationship of the profile), whatever its errors. It may then be invalid, and you are responsible for it. Use this only if you validate the XML yourself, e.g. when a recipient explicitly accepts a deviation.                                                                                                                                                                                                                                                             |
+| Value               | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"panic"` (default) | Errors stop the compilation with the list shown above (including any warnings). An invoice with warnings only compiles.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `"report"`          | Errors and warnings are listed in a box at the top of the invoice instead of stopping the compilation, which is handy while filling in the data in the preview. If the theme shows no report, errors stop the compilation as with `"panic"` (see [Custom Report Layout](#custom-report-layout)). The XML of an invoice with errors is attached as a draft: as `invoice-draft.xml` instead of `factur-x.xml` (or `xrechnung.xml`) and with the relationship `"data"`, so that no receiving software takes it for the e-invoice. With warnings only, the XML is attached as usual. |
+| `"ignore"`          | The check is skipped on purpose: the XML is attached as usual (`factur-x.xml` or `xrechnung.xml`, relationship of the profile), whatever its errors. It may then be invalid, and you are responsible for it. Use this only if you validate the XML yourself, e.g. when a recipient explicitly accepts a deviation.                                                                                                                                                                                                                                                               |
 
 A missing or invalid IBAN in [`bank-details`](./api-reference/components.md#bank-details), or an invalid IBAN or creditor identifier of a [`direct-debit`](./api-reference/components.md#direct-debit), makes the printed invoice wrong as well, so it stops the compilation with a message naming it, also with `"ignore"`. With `"report"`, it is marked where it is printed instead (a placeholder takes the place of the EPC-QR code), and the report lists it as an error (`BR-DE-19` or `BR-DE-20` in XRechnung, `IP-PAY-01` or `IP-PAY-02` otherwise), so the XML is attached as a draft.
 
@@ -147,7 +147,7 @@ A missing or invalid IBAN in [`bank-details`](./api-reference/components.md#bank
 ```
 
 :::warning
-An invoice with errors is not a valid e-invoice. With `"report"`, it carries its XML only as the draft `invoice-draft.xml`; with `"ignore"`, it carries the invalid XML as `factur-x.xml`. Switch back to the default `"panic"` before you send an invoice.
+An invoice with errors is not a valid e-invoice. With `"report"`, it carries its XML only as the draft `invoice-draft.xml`; with `"ignore"`, it carries the invalid XML as the e-invoice (`factur-x.xml` or `xrechnung.xml`). Switch back to the default `"panic"` before you send an invoice.
 :::
 
 ### Custom Report Layout
@@ -832,7 +832,7 @@ The EPC-QR code of the [bank details](./api-reference/components.md#bank-details
 
 A Factur-X / ZUGFeRD PDF announces its XML in the XMP metadata of the PDF, with the Factur-X extension schema (`fx:DocumentType`, `fx:DocumentFileName`, `fx:Version` and `fx:ConformanceLevel`). Typst cannot write custom XMP metadata yet, so `invoice-pro` cannot add these entries. This is a limitation of the Typst platform, not of the invoice data:
 
-- The embedded `factur-x.xml` is complete and valid for its profile. Most receiving systems only extract and process this XML.
+- The embedded XML (`factur-x.xml`, or `xrechnung.xml` in the XRechnung profile) is complete and valid for its profile. Most receiving systems only extract and process this XML.
 - Validators that check the PDF itself reject it. The Mustang validator, for example, reports `XMP Metadata: ConformanceLevel not found` together with the missing `DocumentType`, `DocumentFileName` and `Version`, and rates the PDF (not the XML) as invalid.
 
 `invoice-pro` will write the metadata as soon as Typst supports custom XMP metadata.
@@ -867,7 +867,7 @@ java -jar Mustang-CLI-2.14.0.jar --action validate --source invoice-facturx.pdf
 | `"en16931"`                      | `E`         |
 | `"xrechnung"`                    | `X`         |
 
-With `zugferd: auto`, use the profile the invoice was written in: `X` if the guideline ID of the XML (BT-24) ends in `xrechnung_3.0`, otherwise `E`. `--format fx --version 1` writes the metadata of Factur-X 1.0, which ZUGFeRD 2.1 and later use as well. For `X`, Mustang embeds the XML a second time under the name `xrechnung.xml`, next to the `factur-x.xml` of `invoice-pro`; both files are identical. XRechnung is primarily exchanged as the XML file itself: if a recipient asks for an XRechnung, you can send `invoice.xml` from step 2.
+With `zugferd: auto`, use the profile the invoice was written in: `X` if the guideline ID of the XML (BT-24) ends in `xrechnung_3.0`, otherwise `E`. `--format fx --version 1` writes the metadata of Factur-X 1.0, which ZUGFeRD 2.1 and later use as well. For `X`, Mustang names the XML `xrechnung.xml`, as `invoice-pro` does, and replaces it with the same XML, so the PDF carries it once. XRechnung is primarily exchanged as the XML file itself: if a recipient asks for an XRechnung, you can send `invoice.xml` from step 2.
 
 ---
 

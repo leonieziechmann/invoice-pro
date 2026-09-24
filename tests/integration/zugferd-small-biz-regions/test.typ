@@ -1,7 +1,8 @@
 // The small business scheme of each region (`tax-exempt-small-biz: true`).
 //
 // The legal note printed on the invoice is the exemption reason (BT-120) of
-// the attached factur-x.xml, and the VAT category (BT-118) says why no VAT is
+// the attached e-invoice (factur-x.xml, or xrechnung.xml in the XRECHNUNG
+// profile), and the VAT category (BT-118) says why no VAT is
 // charged: E where the law exempts the turnover of small businesses (DE § 19
 // Abs. 1 UStG since 2025, AT § 6 Abs. 1 Z 27 UStG, FR art. 293 B du CGI, ES),
 // O where they are not subject to VAT (IT regime forfettario, CH).
@@ -226,7 +227,7 @@
   if query(<small-biz-regions-check>).len() == 0 { return }
   let printed = query(<printed-line-items>).map(it => it.value)
   let attachments = query(pdf.attach).filter(it => (
-    it.path == "/factur-x.xml"
+    it.path in ("/factur-x.xml", "/xrechnung.xml")
   ))
   assert.eq(printed.len(), cases.len(), message: "printed line items")
   assert.eq(attachments.len(), cases.len(), message: "attached XML files")

@@ -218,7 +218,7 @@ You can supply references in four formats:
 ZUGFeRD / Factur-X support is **experimental**. The generated XML has not yet been validated against all edge cases of the EN 16931 standard. Do not rely on it for legally binding e-invoices without independent validation.
 :::
 
-Setting `zugferd` to a profile string embeds a machine-readable `factur-x.xml` file inside the PDF according to the ZUGFeRD 2.x / Factur-X 1.0 standard. This allows accounting software to automatically import your invoice data.
+Setting `zugferd` to a profile string embeds a machine-readable `factur-x.xml` file (`xrechnung.xml` in the XRechnung profile) inside the PDF according to the ZUGFeRD 2.x / Factur-X 1.0 standard. This allows accounting software to automatically import your invoice data.
 
 **Required CLI flag:** You must compile with PDF/A-3b support for the attachment to be valid:
 

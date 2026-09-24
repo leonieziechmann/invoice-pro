@@ -373,16 +373,20 @@
           assert(false, message: format-report(result))
         }
 
-        // With errors, "report" attaches the XML as a draft: under a name that
-        // no receiving software takes for the e-invoice (which is
-        // "factur-x.xml") and only as supplementary data. "ignore" skips the
-        // check on purpose and attaches the XML like a valid one.
+        // The e-invoice is "factur-x.xml", or "xrechnung.xml" in the
+        // XRECHNUNG profile (`file-name` of the profile). With errors,
+        // "report" attaches the XML as a draft: under a name that no
+        // receiving software takes for the e-invoice and only as
+        // supplementary data. "ignore" skips the check on purpose and
+        // attaches the XML like a valid one.
         let draft = errors.len() > 0 and ctx.zugferd-errors == "report"
         // MINIMUM and BASIC WL do not replace the visual invoice either, so
         // their XML is attached as data rather than as an alternative of it.
         let as-data = draft or result.profile.id in ("minimum", "basic-wl")
         pdf.attach(
-          if draft { "/invoice-draft.xml" } else { "/factur-x.xml" },
+          if draft { "/invoice-draft.xml" } else {
+            "/" + result.profile.at("file-name", default: "factur-x.xml")
+          },
           result.xml,
           relationship: if as-data { "data" } else { "alternative" },
           mime-type: "text/xml",

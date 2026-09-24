@@ -57,6 +57,9 @@
   en16931: false,
   // The German CIUS XRechnung (BR-DE-*) applies on top of EN 16931.
   xrechnung: false,
+  // The name of the embedded XML file: "factur-x.xml", and "xrechnung.xml"
+  // for the XRECHNUNG profile (ZUGFeRD 2.3, as Mustang embeds it as well).
+  file-name: "factur-x.xml",
 )
 
 #let profiles = (
@@ -152,6 +155,7 @@
       notes: true,
       en16931: true,
       xrechnung: true,
+      file-name: "xrechnung.xml",
     ),
 )
 

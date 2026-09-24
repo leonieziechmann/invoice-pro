@@ -373,7 +373,7 @@ ZUGFeRD tests verify that generated invoices comply with the **EN 16931** Europe
 #### How It Works
 
 1. Compiles the Typst invoice document to **PDF/A-3b** (`--pdf-standard=a-3b`).
-2. Extracts the embedded `factur-x.xml` attachment using `pdfdetach` (from `poppler-utils`).
+2. Extracts the embedded e-invoice (`factur-x.xml`, or `xrechnung.xml` in the XRechnung profile) using `pdfdetach` (from `poppler-utils`).
 3. Validates the XML syntax and Schematron business rules (including XRechnung / EN16931 rules) using the **Mustangproject CLI validator** (`mustang-cli`).
 
 Independently of Mustang, `invoice-pro` checks the e-invoice data itself while compiling (`src/zugferd/validate.typ`) and lists every violated rule at once. The tests under `tests/zugferd/` cover these checks; the Mustang validation makes sure that an invoice passing them is valid for the official validator as well.
