@@ -6,7 +6,7 @@
 // 16931 CII Schematron; src/zugferd/guard/write.typ describes them.
 
 #import "lists.typ": (
-  country-3, currency-3, document-type, guideline-2, note-subject,
+  country-3, currency-3, document-type, guideline-3, note-subject,
   payment-means, tax-type, vat-category-2, vatex,
 )
 
@@ -29,9 +29,9 @@
 )),
 ("s", ("schemeID": (false, "IP-GUARD-05", ("icd", "BR-CL-11", none, false))), none, none, none, none),
 (n: 1, z: none, c: (
-  "ram:ID": (guideline-2, 0, 1, 1, 5, "BR-01"),
+  "ram:ID": (guideline-3, 0, 1, 1, 5, "BR-01"),
 )),
-("s", ("schemeID": (false, "IP-GUARD-05", ("icd", "BR-CL-11", none, false))), ("guideline-2", "FX-SCH-A-000026", none, false), none, none, none),
+("s", ("schemeID": (false, "IP-GUARD-05", ("icd", "BR-CL-11", none, false))), ("guideline-3", "FX-SCH-A-000026", none, false), none, none, none),
 (n: 3, z: none, c: (
   "ram:ID": ("s", 0, 1, 1, 3, "BR-02"),
   "ram:TypeCode": (document-type, 1, 1, 1, 7, "BR-04"),
@@ -176,7 +176,7 @@
 (n: 1, z: none, c: (
   "ram:URIID": (none, 0, 1, 1, 51, "BR-62"),
 )),
-("s", ("schemeID": ("BR-62", none, ("eas-2", "BR-CL-25", ("0219": "FX-SCH-A-000031", "0220": "FX-SCH-A-000031"), false))), none, none, none, none),
+("s", ("schemeID": ("BR-62", none, ("eas-3", "BR-CL-25", ("0219": "FX-SCH-A-000031", "0220": "FX-SCH-A-000031"), false))), none, none, none, none),
 (d: ("ram:ID", "@schemeID"), m: ("FC": 53, "VA": 55), o: "IP-GUARD-05", k: ("FC": (1, "FX-SCH-A-000034"), "VA": (1, "FX-SCH-A-000033"))),
 (n: 1, z: none, c: (
   "ram:ID": (none, 0, 1, 1, 54),
@@ -211,7 +211,7 @@
 (n: 1, z: none, c: (
   "ram:URIID": (none, 0, 1, 1, 61, "BR-63"),
 )),
-("s", ("schemeID": ("BR-63", none, ("eas-2", "BR-CL-25", ("0219": "FX-SCH-A-000031", "0220": "FX-SCH-A-000031"), false))), none, none, none, none),
+("s", ("schemeID": ("BR-63", none, ("eas-3", "BR-CL-25", ("0219": "FX-SCH-A-000031", "0220": "FX-SCH-A-000031"), false))), none, none, none, none),
 (d: ("ram:ID", "@schemeID"), m: ("FC": "FX-SCH-A-000031", "VA": 63), o: 65, k: (:)),
 (n: 1, z: none, c: (
   "ram:ID": (none, 0, 1, 1, 64),

@@ -6,7 +6,7 @@
 // src/zugferd/guard/write.typ describes them.
 
 #import "lists.typ": (
-  country-2, currency, document-type, guideline-3, note-subject, payment-means,
+  country-2, currency, document-type, guideline-4, note-subject, payment-means,
   tax-type, vat-category-2, vatex,
 )
 
@@ -29,9 +29,9 @@
 )),
 ("s", ("schemeID": (false, "IP-GUARD-05", none)), none, none, none, none),
 (n: 1, z: none, c: (
-  "ram:ID": (guideline-3, 0, 1, 1, 5, "BR-01"),
+  "ram:ID": (guideline-4, 0, 1, 1, 5, "BR-01"),
 )),
-("s", ("schemeID": (false, "IP-GUARD-05", none)), ("guideline-3", "FX-SCH-A-000026", none, false), none, none, none),
+("s", ("schemeID": (false, "IP-GUARD-05", none)), ("guideline-4", "FX-SCH-A-000026", none, false), none, none, none),
 (n: 3, z: none, c: (
   "ram:ID": ("s", 0, 1, 1, 3, "BR-02"),
   "ram:TypeCode": (document-type, 1, 1, 1, 7, "BR-04"),

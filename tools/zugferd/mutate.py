@@ -31,8 +31,10 @@ The proof criteria, each must hold for every mutant:
       those reports), a required element without text, a date that names no
       day;
   C3  the guard rejects a mutated code exactly when Mustang reports a code
-      list rule of that position (and KoSIT one of EN 16931 or XRechnung,
-      with --kosit);
+      list rule of that position or the code is missing from the list of the
+      newest CEN Schematron there (KoSIT's CEN 1.3.16, which the tables apply
+      as well), and KoSIT reports one of EN 16931 or XRechnung (with
+      --kosit);
   C4  for a tax mutant or a mutated category code, the guard reports
       exactly the rules of the VAT categories (rate, VAT amount, exemption
       reason) that Mustang reports;
@@ -40,11 +42,13 @@ The proof criteria, each must hold for every mutant:
       which Mustang reports a rule that the tables compile as a requirement
       of that element (e.g. BR-06 for an empty seller name).
 
-Needs Python 3.11+ with lxml, Typst, a JDK and $MUSTANG_JAR; the numbers go
+Needs Python 3.11+ with lxml, Typst, a JDK, $MUSTANG_JAR and $KOSIT_CONFIG (the
+KoSIT configuration, whose CEN code lists the tables apply); the numbers go
 to <out>/mutate-report.json. Exit status 1 when a criterion fails.
 """
 
 import argparse
+import ast
 import collections
 import copy
 import fnmatch
@@ -348,16 +352,22 @@ def representable(root):
 def compiled_rules(jar, profiles):
     """From the generator's compiled rules, per profile: the rules of every
     code list the official validators apply at each position ({(path, "."
-    or "@name"): {rule: source}}), the rules of the VAT categories (a set of
+    or "@name"): {rule: source}}), the list of the newest CEN Schematron
+    there ({(path, what): CodeList}), the rules of the VAT categories (a set of
     the ids Mustang reports), and the rules that require an element ({path:
     set of rules}: its minimum, the minimum of a variant, one of several
     alternatives, a count over a path)."""
     j = gen_guard.Jar(jar)
     schemas = gen_guard.load_schemas(j)
-    lists, categories, presence = {}, {}, {}
+    newest = gen_guard.load_cen_code_lists(
+        gen_guard.KositConfig(os.environ.get("KOSIT_CONFIG")), gen_guard.load_rules(j, gen_guard.CEN_XSLT, "CEN")
+    )
+    lists, newest_codes, categories, presence = {}, {}, {}, {}
     for profile in profiles:
-        compiler = gen_guard.load_profile(j, profile, schemas)
+        compiler = gen_guard.load_profile(j, profile, schemas, newest)
         rules = collections.defaultdict(dict)
+        # The list of the newest CEN Schematron at each position (one each).
+        codes = {}
         required = collections.defaultdict(set)
         for pos in compiler.positions:
             steps, p = [], pos
@@ -367,9 +377,13 @@ def compiled_rules(jar, profiles):
             path = "/".join(reversed(steps))
             for cl in pos.lists:
                 rules[(path, ".")][cl.rule] = cl.source
+                if cl.newest:
+                    codes[(path, ".")] = cl
             for name, attr in pos.attrs.items():
                 for cl in attr.lists:
                     rules[(path, "@" + name)][cl.rule] = cl.source
+                    if cl.newest:
+                        codes[(path, "@" + name)] = cl
             for cl in getattr(pos, "prefix", None) or []:
                 rules[(path, ".")][cl.rule] = cl.source
             for tag, entries in pos.cmin.items():
@@ -384,11 +398,12 @@ def compiled_rules(jar, profiles):
                 if low > 0:
                     required[path + "/" + "/".join(steps_below)].add(rule)
         lists[profile] = rules
+        newest_codes[profile] = codes
         categories[profile] = {
             rule for pos in compiler.positions for checks in pos.categories.values() for _, _, rule in checks
         }
         presence[profile] = required
-    return lists, categories, presence
+    return lists, newest_codes, categories, presence
 
 
 def all_codes(jar):
@@ -530,7 +545,9 @@ def main(argv=None):
         finally:
             mustang.close()
         kosit = run_kosit([m["file"] for m in mutants if m["class"] == "code"], out) if args.kosit else {}
-        rules, category_rules, presence_rules = compiled_rules(jar, sorted({m["profile"] for m in mutants}))
+        rules, newest_codes, category_rules, presence_rules = compiled_rules(
+            jar, sorted({m["profile"] for m in mutants})
+        )
 
         failures = collections.defaultdict(list)
         stats = collections.Counter()
@@ -589,8 +606,14 @@ def main(argv=None):
                 at = [f for f in findings if f[0] in ("code", "prefix") and re.sub(r"\[\d+\]", "", f[2]) == path]
                 guard_rejects = bool(at)
                 mustang_rejects = bool(set(report["errors"]) & set(known_rules))
+                # A code the newest CEN list lacks (e.g. a withdrawn currency),
+                # which only KoSIT reports: the tables reject it as well.
+                value = ast.literal_eval(m["detail"].rsplit(" -> ", 1)[1])
+                newest = newest_codes[m["profile"]].get((path, what))
+                newest_rejects = newest is not None and (value.upper() if newest.casefold else value) not in newest.codes
                 stats[("code", "compared with Mustang")] += 1
-                if guard_rejects != mustang_rejects:
+                stats[("code", "rejected by the newest CEN list only")] += newest_rejects and not mustang_rejects
+                if guard_rejects != (mustang_rejects or newest_rejects):
                     failures["C3"].append(entry | {"rules": sorted(known_rules)})
                 if args.kosit and kosit.get(m["file"]) is not None:
                     official_rules = {r for r, source in known_rules.items() if source in ("CEN", "XR")}
