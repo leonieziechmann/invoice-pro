@@ -26,7 +26,10 @@ Facts (all optional; an absent fact is not checked):
   buyer_reference          BT-10                                 O-BT10
   buyer_contact            {name, phone, email} of BG-9          O-BG9
   tax_representative       {name, vat, country} of BG-11         O-BG11
-  payee                    {name, ids, legal_id} of BG-10        O-BG10
+  payee                    {name, ids, legal_id} of BG-10 (not in MINIMUM)  O-BG10
+  preceding_invoice        [BT-25, BT-26 (YYYYMMDD)] of BG-3     O-BT25
+  notes                    [[subject code or "", text], ..] of the invoice notes
+                           (BT-21, BT-22), in order              O-BT22
   seller_post_code/_city   BT-38, BT-37                          O-BT38, O-BT37
   buyer_post_code/_city_name  BT-53, BT-52                       O-BT53, O-BT52
   seller_country, buyer_country, ship_to_country  BT-40/55/80    O-BT40/55/80
@@ -38,14 +41,19 @@ Facts (all optional; an absent fact is not checked):
   due_date                 BT-9 (YYYYMMDD)                       O-BT9
   iban                     BT-84                                 O-BT84
   payment_means            BT-81 of each payment means, in order O-BT81
-  account_name             BT-85                                 O-BT85
-  card                     [BT-87, BT-88] of the payment card    O-BG18
+  account_name             BT-85 (EN 16931, XRechnung)           O-BT85
+  card                     [BT-87, BT-88] of the payment card (EN 16931, XRechnung)  O-BG18
   mandate, creditor_id     BT-89, BT-90                          O-BT89, O-BT90
   debtor_iban              BT-91                                 O-BT91
   paid                     true: BT-113 = BT-112, BT-115 = 0     O-BT113
   payment_terms            BT-20, exactly                        O-BT20
   units                    BT-130 of every line, in order        O-BT130
   line_names               BT-153 of every line, in order        O-BT153
+  item_notes               [[line name, note], ..]: the note (BT-127) of the lines
+                           of that name; the other lines have none   O-BT127
+  item_origins             [[line name, country], ..]: the country of origin
+                           (BT-159, EN 16931, XRechnung) of the lines of that
+                           name; the other lines have none       O-BT159
   number_format            [decimal sign, group sign] of the printed amounts
   skip_oracles             oracle ids not to check for this case
 
@@ -69,9 +77,13 @@ SETTLEMENT = HEADER + "/ram:ApplicableHeaderTradeSettlement"
 SUMMATION = SETTLEMENT + "/ram:SpecifiedTradeSettlementHeaderMonetarySummation"
 LINES = HEADER + "/ram:IncludedSupplyChainTradeLineItem"
 
-# Profiles whose XML carries these parts at all.
+# Profiles whose XML carries these parts at all (src/zugferd/profile.typ):
+# the addresses, the settlement, the payee, the notes and the document
+# references; the invoice lines; the payment card, the account name and the
+# country of origin of an item.
 WITH_ADDRESSES = ("basic-wl", "basic", "en16931", "xrechnung")
 WITH_LINES = ("basic", "en16931", "xrechnung")
+WITH_DETAILS = ("en16931", "xrechnung")
 CENT = Decimal("0.01")
 # (decimal sign, group sign) of printed amounts, tried in turn when the case
 # does not state the format of its locale.
@@ -127,7 +139,7 @@ def _legal_id(doc, party):
     return [found[0].get("schemeID") or "", found[0].text or ""] if found else None
 
 
-def _party_details(check, facts, doc):
+def _party_details(check, facts, doc, profile):
     """The party details besides names, addresses and VAT identifiers."""
     seller = AGREEMENT + "/ram:SellerTradeParty"
     buyer = AGREEMENT + "/ram:BuyerTradeParty"
@@ -163,7 +175,7 @@ def _party_details(check, facts, doc):
         }
         want = {key: facts["tax_representative"].get(key) for key in ("name", "vat", "country")}
         check("O-BG11", got == want, f"{got} != {want}")
-    if facts.get("payee"):
+    if facts.get("payee") and profile in WITH_ADDRESSES:
         payee = SETTLEMENT + "/ram:PayeeTradeParty"
         got = {
             "name": xtext1(doc, payee + "/ram:Name"),
@@ -228,7 +240,7 @@ def _check_modifiers(check, oracle, facts_mods, found, inclusive, line_rates=Non
             )
 
 
-def _check_payment(check, facts, doc):
+def _check_payment(check, facts, doc, profile):
     """The payment means (BG-16) and payment terms the input states: the codes
     (BT-81), the account name (BT-85), the payment card (BG-18), the direct
     debit (BT-89, BT-90, BT-91), a paid invoice (BT-113, BT-115) and the terms
@@ -244,12 +256,12 @@ def _check_payment(check, facts, doc):
         "O-BT20": ("payment_terms", terms + "/ram:Description"),
     }
     for oracle, (fact, path) in expected.items():
-        if facts.get(fact) is None:
+        if facts.get(fact) is None or (fact == "account_name" and profile not in WITH_DETAILS):
             continue
         want = facts[fact] if isinstance(facts[fact], list) else [facts[fact]]
         got = xtext(doc, path)
         check(oracle, got == want, f"{got} != {want!r}")
-    if facts.get("card") is not None:
+    if facts.get("card") is not None and profile in WITH_DETAILS:
         card = means + "/ram:ApplicableTradeSettlementFinancialCard"
         got = [xtext1(doc, card + "/ram:ID"), xtext1(doc, card + "/ram:CardholderName")]
         check("O-BG18", got == list(facts["card"]), f"{got} != {facts['card']!r}")
@@ -258,6 +270,46 @@ def _check_payment(check, facts, doc):
         paid = dec(xtext1(doc, SUMMATION + "/ram:TotalPrepaidAmount"))
         due = dec(xtext1(doc, SUMMATION + "/ram:DuePayableAmount"))
         check("O-BT113", paid == grand and due == 0, f"paid {paid}, due {due} of {grand}")
+
+
+def _check_references(check, facts, doc):
+    """The preceding invoice (BG-3) and the invoice notes (BT-21, BT-22)."""
+    if facts.get("preceding_invoice"):
+        reference = SETTLEMENT + "/ram:InvoiceReferencedDocument"
+        got = [[e.findtext("ram:IssuerAssignedID", namespaces=NS),
+                e.findtext("ram:FormattedIssueDateTime/qdt:DateTimeString", namespaces=NS)]
+               for e in doc.xpath(reference, namespaces=NS)]
+        want = [list(facts["preceding_invoice"])]
+        check("O-BT25", got == want, f"{got} != {want}")
+    if facts.get("notes"):
+        got = [[_find(n, "ram:SubjectCode") or "", _find(n, "ram:Content") or ""]
+               for n in doc.xpath("rsm:ExchangedDocument/ram:IncludedNote", namespaces=NS)]
+        want = [list(note) for note in facts["notes"]]
+        # Every note, in order; notes of other inputs may come between them.
+        rest = iter(got)
+        check("O-BT22", all(note in rest for note in want), f"{want} not in {got}")
+
+
+def _check_line_details(check, facts, lines, profile):
+    """The note (BT-127) and the country of origin (BT-159) of the lines, by
+    the name of the line (BT-153): the lines with a name of the facts have
+    its value, every other line has none."""
+    for fact, oracle, path, profiles in (
+        ("item_notes", "O-BT127", "ram:AssociatedDocumentLineDocument/ram:IncludedNote/ram:Content", WITH_LINES),
+        ("item_origins", "O-BT159", "ram:SpecifiedTradeProduct/ram:OriginTradeCountry/ram:ID", WITH_DETAILS),
+    ):
+        if facts.get(fact) is None or profile not in profiles:
+            continue
+        want = {name: value for name, value in facts[fact]}
+        names = set()
+        for line in lines:
+            name = _find(line, "ram:SpecifiedTradeProduct/ram:Name") or ""
+            names.add(name)
+            got = [e.text or "" for e in line.xpath(path, namespaces=NS)]
+            expected = [want[name]] if name in want else []
+            check(oracle, got == expected, f"line {name!r}: {got} != {expected}")
+        for name in want:
+            check(oracle, name in names, f"no line {name!r}")
 
 
 def check(facts, doc, pdf_text, profile):
@@ -312,7 +364,7 @@ def check(facts, doc, pdf_text, profile):
     if facts.get("seller_country"):
         got = xtext(doc, seller + "/ram:PostalTradeAddress/ram:CountryID")
         check_("O-BT40", got == [facts["seller_country"]], f"{got} != {facts['seller_country']!r}")
-    _party_details(check_, facts, doc)
+    _party_details(check_, facts, doc, profile)
 
     if profile in WITH_ADDRESSES:
         for key, path, oracle in (
@@ -368,7 +420,8 @@ def check(facts, doc, pdf_text, profile):
                 SETTLEMENT + "/ram:SpecifiedTradeSettlementPaymentMeans/ram:PayeePartyCreditorFinancialAccount/ram:IBANID",
             )
             check_("O-BT84", got == [facts["iban"]], f"{got} != {facts['iban']!r}")
-        _check_payment(check_, facts, doc)
+        _check_payment(check_, facts, doc, profile)
+        _check_references(check_, facts, doc)
 
     if profile in WITH_LINES:
         lines = doc.xpath(LINES, namespaces=NS)
@@ -391,6 +444,7 @@ def check(facts, doc, pdf_text, profile):
                 part["rate"] = rate
                 line_ac.append(part)
         _check_modifiers(check_, "O-BG27/28", facts.get("item_modifiers", []), line_ac, facts.get("tax_mode") == "inclusive")
+        _check_line_details(check_, facts, lines, profile)
 
     # The printed PDF states the amounts of the XML.
     if pdf_text is not None:

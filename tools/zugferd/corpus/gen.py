@@ -49,11 +49,21 @@ DIMS = {
     "mode": ["exclusive", "inclusive"],
     "mods": ["none", "item-pct", "item-abs", "doc-pct", "doc-abs-disc", "doc-abs-sur", "bundle2-pct", "free-ship"],
     "amounts": ["plain", "fractional", "large", "credit-line"],
-    "ids": ["vat", "taxnr", "vat+taxnr", "id", "gln"],
-    "payment": ["bank+days", "bank+due", "nobank+days", "bank+immediate"],
-    "delivery": ["none", "addr", "dates-all", "dates-mixed"],
+    # "legal": both parties identified by their legal registration identifier
+    # (BT-30, BT-47) instead of VAT IDs; the seller states its tax number.
+    "ids": ["vat", "taxnr", "vat+taxnr", "id", "gln", "legal"],
+    "payment": ["bank+days", "bank+due", "nobank+days", "bank+immediate", "direct-debit", "card", "paid"],
+    # "period": the service period of the invoice (`service-period`).
+    "delivery": ["none", "addr", "dates-all", "dates-mixed", "period"],
     "lines": [1, 3, 8],
     "theme": ["blank", "din-5008"],
+    # Document type (BT-3): 380, 381, 384, 389.
+    "doctype": ["invoice", "credit-note", "corrected", "self-billed"],
+    # Invoice notes (BT-21/22), note and country of origin of an item
+    # (BT-127, BT-159), a factoring company as payee (BG-10).
+    "extras": ["none", "notes", "item-data", "payee"],
+    # The currency of the locale, or US dollars (BT-5).
+    "currency": ["default", "usd"],
 }
 
 # The simplest value of every dimension (minimizer target, mutation base).
@@ -69,6 +79,9 @@ SIMPLE = {
     "delivery": "none",
     "lines": 1,
     "theme": "blank",
+    "doctype": "invoice",
+    "extras": "none",
+    "currency": "default",
 }
 
 EU = {"de", "fr", "at"}
@@ -83,6 +96,8 @@ SELLER = {
         country="de",
         vat="DE123456788",
         taxnr="30/123/45678",
+        legal='id.register("HRB 4711", court: "Amtsgericht Charlottenburg")',
+        legal_fact=["", "Amtsgericht Charlottenburg, HRB 4711"],
         locale="de-de",
         currency="EUR",
         rates=("19%", "7%"),
@@ -97,6 +112,8 @@ SELLER = {
         country="at",
         vat="ATU12345675",
         taxnr="12 345/6789",
+        legal='id.register("FN 123456 a", court: "Handelsgericht Wien")',
+        legal_fact=["", "Handelsgericht Wien, FN 123456 a"],
         locale="de-at",
         currency="EUR",
         rates=("20%", "10%"),
@@ -111,6 +128,8 @@ SELLER = {
         country="fr",
         vat="FR40303265045",
         taxnr="303265045",
+        legal='id.siret("303 265 045 00011")',
+        legal_fact=["0009", "30326504500011"],
         locale="fr-fr",
         currency="EUR",
         rates=("20%", "5.5%"),
@@ -125,6 +144,8 @@ SELLER = {
         country="ch",
         vat="CHE123456788",
         taxnr="CHE-123.456.788",
+        legal='id.uid-ch("CHE-123.456.788")',
+        legal_fact=["0183", "CHE123456788"],
         locale="de-ch",
         currency="CHF",
         rates=("8.1%", "2.6%"),
@@ -133,6 +154,9 @@ SELLER = {
         contact='(name: "Max Muster", phone: "+41 44 1234567", email: "rechnung@muster.example")',
     ),
 }
+# `iban` is the account a credit note is paid to, the one a direct debit
+# collects from, and the seller's account on a self-billed invoice (where the
+# recipient is the seller).
 BUYER = {
     "de": dict(
         name="Kunde AG",
@@ -140,7 +164,10 @@ BUYER = {
         city='(name: "Köln", post-code: "50667")',
         country="de",
         vat="DE987654328",
+        legal='id.register("HRB 12345", court: "Amtsgericht Köln")',
+        legal_fact=["", "Amtsgericht Köln, HRB 12345"],
         email="eingang@kunde.example",
+        iban="DE75512108001245126199",
     ),
     "fr": dict(
         name="Client SAS",
@@ -148,7 +175,10 @@ BUYER = {
         city='(name: "Lyon", post-code: "69001")',
         country="fr",
         vat="FR61954506077",
+        legal='id.siren("954 506 077")',
+        legal_fact=["0002", "954506077"],
         email="compta@client.example",
+        iban="FR7630006000011234567890189",
     ),
     "at": dict(
         name="Kunde GmbH",
@@ -156,7 +186,10 @@ BUYER = {
         city='(name: "Graz", post-code: "8010")',
         country="at",
         vat="ATU87654324",
+        legal='id.register("FN 654321 b", court: "Landesgericht für ZRS Graz")',
+        legal_fact=["", "Landesgericht für ZRS Graz, FN 654321 b"],
         email="buchhaltung@kunde.example",
+        iban="AT483200000012345864",
     ),
     "us": dict(
         name="Acme Inc.",
@@ -164,7 +197,10 @@ BUYER = {
         city='(name: "New York", post-code: "10118")',
         country="us",
         vat=None,
+        legal='"EIN 12-3456789"',
+        legal_fact=["", "EIN 12-3456789"],
         email="ap@acme.example",
+        iban=None,
     ),
     "ch": dict(
         name="Kunde AG",
@@ -172,7 +208,10 @@ BUYER = {
         city='(name: "Bern", post-code: "3011")',
         country="ch",
         vat="CHE987654326",
+        legal='id.uid-ch("CHE-987.654.326")',
+        legal_fact=["0183", "CHE987654326"],
         email="kreditoren@kunde.example",
+        iban="CH5604835012345678009",
     ),
 }
 # Number format of the printed amounts per locale: (decimal sign, group sign).
@@ -193,6 +232,30 @@ BUYER_GLN = "4000001987658"
 CONSTRUCTOR = {"ae": "reverse-charge", "k": "intra-community", "g": "export", "o": "outside-scope"}
 PERIOD = ("20260801", "20260831")
 ITEM_PERIOD = "(datetime(year: 2026, month: 8, day: 1), datetime(year: 2026, month: 8, day: 31))"
+# Document type code (BT-3) of every value of the `doctype` dimension.
+TYPE_CODE = {"invoice": "380", "credit-note": "381", "corrected": "384", "self-billed": "389"}
+# The invoice a credit note or a corrected invoice refers to (BT-25, BT-26).
+PRECEDING = ("RE-2026-0815", "datetime(year: 2026, month: 8, day: 3)", "20260803")
+# A SEPA direct debit of the German seller (BT-89, BT-90) and a card (BT-87, BT-88).
+MANDATE = "M-2026-017"
+CREDITOR_ID = "DE98ZZZ09999999999"
+CARD = ("1234", "Erika Kunde")
+# A paid invoice: paid in cash on the invoice date (BT-81 = 10).
+PAID = ('"cash"', "datetime(year: 2026, month: 9, day: 1)", "10")
+# Invoice notes as (subject code, text) (BT-21, BT-22), a note (BT-127) and
+# the country of origin (BT-159) of the last item.
+NOTES = [("", "Lieferung frei Haus."), ("AAI", "Es gelten unsere Allgemeinen Geschäftsbedingungen.")]
+ITEM_NOTE = "Seriennummer 4711-0815"
+ITEM_ORIGIN = "IT"
+# A factoring company the buyer pays (BG-10), with its own account.
+PAYEE = dict(
+    name="Factoring Bank AG",
+    source='(name: "Factoring Bank AG", global-id: id.gln("4000001543212"), '
+    'legal-id: id.register("HRB 12345", court: "Amtsgericht Frankfurt am Main"))',
+    ids=[["0088", "4000001543212"]],
+    legal_id=["", "Amtsgericht Frankfurt am Main, HRB 12345"],
+    iban="DE02120300000000202051",
+)
 
 
 def parties(f):
@@ -205,21 +268,27 @@ def resolved_profile(f):
 
     Explicit profiles are exact. `auto` is XRechnung for a buyer in Germany
     when the invoice satisfies it (here: it has payment instructions,
-    BR-DE-1), otherwise EN 16931.
+    BR-DE-1), otherwise EN 16931. The buyer of a self-billed invoice is its
+    sender, and its seller, the recipient, has no contact (BG-6), which
+    XRechnung requires: EN 16931.
     """
     if f["profile"] != "auto":
         return f["profile"]
     _, b = parties(f)
+    if f["doctype"] == "self-billed":
+        return "en16931"
     return "xrechnung" if b == "de" and f["payment"] != "nobank+days" else "en16931"
 
 
 def allowed(f):
     """Legal constraints: only complete, legal real-world invoices.
 
-    Works on partial feature dictionaries, so that it can prune value pairs.
+    Works on partial feature dictionaries, so that it can prune value pairs:
+    a rule only applies when all dimensions it reads are given.
     """
     g = f.get
     route, tax, prof, ids, pay = g("route"), g("tax"), g("profile"), g("ids"), g("payment")
+    doc, extras, currency = g("doctype"), g("extras"), g("currency")
     s, b = route.split("-") if route else (None, None)
     if tax and route:
         # Reverse charge: cross-border within the EU or domestic (section 13b UStG).
@@ -242,12 +311,56 @@ def allowed(f):
             return False
         if tax in ("o", "smallbiz") and ids in ("vat", "gln"):
             return False
-    # MINIMUM identifies the seller by its VAT ID only (BR-CO-26).
-    if prof == "minimum" and (ids == "taxnr" or tax in ("o", "smallbiz")):
+        # Parties identified by their legal registration identifiers have no
+        # VAT IDs, which K and G need.
+        if tax in ("k", "g") and ids == "legal":
+            return False
+    # A reverse charge identifies the buyer by its legal registration
+    # identifier instead of its VAT ID (BR-AE-02) only at home (e.g. section
+    # 13b UStG); across borders the law requires the VAT ID (IP-VAT-226).
+    if ids == "legal" and tax == "ae" and route and s != b:
+        return False
+    # MINIMUM identifies the seller by its VAT ID or its legal registration
+    # identifier (BR-CO-26), not by a tax number or `id`.
+    if prof == "minimum" and ids and (ids == "taxnr" or (tax in ("o", "smallbiz") and ids != "legal")):
         return False
     # XRechnung needs payment instructions (BR-DE-1); `auto` falls back.
     if prof == "xrechnung" and pay == "nobank+days":
         return False
+    # The sender of a credit note or a self-billed invoice pays the amount:
+    # no direct debit, card payment or paid invoice, the account is the
+    # recipient's (which the US buyer has none of), and no payee.
+    if doc in ("credit-note", "self-billed"):
+        if pay in ("direct-debit", "card", "paid") or extras == "payee":
+            return False
+        if b == "us" and pay and pay != "nobank+days":
+            return False
+    # A self-billed invoice swaps the parties (the recipient is the seller):
+    # at home, with VAT IDs, not in XRechnung (its seller contact and buyer
+    # reference would change places too), goods delivered to the issuer.
+    if doc == "self-billed":
+        if route and route not in ("de-de", "fr-fr", "ch-ch"):
+            return False
+        if tax and tax not in ("s", "s2", "s-e", "s-z", "e2"):
+            return False
+        if prof in ("xrechnung", "auto") or ids in ("taxnr", "legal") or g("delivery") == "addr":
+            return False
+    # A SEPA direct debit of the German seller, in euro, from an account in
+    # the euro area (so not for the exports to the US and Switzerland).
+    if pay == "direct-debit":
+        if route and (s != "de" or b not in ("de", "fr", "at")):
+            return False
+        if currency == "usd" or tax in ("g", "o"):
+            return False
+    # The payee receives a credit transfer.
+    if extras == "payee" and pay and pay not in ("bank+days", "bank+due", "bank+immediate"):
+        return False
+    # US dollars for exports and supplies outside the scope of VAT to the US
+    # and Switzerland, which state no VAT amount (Art. 230 of the VAT
+    # Directive would require it in the national currency as well).
+    if currency == "usd":
+        if (tax and tax not in ("g", "o")) or (route and route not in ("de-us", "de-ch")) or doc == "self-billed":
+            return False
     if g("mods") == "free-ship" and tax in ("s2", "s-e", "s-z"):
         return False  # the shipping charge has a single VAT group to go to
     if g("mods") == "bundle2-pct" and g("lines") == 1:
@@ -332,6 +445,7 @@ def _items(f, seller, opts):
     prices = PRICES[f["amounts"]]
     quantities = QUANTITIES["fractional" if f["amounts"] == "fractional" else "default"]
     by_k, names_by_k, grounds, item_mods = {}, {}, [], []
+    item_data = {"item_notes": [], "item_origins": []}
     for k in range(n):
         price = "0" if f["mods"] == "free-ship" else prices[k % 8]
         qty = quantities[k % 8]
@@ -365,6 +479,11 @@ def _items(f, seller, opts):
             item_mods.append({"name": "Expresszuschlag", "charge": True, "amount": "25.00"})
         if f["delivery"] == "dates-all" or (f["delivery"] == "dates-mixed" and k == 0):
             args.append(f"date: {ITEM_PERIOD}")
+        # The last item is never in the bundle, which takes the first two.
+        if f.get("extras") == "item-data" and k == n - 1:
+            args += [f'note: "{ITEM_NOTE}"', f"origin: country.{ITEM_ORIGIN.lower()}"]
+            item_data["item_notes"].append([name, ITEM_NOTE])
+            item_data["item_origins"].append([name, ITEM_ORIGIN])
         # `split`: the same item in two lines, quantity 1 and the rest.
         parts = ["1", str(int(qty) - 1)] if opts.get("split") and qty.isdigit() and int(qty) >= 2 else [qty]
         by_k[k] = ["  #item(" + ", ".join(head + [f"quantity: {part}"] + args) + ")" for part in parts]
@@ -390,7 +509,7 @@ def _items(f, seller, opts):
         "doc-abs-sur": [("  #surcharge([Versand], amount: 5.90)", {"name": "Versand", "charge": True, "amount": "5.90"})],
         "free-ship": [("  #surcharge([Versand], amount: 5.90)", {"name": "Versand", "charge": True, "amount": "5.90"})],
     }.get(f["mods"], [])
-    return lines + [src for src, _ in doc_mods], names, grounds, [fact for _, fact in doc_mods], item_mods
+    return lines + [src for src, _ in doc_mods], names, grounds, [fact for _, fact in doc_mods], item_mods, item_data
 
 
 def _breakdown(f, seller, mutation):
@@ -414,9 +533,50 @@ def _breakdown(f, seller, mutation):
 
 
 def _due_date(f, mutation):
-    if mutation == "no-payment-terms" or f["payment"] == "bank+immediate":
+    """The payment due date (BT-9): 14 days after the invoice date, or the
+    `due-date`; none when the amount is due at once or paid already."""
+    if mutation == "no-payment-terms" or f["payment"] in ("bank+immediate", "card", "paid"):
         return None
     return "20260930" if f["payment"] == "bank+due" else "20260915"
+
+
+def _account(f, seller, buyer):
+    """(Typst source, IBAN) of the bank details of a credit transfer, or None.
+
+    The account the amount is paid to: the seller's, a payee's own, and the
+    recipient's on a credit note (the seller refunds the buyer) and on a
+    self-billed invoice (the recipient is the seller).
+    """
+    if not f["payment"].startswith("bank+"):
+        return None
+    if f["extras"] == "payee":
+        name = PAYEE["name"]
+        return f'#bank-details(name: "{name}", bank: "{name}", iban: "{PAYEE["iban"]}")', PAYEE["iban"]
+    if f["doctype"] in ("credit-note", "self-billed"):
+        return f'#bank-details(bank: "Kundenbank", iban: "{buyer["iban"]}")', buyer["iban"]
+    return f'#bank-details(bank: "Musterbank", iban: "{seller["iban"]}", bic: "{seller["bic"]}")', seller["iban"]
+
+
+def _payment_facts(f, currency, account, buyer, mutation):
+    """The facts of the payment means (BG-16) and of a paid invoice. The
+    oracles check each one only in the profiles that state it."""
+    pay = f["payment"]
+    facts = {"payment_means": None, "account_name": None, "card": None, "mandate": None, "creditor_id": None,
+             "debtor_iban": None, "paid": None}
+    if account and mutation != "no-bank":
+        # A credit transfer in euro is a SEPA credit transfer.
+        facts["payment_means"] = ["58"] if currency == "EUR" else ["30"]
+        if f["extras"] == "payee":
+            facts["account_name"] = PAYEE["name"]
+    if pay == "direct-debit":
+        # A direct debit in euro is a SEPA direct debit.
+        facts.update(payment_means=["59"] if currency == "EUR" else ["49"], mandate=MANDATE, creditor_id=CREDITOR_ID,
+                     debtor_iban=buyer["iban"])
+    if pay == "card":
+        facts.update(payment_means=["54"], card=list(CARD))
+    if pay == "paid":
+        facts.update(payment_means=[PAID[2]], paid=True)
+    return facts
 
 
 def render(cid, f, mutation=None, opts=None):
@@ -429,8 +589,12 @@ def render(cid, f, mutation=None, opts=None):
     s_code, b_code = parties(f)
     seller, buyer = dict(SELLER[s_code]), dict(BUYER[b_code])
     locale = opts.get("locale", seller["locale"])
-    currency = opts.get("currency", seller["currency"])
-    ids = f["ids"]
+    currency = "USD" if f["currency"] == "usd" else opts.get("currency", seller["currency"])
+    ids, doc, extras = f["ids"], f["doctype"], f["extras"]
+    # The sender of a self-billed invoice is the buyer and its recipient the
+    # seller; `seller` and `buyer` stay the sender and the recipient here, and
+    # the facts swap them at the end.
+    self_billed = doc == "self-billed"
     seller_name = opts.get("seller_name", f'"{seller["name"]}"')
     sender = [
         f"name: {seller_name}",
@@ -442,12 +606,14 @@ def render(cid, f, mutation=None, opts=None):
         sender.append(f"contact: {seller['contact']}")
     if ids in ("vat", "vat+taxnr", "id", "gln") and mutation != "no-seller-vat":
         sender.append(f'vat-id: {opts.get("seller_vat", chr(34) + seller["vat"] + chr(34))}')
-    if ids in ("taxnr", "vat+taxnr"):
+    if ids in ("taxnr", "vat+taxnr", "legal"):
         sender.append(f'tax-nr: "{seller["taxnr"]}"')
     if ids == "id":
         sender.append(f'id: "{SELLER_ID}"')
     if ids == "gln":
         sender.append(f'global-id: (scheme: "0088", id: "{SELLER_GLN}")')
+    if ids == "legal":
+        sender.append(f"legal-id: {seller['legal']}")
     recipient = [
         f'address: "{buyer["address"]}"',
         f'city: {opts.get("buyer_city", buyer["city"])}',
@@ -457,12 +623,16 @@ def render(cid, f, mutation=None, opts=None):
         recipient.insert(0, f'name: {opts.get("buyer_name", chr(34) + buyer["name"] + chr(34))}')
     if mutation != "no-buyer-email":
         recipient.append(f'email: "{buyer["email"]}"')
-    if mutation != "no-buyer-reference":
+    # The buyer reference (BT-10) is the buyer's, which the recipient of a
+    # self-billed invoice is not.
+    if mutation != "no-buyer-reference" and not self_billed:
         recipient.append('buyer-reference: "04011000-12345-34"')
-    if buyer["vat"] and mutation != "no-buyer-vat":
+    if buyer["vat"] and mutation != "no-buyer-vat" and ids != "legal":
         recipient.append(f'vat-id: "{buyer["vat"]}"')
     if ids == "gln":
         recipient.append(f'global-id: (scheme: "0088", id: "{BUYER_GLN}")')
+    if ids == "legal":
+        recipient.append(f"legal-id: {buyer['legal']}")
     header = []
     if f["delivery"] == "addr":
         header.append(
@@ -473,12 +643,27 @@ def render(cid, f, mutation=None, opts=None):
         header.append("  due-date: datetime(year: 2026, month: 9, day: 30),")
     if f["tax"] == "smallbiz":
         header.append("  tax-exempt-small-biz: true,")
-    lines, names, grounds, doc_mods, item_mods = _items(f, seller, opts)
+    if doc != "invoice":
+        header.append(f'  document-type: "{doc}",')
+    if doc in ("credit-note", "corrected"):
+        header.append(f'  preceding-invoice-nr: "{PRECEDING[0]}",')
+        header.append(f"  preceding-invoice-date: {PRECEDING[1]},")
+    if f["delivery"] == "period":
+        header.append(f"  service-period: {ITEM_PERIOD},")
+    if extras == "notes":
+        notes = [f'(text: "{text}", subject-code: "{code}")' if code else f'"{text}"' for code, text in NOTES]
+        header.append("  notes: (" + ", ".join(notes) + "),")
+    if extras == "payee":
+        header.append(f"  payee: {PAYEE['source']},")
+    if f["currency"] == "usd":
+        header.append('  currency: "USD",')
+    lines, names, grounds, doc_mods, item_mods, item_data = _items(f, seller, opts)
     if mutation == "e-no-grounds":
         lines = [line.replace(f'tax.exempt(grounds: "{GROUNDS["e1"]}")', "tax.exempt()") for line in lines]
         grounds = [g for g in grounds if g != ("E", GROUNDS["e1"])]
     if mutation == "no-lines":
         lines, names, grounds, doc_mods, item_mods = [], [], [], [], []
+        item_data = {"item_notes": [], "item_origins": []}
     theme = "themes.DIN-5008()" if f["theme"] == "din-5008" else "themes.blank"
     profile = "auto" if f["profile"] == "auto" else f'"{f["profile"]}"'
     invoice_nr = opts.get("invoice_nr", f'"{cid}"')
@@ -503,43 +688,71 @@ def render(cid, f, mutation=None, opts=None):
         *lines,
         "]",
     ]
-    if f["payment"] in ("bank+days", "nobank+days") and mutation != "no-payment-terms":
+    pay, terms = f["payment"], mutation != "no-payment-terms"
+    if pay in ("bank+days", "nobank+days", "direct-debit") and terms:
         src.append("#payment-goal(days: 14)")
-    if f["payment"] == "bank+immediate" and mutation != "no-payment-terms":
+    if pay in ("bank+immediate", "card") and terms:
         src.append("#payment-goal()")
-    if f["payment"] != "nobank+days" and mutation != "no-bank":
-        src.append(f'#bank-details(bank: "Musterbank", iban: "{seller["iban"]}", bic: "{seller["bic"]}")')
-    period = list(PERIOD) if f["delivery"] in ("dates-all", "dates-mixed") else None
-    k_or_addr = f["delivery"] == "addr" or f["tax"] == "k"
+    if pay == "paid":
+        src.append(f"#paid(method: {PAID[0]}, date: {PAID[1]})")
+    account = _account(f, seller, buyer)
+    if account and mutation != "no-bank":
+        src.append(account[0])
+    if pay == "direct-debit":
+        src.append(f'#direct-debit(mandate: "{MANDATE}", creditor-id: "{CREDITOR_ID}", debtor-iban: "{buyer["iban"]}")')
+    if pay == "card":
+        src.append(f'#card-payment(last4: "{CARD[0]}", holder: "{CARD[1]}", kind: "credit")')
+    period = list(PERIOD) if f["delivery"] in ("dates-all", "dates-mixed", "period") else None
+    # The deliver-to country (BT-80): of the delivery address, which is the
+    # recipient's warehouse, or of an intra-community supply to the buyer
+    # (BR-IC-12), who is the sender of a self-billed invoice.
+    ship_to = None
+    if f["delivery"] == "addr":
+        ship_to = buyer["country"].upper()
+    elif f["tax"] == "k":
+        ship_to = (seller if self_billed else buyer)["country"].upper()
     # Category O leaves out every VAT identifier (BR-O-02); so does the small
     # business scheme while it is coded O, so neither is checked there.
     without_vat_ids = f["tax"] in ("o", "smallbiz")
+    profile = resolved_profile(f)
     facts = {
-        "profile": resolved_profile(f),
+        "profile": profile,
         "invoice_nr": None if mutation == "no-invoice-nr" else opts.get("expect_invoice_nr", cid),
-        "type_code": "380",
+        "type_code": TYPE_CODE[doc],
         "currency": currency,
         "seller_name": opts.get("expect_seller_name", seller["name"]),
         "buyer_name": None if mutation == "no-buyer-name" else opts.get("expect_buyer_name", buyer["name"]),
         "seller_country": opts.get("expect_seller_country", seller["country"].upper()),
-        # Every identifier reaches its business term (BT-29/31/32, BT-46/48).
+        # Every identifier reaches its business term (BT-29/30/31/32, BT-46/47/48).
         "seller_vat": seller["vat"]
         if ids in ("vat", "vat+taxnr", "id", "gln") and not without_vat_ids and mutation != "no-seller-vat"
         else None,
-        "seller_tax_nr": seller["taxnr"] if ids in ("taxnr", "vat+taxnr") else None,
+        "seller_tax_nr": seller["taxnr"] if ids in ("taxnr", "vat+taxnr", "legal") else None,
         "seller_ids": {"id": [["", SELLER_ID]], "gln": [["0088", SELLER_GLN]]}.get(ids),
-        "buyer_vat": buyer["vat"] if buyer["vat"] and not without_vat_ids and mutation != "no-buyer-vat" else None,
+        "seller_legal_id": seller["legal_fact"] if ids == "legal" else None,
+        "buyer_vat": buyer["vat"]
+        if buyer["vat"] and ids != "legal" and not without_vat_ids and mutation != "no-buyer-vat"
+        else None,
         "buyer_ids": [["0088", BUYER_GLN]] if ids == "gln" else None,
+        "buyer_legal_id": buyer["legal_fact"] if ids == "legal" else None,
         "buyer_country": opts.get("expect_buyer_country", buyer["country"].upper()),
-        "ship_to_country": buyer["country"].upper() if k_or_addr else None,
+        "ship_to_country": ship_to,
+        "preceding_invoice": [PRECEDING[0], PRECEDING[2]] if doc in ("credit-note", "corrected") else None,
+        "notes": [list(note) for note in NOTES] if extras == "notes" else None,
+        "payee": {"name": PAYEE["name"], "ids": PAYEE["ids"], "legal_id": PAYEE["legal_id"]}
+        if extras == "payee"
+        else None,
         "line_names": names,
+        "item_notes": item_data["item_notes"] if extras == "item-data" else None,
+        "item_origins": item_data["item_origins"] if extras == "item-data" else None,
         "grounds": [] if f["tax"] == "smallbiz" else grounds,
         "doc_modifiers": doc_mods,
         "item_modifiers": item_mods,
         "period": period,
         "breakdown": _breakdown(f, seller, mutation),
         "due_date": _due_date(f, mutation),
-        "iban": seller["iban"] if f["payment"] != "nobank+days" and mutation != "no-bank" else None,
+        "iban": account[1] if account and mutation != "no-bank" else None,
+        **_payment_facts(f, currency, account, buyer, mutation),
         "number_format": NUMBER_FORMAT[locale],
         "tax_mode": f["mode"],
         "skip_oracles": opts.get("skip_oracles", []),
@@ -547,6 +760,12 @@ def render(cid, f, mutation=None, opts=None):
     for key in ("seller_vat", "seller_post_code", "seller_city", "buyer_post_code", "buyer_city_name"):
         if "expect_" + key in opts:
             facts[key] = opts["expect_" + key]
+    if self_billed:
+        # The XML states the recipient as seller (BG-4) and the sender as
+        # buyer (BG-7). The buyer has no tax number in EN 16931.
+        for key in ("name", "country", "vat", "ids", "legal_id"):
+            facts["seller_" + key], facts["buyer_" + key] = facts["buyer_" + key], facts["seller_" + key]
+        facts["seller_tax_nr"] = None
     return "\n".join(line for line in src if line != "") + "\n", facts
 
 
@@ -660,7 +879,10 @@ def metamorphic(rows):
                 cases.append(_case(f"mm-profile-{k:03d}", "metamorphic", g,
                                    twin={"of": f"pw{k:03d}", "relation": "same-totals"}))
         s, _ = parties(f)
-        if k % 4 == 2 and s == "de" and f["tax"] != "smallbiz":
+        # Another currency of the locale: not for an invoice in US dollars,
+        # whose currency is set, nor for a SEPA direct debit, which is in euro.
+        if (k % 4 == 2 and s == "de" and f["tax"] != "smallbiz" and f["currency"] == "default"
+                and f["payment"] != "direct-debit"):
             cases.append(_case(f"mm-currency-{k:03d}", "metamorphic", f,
                                opts={"locale": "de-ch", "currency": "CHF"},
                                twin={"of": f"pw{k:03d}", "relation": "same-totals"}))

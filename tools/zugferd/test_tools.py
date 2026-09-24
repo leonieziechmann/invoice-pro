@@ -603,6 +603,64 @@ class Oracles(unittest.TestCase):
         # MINIMUM carries no buyer identifiers.
         self.assertEqual([p.split(":")[0] for p in oracles.check(wrong, doc, None, "minimum")], ["O-BT32"])
 
+    def test_references_notes_and_line_details(self):
+        cii = CII.replace(
+            "<ram:TypeCode>380</ram:TypeCode></rsm:ExchangedDocument>",
+            "<ram:TypeCode>381</ram:TypeCode>"
+            "<ram:IncludedNote><ram:Content>Lieferung frei Haus.</ram:Content></ram:IncludedNote>"
+            "<ram:IncludedNote><ram:Content>AGB</ram:Content><ram:SubjectCode>AAI</ram:SubjectCode></ram:IncludedNote>"
+            "</rsm:ExchangedDocument>",
+        ).replace(
+            "<ram:SpecifiedTradeProduct><ram:Name>Buch</ram:Name></ram:SpecifiedTradeProduct>",
+            "<ram:AssociatedDocumentLineDocument><ram:IncludedNote><ram:Content>Signiert</ram:Content>"
+            "</ram:IncludedNote></ram:AssociatedDocumentLineDocument>"
+            "<ram:SpecifiedTradeProduct><ram:Name>Buch</ram:Name>"
+            "<ram:OriginTradeCountry><ram:ID>IT</ram:ID></ram:OriginTradeCountry></ram:SpecifiedTradeProduct>",
+        ).replace(
+            "</ram:SpecifiedTradeSettlementHeaderMonetarySummation>",
+            "</ram:SpecifiedTradeSettlementHeaderMonetarySummation>"
+            '<ram:InvoiceReferencedDocument xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:100">'
+            "<ram:IssuerAssignedID>RE-0</ram:IssuerAssignedID><ram:FormattedIssueDateTime>"
+            '<qdt:DateTimeString format="102">20260803</qdt:DateTimeString></ram:FormattedIssueDateTime>'
+            "</ram:InvoiceReferencedDocument>",
+        )
+        doc = common.parse_xml(cii.encode("utf-8"))
+        facts = {
+            "type_code": "381",
+            "preceding_invoice": ["RE-0", "20260803"],
+            "notes": [["AAI", "AGB"]],  # other notes may come before
+            "item_notes": [["Buch", "Signiert"]],
+            "item_origins": [["Buch", "IT"]],
+        }
+        self.assertEqual(oracles.check(facts, doc, None, "en16931"), [])
+        wrong = {
+            "preceding_invoice": ["RE-0", "20260804"],
+            "notes": [["AAI", "AGB"], ["", "Lieferung frei Haus."]],  # in the wrong order
+            "item_notes": [["Paket", "Signiert"]],  # no such line, and "Buch" has a note of its own
+            "item_origins": [["Buch", "DE"]],
+        }
+
+        def ids(profile):
+            return sorted({p.split(":")[0] for p in oracles.check(wrong, doc, None, profile)})
+
+        self.assertEqual(ids("en16931"), ["O-BT127", "O-BT159", "O-BT22", "O-BT25"])
+        # BASIC states no country of origin, BASIC WL no lines, MINIMUM
+        # neither notes nor a preceding invoice.
+        self.assertEqual(ids("basic"), ["O-BT127", "O-BT22", "O-BT25"])
+        self.assertEqual(ids("basic-wl"), ["O-BT22", "O-BT25"])
+        self.assertEqual(ids("minimum"), [])
+
+    def test_details_only_where_the_profile_states_them(self):
+        # The fixture states no payee, payment card or account name.
+        facts = {"payee": {"name": "Factoring Bank AG"}, "card": ["1234", "Erika Kunde"], "account_name": "Factoring"}
+
+        def ids(profile):
+            return sorted({p.split(":")[0] for p in oracles.check(facts, self.doc, None, profile)})
+
+        self.assertEqual(ids("en16931"), ["O-BG10", "O-BG18", "O-BT85"])
+        self.assertEqual(ids("basic-wl"), ["O-BG10"])  # BASIC WL has no card and no account name
+        self.assertEqual(ids("minimum"), [])  # MINIMUM has no payee
+
     def test_printed_amounts_and_reasons(self):
         printed = "Gesamtbetrag: 1.234,50 €\nSteuerfrei nach § 4 Nr. 21\nUStG"
         self.assertEqual(oracles.check({}, self.doc, printed, "en16931"), [])
@@ -640,6 +698,45 @@ class Generator(unittest.TestCase):
         self.assertFalse(gen.allowed(dict(base, profile="xrechnung", payment="nobank+days")))  # BR-DE-1
         self.assertTrue(gen.allowed(dict(base, profile="auto", payment="nobank+days")))  # falls back
 
+    def test_identity_constraints(self):
+        base = dict(gen.SIMPLE)
+        # MINIMUM identifies the seller by its VAT ID or its legal registration
+        # identifier (BR-CO-26); without VAT IDs (category O) only the latter.
+        outside = dict(base, tax="o", route="de-us", profile="minimum")
+        self.assertTrue(gen.allowed(dict(outside, ids="legal")))
+        self.assertFalse(gen.allowed(dict(outside, ids="id")))
+        self.assertFalse(gen.allowed(dict(base, profile="minimum", ids="taxnr")))
+        # A reverse charge to a buyer with a legal registration identifier
+        # instead of a VAT ID: at home only (IP-VAT-226 across borders).
+        self.assertTrue(gen.allowed(dict(base, tax="ae", ids="legal", route="de-de")))
+        self.assertFalse(gen.allowed(dict(base, tax="ae", ids="legal", route="de-fr")))
+        self.assertFalse(gen.allowed(dict(base, tax="k", ids="legal", route="de-at")))  # K needs VAT IDs
+
+    def test_document_and_payment_constraints(self):
+        base = dict(gen.SIMPLE)
+        # The sender of a credit note pays: no direct debit, card, payee, and
+        # bank details only of a buyer with an account.
+        credit = dict(base, doctype="credit-note")
+        self.assertTrue(gen.allowed(credit))
+        for other in ({"payment": "direct-debit", "route": "de-de"}, {"payment": "card"}, {"payment": "paid"},
+                      {"extras": "payee"}, {"route": "de-us", "payment": "bank+days"}):
+            self.assertFalse(gen.allowed(dict(credit, **other)), other)
+        self.assertTrue(gen.allowed(dict(credit, route="de-us", payment="nobank+days")))
+        # A self-billed invoice: at home, not in XRechnung.
+        billed = dict(base, doctype="self-billed", route="de-de")
+        self.assertTrue(gen.allowed(billed))
+        self.assertFalse(gen.allowed(dict(billed, route="de-fr")))
+        self.assertFalse(gen.allowed(dict(billed, profile="xrechnung")))
+        # A SEPA direct debit of the German seller from an account in the euro area.
+        debit = dict(base, payment="direct-debit")
+        self.assertTrue(gen.allowed(debit))
+        self.assertFalse(gen.allowed(dict(debit, route="at-de")))
+        self.assertFalse(gen.allowed(dict(debit, route="de-us", tax="g")))
+        # US dollars for exports and supplies outside the scope of VAT only.
+        self.assertTrue(gen.allowed(dict(base, currency="usd", tax="g", route="de-us")))
+        self.assertFalse(gen.allowed(dict(base, currency="usd")))
+        self.assertFalse(gen.allowed(dict(base, extras="payee", payment="card")))  # the payee gets a transfer
+
     def test_identifier_facts(self):
         def facts(**features):
             return gen.render("x", dict(gen.SIMPLE, **features))[1]
@@ -655,6 +752,95 @@ class Generator(unittest.TestCase):
         self.assertEqual((outside["seller_vat"], outside["buyer_vat"], outside["seller_ids"]),
                          (None, None, [["", gen.SELLER_ID]]))
         self.assertIsNone(facts(route="de-us")["buyer_vat"])
+        # Legal registration identifiers instead of VAT IDs; the seller states
+        # its tax number.
+        src, legal = gen.render("x", dict(gen.SIMPLE, ids="legal", route="de-fr"))
+        self.assertIn('legal-id: id.register("HRB 4711", court: "Amtsgericht Charlottenburg")', src)
+        self.assertIn('legal-id: id.siren("954 506 077")', src)
+        self.assertNotIn("vat-id", src)
+        self.assertEqual((legal["seller_vat"], legal["seller_tax_nr"], legal["buyer_vat"]), (None, "30/123/45678", None))
+        self.assertEqual((legal["seller_legal_id"], legal["buyer_legal_id"]),
+                         (["", "Amtsgericht Charlottenburg, HRB 4711"], ["0002", "954506077"]))
+
+    def test_document_type_facts(self):
+        src, credit = gen.render("x", dict(gen.SIMPLE, doctype="credit-note", route="de-de"))
+        self.assertIn('document-type: "credit-note"', src)
+        self.assertIn('preceding-invoice-nr: "RE-2026-0815"', src)
+        # The seller refunds the buyer to the buyer's account.
+        self.assertIn(f'iban: "{gen.BUYER["de"]["iban"]}"', src)
+        self.assertEqual((credit["type_code"], credit["preceding_invoice"], credit["iban"]),
+                         ("381", ["RE-2026-0815", "20260803"], gen.BUYER["de"]["iban"]))
+        # A self-billed invoice: the XML states the recipient as seller and the
+        # sender as buyer, and the amount is paid to the recipient.
+        src, billed = gen.render("x", dict(gen.SIMPLE, doctype="self-billed", route="de-de", ids="vat+taxnr"))
+        self.assertNotIn("buyer-reference", src)
+        self.assertEqual(
+            (billed["type_code"], billed["seller_name"], billed["buyer_name"], billed["seller_vat"],
+             billed["buyer_vat"], billed["seller_tax_nr"], billed["iban"], billed["preceding_invoice"]),
+            ("389", "Kunde AG", "Muster GmbH", "DE987654328", "DE123456788", None, gen.BUYER["de"]["iban"], None),
+        )
+        # The random population has no legal constraints: an intra-community
+        # supply on a self-billed invoice goes to its buyer, the sender, and
+        # `auto` cannot choose XRechnung, whose seller contact (BG-6) the
+        # recipient lacks.
+        _, supply = gen.render("x", dict(gen.SIMPLE, doctype="self-billed", tax="k", route="de-fr", profile="auto"))
+        self.assertEqual((supply["ship_to_country"], supply["profile"]), ("DE", "en16931"))
+        self.assertEqual(gen.render("x", dict(gen.SIMPLE, tax="k", route="de-fr"))[1]["ship_to_country"], "FR")
+
+    def test_payment_facts(self):
+        def render(**features):
+            return gen.render("x", dict(gen.SIMPLE, **features))
+
+        src, debit = render(payment="direct-debit", route="de-de")
+        self.assertIn('#direct-debit(mandate: "M-2026-017", creditor-id: "DE98ZZZ09999999999", '
+                      f'debtor-iban: "{gen.BUYER["de"]["iban"]}")', src)
+        self.assertNotIn("#bank-details", src)
+        self.assertEqual((debit["payment_means"], debit["mandate"], debit["creditor_id"], debit["debtor_iban"],
+                          debit["due_date"], debit["iban"]),
+                         (["59"], "M-2026-017", "DE98ZZZ09999999999", gen.BUYER["de"]["iban"], "20260915", None))
+        src, card = render(payment="card")
+        self.assertIn('#card-payment(last4: "1234", holder: "Erika Kunde", kind: "credit")', src)
+        self.assertEqual((card["payment_means"], card["card"], card["due_date"]), (["54"], ["1234", "Erika Kunde"], None))
+        src, paid = render(payment="paid")
+        self.assertIn('#paid(method: "cash", date: datetime(year: 2026, month: 9, day: 1))', src)
+        self.assertNotIn("#payment-goal", src)
+        self.assertEqual((paid["payment_means"], paid["paid"], paid["due_date"]), (["10"], True, None))
+        # A credit transfer or a direct debit outside the euro is no SEPA
+        # payment (the random population has direct debits in other currencies).
+        self.assertEqual(render()[1]["payment_means"], ["58"])
+        self.assertEqual(render(route="ch-ch")[1]["payment_means"], ["30"])
+        self.assertEqual(render(payment="direct-debit", route="ch-ch")[1]["payment_means"], ["49"])
+        src, usd = render(currency="usd", tax="g", route="de-us")
+        self.assertIn('currency: "USD"', src)
+        self.assertEqual((usd["currency"], usd["payment_means"]), ("USD", ["30"]))
+        # A factoring company as payee, paid to its own account.
+        src, payee = render(extras="payee")
+        self.assertIn(f'iban: "{gen.PAYEE["iban"]}"', src)
+        self.assertEqual((payee["payee"]["name"], payee["iban"], payee["account_name"]),
+                         ("Factoring Bank AG", gen.PAYEE["iban"], "Factoring Bank AG"))
+
+    def test_extras_facts(self):
+        src, notes = gen.render("x", dict(gen.SIMPLE, extras="notes"))
+        self.assertIn('notes: ("Lieferung frei Haus.", (text: "Es gelten unsere Allgemeinen Geschäftsbedingungen.", '
+                      'subject-code: "AAI")),', src)
+        self.assertEqual(notes["notes"], [["", "Lieferung frei Haus."],
+                                          ["AAI", "Es gelten unsere Allgemeinen Geschäftsbedingungen."]])
+        # The note and the country of origin of the last item, never one of a bundle.
+        src, items = gen.render("x", dict(gen.SIMPLE, extras="item-data", lines=3, mods="bundle2-pct"))
+        self.assertEqual(src.count(f'note: "{gen.ITEM_NOTE}", origin: country.it'), 1)
+        self.assertEqual((items["item_notes"], items["item_origins"]),
+                         ([["Position 3", gen.ITEM_NOTE]], [["Position 3", "IT"]]))
+        src, period = gen.render("x", dict(gen.SIMPLE, delivery="period"))
+        self.assertIn(f"service-period: {gen.ITEM_PERIOD},", src)
+        self.assertEqual(period["period"], list(gen.PERIOD))
+
+    def test_currency_twins(self):
+        rows = [dict(gen.SIMPLE, lines=3)] * 3
+        rows[2] = dict(rows[2], payment="direct-debit")  # a SEPA direct debit is in euro
+        self.assertEqual([c["id"] for c in gen.metamorphic(rows) if c["id"].startswith("mm-currency")], [])
+        rows[2] = dict(rows[2], payment="bank+days")
+        self.assertEqual([c["id"] for c in gen.metamorphic(rows) if c["id"].startswith("mm-currency")],
+                         ["mm-currency-002"])
 
     def test_split_twins(self):
         f = dict(gen.SIMPLE, lines=3, route="de-de")  # quantities 1, 2, 1
