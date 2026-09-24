@@ -13,21 +13,24 @@
 #import "../locale/lang/lang.typ" as languages
 #import "../logic/payment-reference.typ": resolve-payment-reference
 #import "../logic/document-type.typ": resolve-document-type
-#import "../logic/service-period.typ": (
-  format-service-period, resolve-service-period,
-)
+#import "../logic/service-period.typ": format-service-period, service-period-of
 #import "../logic/payment-means.typ": (
   card-code, direct-debit-code, method-code, resolve as resolve-payment-means,
   transfer-code,
 )
+#import "../logic/references.typ": (
+  service-period-label, service-period-text-label,
+)
+#import "../logic/printed.typ": shows-identifier, shows-text
+#import "../logic/currency.typ": currency-code
+#import "../utils/helper.typ": first-given
 #import "xml.typ": fmt-number
 
 #let _zero = decimal("0")
 
-// The first value that is set, or `none`.
-#let first-of(..values) = (
-  values.pos().find(value => value not in (none, auto, "", []))
-)
+// The first value that is set, or `none`: the same fallbacks as the printed
+// invoice takes (see `first-given`).
+#let first-of = first-given
 
 // The plain text of a value, or `none` if it has no visible text.
 #let text-or-none(value) = {
@@ -1067,33 +1070,64 @@
   }
 }
 
-#let _service-period(ctx, items) = resolve-service-period(
-  items,
-  ctx.at("invoice-date", default: none),
-  service-period: ctx.at("service-period", default: none),
-)
+#let _service-period(ctx, items) = service-period-of(ctx, items)
 
 #let determine-delivery-dates(ctx, items) = _delivery(_service-period(
   ctx,
   items,
 ))
 
-// The text of the service period the invoice prints as a reference (one
-// labelled like `references.service-time`), or `none`.
+// The service period the invoice prints as a reference, or `none`:
+// `(text: .., own: ..)`, its text and whether it is a text of its own rather
+// than dates in the date format of the locale. That is the one of
+// `references.service-time`, which marks it whatever its title, or a
+// reference of its own with the title of the service period, e.g.
+// `("Leistungszeitraum", "Juni 2026")`.
 #let _printed-service-period(ctx) = {
   let strings = ctx.at("locale", default: (:)).at("strings", default: (:))
   let labels = strings.at("reference", default: (:))
   let label = text-or-none(labels.at("service-time", default: none))
   let references = ctx.at("references", default: ())
-  if label == none or type(references) != array { return none }
+  if type(references) != array { return none }
   for reference in references {
     if type(reference) != array or reference.len() != 2 { continue }
     let (title, value) = reference
-    if type(title) in (str, content) and text-or-none(title) == label {
-      return if type(value) in (str, content) { text-or-none(value) }
+    let mark = if type(value) == content { value.at("label", default: none) }
+    let titled = (
+      label != none
+        and type(title) in (str, content)
+        and text-or-none(title) == label
+    )
+    if mark in (service-period-label, service-period-text-label) or titled {
+      if type(value) not in (str, content) { return none }
+      let text = text-or-none(value)
+      if text == none { return none }
+      return (text: text, own: mark != service-period-label)
     }
   }
   none
+}
+
+// Whether the printed invoice shows the date of the supply (IP-PERIOD-03):
+// `none` if that cannot be known, as the theme does not say that it prints
+// the reference signs (see `logic/printed.typ`); `true` if it prints a
+// service period as a reference (`printed-period`) or the dates of the items,
+// or shows the text of the service period the e-invoice states
+// (`period-text`) elsewhere, e.g. in a reference of another title or the
+// text of the invoice, but not as the invoice date; else `false`.
+#let _period-shown(ctx, printed, printed-period, period-text, dates-printed) = {
+  if type(printed) != dictionary or not printed.at("known", default: false) {
+    return none
+  }
+  if printed-period != none or dates-printed { return true }
+  let strings = ctx.at("locale", default: (:)).at("strings", default: (:))
+  let invoice-date = strings
+    .at("reference", default: (:))
+    .at("invoice-date", default: none)
+  let except = if invoice-date == none { () } else {
+    (plain-text(invoice-date),)
+  }
+  shows-text(printed, period-text, except: except) == true
 }
 
 // The notes of the invoice (BT-22 and BT-21, see `normalize-notes`): the
@@ -1120,6 +1154,46 @@
 // Categories whose VAT breakdown must not carry an exemption reason
 // (BR-S-10, BR-Z-10, BR-AF-10, BR-AG-10).
 #let _taxed-categories = ("S", "Z", "L", "M")
+
+// The VAT exemption reason code (BT-121) of the categories that have one
+// meaning (BR-AE-10, BR-IC-10, BR-G-10, BR-O-10).
+#let _category-codes = (
+  AE: "VATEX-EU-AE",
+  K: "VATEX-EU-IC",
+  G: "VATEX-EU-G",
+  O: "VATEX-EU-O",
+)
+
+/// The VAT exemption reason codes (BT-121) the items of a VAT group give
+/// (`code` of the constructors of the `tax` module): distinct, without
+/// whitespace and in upper case, as the validator checks them.
+///
+/// -> array
+#let exemption-codes(codes) = {
+  let result = ()
+  for code in codes {
+    let text = compact(code)
+    if text == none { continue }
+    text = upper(text)
+    if text not in result { result.push(text) }
+  }
+  result
+}
+
+/// The VAT exemption reason code (BT-121) of a VAT category: the one code its
+/// items give, else the code of the category for AE, K, G and O (e.g.
+/// "VATEX-EU-IC" for an intra-community supply). A taxed category (S, Z, L,
+/// M) has none, and neither has a group whose items give different codes:
+/// EN 16931 states one per VAT category and rate, so the reasons are stated
+/// as text (BT-120) only; the validator reports both.
+///
+/// -> none | str
+#let exemption-code(category, codes) = {
+  if category in _taxed-categories or codes.len() > 1 { return none }
+  if codes.len() == 1 { codes.first() } else {
+    _category-codes.at(category, default: none)
+  }
+}
 
 /// The exemption reason (BT-120) of a VAT category: the plain text of its
 /// grounds. The VAT groups of the line items state the note of the language
@@ -1473,6 +1547,15 @@
   let outside-scope = profile.id != "minimum" and "O" in categories
 
   let seller = seller-model(sender, use-vat-id: not outside-scope)
+  // What the printed invoice shows besides the components (see
+  // `logic/printed.typ`): whether it shows the seller's VAT ID or tax number
+  // the XML states (BT-31, BT-32), which the law requires on the invoice;
+  // `none` if that cannot be known, e.g. with the blank theme.
+  let printed = ctx.at("printed", default: none)
+  seller.insert("printed-tax-id", shows-identifier(printed, (
+    seller.vat-id,
+    seller.tax-nr,
+  )))
   let buyer = party-model(
     recipient,
     role: "buyer",
@@ -1520,6 +1603,7 @@
     .pairs()
     .map(((key, tax)) => {
       let category = text-or-none(tax.at("category", default: none))
+      let codes = exemption-codes(tax.at("codes", default: ()))
       (
         key: key,
         category: category,
@@ -1531,6 +1615,9 @@
           tax.at("grounds", default: none),
           strings: ctx.at("locale", default: (:)).at("strings", default: (:)),
         ),
+        // BT-121, and the codes the items give (for the validator).
+        code: exemption-code(category, codes),
+        codes: codes,
         // Some item of the group has no tax (`tax: none`).
         implicit: tax.at("implicit", default: false),
       )
@@ -1562,8 +1649,7 @@
 
   let locale = ctx.at("locale", default: (:))
   let currency-meta = locale.at("currency", default: (:))
-  let currency = compact(currency-meta.at("code", default: none))
-  if currency != none { currency = upper(currency) }
+  let currency = currency-code(locale)
   // How the invoice prints an amount (`format.currency`) and a unit price
   // (`format.currency-fine`), to check that it prints the currency the XML
   // states (BT-5).
@@ -1580,6 +1666,10 @@
   // The service period and the date format the invoice prints it with.
   let service-period = _service-period(ctx, items)
   let format-date = locale.at("format", default: (:)).at("date", default: none)
+  let period-text = if type(format-date) == function {
+    text-or-none(format-service-period(service-period, format-date))
+  }
+  let printed-period = _printed-service-period(ctx)
 
   // BT-9 and BT-20: the invoice's own `due-date` wins over the payment goal.
   // `terms-input` is the input the payment terms come from.
@@ -1663,6 +1753,8 @@
     currency-field: if ctx.at("currency", default: auto) == auto {
       "locale"
     } else { "currency" },
+    // The decimals the amounts of the currency are rounded to.
+    currency-decimals: currency-meta.at("decimals", default: 2),
     printed-currency: printed-currency,
     invoice: (
       number: text-or-none(_field(ctx, "invoice-nr")),
@@ -1712,14 +1804,22 @@
     // The service period (BT-72 or BG-14), see `resolve-service-period` for
     // its `source`. `text` is how `references.service-time` prints it,
     // `printed` the text of the service period the invoice prints as a
-    // reference, if any.
+    // reference, if any, `printed-own` whether that is a text of its own
+    // rather than dates, and `shown` whether the printed invoice shows the
+    // date of the supply at all (see `_period-shown`).
     delivery: _delivery(service-period)
       + (
         source: if service-period != none { service-period.source },
-        text: if type(format-date) == function {
-          text-or-none(format-service-period(service-period, format-date))
-        },
-        printed: _printed-service-period(ctx),
+        text: period-text,
+        printed: if printed-period != none { printed-period.text },
+        printed-own: printed-period != none and printed-period.own,
+        shown: _period-shown(
+          ctx,
+          printed,
+          printed-period,
+          period-text,
+          item-data.at("dates-printed", default: false),
+        ),
       ),
     lines: lines,
     allowance-charges: allowance-charges,

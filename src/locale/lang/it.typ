@@ -65,6 +65,7 @@
     contact-person: "Referente",
     contact-phone: "Telefono",
     contact-email: "E-mail",
+    payee: "Beneficiario del pagamento",
   ),
 
   /// Intestazioni di colonna ed etichette per la tabella degli articoli
@@ -172,6 +173,10 @@
       sum,
       date,
     ) => [L'importo dovuto di *#sum* è stato pagato#if date != none [ il #date].],
+    paid-credit: (
+      sum,
+      date,
+    ) => [Vi abbiamo versato l'importo di *#sum*#if date != none [ il #date].],
   ),
 
   /// Blocchi di testo per i termini di pagamento

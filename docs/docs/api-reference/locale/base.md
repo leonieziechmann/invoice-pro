@@ -51,13 +51,14 @@ Labels indicating the address blocks.
 
 Designations for header metadata.
 
-| Key              | Type  | Description                                                    |
-| :--------------- | :---- | :------------------------------------------------------------- |
-| `tax-number`     | `str` | Label for the sender's tax identification (e.g., `"Tax ID"`).  |
-| `invoice-number` | `str` | Label for the document identifier (e.g., `"Invoice Number"`).  |
-| `vat-id`         | `str` | Label for the Value Added Tax identifier (e.g., `"VAT ID"`).   |
-| `invoice-date`   | `str` | Label for the date of the invoice (e.g., `"Invoice Date"`).    |
-| `service-time`   | `str` | Label for the period of service (e.g., `"Period of Service"`). |
+| Key              | Type  | Description                                                                                           |
+| :--------------- | :---- | :---------------------------------------------------------------------------------------------------- |
+| `tax-number`     | `str` | Label for the sender's tax identification (e.g., `"Tax ID"`).                                         |
+| `invoice-number` | `str` | Label for the document identifier (e.g., `"Invoice Number"`).                                         |
+| `vat-id`         | `str` | Label for the Value Added Tax identifier (e.g., `"VAT ID"`).                                          |
+| `invoice-date`   | `str` | Label for the date of the invoice (e.g., `"Invoice Date"`).                                           |
+| `service-time`   | `str` | Label for the period of service (e.g., `"Period of Service"`).                                        |
+| `payee`          | `str` | Label for who receives the payment instead of the sender, e.g. a factoring company (e.g., `"Payee"`). |
 
 ### `line-items`
 
@@ -163,6 +164,7 @@ Texts of the payment means besides the bank details: [`direct-debit`](../compone
 | `card-number`, `card-holder`                                                                                     | `str`                           | Labels of the details of a payment card (e.g., `"Card number"`).                                             |
 | `paid`                                                                                                           | `(content, content) => content` | Sentence of a paid invoice. Parameters map to `(sum, date)`; `date` is `none` if not given.                  |
 | `paid-due`                                                                                                       | `(content, content) => content` | Replaces `paid` when prepayments reduced the payable amount, so `sum` is the remaining amount that was paid. |
+| `paid-credit`                                                                                                    | `(content, content) => content` | Replaces `paid` on a credit note or a self-billed invoice, whose sender paid the amount to the recipient.    |
 
 ### `payment`
 

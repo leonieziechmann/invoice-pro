@@ -402,6 +402,13 @@
   ))
   assert.eq((jp.parse-city)("1000001 Tokyo").post-code, "1000001")
   assert.eq((jp.parse-city)("10001 Tokyo").post-code, none)
+  // Characters of a mask other than `9`, `A` and space stand for
+  // themselves, also those with a meaning in a regular expression
+  let dotted = country.custom(code: "XK", post-code: "99.999")
+  assert.eq((dotted.parse-city)("12.345 Prishtina").post-code, "12.345")
+  assert.eq((dotted.parse-city)("12x345 Prishtina").post-code, none)
+  let bracketed = country.custom(code: "XK", post-code: "(99)")
+  assert.eq((bracketed.parse-city)("(12) Prishtina").post-code, "(12)")
   assert.eq(resolve-country(country.custom.with(code: "IS"), "de").code, "IS")
   assert(catch(() => country.custom()).contains("`country.custom: code`"))
   assert(

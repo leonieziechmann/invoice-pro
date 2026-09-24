@@ -222,3 +222,49 @@
   ),
   result => assert.eq(result.diagnostics, ()),
 )
+
+// 8. A public buyer in Germany receives XRechnung at its Leitweg-ID: the
+//    hints of the missing electronic address and buyer reference name it
+#let public-buyer = (
+  name: "Stadt Musterstadt",
+  address: "Rathausplatz 1",
+  city: "12345 Musterstadt",
+  country: country.de,
+)
+#let find(result, rule) = result.diagnostics.find(d => d.rule == rule)
+#e-invoice(
+  zugferd: "xrechnung",
+  recipient: public-buyer + (leitweg-id: id.leitweg("04011000-1234512345-06")),
+  result => {
+    let d = find(result, "PEPPOL-EN16931-R010")
+    assert.ne(d, none, message: repr(rules(result)))
+    assert(
+      d.hint.starts-with(
+        "A public buyer is reached by its Leitweg-ID: set `electronic-address: id.leitweg(\"04011000-1234512345-06\")` on the recipient.",
+      ),
+      message: d.hint,
+    )
+  },
+)
+#e-invoice(
+  zugferd: "xrechnung",
+  recipient: public-buyer
+    + (electronic-address: id.leitweg("04011000-1234512345-06")),
+  result => {
+    let d = find(result, "BR-DE-15")
+    assert.eq(
+      d.hint,
+      "Set the Leitweg-ID of its electronic address as `leitweg-id: id.leitweg(\"04011000-1234512345-06\")` on the recipient, or another `buyer-reference`.",
+    )
+  },
+)
+#e-invoice(
+  zugferd: "xrechnung",
+  recipient: public-buyer + (email: "rechnung@musterstadt.de"),
+  result => {
+    let d = find(result, "BR-DE-15")
+    assert(d.hint.contains("`leitweg-id: id.leitweg("), message: d.hint)
+    // A buyer reference that is no Leitweg-ID is not suggested as address
+    assert.eq(find(result, "PEPPOL-EN16931-R010"), none)
+  },
+)

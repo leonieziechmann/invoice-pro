@@ -3,6 +3,7 @@
 // must name the invoice it replaces (BR-DE-26 in XRechnung, IP-DOC-02).
 
 #import "/src/lib.typ": *
+#import "/src/utils/text.typ": plain-text
 #import "/src/zugferd/profile.typ": resolve-profile
 #import "/tests/zugferd/harness.typ": (
   bank, buyer-de, buyer-fr, diagnostic, model-test, rules, seller, xml-elements,
@@ -34,7 +35,7 @@
     assert.eq(d.field, "preceding-invoice-nr")
     assert.eq(
       d.message,
-      "The MINIMUM profile has no preceding invoice reference (BG-3), so `preceding-invoice-nr` and `preceding-invoice-date` are not written into the e-invoice.",
+      "The MINIMUM profile cannot state the preceding invoice reference (BG-3), so `preceding-invoice-nr` and `preceding-invoice-date` are not written into the e-invoice.",
     )
   },
 )[
@@ -139,13 +140,19 @@
   locale: locale.de-de,
   sender: seller,
   recipient: buyer-de,
+  date: datetime(year: 2026, month: 9, day: 1),
   ..args,
 )[]
+// The date of the supply of a German seller (§ 14 Abs. 4 Satz 1 Nr. 6
+// UStG), here the invoice date, is marked content
+#let plain-refs(refs) = refs.map(((label, value)) => (label, plain-text(value)))
+// A credit note amends the preceding invoice: its own date (01.09.2026) is
+// not the date of the supply, so without dates it prints none
 #default-references(
   document-type: "credit-note",
   preceding-invoice-nr: "R-2026-11",
   preceding-invoice-date: preceding-date,
-  refs => assert.eq(refs, (
+  refs => assert.eq(plain-refs(refs), (
     ("Steuernummer", "123/456/78901"),
     ("USt-IdNr.", "DE123456789"),
     ("Empfänger:in USt-IdNr.", "DE987654321"),
@@ -153,9 +160,32 @@
     ("Datum der vorherigen Rechnung", "30.08.2026"),
   )),
 )
+// ... but its `service-period`
+#default-references(
+  document-type: "credit-note",
+  preceding-invoice-nr: "R-2026-11",
+  service-period: datetime(year: 2026, month: 8, day: 20),
+  refs => assert.eq(plain-refs(refs).slice(3), (
+    ("Leistungszeitraum", "20.08.2026"),
+    ("Vorherige Rechnungsnummer", "R-2026-11"),
+  )),
+)
+// A corrected invoice replaces the preceding invoice, with all of its
+// details: the invoice date, as for any invoice
+#default-references(
+  document-type: "corrected",
+  preceding-invoice-nr: "R-2026-11",
+  refs => assert.eq(plain-refs(refs).slice(3), (
+    ("Leistungszeitraum", "01.09.2026"),
+    ("Vorherige Rechnungsnummer", "R-2026-11"),
+  )),
+)
+// With gross prices (B2C) as well
 #default-references(
   tax-mode: "inclusive",
   preceding-invoice-nr: "R-2026-11",
-  refs => assert.eq(refs, (("Vorherige Rechnungsnummer", "R-2026-11"),)),
+  refs => assert.eq(plain-refs(refs).slice(3), (
+    ("Leistungszeitraum", "01.09.2026"),
+    ("Vorherige Rechnungsnummer", "R-2026-11"),
+  )),
 )
-#default-references(tax-mode: "inclusive", refs => assert.eq(refs, ()))

@@ -4,10 +4,9 @@
 #import "text.typ": plain-text
 
 // The patterns are compiled once: compiling a regex costs far more than
-// matching it, and `iban-valid` tests every character of an IBAN.
+// matching it.
 #let _whitespace = regex("\\s")
 #let _iban-format = regex("^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$")
-#let _digit = regex("^[0-9]$")
 
 /// The electronic format of an IBAN: its plain text without whitespace, in
 /// upper case. The printed IBAN, the EPC-QR code and the e-invoice (BT-84)
@@ -19,16 +18,20 @@
 /// The remainder of an alphanumeric text in upper case, read as a number
 /// with the letters A to Z standing for 10 to 35, divided by 97: the check
 /// of ISO 7064 MOD 97-10, which IBANs and SEPA creditor identifiers use. A
-/// text with correct check digits has the remainder 1.
+/// text with correct check digits has the remainder 1. The callers check
+/// the format first, so every character is a digit or a letter from A to Z.
 ///
 /// -> int
 #let mod97(text) = {
   let remainder = 0
   for char in text.clusters() {
-    if char.match(_digit) != none {
-      remainder = calc.rem(remainder * 10 + int(char), 97)
+    // By code point, without a regular expression per character: "0" to
+    // "9" are 48 to 57, "A" to "Z" are 65 to 90 and stand for 10 to 35.
+    let code = str.to-unicode(char)
+    remainder = if code <= 57 {
+      calc.rem(remainder * 10 + code - 48, 97)
     } else {
-      remainder = calc.rem(remainder * 100 + str.to-unicode(char) - 55, 97)
+      calc.rem(remainder * 100 + code - 55, 97)
     }
   }
   remainder

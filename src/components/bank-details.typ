@@ -6,14 +6,10 @@
 #import "../logic/epc.typ"
 #import "../logic/payment-reference.typ": resolve-remittance
 #import "../logic/document-type.typ": sender-pays
-#import "../logic/payment-means.typ": of-context, transfer-requested
-
-// With an e-invoice and `zugferd-errors: "report"`, problems are shown in the
-// document instead of stopping the compilation.
-#let _report-problems(ctx) = (
-  ctx.at("zugferd", default: none) != none
-    and ctx.at("zugferd-errors", default: "panic") == "report"
+#import "../logic/payment-means.typ": (
+  of-context, report-problems, transfer-requested,
 )
+#import "../logic/currency.typ": currency-code
 
 // What the root context holds for a sender or recipient without a name.
 #let _is-missing(value) = (
@@ -33,9 +29,10 @@
 ///
 /// -> content
 #let bank-details(
-  /// The name of the account holder. Defaults to the sender's name on one
-  /// line, as in the e-invoice (BT-27). A name given here is also the
-  /// account name of the e-invoice (BT-85).
+  /// The name of the account holder. Defaults to the name of the `payee` of
+  /// the invoice, else the sender's name on one line, as in the e-invoice
+  /// (BT-59, BT-27). A name given here is also the account name of the
+  /// e-invoice (BT-85).
   /// -> auto | none | string
   name: auto,
 
@@ -149,8 +146,10 @@
       // invalid one never ends up on an invoice unnoticed.
       let electronic-iban = normalize-iban(iban)
       let valid-iban = iban-valid(electronic-iban)
-      let report-problems = _report-problems(ctx)
-      if not valid-iban and not report-problems {
+      // With an e-invoice and `zugferd-errors: "report"`, problems are shown
+      // in the document instead of stopping the compilation.
+      let report = report-problems(ctx)
+      if not valid-iban and not report {
         panic(
           if electronic-iban == "" {
             "bank-details: the IBAN is missing. Set `iban` on `bank-details`."
@@ -171,14 +170,32 @@
       let recipient-account = sender-pays(document)
 
       // The account holder: the explicit `name`, else the name on one line
-      // of the sender (as in the e-invoice, BT-27), or of the recipient for
-      // the recipient's account.
+      // of whom the amount is paid to: the payee (BG-10, e.g. a factoring
+      // company that receives the payment instead of the seller) of what
+      // the buyer pays, also on a self-billed invoice, but not of a credit
+      // note, which refunds the buyer; else the sender (as in the e-invoice,
+      // BT-27), or the recipient for the recipient's account.
+      let credit = (
+        type(document) == dictionary and document.at("credit", default: false)
+      )
       let holder = ctx.sender.name
       if name == auto {
-        let party = if recipient-account { ctx.recipient } else { ctx.sender }
-        if recipient-account { holder = party.name }
-        let inline = party.at("name-inline", default: none)
-        if not _is-missing(inline) { holder = inline }
+        let payee = ctx.at("payee", default: none)
+        let payee-name = if type(payee) == dictionary and not credit {
+          payee.at("name", default: none)
+        }
+        if not _is-missing(payee-name) {
+          holder = if type(payee-name) == array {
+            payee-name.join(", ")
+          } else { payee-name }
+        } else {
+          let party = if recipient-account { ctx.recipient } else {
+            ctx.sender
+          }
+          if recipient-account { holder = party.name }
+          let inline = party.at("name-inline", default: none)
+          if not _is-missing(inline) { holder = inline }
+        }
       }
 
       let electronic-bic = normalize-bic(bic)
@@ -197,10 +214,7 @@
         "display",
         default: not recipient-account and transfer-requested(of-context(ctx)),
       )
-      let currency = ctx.locale.at("currency", default: (:))
-      let epc-code = if (
-        qr-display and currency.at("code", default: none) == "EUR"
-      ) {
+      let epc-code = if qr-display and currency-code(ctx.locale) == "EUR" {
         epc.qr-code(
           holder,
           electronic-iban,
@@ -244,13 +258,14 @@
         reference: ctx.reference,
         text: ctx.text,
         show-reference: show-reference,
-        report-problems: report-problems,
+        report-problems: report,
         payment-amount: amount,
       )
 
       // Expose IBAN/BIC/reference as a public signal so root can embed them in ZUGFeRD XML.
       // The account name (BT-85) only if it is given: the default holder is
-      // the seller, whom the e-invoice names already (BT-27).
+      // the payee or the seller, whom the e-invoice names already (BT-59,
+      // BT-27).
       let public = (
         iban: iban,
         bic: bic,

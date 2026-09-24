@@ -62,12 +62,30 @@
   /// The legal reason of an exemption or a 0% rate.
   /// -> str | content | none
   grounds: none,
-) = (
-  rate: coercion.to-ratio(rate),
-  category: category,
-  label: label,
-  grounds: grounds,
-)
+  /// The VAT exemption reason code of the CEF VATEX code list (BT-121 of
+  /// the e-invoice), e.g. `"VATEX-EU-132-1A"`, next to the `grounds` the
+  /// invoice prints. Only a tax that is exempt or not charged has one.
+  /// -> none | str
+  code: none,
+) = {
+  if code != none and type(code) != str {
+    assert(
+      false,
+      message: "tax: `code` must be a VAT exemption reason code of the VATEX code list such as \"VATEX-EU-132-1A\", got "
+        + repr(code)
+        + ".",
+    )
+  }
+  (
+    rate: coercion.to-ratio(rate),
+    category: category,
+    label: label,
+    grounds: grounds,
+    // Only a tax with a code carries the key, so that the tax of most items
+    // stays as small as before.
+    ..if code != none { (code: code) },
+  )
+}
 
 // A: Mixed tax rate
 #let mixed(rate, grounds: none) = new(
@@ -110,11 +128,12 @@
 )
 
 // AE: VAT Reverse Charge
-#let reverse-charge(grounds: "Reverse charge") = new(
+#let reverse-charge(grounds: "Reverse charge", code: none) = new(
   rate: 0%,
   category: "AE",
   label: "reverse-charge",
   grounds: grounds,
+  code: code,
 )
 
 // B: Transferred (VAT)
@@ -142,11 +161,12 @@
 )
 
 // E: Exempt from tax
-#let exempt(grounds: none) = new(
+#let exempt(grounds: none, code: none) = new(
   rate: 0%,
   category: "E",
   label: "exempt",
   grounds: grounds,
+  code: code,
 )
 
 // F: Value Added Tax (VAT) margin scheme - second-hand goods
@@ -158,11 +178,12 @@
 )
 
 // G: Free export item, tax not charged
-#let export(grounds: none) = new(
+#let export(grounds: none, code: none) = new(
   rate: 0%,
   category: "G",
   label: "export",
   grounds: grounds,
+  code: code,
 )
 
 // H: Higher rate
@@ -190,11 +211,12 @@
 )
 
 // K: VAT exempt for EEA intra-community supply of goods and services
-#let intra-community(grounds: none) = new(
+#let intra-community(grounds: none, code: none) = new(
   rate: 0%,
   category: "K",
   label: "intra-community",
   grounds: grounds,
+  code: code,
 )
 
 // L: Canary Islands general indirect tax (IGIC)
@@ -222,11 +244,12 @@
 )
 
 // O: Services outside scope of tax
-#let outside-scope(grounds: none) = new(
+#let outside-scope(grounds: none, code: none) = new(
   rate: 0%,
   category: "O",
   label: "outside-scope",
   grounds: grounds,
+  code: code,
 )
 
 // S: Standard rate
@@ -273,6 +296,7 @@
       category: value.at("category", default: ""),
       label: value.at("label", default: ""),
       grounds: value.at("grounds", default: none),
+      code: value.at("code", default: none),
     )
 )
 
@@ -361,6 +385,24 @@
   ).at(category, default: none)
   if key == none { return none }
   strings.at("tax-exemption", default: (:)).at(key, default: none)
+}
+
+// The distinct VAT exemption reason codes of a tax (BT-121): the virtual item
+// of a bundle and a VAT group can carry several (`codes`), every other tax at
+// most one (`code`).
+#let codes-of(tax) = {
+  let list = tax.at("codes", default: none)
+  if type(list) == array { return list }
+  let code = tax.at("code", default: none)
+  if code == none { () } else { (code,) }
+}
+
+// Adds the codes of `more` that are not in `list` yet.
+#let merge-codes(list, more) = {
+  for code in more {
+    if code not in list { list.push(code) }
+  }
+  list
 }
 
 // All exemption grounds of a VAT category as one value: `none`, the single

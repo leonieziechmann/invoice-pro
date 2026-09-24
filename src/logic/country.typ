@@ -7,6 +7,20 @@
 
 // --- Regional Parsers and Formatters ---
 
+// The patterns of the parsers below. Each is compiled once, when a party of
+// its country is parsed for the first time: compiling a regular expression
+// costs far more than matching it, and most invoices need none of them.
+#let _euro-city-pattern() = regex("^\\s*(?:[A-Z]{1,2}-)?(\\d{4,5})\\s+(.+)$")
+#let _uk-city-pattern() = regex(
+  "(?i)^\\s*(.+?)(?:,\\s*|\\s+|\\n)\\s*([a-z]{1,2}\\d[a-z\\d]?\\s*\\d[a-z]{2})\\s*$",
+)
+#let _us-city-patterns() = (
+  with-state: regex(
+    "(?i)^\\s*(.+?)(?:,\\s*|\\s+)([a-z]{2})\\s+(\\d{5}(?:-\\d{4})?)\\s*$",
+  ),
+  without-state: regex("(?i)^\\s*(.+?)(?:,\\s*|\\s+)(\\d{5}(?:-\\d{4})?)\\s*$"),
+)
+
 // A city line without a post code of the expected format: the whole text is
 // the city name.
 #let _unparsed-city(city-str) = (name: city-str.trim(), post-code: none)
@@ -14,7 +28,7 @@
 // The generic parser of custom countries: a post code of 4 or 5 digits,
 // optionally with a country marker ("D-10115"), before the city name.
 #let parse-city-euro(city-str) = {
-  let m = city-str.match(regex("^\\s*(?:[A-Z]{1,2}-)?(\\d{4,5})\\s+(.+)$"))
+  let m = city-str.match(_euro-city-pattern())
   if m != none {
     let pc-raw = m.captures.at(0, default: none)
     let name-raw = m.captures.at(1, default: none)
@@ -115,11 +129,7 @@
 }
 
 #let parse-city-uk(city-str) = {
-  let m = city-str.match(
-    regex(
-      "(?i)^\\s*(.+?)(?:,\\s*|\\s+|\\n)\\s*([a-z]{1,2}\\d[a-z\\d]?\\s*\\d[a-z]{2})\\s*$",
-    ),
-  )
+  let m = city-str.match(_uk-city-pattern())
   if m != none {
     let name-raw = m.captures.at(0, default: none)
     let pc-raw = m.captures.at(1, default: none)
@@ -158,11 +168,8 @@
 }
 
 #let parse-city-us(city-str) = {
-  let m1 = city-str.match(
-    regex(
-      "(?i)^\\s*(.+?)(?:,\\s*|\\s+)([a-z]{2})\\s+(\\d{5}(?:-\\d{4})?)\\s*$",
-    ),
-  )
+  let patterns = _us-city-patterns()
+  let m1 = city-str.match(patterns.with-state)
   if m1 != none {
     let name-raw = m1.captures.at(0, default: none)
     let state-raw = m1.captures.at(1, default: none)
@@ -173,9 +180,7 @@
       post-code: if pc-raw != none { pc-raw.trim() } else { none },
     )
   } else {
-    let m2 = city-str.match(
-      regex("(?i)^\\s*(.+?)(?:,\\s*|\\s+)(\\d{5}(?:-\\d{4})?)\\s*$"),
-    )
+    let m2 = city-str.match(patterns.without-state)
     if m2 != none {
       let name-raw = m2.captures.at(0, default: none)
       let pc-raw = m2.captures.at(1, default: none)
@@ -330,6 +335,29 @@
   if code == "UK" { "GB" } else { code }
 }
 
+// The characters that have a meaning in a regular expression, which a post
+// code mask escapes.
+#let _regex-syntax = (
+  "\\": true,
+  ".": true,
+  "+": true,
+  "*": true,
+  "?": true,
+  "(": true,
+  ")": true,
+  "|": true,
+  "[": true,
+  "]": true,
+  "{": true,
+  "}": true,
+  "^": true,
+  "$": true,
+  "#": true,
+  "&": true,
+  "~": true,
+  "-": true,
+)
+
 // Turns a post code mask of `country.custom` into a regular expression:
 // `9` is a digit, `A` a letter, a space an optional space, anything else
 // stands for itself ("9999", "A9A 9A9", "999-9999").
@@ -338,9 +366,9 @@
   for char in mask.clusters() {
     pattern += if char == "9" { "\\d" } else if char == "A" {
       "[A-Z]"
-    } else if char == " " { "\\s?" } else if (
-      char.match(regex("^[\\\\.+*?()|\\[\\]{}^$#&~-]$")) != none
-    ) { "\\" + char } else { char }
+    } else if char == " " { "\\s?" } else if char in _regex-syntax {
+      "\\" + char
+    } else { char }
   }
   pattern
 }

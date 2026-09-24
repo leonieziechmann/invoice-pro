@@ -292,6 +292,29 @@
   assert.eq(rules(m), ("BR-CL-16",))
 })[#items #paid(method: (code: "97", name: [Verrechnung]))]
 
+// A credit note is paid by its sender: the terms state that the amount was
+// paid to the recipient
+#model-test(..xrechnung, document-type: "credit-note", model => {
+  assert.eq(
+    model.payment.terms,
+    "Den Betrag in Höhe von 238,00 € haben wir Ihnen am 01.09.2026 ausgezahlt.\nZahlungsart: Barzahlung",
+  )
+  assert.eq(model.payment.terms-input, "paid")
+})[
+  #items
+  #paid(method: "cash", date: datetime(year: 2026, month: 9, day: 1))
+]
+
+// A payment means code of its own that its component states as well: the
+// code is stated once, with the details of the component, and the terms
+// state its name
+#model-test(..xrechnung, model => {
+  assert.eq(model.payment.means.map(m => m.type-code), ("54",))
+  assert.eq(model.payment.means.first().card.id, "1234")
+  assert(model.payment.terms.ends-with("Zahlungsart: Visa"))
+  assert.eq(rules(model), ())
+})[#items #paid(method: (code: "54", name: [Visa])) #card]
+
 // --- 4. One kind of payment means per invoice (BT-81) ---
 #model-test(..xrechnung, model => {
   // Both are written, as stated, and reported
@@ -363,6 +386,22 @@
   }
 })[#items #goal]
 
+// ... but on a credit note, the sender pays the amount: the hint names the
+// recipient's account, not the payment means that collect it
+#model-test(
+  ..xrechnung,
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  model => {
+    assert.eq(rules(model), ("BR-DE-1",))
+    let hint = diagnostic(model, "BR-DE-1").hint
+    assert(hint.contains("the recipient's account"), message: hint)
+    assert(hint.contains("(not your own)"), message: hint)
+    assert(hint.contains("\"97\""), message: hint)
+    assert(not hint.contains("#direct-debit("), message: hint)
+  },
+)[#items #goal]
+
 // --- 5. The account name (BT-85): only a name given to `bank-details` ---
 #model-test(model => {
   assert.eq(model.payment.means.first().account-name, "Factoring Bank AG")
@@ -424,4 +463,21 @@
 #model-test(zugferd: "minimum", model => {
   assert.eq(xml-values(model, "ram:DuePayableAmount"), ("0.00",))
   assert.eq(rules(model), ())
+  // ... nor the payment means of `paid` (IP-PROFILE-01)
+  let warnings = validate(model).filter(d => d.level == "warning")
+  assert.eq(warnings.map(d => (d.rule, d.field)), (
+    ("IP-PROFILE-01", "paid.method"),
+  ))
+  assert.eq(
+    warnings.first().message,
+    "The MINIMUM profile cannot state the payment means (BT-81), so `paid.method` is not written into the e-invoice.",
+  )
+  assert.eq(
+    warnings.first().hint,
+    "Use the \"basic-wl\" profile or higher to state it.",
+  )
 })[#items #paid(method: "cash")]
+// Without a method of its own, `paid` states none
+#model-test(zugferd: "minimum", model => {
+  assert.eq(rules(model, level: "warning"), ())
+})[#items #paid()]

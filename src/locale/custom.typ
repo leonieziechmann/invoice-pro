@@ -80,6 +80,8 @@
 /// - contact-person (auto, str): e.g., "Contact Person", "Ansprechpartner:in"
 /// - contact-phone (auto, str): e.g., "Phone", "Telefon"
 /// - contact-email (auto, str): e.g., "Email", "E-Mail"
+/// - payee (auto, str): who receives the payment instead of the sender,
+///   e.g., "Payee", "Zahlungsempfänger"
 /// -> array
 #let reference(
   tax-number: auto,
@@ -105,6 +107,7 @@
   contact-person: auto,
   contact-phone: auto,
   contact-email: auto,
+  payee: auto,
 ) = (
   {
     let payload = _clean-auto((
@@ -131,6 +134,7 @@
       contact-person: contact-person,
       contact-phone: contact-phone,
       contact-email: contact-email,
+      payee: payee,
     ))
     (strings: (reference: payload))
   },
@@ -278,6 +282,8 @@
 /// - paid (auto, fn): sentence of a paid invoice: (sum, date) => content,
 ///   `date` is `none` if not given
 /// - paid-due (auto, fn): `paid` after prepayments: (sum, date) => content
+/// - paid-credit (auto, fn): `paid` on a credit note or a self-billed
+///   invoice, whose sender pays the amount: (sum, date) => content
 /// -> array
 #let payment-means(
   method: auto,
@@ -297,6 +303,7 @@
   card-holder: auto,
   paid: auto,
   paid-due: auto,
+  paid-credit: auto,
 ) = (
   {
     let payload = _clean-auto((
@@ -317,6 +324,7 @@
       card-holder: card-holder,
       paid: paid,
       paid-due: paid-due,
+      paid-credit: paid-credit,
     ))
     (strings: (payment-means: payload))
   },

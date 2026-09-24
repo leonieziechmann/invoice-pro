@@ -128,6 +128,7 @@
         <ram:ExemptionReason>Tax-exempt intra-community supply</ram:ExemptionReason>
         <ram:BasisAmount>24500.00</ram:BasisAmount>
         <ram:CategoryCode>K</ram:CategoryCode>
+        <ram:ExemptionReasonCode>VATEX-EU-IC</ram:ExemptionReasonCode>
         <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>
       <ram:SpecifiedTradePaymentTerms>

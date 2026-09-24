@@ -9,7 +9,7 @@ sidebar_position: 3
 :::warning
 ZUGFeRD/Factur-X support in `invoice-pro` is currently **experimental**. Please note the following known limitations:
 
-- **Factur-X XMP Metadata (Typst limitation):** Typst cannot write custom XMP metadata yet, so the PDF lacks the Factur-X extension schema that announces the attached `factur-x.xml`. The embedded XML is valid, but validators that check the PDF itself reject the PDF. See [Factur-X XMP Metadata](#factur-x-xmp-metadata) for an optional post-processing step outside the package.
+- **Factur-X XMP Metadata (Typst limitation):** Typst cannot write custom XMP metadata yet, so the PDF lacks the Factur-X extension schema that announces the attached XML (`factur-x.xml`, or `xrechnung.xml` in the XRechnung profile). The embedded XML is valid, but validators that check the PDF itself reject the PDF. See [Factur-X XMP Metadata](#factur-x-xmp-metadata) for an optional post-processing step outside the package.
 - **Built-in Validation Is Not a Certification:** The template checks your invoice data against the business rules of the selected profile before embedding the XML (see [Validation and Error Reporting](#validation-and-error-reporting)). This catches missing or inconsistent data early, but it does not replace an official validator: verify the generated PDF and XML payload with an external validator (e.g., the [ZUGFeRD Community Validator](https://www.zugferd-community.net/) or other official portals) before using them in production.
 - **Reporting Issues:** If you encounter edge cases, schema validation failures, or formatting issues, please report them by opening an issue on our GitHub repository.
   :::
@@ -30,7 +30,7 @@ pdf.attach(
 )
 ```
 
-The recipient's software detects this embedded `/factur-x.xml` file and extracts all metadata without needing optical character recognition (OCR) on the visual layout.
+The recipient's software detects this embedded `/factur-x.xml` file and extracts all metadata without needing optical character recognition (OCR) on the visual layout. In the `"xrechnung"` profile, the file is named `/xrechnung.xml`, as ZUGFeRD 2.3 names the XML of its XRECHNUNG profile (and as Mustang embeds it). Earlier versions named it `factur-x.xml` in every profile.
 
 If the XML has errors and you let the invoice compile anyway with `zugferd-errors: "report"`, the XML is attached as a draft instead: named `invoice-draft.xml` and with the relationship `"data"` (see [The `zugferd-errors` Parameter](#the-zugferd-errors-parameter)).
 
@@ -103,10 +103,13 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | `IP-ID-03`      | error   | An identifier given for a field it does not belong to: a Leitweg-ID as party identifier or legal registration identifier, another identifier as `leitweg-id`, a GLN or D-U-N-S number as `legal-id`, or a register number as `id`.                                                 |
 | `IP-KEY-01`     | warning | A key of `sender`, `recipient`, `delivery-address`, `sender.tax-representative` or `payee` that `invoice-pro` does not know: its value is not written into the e-invoice.                                                                                                          |
 | `IP-KEY-02`     | error   | A misspelled key the e-invoice reads, or another name of it (e.g. `vatId`, `vat_id`, `ustid`, `uid`, `e-mail`, `siret` or `zip`): its value would be missing without notice.                                                                                                       |
-| `IP-PROFILE-01` | warning | An input the profile cannot state, e.g. the buyer trading name (BT-45) in `"basic"` or a `payee` in `"minimum"`: it is not written into the e-invoice. The hint names the lowest profile that states it.                                                                           |
+| `IP-PROFILE-01` | warning | An input the profile cannot state, e.g. the buyer trading name (BT-45) in `"basic"`, or `notes`, a `payee` or the method of `paid` in `"minimum"`: the invoice may print it, but it is not written into the e-invoice. The hint names the lowest profile that states it.           |
 | `IP-VAT-226`    | error   | An intra-community supply (`K`) or a cross-border reverse charge (`AE`) without the buyer VAT identifier (Art. 226 No. 4 VAT Directive), which the official rules miss: in BASIC WL (no invoice lines) and with a buyer `legal-id`; a tax representative without address (No. 15). |
 | `IP-VAT-138`    | warning | An intra-community supply (`K`) to a buyer whose VAT identifier was not issued by an EU member state (or "XI" for Northern Ireland).                                                                                                                                               |
 | `IP-TAX-01`     | error   | `tax: none` in an e-invoice: the items would be declared as zero rated (`Z`). Use `tax.zero()`, `tax.exempt(grounds: ..)`, `tax.outside-scope()` or `tax-exempt-small-biz`.                                                                                                        |
+| `IP-TAX-02`     | error   | A VAT exemption reason code (BT-121, `code` of the `tax` module) of another VAT category, e.g. `"VATEX-EU-IC"` on an exemption (`E`), or on a taxed category (`S`, `Z`, `L`, `M`). See [Tax Category Codes](#3-tax-category-codes).                                                |
+| `IP-TAX-03`     | warning | Items of one VAT category and rate with different exemption reason codes: EN 16931 states one code per VAT group, so the reasons are stated as text (BT-120) only.                                                                                                                 |
+| `IP-TAX-04`     | error   | An exemption (`E`) with an exemption reason code but without `grounds`: the printed invoice must state why no VAT is charged (§ 14 Abs. 4 Satz 1 Nr. 8 UStG, Art. 226 No. 11 of the VAT Directive).                                                                                |
 | `IP-PRINT-02`   | error   | Amounts printed in another currency than the invoice currency (BT-5), e.g. a custom locale that prints "zł" while the XML states EUR.                                                                                                                                              |
 | `IP-DEC-01`     | error   | A VAT rate with more than 4 decimals, which the XML cannot state exactly (and which could collide with another VAT group).                                                                                                                                                         |
 | `IP-PAY-01`     | error   | An IBAN with wrong check digits or format in `bank-details` or as `debtor-iban` of `direct-debit`, where `BR-DE-19` and `BR-DE-20` do not check it (outside XRechnung, or an invoice not in euro).                                                                                 |
@@ -117,9 +120,10 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | `IP-DOC-02`     | error   | A corrected invoice (`document-type: "corrected"`) without `preceding-invoice-nr`: it replaces an invoice, which the VAT Directive (Art. 219) requires it to name. XRechnung checks it as `BR-DE-26`.                                                                              |
 | `IP-DOC-03`     | error   | A credit note with a negative total: it states the credited amounts as positive amounts, so it would ask the buyer to pay.                                                                                                                                                         |
 | `IP-DOC-04`     | warning | An invoice with a negative total: valid, but a credit note (`document-type: "credit-note"`) is the document for a credit.                                                                                                                                                          |
-| `IP-PROFILE-01` | warning | An input the chosen profile cannot state, e.g. `notes` in `"minimum"`: it is printed, but not written into the e-invoice.                                                                                                                                                          |
-| `IP-PERIOD-01`  | warning | A service period printed as a text of its own (e.g. `references.service-time(value: "Juni 2026")`), which the XML cannot state. See [Service Period](#10-service-period-bt-72--bg-14).                                                                                             |
+| `IP-PERIOD-01`  | error   | A printed service period that is not the one the XML states: another date, or a text of its own where the XML states the invoice date. A text of its own besides dated items or a `service-period` is a warning. See [Service Period](#10-service-period-bt-72--bg-14).            |
 | `IP-PERIOD-02`  | warning | The date of an item outside the `service-period` of the invoice. XRechnung checks it for an invoicing period (BG-14) as `PEPPOL-EN16931-R110` and `R111`. See [Item Notes, Periods and Country of Origin](#12-item-notes-periods-and-country-of-origin).                           |
+| `IP-PERIOD-03`  | error   | The printed invoice does not show the date of the supply, which German law requires on every invoice but a small-amount invoice; for a seller elsewhere a warning where it is not the invoice date. See [Printed Details](#printed-details).                                       |
+| `IP-PRINT-03`   | error   | The XML states the seller's VAT identifier (BT-31) or tax number (BT-32), one of which the law requires on the invoice, but the printed invoice shows neither. See [Printed Details](#printed-details).                                                                            |
 
 ### The XML Write Guard
 
@@ -150,11 +154,11 @@ The guard checks what the schema, the code lists and the rules of the VAT catego
 
 The `zugferd-errors` parameter of `invoice` decides what happens with the problems:
 
-| Value               | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| :------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"panic"` (default) | Errors stop the compilation with the list shown above (including any warnings). An invoice with warnings only compiles.                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `"report"`          | Errors and warnings are listed in a box at the top of the invoice instead of stopping the compilation, which is handy while filling in the data in the preview. If the theme shows no report, errors stop the compilation as with `"panic"` (see [Custom Report Layout](#custom-report-layout)). The XML of an invoice with errors is attached as a draft: as `invoice-draft.xml` instead of `factur-x.xml` and with the relationship `"data"`, so that no receiving software takes it for the e-invoice. With warnings only, the XML is attached as usual. |
-| `"ignore"`          | The check is skipped on purpose: the XML is attached as usual (`factur-x.xml`, relationship of the profile), whatever its errors. It may then be invalid, and you are responsible for it. Use this only if you validate the XML yourself, e.g. when a recipient explicitly accepts a deviation.                                                                                                                                                                                                                                                             |
+| Value               | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"panic"` (default) | Errors stop the compilation with the list shown above (including any warnings). An invoice with warnings only compiles.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `"report"`          | Errors and warnings are listed in a box at the top of the invoice instead of stopping the compilation, which is handy while filling in the data in the preview. If the theme shows no report, errors stop the compilation as with `"panic"` (see [Custom Report Layout](#custom-report-layout)). The XML of an invoice with errors is attached as a draft: as `invoice-draft.xml` instead of `factur-x.xml` (or `xrechnung.xml`) and with the relationship `"data"`, so that no receiving software takes it for the e-invoice. With warnings only, the XML is attached as usual. |
+| `"ignore"`          | The check is skipped on purpose: the XML is attached as usual (`factur-x.xml` or `xrechnung.xml`, relationship of the profile), whatever its errors. It may then be invalid, and you are responsible for it. Use this only if you validate the XML yourself, e.g. when a recipient explicitly accepts a deviation.                                                                                                                                                                                                                                                               |
 
 A missing or invalid IBAN in [`bank-details`](./api-reference/components.md#bank-details), or an invalid IBAN or creditor identifier of a [`direct-debit`](./api-reference/components.md#direct-debit), makes the printed invoice wrong as well, so it stops the compilation with a message naming it, also with `"ignore"`. With `"report"`, it is marked where it is printed instead (a placeholder takes the place of the EPC-QR code), and the report lists it as an error (`BR-DE-19` or `BR-DE-20` in XRechnung, `IP-PAY-01` or `IP-PAY-02` otherwise), so the XML is attached as a draft.
 
@@ -167,7 +171,7 @@ A missing or invalid IBAN in [`bank-details`](./api-reference/components.md#bank
 ```
 
 :::warning
-An invoice with errors is not a valid e-invoice. With `"report"`, it carries its XML only as the draft `invoice-draft.xml`; with `"ignore"`, it carries the invalid XML as `factur-x.xml`. Switch back to the default `"panic"` before you send an invoice.
+An invoice with errors is not a valid e-invoice. With `"report"`, it carries its XML only as the draft `invoice-draft.xml`; with `"ignore"`, it carries the invalid XML as the e-invoice (`factur-x.xml` or `xrechnung.xml`). Switch back to the default `"panic"` before you send an invoice.
 :::
 
 ### Custom Report Layout
@@ -191,6 +195,66 @@ In `"report"` mode, the list is rendered by the theme function `zugferd-report`,
 
 Whatever the function returns is placed above the invoice body as content (a string works as well). A theme can do without the list with `zugferd-report: none`. Errors must not go unnoticed, though: if the theme shows no report (`none`, or a function that returns `none` or empty content), errors stop the compilation as with `"panic"`, and only warnings are left out. Any other value is rejected with an error naming `theme::zugferd-report`.
 
+### Printed Details
+
+The printed invoice and its XML are one invoice, so the printed invoice shows what the XML states and the law requires on an invoice:
+
+- **The seller's tax number or VAT identifier** (`IP-PRINT-03`, § 14 Abs. 4 Satz 1 Nr. 2 UStG, Art. 226 No. 3 of the VAT Directive): an error if the XML states the seller's VAT identifier (BT-31) or tax number (BT-32), but the printed invoice shows neither. A small-amount invoice of at most 250 euros needs neither by German law (§ 33 UStDV), but it shows what its XML states as well.
+- **The date of the supply** (`IP-PERIOD-03`): for a seller in Germany an error, as the law requires it on every invoice, also when it is the date of the invoice (§ 14 Abs. 4 Satz 1 Nr. 6 UStG), except on a small-amount invoice of at most 250 euros that is no intra-community supply or reverse charge (§ 33 UStDV). For a seller elsewhere, and on a small-amount invoice, it is a warning where the date of the supply is not the date of the invoice (Art. 226 No. 7 of the VAT Directive). A credit note, which amends an invoice, is not checked, nor is a prepayment invoice, which precedes the supply (§ 14 Abs. 5 UStG asks for the date of the payment only if it is known).
+
+The default `references` and every [preset](./api-reference/invoice/references.md#preset-packages) print both. A detail counts as shown in a reference sign of any title (e.g. `references.seller-vat-id()`, `references.service-time()` or `("Lieferdatum", "01.09.2026")`), in the name and address lines or the `extra` of the sender or the recipient, in the text of the invoice (e.g. `#info.sender.vat-id`) and, for the date of the supply, with the dates of the items. Identifiers are compared without spaces, and the date of the supply as the XML states it, in the date format of the locale: a sentence such as "Leistungsdatum entspricht Rechnungsdatum" is not recognized, so print the date with `references.service-time()`. The invoice date does not count as the date of the supply.
+
+`invoice-pro` knows what the page shows only for a theme that says what it prints (`prints`, see [What the Theme Prints](./api-reference/theme.md#what-the-theme-prints)): the DIN-5008 theme prints the reference signs and the `extra` of the parties. The blank theme and themes without `prints` are not checked, and neither is `IP-PRINT-03` with a `header` or `footer` of the theme, which may show the tax number. A page header or footer of your own (`set page(header: ..)`) cannot be read: give company details such as the tax number as the `footer` of the theme instead, e.g. `themes.DIN-5008(footer: ..)`.
+
+```typst
+#import "@preview/invoice-pro:0.4.2": *
+
+#show: invoice.with(
+  theme: themes.DIN-5008(font: "libertinus serif"),
+  zugferd: "en16931",
+  sender: (
+    name: "Consulting Group GmbH",
+    address: "Tech Avenue 42",
+    city: "80331 München",
+    country: country.de,
+    vat-id: "DE123456789",
+    contact: (
+      name: "Max Mustermann",
+      phone: "+49 89 1234567",
+      email: "max@consultinggroup.de",
+    ),
+  ),
+  recipient: (
+    name: "Acme Corp",
+    address: "Industrial Road 1",
+    city: (name: "Stuttgart", post-code: "70173"),
+    country: country.de,
+    vat-id: "DE987654321",
+  ),
+  invoice-nr: "INV-2026-103",
+  date: datetime(year: 2026, month: 7, day: 8),
+  service-period: datetime(year: 2026, month: 7, day: 2),
+  references: (
+    references.invoice-nr(),
+    references.invoice-date(),
+    references.service-time(), // the date of the supply: 02.07.2026
+    references.seller-vat-id(), // or references.seller-tax-nr()
+  ),
+)
+
+#line-items[
+  #item([On-site Workshop], quantity: 8, unit: unit.hour, price: 120.00)
+]
+
+#payment-goal(days: 14)
+
+#bank-details(
+  bank: "Global Business Bank",
+  iban: "DE89370400440532013000",
+  bic: "GBBADEFFXXX",
+)
+```
+
 ---
 
 ## Data Requirements for Compliance
@@ -213,7 +277,7 @@ Both the `sender` and `recipient` dictionaries must include:
     city: (name: "Berlin", post-code: "10115")
     ```
 - **Tax Identifiers:**
-  - The **sender** should include a `tax-nr` (national tax number) and/or `vat-id` (value-added tax identifier, written with its country prefix, e.g. `"DE123456789"`; spaces and invisible characters, such as the zero width spaces of copied text, are removed).
+  - The **sender** should include a `tax-nr` (national tax number) and/or `vat-id` (value-added tax identifier, written with its country prefix, e.g. `"DE123456789"`; spaces and invisible characters, such as the zero width spaces of copied text, are removed). The law requires one of them on the printed invoice (§ 14 Abs. 4 Satz 1 Nr. 2 UStG; Art. 226 No. 3 of the VAT Directive requires the VAT identifier): the default `references` and every [preset](./api-reference/invoice/references.md#preset-packages) print the seller's tax number and VAT identifier and the buyer's VAT identifier, with net and gross prices alike. Earlier versions printed none of them for gross prices (`tax-mode: "inclusive"`).
   - The **recipient** (buyer) should include a `vat-id` if applicable. Intra-community supplies (`K`) require it. Reverse charge (`AE`) requires it or, for a buyer without VAT identifier (e.g. a domestic reverse charge under § 13b UStG), the buyer's `legal-id` (BT-47, see below). A cross-border reverse charge needs the VAT identifier by law (Art. 226 No. 4 of the VAT Directive), which the legal registration identifier does not replace (`IP-VAT-226`). In `"basic-wl"`, which has no invoice lines, `invoice-pro` requires it for `K` and a cross-border `AE` by law (`IP-VAT-226`), but not for a domestic reverse charge.
   - The `"minimum"` profile identifies the seller by its VAT identifier (BT-31) or its legal registration identifier (BT-30), so the **sender** needs a `vat-id` or a `legal-id` there, e.g. a French micro-entrepreneur without VAT identifier its SIRET (`legal-id: id.siret(..)`). Senders identified by a `tax-nr` or `id` only need `"basic-wl"` or higher.
 
@@ -242,7 +306,7 @@ Both the `sender` and `recipient` dictionaries must include:
   | Another register          | `legal-id: id.custom("0208", "0123456749")`                       | `0123456749`, scheme `0208`                |
   | GLN (a location, as `id`) | `global-id: id.gln("4000001123452")`                              | `4000001123452`, scheme `0088` (BT-29)     |
 
-  A wrong check digit stops the e-invoice (`IP-ID-01`); `id.custom` takes an identifier unchecked. An identifier given for a field it does not belong to, such as a GLN as `legal-id` or a register number as `id`, stops it as well (`IP-ID-03`). The scheme of a legal registration identifier must be an ISO/IEC 6523 code (`BR-CL-11`).
+  A wrong check digit stops the e-invoice (`IP-ID-01`); `id.custom` takes an identifier unchecked. An identifier given for a field it does not belong to, such as a GLN as `legal-id` or a register number as `id`, stops it as well (`IP-ID-03`). The scheme of a legal registration identifier must be an ISO/IEC 6523 code (`BR-CL-11`). An identifier that produces no text, such as `legal-id: id.siret` without calling the constructor or `legal-id: (scheme: "0002")` without `id`, stops the compilation with the field, also without e-invoice; earlier versions left it out without notice.
 
 - **Trading Name and Legal Information (BT-28, BT-45, BT-33):** `trading-name` on the `sender` or `recipient` is the name the party trades under, besides its legal `name`. `legal-info` on the `sender` is additional legal information about the seller, such as its managing directors, its registered office or its share capital (e.g. `"SAS au capital de 10 000 €, RCS Paris 123 456 782"`). The seller's trading name is stated from the `"basic-wl"` profile on, the buyer's trading name and the legal information in `"en16931"` and `"xrechnung"`; a profile that cannot state an input reports it as a warning (`IP-PROFILE-01`).
 
@@ -267,7 +331,7 @@ Both the `sender` and `recipient` dictionaries must include:
 
 - **Buyer Contact (BG-9):** The `contact` of the `recipient` (or its keys `contact-name` and `phone`) is written as the buyer contact in `"en16931"` and `"xrechnung"`, with the same keys as the seller contact. An `email` of the recipient alone is not a contact point: it is where the invoice goes, the electronic address (see below). Earlier versions left the buyer contact out of the e-invoice. The built-in themes do not print it; to show it on the printed invoice, print it from the same value, e.g. in `extra` of the recipient, which the DIN 5008 theme prints in the annotation zone of the address field.
 
-- **Buyer Reference / Leitweg-ID (BT-10):** A buyer reference (such as the customer's Leitweg-ID for public sectors) is mandatory under XRechnung. Define this under `buyer-reference` or `leitweg-id` in the `recipient` dictionary. A Leitweg-ID given with `id.leitweg(..)` is checked for its check digits (`IP-ID-01`), and can be the electronic address of the buyer as well (scheme `0204`):
+- **Buyer Reference / Leitweg-ID (BT-10):** A buyer reference (such as the customer's Leitweg-ID for public sectors) is mandatory under XRechnung. Define this under `buyer-reference` or `leitweg-id` in the `recipient` dictionary. A Leitweg-ID given with `id.leitweg(..)` is checked for its check digits (`IP-ID-01`), and can be the electronic address of the buyer as well (scheme `0204`), which the report suggests for a buyer with a Leitweg-ID but without electronic address (`PEPPOL-EN16931-R010`):
 
   ```typst
   recipient: (
@@ -312,7 +376,7 @@ Both the `sender` and `recipient` dictionaries must include:
   )
   ```
 
-  A payee needs its name, which is not the seller's (`BR-17`), and at most one of `id` and `global-id` (`CII-SR-451`). Leave out `payee` when the seller receives the payment itself. The built-in themes do not print the payee: name it on the printed invoice as well, e.g. as the account holder of the bank details (`bank-details(name: "Factoring Bank AG", ..)`), whom the EPC-QR code names as the beneficiary. Without `name`, the bank details print the seller as the account holder.
+  A payee needs its name, which is not the seller's (`BR-17`), and at most one of `id` and `global-id` (`CII-SR-451`). Leave out `payee` when the seller receives the payment itself. The printed invoice names the payee as the e-invoice does: the default `references` and every preset print it ("Zahlungsempfänger", "Payee", `references.payee()`), and it is the default account holder of the [`bank-details`](./api-reference/components.md#bank-details), whom the EPC-QR code names as the beneficiary, except on a credit note, which refunds the buyer. The account name of the e-invoice (BT-85) is only written for a `name` given to `bank-details`. Earlier versions printed neither, and the bank details and the EPC-QR code named the seller as the account holder.
 
 - **Electronic Addresses & EAS Routing (BT-34 / BT-49):** For routing across networks (such as Peppol), both parties need an electronic address. XRechnung requires them; for the other profiles a missing address is reported as a warning (`"en16931"`) or not at all.
   - **Auto-derivation from VAT ID:** If `vat-id` is specified on the party, the system derives the endpoint from it. The Electronic Address Scheme (EAS) is chosen by the country prefix of the VAT ID:
@@ -389,6 +453,21 @@ EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `
 
 Where EN 16931 requires an exemption reason (`AE`, `K`, `G`, `O`) and the items give no `grounds` of their own, the note of the invoice language (`tax-exemption` in the [language schema](./api-reference/locale/base.md#tax-exemption), e.g. "Steuerfreie innergemeinschaftliche Lieferung" for `tax.intra-community()` in German) is printed below the line items and written as exemption reason, so the invoice and the XML state the same note. With `tax-exempt-small-biz: true`, the small business note of the invoice is the exemption reason. For the taxed categories (`S`, `Z`, `L`, `M`), `grounds` are printed on the invoice but left out of the XML, which does not allow them there. If the items of one category have different `grounds`, each of them is printed, and the XML joins them with `; ` into the one exemption reason (BT-120) of the category.
 
+**Exemption reason code (BT-121).** Next to the text, the XML states the VAT exemption reason code of the CEF VATEX code list, from the `"basic-wl"` profile on: `VATEX-EU-AE` for a reverse charge, `VATEX-EU-IC` for an intra-community supply, `VATEX-EU-G` for an export, `VATEX-EU-O` for items not subject to VAT, and `VATEX-FR-FRANCHISE` for the small business scheme of France. The code of an exemption depends on its legal basis, so state it with `code`; without one, only the text is stated, which EN 16931 accepts (`BR-E-10`):
+
+```typst
+#item(
+  [Physiotherapie],
+  price: 80,
+  tax: tax.exempt(
+    grounds: "Steuerfrei nach § 4 Nr. 14 UStG",
+    code: "VATEX-EU-132-1C", // Art. 132 (1) (c) of the VAT Directive
+  ),
+)
+```
+
+The code must be one of the VATEX list the Factur-X and EN 16931 validators apply (`BR-CL-22`; the newer list of the KoSIT validator knows a few more, e.g. `VATEX-EU-144`, which Mustang rejects), in upper or lower case, and fit the category (`IP-TAX-02`): `VATEX-EU-AE`, `VATEX-EU-IC`, `VATEX-EU-G` and `VATEX-EU-O` belong to their categories, every other code to an exemption (`E`), and the taxed categories (`S`, `Z`, `L`, `M`) have none. An exemption with a code needs its `grounds` as well, which the printed invoice states (`IP-TAX-04`). EN 16931 states one code per VAT category and rate, so items of one group with different codes are stated with their grounds only (`IP-TAX-03`, a warning). Earlier versions stated no code at all.
+
 `tax: none` on the invoice is not a tax category: the items are printed with 0%, but an e-invoice must say why no VAT is charged, so it stops with the error `IP-TAX-01`. Choose one of the functions above instead.
 
 Document level discounts and surcharges (BG-20, BG-21) belong to a VAT category as well. An absolute amount is split over the categories of the items (see [VAT categories of modifiers](./api-reference/line-items/index.md#vat-categories-of-document-and-bundle-modifiers)); pin it to one with `tax`, e.g. `surcharge([Shipping], amount: 4.90, tax: tax.vat(19%))`.
@@ -408,7 +487,7 @@ With `tax-exempt-small-biz: true`, all items and pinned modifiers use the small 
 | IT     | `O`      | Operazione in franchigia da IVA ai sensi dell'art. 1, commi da 54 a 89, della Legge n. 190/2014. |
 | CH     | `O`      | Nicht MWST-pflichtig / Non soumis à la TVA / Non assoggettato all'IVA                            |
 
-If the language of the invoice differs from the region (e.g. `locale.en-de`), a translated note comes first and the legal note follows in parentheses. The note is one of the annotations below the line items, which `line-items(show-information: false)` hides; keep them shown, since the note is mandatory on the invoice (e.g. § 34a UStDV in Germany).
+If the language of the invoice differs from the region (e.g. `locale.en-de`), a translated note comes first and the legal note follows in parentheses. The note is printed below the line items, as it is mandatory on the invoice (e.g. § 34a UStDV in Germany), also with `line-items(show-information: false)`, which hides only the information about the items (such as the tax rate or the unit they share). Earlier versions hid the exemption notes and the `notes` of the invoice with it, while the XML stated them.
 
 - **Exempt (`E`), in Germany, Austria, France and Spain:** the scheme exempts the turnover of small businesses. In Germany, § 19 Abs. 1 UStG declares it tax exempt ("steuerfrei") since 2025 (Jahressteuergesetz 2024), and the invoice must note that the small business exemption applies (§ 34a UStDV). The Spanish note refers to the franchise of the EU small business scheme (Directive (EU) 2020/285) and cites no provision of Spanish law; where one applies, state it with an override (see below). An exempt invoice needs the seller's VAT identifier or tax number (BR-E-02): set `tax-nr` (e.g. the Steuernummer) or `vat-id` on the sender. Both are written to the XML, and the buyer's electronic address is derived from its VAT identifier as on any other invoice. A French micro-entrepreneur without an intra-community VAT number can state its SIREN as `tax-nr`, which is written as the seller's tax registration (BT-32).
 - **Not subject to VAT (`O`), in Italy and Switzerland:** supplies under the Italian _regime forfettario_ are not subject to VAT, and Swiss businesses below the turnover threshold are not liable for VAT. As with `tax.outside-scope()`, the XML carries no VAT identifiers (BR-O-02), and the seller is identified by `tax-nr` or `id`.
@@ -509,7 +588,11 @@ A card payment or a direct debit adds its details with its own component. XRechn
 #card-payment(last4: "4242", holder: "Claire Martin", kind: "credit")
 ```
 
-With prepayments, the printed sentence states the remaining amount that was paid; the e-invoice states the total as paid amount either way. An invoice that is paid has no payment goal: `paid` next to `payment-goal` stops the compilation.
+With prepayments, the printed sentence states the remaining amount that was paid; the e-invoice states the total as paid amount either way. An invoice that is paid has no payment goal and no payment terms: `paid` next to `payment-goal`, or next to a text as `due-date` of the invoice, which would be the payment terms (BT-20) instead of the sentence that it is paid, stops the compilation. A `datetime` as `due-date` is the due date (BT-9) the payment met.
+
+A payment means code of its own must be the code of the component that details its kind, as the invoice states one (BT-81): `paid(method: (code: "54", name: [Visa]))` next to `card-payment(kind: "credit")` states 54 with the card details and prints its name, but next to `card-payment()` (48, a card of any kind) it stops the compilation, as one of the codes would be lost.
+
+On a credit note or a self-billed invoice, the sender paid the amount to the recipient: the sentence says so (e.g. "Den Betrag in Höhe von 119,00 € haben wir Ihnen am 01.09.2026 ausgezahlt."), and the e-invoice states it as payment terms (BT-20).
 
 #### Cash Discount (Skonto)
 
@@ -575,9 +658,10 @@ Any other code of UNTDID 1001 for invoices and credit notes can be given as text
 
 - A credit note with a negative total would ask the buyer to pay, so it stops the e-invoice (`IP-DOC-03`). An invoice with a negative total is valid, but a credit note is the document for it (`IP-DOC-04`, a warning).
 - As long as an amount is due, the credit note says when or how the buyer gets it (`BR-CO-25`): [`payment-goal`](./api-reference/components.md#payment-goal) prints that the amount is transferred within the given days (and states that date, BT-9), a textual `due-date` (e.g. `due-date: "Der Betrag wird mit Ihrer nächsten Rechnung verrechnet."`) states the terms (BT-20).
-- [`bank-details`](./api-reference/components.md#bank-details) on a credit note are the account the amount is paid to, usually the buyer's: the account holder defaults to the recipient's name, and no EPC-QR code is printed. Do not reuse the bank details of your invoices on a credit note: your own account would be printed with the buyer as its holder and stated as the account the credit is paid into. XRechnung requires payment instructions (BG-16) on credit notes as well (`BR-DE-1`).
+- [`bank-details`](./api-reference/components.md#bank-details) on a credit note are the account the amount is paid to, usually the buyer's: the account holder defaults to the recipient's name, and no EPC-QR code is printed. Do not reuse the bank details of your invoices on a credit note: your own account would be printed with the buyer as its holder and stated as the account the credit is paid into. XRechnung requires payment instructions (BG-16) on credit notes as well (`BR-DE-1`): the recipient's account you transfer the amount to, `paid` if it is paid already, or for a set-off against an invoice `paid(method: (code: "97", name: [Verrechnung]))`.
 - The sender of a credit note or a self-billed invoice pays the amount, so it cannot collect it from the recipient: [`direct-debit`](./api-reference/components.md#direct-debit), [`card-payment`](./api-reference/components.md#card-payment) and a cash discount of the payment goal (`discount`) stop the compilation on these documents. [`paid`](./api-reference/components.md#paid) states that the amount has been paid already.
 - A document that amends an invoice must refer to it (Art. 219 VAT Directive): set `preceding-invoice-nr` (and `preceding-invoice-date`) to the invoice the credit note refers to. The default `references` print them.
+- The date of the supply of a credit note is the one of the supply it credits: set `service-period` to it, or give the items their `date`. The date of the credit note is not the date of the supply, so without them the credit note states none (see [Service Period](#10-service-period-bt-72--bg-14)).
 - In German, a credit note is titled "Rechnungskorrektur": the German VAT law reserves "Gutschrift" for self-billed invoices (§ 14 Abs. 2 Satz 2 UStG). A commercial credit note titled "Gutschrift" is permitted as well; set `subject: "Gutschrift"` together with `document-type: "credit-note"` if you prefer it.
 
 ```typst
@@ -626,7 +710,7 @@ Any other code of UNTDID 1001 for invoices and credit notes can be given as text
 **Self-billed invoices.** The buyer issues a self-billed invoice for the seller, e.g. a publisher for the royalties of an author or a principal for the commissions of an agent. `sender` is then the buyer, who issues the document, and `recipient` the seller:
 
 - The XML states the recipient as seller (BG-4) and the sender as buyer (BG-7). The messages of the e-invoice name the inputs, e.g. `recipient.vat-id` for the seller VAT identifier.
-- The references state the tax number and VAT ID of the seller (the recipient), which the law requires on the invoice, and the VAT ID of the buyer (the sender).
+- The default references and every preset state the tax number and VAT ID of the seller (the recipient), which the law requires on the invoice, and the VAT ID of the buyer (the sender); `references.seller-tax-nr()`, `references.seller-vat-id()` and `references.buyer-vat-id()` print them in references of your own. Earlier versions printed the sender's tax identifiers with the presets.
 - The payment goal says that the sender transfers the amount, and the [`bank-details`](./api-reference/components.md#bank-details) are the seller's account, without EPC-QR code.
 - The title is the mention the law requires on a self-billed invoice (Art. 226 No. 10a VAT Directive): "Gutschrift" in German (§ 14 Abs. 4 Satz 1 Nr. 10 UStG), "Self-Billing Invoice" in English, "Autofacturation" in French, "Autofatturazione" in Italian and "Facturación por el destinatario" in Spanish. Keep it in a `subject` of your own.
 
@@ -638,9 +722,9 @@ The date or period of the supply is mandatory invoice content in many countries 
 
 1. the `service-period` of the invoice, a `datetime` or a period `(start, end)`, if you set it;
 2. else from the earliest to the latest `date` of the items (of `item`, `bundle` and `group`, a date or a period). Items without a date do not count when others have one;
-3. else the invoice date, if no item has a date.
+3. else the invoice date, if no item has a date. Not so on a credit note (`document-type: "credit-note"`, 381), which amends an invoice, and on a prepayment invoice (`"prepayment"`, 386), which asks for an advance payment before the supply: their own date is not the date of the supply, so without a `service-period` or dates of the items, neither the printed document nor its XML states one. XRechnung recommends one (`BR-DE-TMP-32`, a warning): set `service-period` to the date or period of the supply the credit note refers to. Earlier versions stated the date of the credit note.
 
-A single date is written as the actual delivery date (BT-72), a period as the invoicing period (BG-14, BT-73 and BT-74), both from the `"basic-wl"` profile on (`"minimum"` has neither: a `service-period` is then reported as a warning, `IP-PROFILE-01`). The default `references` print a `service-period` you set; with references of your own, add `references.service-time()`:
+A single date is written as the actual delivery date (BT-72), a period as the invoicing period (BG-14, BT-73 and BT-74), both from the `"basic-wl"` profile on (`"minimum"` has neither: a `service-period` is then reported as a warning, `IP-PROFILE-01`). The default `references` print a `service-period` you set and, for a seller in Germany, the date of the supply in any case: German law requires it on the invoice also when it is the date of the invoice (§ 14 Abs. 4 Satz 1 Nr. 6 UStG), and without dates on the items, the XML states the invoice date. Every preset prints it as well; with references of your own, add `references.service-time()`:
 
 ```typst
 #show: invoice.with(
@@ -653,11 +737,11 @@ A single date is written as the actual delivery date (BT-72), a period as the in
 )
 ```
 
-A service period printed as a text of its own, e.g. `references.service-time(value: "Juni 2026")` or a reference `("Leistungszeitraum", "Juni 2026")`, cannot reach the XML, which would state another date: `invoice-pro` warns about it (`IP-PERIOD-01`). Set `service-period` instead.
+The printed service period must be the one the XML states (`IP-PERIOD-01`). `references.service-time(value: ..)` prints a date or a period `(start, end)` given as `value` in the date format of the locale, and another date than the one the XML states is an error. A text of its own, e.g. `references.service-time(value: "Juni 2026")` or a reference `("Leistungszeitraum", "Juni 2026")`, cannot reach the XML: without dates on the items or a `service-period`, the XML states the invoice date, which the text contradicts, so it is an error; besides them, the text may name the same period in other words, so it is a warning. Set `service-period` instead, and print it with `references.service-time()`. The same holds for a credit note or a prepayment invoice without dates, whose XML states no date of the supply: a date printed with `value` is an error, a text of its own a warning. A printed invoice without the date of the supply is reported as well (`IP-PERIOD-03`, see [Printed Details](#printed-details)).
 
 ### 11. Notes (BT-22)
 
-`notes` on the invoice are texts about the invoice as a whole, e.g. terms of delivery or legal notices. They are printed below the line items, with the exemption notes, and written into the XML as invoice notes (BT-22) with their line breaks, from the `"basic-wl"` profile on (`"minimum"` has none, which is reported as a warning, `IP-PROFILE-01`). Like the exemption notes, they are annotations below the line items, which `line-items(show-information: false)` hides while the XML still states them: keep them shown. A note can carry a subject code of UNTDID 4451 (BT-21, `BR-CL-08`), e.g. `"AAI"` for general information or `"REG"` for regulatory information:
+`notes` on the invoice are texts about the invoice as a whole, e.g. terms of delivery or legal notices. They are printed below the line items, with the exemption notes, and written into the XML as invoice notes (BT-22) with their line breaks, from the `"basic-wl"` profile on (`"minimum"` has none, which is reported as a warning, `IP-PROFILE-01`). Like the exemption notes, they are printed also with `line-items(show-information: false)`, so the printed invoice states what the XML states. A note can carry a subject code of UNTDID 4451 (BT-21, `BR-CL-08`), e.g. `"AAI"` for general information or `"REG"` for regulatory information:
 
 ```typst
 #show: invoice.with(
@@ -753,7 +837,7 @@ The invoice currency (BT-5) is the currency of the locale (`EUR`, or `CHF` for t
 )
 ```
 
-The EPC-QR code of the [bank details](./api-reference/components.md#bank-details) transfers euros only, so it is shown for invoices in euro only, and a credit transfer in another currency is written as a credit transfer (BT-81 `30`) instead of a SEPA credit transfer (`58`). An e-invoice whose printed amounts show another currency than the one it states stops with `IP-PRINT-02`, e.g. with a currency formatter of a custom locale that prints "zł" while the locale states `EUR`. The profiles based on EN 16931 accept only the currencies of its code list (`BR-CL-04`).
+The EPC-QR code of the [bank details](./api-reference/components.md#bank-details) transfers euros only, so it is shown for invoices in euro only, and a credit transfer in another currency is written as a credit transfer (BT-81 `30`) instead of a SEPA credit transfer (`58`). An e-invoice whose printed amounts show another currency than the one it states stops with `IP-PRINT-02`, e.g. with a currency formatter of a custom locale that prints "zł" while the locale states `EUR`. The profiles based on EN 16931 accept only the currencies of its code list (`BR-CL-04`). The printed invoice reads the currency code as the e-invoice states it, in upper case and without spaces: a custom locale with the code `"eur"` invoices in euro, so its bank details show the EPC-QR code, and a direct debit is a SEPA direct debit whose creditor identifier is checked. A currency with more than 2 decimals, such as `KWD`, rounds its amounts to them, which the XML cannot state (`BR-DEC-*`, reported for `currency`): create such an invoice without e-invoice, or with a locale of your own whose currency has 2 decimals, e.g. `locale.en-de.with((region: (currency: (code: "KWD", symbol: "KWD", decimals: 2))))`.
 
 **VAT in the national currency (BT-6, BT-111).** Within the EU, an invoice in another currency must also state the VAT amount in the national currency of the member state where the supply is taxed (Art. 230 VAT Directive), e.g. in euro for a supply taxed in Germany. `invoice-pro` does not support the VAT accounting currency (BT-6) and the VAT total in it (BT-111) yet: state the VAT amount in the national currency and the exchange rate in a note (`notes`), which is printed and written into the e-invoice (BT-22).
 
@@ -773,7 +857,7 @@ The EPC-QR code of the [bank details](./api-reference/components.md#bank-details
 
 A Factur-X / ZUGFeRD PDF announces its XML in the XMP metadata of the PDF, with the Factur-X extension schema (`fx:DocumentType`, `fx:DocumentFileName`, `fx:Version` and `fx:ConformanceLevel`). Typst cannot write custom XMP metadata yet, so `invoice-pro` cannot add these entries. This is a limitation of the Typst platform, not of the invoice data:
 
-- The embedded `factur-x.xml` is complete and valid for its profile. Most receiving systems only extract and process this XML.
+- The embedded XML (`factur-x.xml`, or `xrechnung.xml` in the XRechnung profile) is complete and valid for its profile. Most receiving systems only extract and process this XML.
 - Validators that check the PDF itself reject it. The Mustang validator, for example, reports `XMP Metadata: ConformanceLevel not found` together with the missing `DocumentType`, `DocumentFileName` and `Version`, and rates the PDF (not the XML) as invalid.
 
 `invoice-pro` will write the metadata as soon as Typst supports custom XMP metadata.
@@ -808,7 +892,7 @@ java -jar Mustang-CLI-2.14.0.jar --action validate --source invoice-facturx.pdf
 | `"en16931"`                      | `E`         |
 | `"xrechnung"`                    | `X`         |
 
-With `zugferd: auto`, use the profile the invoice was written in: `X` if the guideline ID of the XML (BT-24) ends in `xrechnung_3.0`, otherwise `E`. `--format fx --version 1` writes the metadata of Factur-X 1.0, which ZUGFeRD 2.1 and later use as well. For `X`, Mustang embeds the XML a second time under the name `xrechnung.xml`, next to the `factur-x.xml` of `invoice-pro`; both files are identical. XRechnung is primarily exchanged as the XML file itself: if a recipient asks for an XRechnung, you can send `invoice.xml` from step 2.
+With `zugferd: auto`, use the profile the invoice was written in: `X` if the guideline ID of the XML (BT-24) ends in `xrechnung_3.0`, otherwise `E`. `--format fx --version 1` writes the metadata of Factur-X 1.0, which ZUGFeRD 2.1 and later use as well. For `X`, Mustang names the XML `xrechnung.xml`, as `invoice-pro` does, and replaces it with the same XML, so the PDF carries it once. XRechnung is primarily exchanged as the XML file itself: if a recipient asks for an XRechnung, you can send `invoice.xml` from step 2.
 
 ---
 

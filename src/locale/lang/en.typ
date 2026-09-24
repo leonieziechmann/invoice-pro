@@ -60,6 +60,7 @@
     contact-person: "Contact Person",
     contact-phone: "Phone",
     contact-email: "Email",
+    payee: "Payee",
   ),
 
   line-items: (
@@ -156,6 +157,11 @@
       date,
     ) => if date
       == none [The amount due of *#sum* has been paid.] else [The amount due of *#sum* was paid on #date.],
+    paid-credit: (
+      sum,
+      date,
+    ) => if date
+      == none [We have paid the amount of *#sum* to you.] else [We paid the amount of *#sum* to you on #date.],
   ),
 
   payment: (

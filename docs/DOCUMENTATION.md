@@ -76,6 +76,7 @@ No code blocks.
 | :--------------- | :---------------------------------- | :------ | :--- | :-------------------------------------- |
 | `reverse-charge` | Reverse-charge tax usage on an item | `0.4.2` | —    | Snippet only (no full document context) |
 | `custom-tax`     | Custom tax category with `tax.new`  | `0.4.2` | —    | Snippet only (let binding)              |
+| `exemption-code` | Exemption with its VATEX code       | `0.4.2` | —    | Compiled by check-docs-examples         |
 
 ### `api-reference/theme.md`
 
@@ -83,6 +84,7 @@ No code blocks.
 | :---------------- | :--------------------------------------------------- | :------ | :------------------------ | :---- |
 | `din5008-example` | DIN-5008 theme with custom form, font, and hole-mark | `0.4.2` | `docs/api-theme-din5008/` |       |
 | `blank-example`   | Blank theme with native Typst page setup             | `0.4.2` | `docs/api-theme-blank/`   |       |
+| `prints-example`  | Layout of its own that says it prints the references | `0.4.2` | —                         |       |
 
 ### `e-invoicing.md`
 
@@ -92,11 +94,13 @@ No code blocks.
 | `compile`               | PDF/A-3b compile command                                 | —       | —                               | Bash command, not Typst           |
 | `error-output`          | Example of the compiler error listing all problems       | —       | —                               | Compiler output, not Typst        |
 | `zugferd-errors-report` | Enabling `zugferd-errors: "report"`                      | —       | —                               | Snippet (partial), no test needed |
+| `printed-details`       | References with the seller's VAT ID and date of supply   | `0.4.2` | —                               | Compiled by check-docs-examples   |
 | `custom-report`         | Theme `zugferd-report` function for a custom list        | —       | `docs/e-invoicing-report/`      |                                   |
 | `party-snippets`        | City, seller identifier, contact, buyer reference, EAS   | —       | —                               | Snippets (partial)                |
 | `unit-snippets`         | Unit builder and dictionary units                        | —       | —                               | Snippets (partial)                |
 | `credit-note`           | Credit note (document type 381) with a preceding invoice | `0.4.2` | `docs/e-invoicing-credit-note/` |                                   |
 | `service-period`        | `service-period` printed by `references.service-time()`  | —       | —                               | Snippet (partial), no test needed |
+| `exemption-code`        | Exemption with its VATEX code (BT-121)                   | —       | —                               | Snippet (partial), no test needed |
 | `notes`                 | Invoice notes, one with a subject code                   | —       | —                               | Snippet (partial), no test needed |
 | `item-data`             | Note, date and country of origin of items                | `0.4.2` | `docs/e-invoicing-item-data/`   |                                   |
 | `currency`              | Invoice in US dollars                                    | —       | —                               | Snippet (partial), no test needed |

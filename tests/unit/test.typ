@@ -792,6 +792,7 @@
 // --- Test dynamic references module ---
 #{
   import "/src/public/references.typ"
+  import "/src/utils/text.typ": plain-text
 
   let mock-locale = (
     strings: (
@@ -836,10 +837,30 @@
     "INV-001",
   ))
   assert.eq((references.invoice-date())(mock-ctx), ("Mock Date", "2026-7-15"))
-  assert.eq((references.service-time())(mock-ctx), (
+  // The service period is marked, so that the e-invoice finds it among the
+  // printed references whatever its title (IP-PERIOD-01)
+  let service-time(..args) = {
+    let (title, value) = (references.service-time(..args))(mock-ctx)
+    assert.eq(value.at("label", default: none), <invoice-pro:service-period>)
+    (title, plain-text(value))
+  }
+  assert.eq(service-time(), (
     "Mock Service Time",
     "2026-7-10 " + sym.dash + " 2026-7-14",
   ))
+  // A date or period given as `value` is printed in the date format
+  assert.eq(
+    service-time(value: datetime(year: 2026, month: 6, day: 30)),
+    ("Mock Service Time", "2026-6-30"),
+  )
+  assert.eq(
+    service-time(value: (
+      datetime(year: 2026, month: 6, day: 1),
+      datetime(year: 2026, month: 6, day: 30),
+    )),
+    ("Mock Service Time", "2026-6-1 " + sym.dash + " 2026-6-30"),
+  )
+  assert.eq((references.service-time(value: none))(mock-ctx).last(), none)
 
   // 2. Test resolution with overrides
   assert.eq(
@@ -859,18 +880,70 @@
     "Custom Date Label",
     "2026-7-15",
   ))
-  assert.eq((references.service-time(value: "Custom Service Time"))(mock-ctx), (
-    "Mock Service Time",
-    "Custom Service Time",
-  ))
+  // A text of its own is marked apart from dates
+  let (title, custom) = (references.service-time(value: "Custom Service Time"))(
+    mock-ctx,
+  )
+  assert.eq(
+    (title, plain-text(custom)),
+    (
+      "Mock Service Time",
+      "Custom Service Time",
+    ),
+  )
+  assert.eq(
+    custom.at("label", default: none),
+    <invoice-pro:service-period-text>,
+  )
 
   // 3. Test service-time fallback to invoice-date when no items/dates are present
   let mock-ctx-no-dates = mock-ctx
   mock-ctx-no-dates.items = ()
-  assert.eq((references.service-time())(mock-ctx-no-dates), (
-    "Mock Service Time",
+  assert.eq(
+    plain-text((references.service-time())(mock-ctx-no-dates).last()),
     "2026-7-15",
+  )
+
+  // 4. The seller's and the buyer's tax identifiers: the sender's and the
+  // recipient's, and on a self-billed invoice, which the buyer issues, the
+  // recipient's and the sender's, with the label of the party
+  let labels = (
+    tax-number: "Tax ID",
+    vat-id: "VAT ID",
+    recipient-tax-number: "Buyer Tax ID",
+    recipient-vat-id: "Buyer VAT ID",
+    payee: "Payee",
+  )
+  let party-ctx = (
+    locale: (strings: (reference: labels)),
+    sender: (tax-nr: "S-TAX", vat-id: "DE1"),
+    recipient: (tax-nr: "R-TAX", vat-id: "FR2"),
+  )
+  let self-billed = (
+    party-ctx
+      + (document-type: (self-billed: true, credit: false, sender-pays: true))
+  )
+  let refs(ctx) = (
+    (references.seller-tax-nr())(ctx),
+    (references.seller-vat-id())(ctx),
+    (references.buyer-vat-id())(ctx),
+  )
+  assert.eq(refs(party-ctx), (
+    ("Tax ID", "S-TAX"),
+    ("VAT ID", "DE1"),
+    ("Buyer VAT ID", "FR2"),
   ))
+  assert.eq(refs(self-billed), (
+    ("Buyer Tax ID", "R-TAX"),
+    ("Buyer VAT ID", "FR2"),
+    ("VAT ID", "DE1"),
+  ))
+  // The payee on one line, `none` without one
+  assert.eq(
+    (references.payee())(party-ctx + (payee: (name: ("Factor", "Bank")))),
+    ("Payee", "Factor, Bank"),
+  )
+  assert.eq((references.payee())(party-ctx), ("Payee", none))
 }
 
 // --- Test bank-details BIC visibility ---
@@ -1244,4 +1317,37 @@
 
   // 6. Empty dictionary returns none
   assert.eq(de-res((:), 1), none)
+}
+
+// --- Argument checks and identifiers of the utilities ---
+#import "/src/utils/types.typ"
+#import "/src/utils/iban.typ": iban-valid, mod97
+#import "/src/utils/creditor-id.typ": creditor-id-valid
+#{
+  // `types.require` builds its message only when the check fails, and the
+  // message is the same as before
+  types.require(5, "unit::value", none, int)
+  types.require([content], "unit::value", str, content)
+  assert.eq(
+    catch(() => types.require(5, "unit::value", none, str)),
+    "assertion failed: variable `unit::value`(5) must be of none | str",
+  )
+  assert.eq(
+    catch(() => types.require("x", "unit::mode", "inclusive", "exclusive")),
+    "assertion failed: variable `unit::mode`(\"x\") must be of \"inclusive\" | \"exclusive\"",
+  )
+
+  // ISO 7064 MOD 97-10 by code point: digits and letters A to Z
+  assert.eq(mod97("123456"), calc.rem(123456, 97))
+  assert.eq(mod97("A"), 10)
+  assert.eq(mod97("Z9"), calc.rem(359, 97))
+  assert(iban-valid("DE89370400440532013000"))
+  assert(iban-valid("GB82WEST12345698765432"))
+  assert(iban-valid("NL91ABNA0417164300"))
+  assert(iban-valid("FR1420041010050500013M02606"))
+  assert(not iban-valid("DE89370400440532013001"))
+  assert(not iban-valid("GB82WEST1234569876543Z"))
+  assert(not iban-valid("de89370400440532013000"))
+  assert(creditor-id-valid("DE98ZZZ09999999999"))
+  assert(not creditor-id-valid("DE99ZZZ09999999999"))
 }

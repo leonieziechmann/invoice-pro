@@ -63,6 +63,7 @@
     contact-person: "Ansprechpartner:in",
     contact-phone: "Telefon",
     contact-email: "E-Mail",
+    payee: "Zahlungsempfänger",
   ),
 
   line-items: (
@@ -164,6 +165,10 @@
       sum,
       date,
     ) => [Der fällige Betrag in Höhe von *#sum* wurde#if date != none [ am #date] bezahlt.],
+    paid-credit: (
+      sum,
+      date,
+    ) => [Den Betrag in Höhe von *#sum* haben wir Ihnen#if date != none [ am #date] ausgezahlt.],
   ),
 
   payment: (

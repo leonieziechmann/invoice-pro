@@ -65,6 +65,7 @@
     contact-person: "Personne de contact",
     contact-phone: "Téléphone",
     contact-email: "E-mail",
+    payee: "Bénéficiaire du paiement",
   ),
 
   /// Column headers and labels for the line-items table
@@ -171,6 +172,10 @@
       sum,
       date,
     ) => [Le montant restant dû de *#sum* a été payé#if date != none [ le #date].],
+    paid-credit: (
+      sum,
+      date,
+    ) => [Nous vous avons versé le montant de *#sum*#if date != none [ le #date].],
   ),
 
   /// Text blocks for payment terms

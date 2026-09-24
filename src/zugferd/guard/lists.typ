@@ -316,6 +316,24 @@
   "VG VI VN VU WF WS XI YE YT ZA ZM ZW",
 )
 
+// 59 codes.
+#let vatex = _codes(
+  "VATEX-EU-132 VATEX-EU-132-1A VATEX-EU-132-1B VATEX-EU-132-1C",
+  "VATEX-EU-132-1D VATEX-EU-132-1E VATEX-EU-132-1F VATEX-EU-132-1G",
+  "VATEX-EU-132-1H VATEX-EU-132-1I VATEX-EU-132-1J VATEX-EU-132-1K",
+  "VATEX-EU-132-1L VATEX-EU-132-1M VATEX-EU-132-1N VATEX-EU-132-1O",
+  "VATEX-EU-132-1P VATEX-EU-132-1Q VATEX-EU-143 VATEX-EU-143-1A",
+  "VATEX-EU-143-1B VATEX-EU-143-1C VATEX-EU-143-1D VATEX-EU-143-1E",
+  "VATEX-EU-143-1F VATEX-EU-143-1FA VATEX-EU-143-1G VATEX-EU-143-1H",
+  "VATEX-EU-143-1I VATEX-EU-143-1J VATEX-EU-143-1K VATEX-EU-143-1L",
+  "VATEX-EU-148 VATEX-EU-148-A VATEX-EU-148-B VATEX-EU-148-C VATEX-EU-148-D",
+  "VATEX-EU-148-E VATEX-EU-148-F VATEX-EU-148-G VATEX-EU-151",
+  "VATEX-EU-151-1A VATEX-EU-151-1AA VATEX-EU-151-1B VATEX-EU-151-1C",
+  "VATEX-EU-151-1D VATEX-EU-151-1E VATEX-EU-309 VATEX-EU-79-C VATEX-EU-AE",
+  "VATEX-EU-D VATEX-EU-F VATEX-EU-G VATEX-EU-I VATEX-EU-IC VATEX-EU-J",
+  "VATEX-EU-O VATEX-FR-CNWVAT VATEX-FR-FRANCHISE",
+)
+
 // The rules of the VAT categories on the tax of a line (BG-30), a VAT
 // breakdown (BG-23), an allowance and a charge: per category code, the
 // checks (check, value, rule) of the rate ("r": 1 above 0, 0 zero, none
@@ -409,6 +427,7 @@
   "vat-category": vat-category,
   "vat-category-2": vat-category-2,
   "vat-prefix": vat-prefix,
+  "vatex": vatex,
 )
 
 /// The rules of the VAT categories by name.

@@ -465,6 +465,10 @@
     }
     entry.insert("ram:BasisAmount", fmt-amount(tax.basis))
     entry.insert("ram:CategoryCode", tax.category)
+    let code = tax.at("code", default: none)
+    if code != none {
+      entry.insert("ram:ExemptionReasonCode", code)
+    }
     entry.insert("ram:RateApplicablePercent", fmt-rate(tax.rate))
     entry
   })

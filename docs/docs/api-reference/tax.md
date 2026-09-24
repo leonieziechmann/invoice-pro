@@ -31,6 +31,11 @@ Items of one tax category may have different grounds (e.g., a medical treatment 
 | `outside-scope(grounds: none)`   | **O**  | **Outside Scope**: Services that fall completely outside the scope of the tax system (always 0%).        |
 | `zero(grounds: none)`            | **Z**  | **Zero Rated Goods**: Standard zero-rated items (always 0%).                                             |
 
+:::info
+The `code` parameter:
+The functions of the categories without VAT (`exempt`, `reverse-charge`, `intra-community`, `export`, `outside-scope`) and `new` also accept `code`, the VAT exemption reason code of the CEF VATEX code list (e.g. `"VATEX-EU-132-1C"` for a medical treatment exempt under Art. 132 (1) (c) of the VAT Directive). An e-invoice states it next to the grounds (BT-121), while the printed invoice shows the grounds. Without `code`, an e-invoice states the code of the category for `reverse-charge` (`VATEX-EU-AE`), `intra-community` (`VATEX-EU-IC`), `export` (`VATEX-EU-G`) and `outside-scope` (`VATEX-EU-O`), and none for an exemption, whose code depends on its legal basis. See [Tax Category Codes](../e-invoicing.md#3-tax-category-codes).
+:::
+
 **Example Usage:**
 
 ```typst
@@ -41,6 +46,28 @@ item(
   price: 1500.00,
   tax: tax.reverse-charge(grounds: "Tax liability of the recipient according to...")
 )
+```
+
+An exemption with its VATEX code:
+
+```typst
+#import "@preview/invoice-pro:0.4.2": *
+
+#show: invoice.with(
+  sender: (name: "Praxis Dr. Muster", address: "Hauptstraße 1", city: "10115 Berlin"),
+  recipient: (name: "Erika Mustermann", address: "Weg 5", city: "50667 Köln"),
+)
+
+#line-items[
+  #item(
+    [Physiotherapy],
+    price: 80,
+    tax: tax.exempt(
+      grounds: "Steuerfrei nach § 4 Nr. 14 UStG",
+      code: "VATEX-EU-132-1C",
+    ),
+  )
+]
 ```
 
 ---

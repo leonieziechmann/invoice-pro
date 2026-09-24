@@ -79,6 +79,8 @@
       grounds-list: group.at("grounds-list", default: ()),
       // Items of the category without exemption grounds.
       missing-grounds: group.at("missing-grounds", default: 0),
+      // The exemption reason codes of the items (BT-121).
+      codes: m-tax.codes-of(group.tax),
       // Some item has no tax at all (`tax: none`), see `tax.implicit-zero`.
       implicit: group.tax.at("implicit", default: false),
       absolute: decimal("0"),

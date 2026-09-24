@@ -1,10 +1,12 @@
 // The service period is resolved once for the printed invoice
 // (`references.service-time`) and the e-invoice (BT-72 or BG-14): the
 // invoice's `service-period`, else the dates of the items (items without a
-// date do not count), else the invoice date. A service period printed as a
+// date do not count), else the invoice date, except on a credit note or a
+// prepayment invoice, which then state none. A service period printed as a
 // text of its own cannot reach the XML (IP-PERIOD-01).
 
 #import "/src/lib.typ": *
+#import "/src/utils/text.typ": plain-text
 #import "/src/logic/service-period.typ": (
   format-service-period, resolve-service-period,
 )
@@ -70,10 +72,17 @@
 }
 
 // --- 2. The XML states the printed service period ---
-// A theme that hands the printed references to `check`.
+// A theme that hands the printed references to `check`, as plain text (the
+// printed service period is marked content, see `references.service-time`).
 #let printed-test(check, ..args, body) = invoice(
   theme: () => (
-    themes.blank() + (document: (ctx, _) => check(ctx.references))
+    themes.blank()
+      + (
+        document: (ctx, _) => check(ctx.references.map(((label, value)) => (
+          label,
+          plain-text(value),
+        ))),
+      )
   ),
   locale: locale.de-de,
   sender: seller,
@@ -146,6 +155,76 @@
   #payment-goal(days: 14)
   #bank
 ]
+// ... but not on a credit note, which amends an invoice: its own date is not
+// the date of the supply, so neither the XML nor the printed invoice states
+// one
+#let undated = [
+  #line-items[#item([A], price: 100)]
+  #payment-goal(days: 14)
+  #bank
+]
+#model-test(
+  date: invoice-date,
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  model => {
+    assert.eq(model.delivery.date, none)
+    assert.eq(model.delivery.period, none)
+    assert.eq(model.delivery.source, none)
+    assert.eq(xml-elements(model, "ram:ActualDeliverySupplyChainEvent"), ())
+    assert.eq(xml-elements(model, "ram:BillingSpecifiedPeriod"), ())
+    assert.eq(rules(model), ())
+    assert.eq(rules(model, level: "warning"), ())
+    // XRechnung recommends the date of the supply (BR-DE-TMP-32, information
+    // in its Schematron): a warning that names `service-period`
+    let m = model
+    m.profile = resolve-profile("xrechnung", "DE")
+    assert("BR-DE-TMP-32" in rules(m, level: "warning"))
+    assert.eq(diagnostic(m, "BR-DE-TMP-32").field, "service-period")
+  },
+)[#undated]
+#printed-test(
+  references: auto,
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  refs => {
+    assert("Leistungszeitraum" not in refs.map(ref => ref.first()))
+    []
+  },
+)[#undated]
+#printed-test(
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  refs => {
+    assert.eq(refs, ())
+    []
+  },
+)[#undated]
+// ... nor on a prepayment invoice, which asks for an advance payment before
+// the supply
+#model-test(date: invoice-date, document-type: "prepayment", model => {
+  assert.eq(model.delivery.date, none)
+  assert.eq(model.delivery.source, none)
+  assert.eq(xml-elements(model, "ram:ActualDeliverySupplyChainEvent"), ())
+  assert.eq(rules(model), ())
+})[#undated]
+#printed-test(references: auto, document-type: "prepayment", refs => {
+  assert("Leistungszeitraum" not in refs.map(ref => ref.first()))
+  []
+})[#undated]
+// ... unless its items are dated
+#model-test(
+  date: invoice-date,
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  model => {
+    assert.eq(model.delivery.date, day(8, 15))
+    assert.eq(model.delivery.source, "items")
+    let m = model
+    m.profile = resolve-profile("xrechnung", "DE")
+    assert("BR-DE-TMP-32" not in rules(m, level: "warning"))
+  },
+)[#mixed]
 
 // --- 3. The invoice's service period overrides the items ---
 #let june = (day(6, 1), day(6, 30))
@@ -180,7 +259,7 @@
 ]
 
 // The default references print the service period of the invoice, which
-// the e-invoice states, after the tax numbers (B2B) or on their own (B2C)
+// the e-invoice states, after the tax numbers, with net and gross prices
 #printed-test(references: auto, service-period: june, refs => {
   assert.eq(refs, (
     ("Steuernummer", "123/456/78901"),
@@ -195,30 +274,52 @@
   tax-mode: "inclusive",
   service-period: day(6, 12),
   refs => {
-    assert.eq(refs, (("Leistungszeitraum", "12.06.2026"),))
+    assert.eq(refs.last(), ("Leistungszeitraum", "12.06.2026"))
     []
   },
 )[#mixed]
-// ... but not the service period of the items, which the items print
+// A seller in Germany prints the date of the supply in any case (§ 14
+// Abs. 4 Satz 1 Nr. 6 UStG): the dates of the items, or the invoice date
 #printed-test(references: auto, refs => {
-  assert.eq(refs.map(ref => ref.first()), (
-    "Steuernummer",
-    "USt-IdNr.",
-    "Empfänger:in USt-IdNr.",
-  ))
+  assert.eq(refs.last(), ("Leistungszeitraum", "15.08.2026"))
   []
 })[#mixed]
+#printed-test(references: auto, refs => {
+  assert.eq(refs.last(), ("Leistungszeitraum", "01.09.2026"))
+  []
+})[
+  #line-items[#item([A], price: 100)]
+]
+// A seller elsewhere only the invoice's own `service-period`: the dates of
+// the items are printed with the items, and the invoice date is the date of
+// the invoice (Art. 226 No. 7 of the VAT Directive)
+#printed-test(
+  references: auto,
+  sender: seller + (country: country.at, vat-id: "ATU12345675"),
+  refs => {
+    assert.eq(refs.map(ref => ref.first()), (
+      "Steuernummer",
+      "USt-IdNr.",
+      "Empfänger:in USt-IdNr.",
+    ))
+    []
+  },
+)[#mixed]
 
-// --- 4. A service period printed as a text of its own (IP-PERIOD-01) ---
+// --- 4. The printed service period and the XML (IP-PERIOD-01) ---
+// A text of its own where the XML states the invoice date contradicts it: an
+// error.
 // The references are evaluated while the invoice is drawn, so these tests
-// read the diagnostics of the e-invoice from the report of the theme.
+// read the diagnostics of the e-invoice from the report of the theme. The
+// report is only shown with diagnostics; each shown report leaves a marker,
+// which the end of the file counts.
 #let report-test(check, ..args, body) = invoice(
   theme: () => (
     themes.blank()
       + (
         zugferd-report: (ctx, result) => {
           check(result)
-          []
+          [#metadata(none)<report-checked>]
         },
       )
   ),
@@ -235,12 +336,19 @@
 #let warnings(result) = (
   result.diagnostics.filter(d => d.level == "warning").map(d => d.rule)
 )
+#let errors(result) = (
+  result.diagnostics.filter(d => d.level == "error").map(d => d.rule)
+)
+// An undated item with a unit only EN 16931 knows, which gives a warning
+// (IP-UNIT-01), so that the report is shown.
+#let screws = item([Schrauben], price: 1, quantity: 10, unit: "STK")
 
 #report-test(
   references: (references.service-time(value: "Juni 2026"),),
   result => {
     assert.eq(result.model.delivery.printed, "Juni 2026")
-    assert.eq(warnings(result), ("IP-PERIOD-01",))
+    assert.eq(errors(result), ("IP-PERIOD-01",))
+    assert.eq(warnings(result), ())
     let d = result.diagnostics.find(d => d.rule == "IP-PERIOD-01")
     assert.eq(d.field, "references")
     assert.eq(
@@ -248,19 +356,28 @@
       "The invoice prints the service period \"Juni 2026\", but the e-invoice states \"01.09.2026\" (BT-72), the invoice date, as no item has a date.",
     )
     assert(d.hint.starts-with("Set `service-period` on the invoice"))
+    assert(
+      d.hint.ends-with(
+        "print it with `references.service-time()` without `value`, which prints the service period of the e-invoice.",
+      ),
+    )
   },
 )[
   #line-items[#item([Wartung Juni], price: 100)]
   #payment-goal(days: 14)
   #bank
 ]
-// ... also as a reference of its own with the label of the service period
+// A reference of its own with the title of the service period is compared
+// as well. Besides a dated item it may name the same period in other words:
+// a warning.
 #report-test(
   references: (("Leistungszeitraum", "Juni 2026"),),
   result => {
+    assert.eq(errors(result), ())
     assert.eq(warnings(result), ("IP-PERIOD-01",))
-    assert(
-      result.diagnostics.first().message.contains("\"30.06.2026\" (BT-72)."),
+    assert.eq(
+      result.diagnostics.first().message,
+      "The invoice prints the service period \"Juni 2026\" as a text of its own, but the e-invoice states \"30.06.2026\" (BT-72), from the dates of the items. Make sure that both name the same period.",
     )
   },
 )[
@@ -272,7 +389,9 @@
 #report-test(
   zugferd: "minimum",
   references: (("Leistungszeitraum", "Juni 2026"),),
-  result => assert.eq(warnings(result), ()),
+  // A note, which MINIMUM cannot state (IP-PROFILE-01), shows the report.
+  notes: [Wartung],
+  result => assert.eq(result.diagnostics.map(d => d.rule), ("IP-PROFILE-01",)),
 )[
   #line-items[#item([Wartung Juni], price: 100)]
   #payment-goal(days: 14)
@@ -291,8 +410,155 @@
 )[
   #line-items[
     #item([Wartung Juni], price: 100)
-    #item([Schrauben], price: 1, quantity: 10, unit: "STK")
+    #screws
   ]
   #payment-goal(days: 14)
   #bank
 ]
+
+// --- 5. A date or period of its own as `value` ---
+// `references.service-time(value: ..)` prints a date or a period `(start,
+// end)` in the date format of the locale, as the e-invoice states it. What
+// it prints is compared with the e-invoice whatever its title.
+#printed-test(
+  references: (
+    references.service-time(value: day(6, 12)),
+    references.service-time(label: "Lieferzeitraum", value: june),
+  ),
+  refs => {
+    assert.eq(refs, (
+      ("Leistungszeitraum", "12.06.2026"),
+      ("Lieferzeitraum", "01.06.2026 – 30.06.2026"),
+    ))
+    []
+  },
+)[#mixed]
+// The date of the dated item, as the e-invoice states it
+#report-test(
+  references: (references.service-time(value: day(8, 15)),),
+  result => {
+    assert.eq(result.model.delivery.printed, "15.08.2026")
+    assert.eq(result.diagnostics.map(d => d.rule), ("IP-UNIT-01",))
+  },
+)[
+  #line-items[
+    #item([A], price: 100, date: day(8, 15))
+    #screws
+  ]
+  #payment-goal(days: 14)
+  #bank
+]
+// Another date contradicts the e-invoice
+#report-test(
+  references: (references.service-time(value: day(8, 14)),),
+  result => {
+    assert.eq(errors(result), ("IP-PERIOD-01",))
+    assert.eq(
+      result.diagnostics.first().message,
+      "The invoice prints the service period \"14.08.2026\", but the e-invoice states \"15.08.2026\" (BT-72), from the dates of the items.",
+    )
+  },
+)[
+  #line-items[#item([A], price: 100, date: day(8, 15))]
+  #payment-goal(days: 14)
+  #bank
+]
+// ... also under a title of its own, and as a period besides the invoice's
+// `service-period`
+#report-test(
+  service-period: june,
+  references: (
+    references.service-time(label: "Lieferzeitraum", value: (
+      day(6, 1),
+      day(6, 15),
+    )),
+  ),
+  result => {
+    assert.eq(result.model.delivery.printed, "01.06.2026 – 15.06.2026")
+    assert.eq(errors(result), ("IP-PERIOD-01",))
+    assert.eq(
+      result.diagnostics.first().message,
+      "The invoice prints the service period \"01.06.2026 – 15.06.2026\", but the e-invoice states \"01.06.2026 – 30.06.2026\" (BG-14).",
+    )
+  },
+)[
+  #line-items[#item([Wartung Juni], price: 100)]
+  #payment-goal(days: 14)
+  #bank
+]
+#report-test(
+  service-period: june,
+  references: (references.service-time(label: "Lieferzeitraum", value: june),),
+  result => assert.eq(result.diagnostics.map(d => d.rule), ("IP-UNIT-01",)),
+)[
+  #line-items[
+    #item([Wartung Juni], price: 100)
+    #screws
+  ]
+  #payment-goal(days: 14)
+  #bank
+]
+
+// A text of its own besides the invoice's `service-period`: a warning
+#report-test(
+  service-period: june,
+  references: (references.service-time(value: [Juni 2026]),),
+  result => {
+    assert.eq(result.model.delivery.printed, "Juni 2026")
+    assert.eq(result.model.delivery.printed-own, true)
+    assert.eq(warnings(result), ("IP-PERIOD-01",))
+    assert.eq(
+      result.diagnostics.first().message,
+      "The invoice prints the service period \"Juni 2026\" as a text of its own, but the e-invoice states \"01.06.2026 – 30.06.2026\" (BG-14). Make sure that both name the same period.",
+    )
+  },
+)[
+  #line-items[#item([Wartung Juni], price: 100)]
+  #payment-goal(days: 14)
+  #bank
+]
+
+// A credit note without dates states no date of the supply: a date printed
+// with `value` is missing from the e-invoice (an error), a text of its own
+// cannot be compared (a warning)
+#report-test(
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  references: (references.service-time(value: day(8, 20)),),
+  result => {
+    assert.eq(result.model.delivery.text, none)
+    assert.eq(errors(result), ("IP-PERIOD-01",))
+    assert.eq(
+      result.diagnostics.find(d => d.rule == "IP-PERIOD-01").message,
+      "The invoice prints the service period \"20.08.2026\", but the e-invoice states none, as the date of a credit note is not the date of the supply.",
+    )
+  },
+)[#undated]
+#report-test(
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  references: (references.service-time(value: [August 2026]),),
+  result => {
+    assert.eq(errors(result), ())
+    assert.eq(warnings(result), ("IP-PERIOD-01",))
+    assert.eq(
+      result.diagnostics.find(d => d.rule == "IP-PERIOD-01").message,
+      "The invoice prints the service period \"August 2026\" as a text of its own, but the e-invoice states none, as the date of a credit note is not the date of the supply.",
+    )
+  },
+)[#undated]
+
+#report-test(
+  document-type: "prepayment",
+  references: (references.service-time(value: day(10, 1)),),
+  result => {
+    assert.eq(errors(result), ("IP-PERIOD-01",))
+    assert.eq(
+      result.diagnostics.find(d => d.rule == "IP-PERIOD-01").message,
+      "The invoice prints the service period \"01.10.2026\", but the e-invoice states none, as a prepayment invoice precedes the supply.",
+    )
+  },
+)[#undated]
+
+// Every report above was shown and checked.
+#context assert.eq(query(<report-checked>).len(), 12)

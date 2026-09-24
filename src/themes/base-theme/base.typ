@@ -47,8 +47,18 @@
   /// `zugferd-errors: "panic"`.
   /// -> none | (ctx, dictionary) => content
   zugferd-report: _render-zugferd-report,
+  /// What `document` prints of the invoice data besides the body:
+  /// `references` (the reference signs, `ctx.references`), `party-extra`
+  /// (`extra` of the sender and the recipient) and `page-content` (content
+  /// of its own on every page, e.g. a footer, whose text invoice-pro cannot
+  /// read). An e-invoice checks that the printed invoice shows the seller's
+  /// tax number or VAT ID and the date of the supply only for a theme that
+  /// prints the references; `header` and `footer` count as page content.
+  /// -> dictionary
+  prints: (:),
 ) = {
   types.require(zugferd-report, "theme::zugferd-report", none, function)
+  types.require(prints, "theme::prints", dictionary)
   (
     document: (ctx, body) => {
       if header != none and header != [] {
@@ -67,5 +77,10 @@
     payment-goal: payment-goal,
     signature: signature,
     zugferd-report: zugferd-report,
+    prints: (references: false, party-extra: false, page-content: false)
+      + prints
+      + if header not in (none, []) or footer not in (none, []) {
+        (page-content: true)
+      } else { (:) },
   )
 }

@@ -68,6 +68,7 @@
         <ram:ExemptionReason>TVA non applicable, art. 293 B du CGI.</ram:ExemptionReason>
         <ram:BasisAmount>584.25</ram:BasisAmount>
         <ram:CategoryCode>E</ram:CategoryCode>
+        <ram:ExemptionReasonCode>VATEX-FR-FRANCHISE</ram:ExemptionReasonCode>
         <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>
       <ram:SpecifiedTradeAllowanceCharge>

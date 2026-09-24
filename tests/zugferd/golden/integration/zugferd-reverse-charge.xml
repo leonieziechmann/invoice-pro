@@ -112,6 +112,7 @@
         <ram:ExemptionReason>Reverse charge</ram:ExemptionReason>
         <ram:BasisAmount>1000.00</ram:BasisAmount>
         <ram:CategoryCode>AE</ram:CategoryCode>
+        <ram:ExemptionReasonCode>VATEX-EU-AE</ram:ExemptionReasonCode>
         <ram:RateApplicablePercent>0.00</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>
       <ram:SpecifiedTradePaymentTerms>

@@ -69,6 +69,7 @@
       // VAT category E in the e-invoice.
       small-enterprise-special-scheme: tax.exempt(
         grounds: "TVA non applicable, art. 293 B du CGI.",
+        code: "VATEX-FR-FRANCHISE",
       ),
     ),
   )

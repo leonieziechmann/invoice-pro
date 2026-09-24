@@ -22,6 +22,7 @@
 #import "model.typ": profile-terms, vat-eas-codes, vat-id-country, vat-id-prefix
 #import "document.typ": note-subject-code-valid, title-kind
 #import "../utils/iban.typ": format-iban, iban-valid
+#import "../logic/service-period.typ": supply-dated
 #import "../utils/creditor-id.typ": creditor-id-valid
 
 #let _zero = decimal("0")
@@ -53,6 +54,22 @@
   fmt-number(rate * 100, min-digits: 0, max-digits: rate-digits) + "%"
 )
 
+// IP-PROFILE-01: an input the profile has no business term for, which is
+// therefore not written into the e-invoice. `lowest` is the lowest profile
+// that states it; `inputs` names several inputs in the message.
+#let _not-carried(profile, field, term, lowest, inputs: none) = warning(
+  "IP-PROFILE-01",
+  field,
+  "The "
+    + profile.name
+    + " profile cannot state "
+    + term
+    + ", so "
+    + if inputs == none { "`" + field + "` is" } else { inputs + " are" }
+    + " not written into the e-invoice.",
+  hint: "Use the " + _quoted(lowest) + " profile or higher to state it.",
+)
+
 // Human readable reference to an invoice line, e.g. `item 2 (Consulting)`.
 #let _line-field(line) = {
   "item " + line.id + if line.name != none { " (" + line.name + ")" }
@@ -70,6 +87,18 @@
 // is removed separately. (ASCII only: a class with other characters, or a
 // Unicode class such as `\d` or `\s`, takes a fraction of a millisecond to
 // compile on every compile.)
+// The highest total of a small-amount invoice in euros, which needs fewer
+// details (§ 33 UStDV).
+#let _small-amount = decimal("250")
+
+// Why the e-invoice of a document states no date of the supply when nothing
+// dates it (see `supply-dated`): a credit note or a prepayment invoice.
+#let _undated-reason(document) = if (
+  type(document) == dictionary and document.at("prepayment", default: false)
+) { "a prepayment invoice precedes the supply" } else {
+  "the date of a credit note is not the date of the supply"
+}
+
 #let _amount-characters = regex("[0-9 .,'+\\-()]")
 
 #let check-document(model) = {
@@ -388,13 +417,11 @@
   // profiles can state them.
   let notes = model.invoice.at("notes", default: ())
   if notes.len() > 0 and not profile.notes {
-    out.push(warning(
-      "IP-PROFILE-01",
+    out.push(_not-carried(
+      profile,
       "notes",
-      "The "
-        + profile.name
-        + " profile has no invoice notes (BT-22), so `notes` are printed, but not written into the e-invoice.",
-      hint: "Use the \"basic-wl\" profile or a richer one to state them.",
+      "invoice notes (BT-22)",
+      "basic-wl",
     ))
   }
   // The project reference (BT-11) exists in EN 16931 and XRechnung only.
@@ -402,13 +429,11 @@
     model.invoice.at("project", default: none) != none
       and not profile.procuring-project
   ) {
-    out.push(warning(
-      "IP-PROFILE-01",
+    out.push(_not-carried(
+      profile,
       "project",
-      "The "
-        + profile.name
-        + " profile has no project reference (BT-11), so `project` is not written into the e-invoice.",
-      hint: "Use the \"en16931\" or \"xrechnung\" profile to state it.",
+      "the project reference (BT-11)",
+      "en16931",
     ))
   }
   // MINIMUM states neither the service period (BT-72, BG-14) nor the
@@ -418,13 +443,11 @@
       and model.at("delivery", default: (:)).at("source", default: none)
         == "invoice"
   ) {
-    out.push(warning(
-      "IP-PROFILE-01",
+    out.push(_not-carried(
+      profile,
       "service-period",
-      "The "
-        + profile.name
-        + " profile has no service period (BT-72, BG-14), so `service-period` is not written into the e-invoice.",
-      hint: "Use the \"basic-wl\" profile or a richer one to state it.",
+      "the service period (BT-72, BG-14)",
+      "basic-wl",
     ))
   }
   if not profile.document-references {
@@ -433,16 +456,14 @@
       if model.invoice.at(key, default: none) != none { given.push(key) }
     }
     if given.len() > 0 {
-      out.push(warning(
-        "IP-PROFILE-01",
+      out.push(_not-carried(
+        profile,
         given.first(),
-        "The "
-          + profile.name
-          + " profile has no preceding invoice reference (BG-3), so "
-          + given.map(key => "`" + key + "`").join(" and ")
-          + if given.len() == 1 { " is" } else { " are" }
-          + " not written into the e-invoice.",
-        hint: "Use the \"basic-wl\" profile or a richer one to state it.",
+        "the preceding invoice reference (BG-3)",
+        "basic-wl",
+        inputs: if given.len() > 1 {
+          given.map(key => "`" + key + "`").join(" and ")
+        },
       ))
     }
   }
@@ -462,37 +483,129 @@
     }
   }
 
-  // IP-PERIOD-01: a service period printed as a text of its own (e.g.
-  // `references.service-time(value: "Juni 2026")`) cannot reach the XML,
-  // which states the service period of the items or the invoice date. The
-  // delivery information exists from BASIC WL on.
+  // IP-PERIOD-01: the service period the invoice prints is the one the XML
+  // states (BT-72 or BG-14). Another date or period (e.g.
+  // `references.service-time(value: datetime(..))`) contradicts it, and so
+  // does a text of its own (e.g. `references.service-time(value: "Juni
+  // 2026")`) when the XML states the invoice date for want of any date. A
+  // text of its own besides dates of the items or the invoice's
+  // `service-period` may name the same period in other words: a warning.
+  // The delivery information exists from BASIC WL on.
   let delivery = model.at("delivery", default: (:))
   let printed = delivery.at("printed", default: none)
   let stated = delivery.at("text", default: none)
-  if (
-    profile.settlement
-      and printed != none
-      and stated != none
-      and printed != stated
-  ) {
-    out.push(warning(
+  let source = delivery.at("source", default: none)
+  let term = if delivery.at("period", default: none) != none { "BG-14" } else {
+    "BT-72"
+  }
+  // A credit note or a prepayment invoice without dates states none (see
+  // `service-period-of`): a date printed there is missing from the
+  // e-invoice, a text of its own may be a warning only.
+  let document = model.invoice.at("document", default: none)
+  if profile.settlement and printed != none and printed != stated {
+    let own = delivery.at("printed-own", default: true)
+    let contradicts = not own or source == "invoice-date"
+    let report = if contradicts { error } else { warning }
+    out.push(report(
       "IP-PERIOD-01",
       "references",
       "The invoice prints the service period "
         + _quoted(printed)
+        + if contradicts { "" } else { " as a text of its own" }
         + ", but the e-invoice states "
-        + _quoted(stated)
-        + " ("
-        + if delivery.at("period", default: none) != none { "BG-14" } else {
-          "BT-72"
+        + if stated == none { "none, as " + _undated-reason(document) } else {
+          (
+            _quoted(stated)
+              + " ("
+              + term
+              + ")"
+              + if source == "invoice-date" {
+                ", the invoice date, as no item has a date"
+              } else if source == "items" { ", from the dates of the items" }
+          )
         }
-        + ")"
-        + if delivery.at("source", default: none) == "invoice-date" {
-          ", the invoice date, as no item has a date"
-        }
-        + ".",
-      hint: "Set `service-period` on the invoice, e.g. `service-period: (datetime(year: 2026, month: 6, day: 1), datetime(year: 2026, month: 6, day: 30))`, and print it with `references.service-time()`.",
+        + if contradicts or stated == none { "." } else {
+          ". Make sure that both name the same period."
+        },
+      hint: "Set `service-period` on the invoice, e.g. `service-period: (datetime(year: 2026, month: 6, day: 1), datetime(year: 2026, month: 6, day: 30))`, and print it with `references.service-time()` without `value`, which prints the service period of the e-invoice.",
     ))
+  }
+
+  // BR-DE-TMP-32 (information in the XRechnung 3.0 Schematron): an invoice
+  // states the date of the supply (BT-72, BG-14, or BG-26 on every line).
+  // An invoice without dates states its invoice date; a credit note, whose
+  // own date is not the date of the supply, states none (see
+  // `service-period-of`), so it needs the date of the supply it credits.
+  if (
+    profile.xrechnung
+      and delivery.at("date", default: none) == none
+      and delivery.at("period", default: none) == none
+  ) {
+    out.push(warning(
+      "BR-DE-TMP-32",
+      "service-period",
+      "XRechnung recommends the date of the supply (BT-72) or the invoicing period (BG-14), which the e-invoice does not state without dates, as "
+        + _undated-reason(document)
+        + ".",
+      hint: "Set `service-period` to the date or period of the supply the document refers to, e.g. the one of the preceding invoice, or give the items their `date`.",
+    ))
+  }
+
+  // IP-PERIOD-03: the invoice prints the date of the supply: by its
+  // references, with the dates of the items or in its text (see
+  // `_period-shown` of the model). German law requires it on
+  // every invoice, also when it is the date of the invoice (§ 14 Abs. 4
+  // Satz 1 Nr. 6 UStG, UStAE 14.5 Abs. 16), except on a small-amount invoice
+  // of at most 250 euros that is no intra-community supply or reverse charge
+  // (§ 33 UStDV); the VAT Directive where it differs from the date of the
+  // invoice (Art. 226 No. 7). A credit note amends an invoice that states
+  // it, and a prepayment invoice precedes the supply (§ 14 Abs. 5 UStG asks
+  // for the date of the payment only if it is known), see `supply-dated`.
+  // Only known for a theme that prints the references (e.g. DIN 5008), not
+  // for the blank theme.
+  if delivery.at("shown", default: none) == false and supply-dated(document) {
+    let issue-date = model.invoice.at("issue-date", default: none)
+    let differs = (
+      delivery.at("period", default: none) != none
+        or delivery.at("date", default: none) != issue-date
+    )
+    let german = model.seller.address.country == "DE"
+    let totals = model.at("totals", default: (:))
+    let small-amount = (
+      german
+        and model.at("currency", default: none) == "EUR"
+        and totals.at("gross", default: none) != none
+        and totals.gross <= _small-amount
+        and model
+          .at("taxes", default: ())
+          .all(tax => tax.at("category", default: none) not in ("K", "AE"))
+    )
+    if german and not small-amount {
+      out.push(error(
+        "IP-PERIOD-03",
+        "references",
+        "The printed invoice does not show the date of the supply"
+          + if profile.settlement and stated != none {
+            " (" + _quoted(stated) + " in the e-invoice, " + term + ")"
+          }
+          + ", which German law requires on the invoice, also when it is the date of the invoice (§ 14 Abs. 4 Satz 1 Nr. 6 UStG).",
+        hint: "Print it with `references.service-time()`, which the default `references` and every preset include, and set `service-period` if the supply was not on the date of the invoice. A sentence such as \"Leistungsdatum entspricht Rechnungsdatum\" is not recognized: print the date.",
+      ))
+    } else if profile.settlement and stated != none and differs {
+      out.push(warning(
+        "IP-PERIOD-03",
+        "references",
+        "The e-invoice states the date of the supply "
+          + _quoted(stated)
+          + " ("
+          + term
+          + "), which is not the date of the invoice, but the printed invoice does not show it"
+          + if small-amount {
+            " (a small-amount invoice of at most 250 euros need not show it, § 33 UStDV)."
+          } else { " (Art. 226 No. 7 of the VAT Directive)." },
+        hint: "Print it with `references.service-time()`, which every preset includes.",
+      ))
+    }
   }
   out
 }
@@ -581,6 +694,9 @@
 
 // Patterns of rare checks, compiled once on first use.
 #let _post-code-digits() = regex("[0-9]{3,}")
+// A Leitweg-ID, the routing identifier of a German public buyer (as
+// `id.leitweg` checks it), e.g. "04011000-1234512345-06".
+#let _leitweg-pattern() = regex("^[0-9]{2,12}(-[0-9A-Z]{1,30})?-[0-9]{2}$")
 // XR-TELEPHONE-REGEX (three digits, BR-DE-27) and XR-EMAIL-REGEX (BR-DE-28)
 // of the XRechnung 3.0 Schematron.
 #let _xr-patterns() = (
@@ -633,6 +749,7 @@
   field,
   term,
   represented: false,
+  reference: none,
 ) = {
   let (missing-rule, scheme-rule) = rules
   let address = party.electronic-address
@@ -665,6 +782,18 @@
           + ". Set `electronic-address` or `email` on the "
           + field
           + "."
+      )
+    }
+    // A public buyer in Germany receives XRechnung at its Leitweg-ID, the
+    // buyer reference (`reference`) of this invoice (EAS 0204).
+    if type(reference) == str and reference.match(_leitweg-pattern()) != none {
+      hint = (
+        "A public buyer is reached by its Leitweg-ID: set `electronic-address: id.leitweg("
+          + _quoted(reference)
+          + ")` on the "
+          + field
+          + ". "
+          + hint
       )
     }
     return (
@@ -1031,20 +1160,6 @@
   )
 }
 
-// An input the profile has no business term for is not written into the
-// e-invoice: `lowest` is the lowest profile that states it.
-#let _not-carried(profile, field, term, lowest) = warning(
-  "IP-PROFILE-01",
-  field,
-  "The "
-    + profile.name
-    + " profile cannot state "
-    + term
-    + ", so `"
-    + field
-    + "` is not written into the e-invoice.",
-  hint: "Use the " + _quoted(lowest) + " profile or higher to state it.",
-)
 
 // The seller tax representative (BG-11): its name (BR-18), country (BR-20)
 // and VAT identifier (BR-56, BR-CO-09), and the address the VAT Directive
@@ -1506,6 +1621,31 @@
     ))
   }
 
+  // IP-PRINT-03: the printed invoice shows the seller's VAT ID or tax number
+  // the XML states (BT-31, BT-32), one of which the law requires on the
+  // invoice (§ 14 Abs. 4 Satz 1 Nr. 2 UStG; Art. 226 No. 3 of the VAT
+  // Directive). Only known for a theme that prints the references and no
+  // content of its own on every page, see `logic/printed.typ`.
+  if seller.at("printed-tax-id", default: none) == false {
+    let stated = ()
+    if seller.vat-id != none {
+      stated.push("VAT identifier " + _quoted(seller.vat-id) + " (BT-31)")
+    }
+    if seller.tax-nr != none {
+      stated.push("tax number " + _quoted(seller.tax-nr) + " (BT-32)")
+    }
+    out.push(error(
+      "IP-PRINT-03",
+      "references",
+      "The e-invoice states the seller's "
+        + stated.join(" and ")
+        + ", but the printed invoice shows "
+        + if stated.len() > 1 { "neither" } else { "it nowhere" }
+        + ". The printed invoice and the e-invoice must state the same details, and the law requires the seller's tax number or VAT identifier on every invoice but a small-amount invoice (§ 14 Abs. 4 Satz 1 Nr. 2 UStG, § 33 UStDV; Art. 226 No. 3 of the VAT Directive).",
+      hint: "Print it with the reference signs: keep `references: auto`, use a preset such as `references.preset-b2b()`, or add `references.seller-vat-id()` or `references.seller-tax-nr()` to your references. The address and the `extra` details of the sender and the text of the invoice count as well. A page header or footer of your own (`set page(..)`) cannot be read: give such details as the `footer` of the theme, e.g. `themes.DIN-5008(footer: ..)`, whose text is not checked.",
+    ))
+  }
+
   // Identifiers of the `id` module, legal registration identifiers
   // (BT-30, BT-47) and the details only some profiles state.
   out += _check-typed-ids(seller, "sender", "seller")
@@ -1596,6 +1736,7 @@
       ("PEPPOL-EN16931-R010", "BR-63"),
       "recipient",
       "buyer electronic address (BT-49)",
+      reference: model.invoice.at("buyer-reference", default: none),
     )
   }
 
@@ -1686,11 +1827,25 @@
     }
 
     if model.invoice.buyer-reference == none {
+      // A buyer reached by its Leitweg-ID (EAS 0204) names it as reference.
+      let address = buyer.at("electronic-address", default: none)
+      let routing = if (
+        type(address) == dictionary
+          and address.at("scheme", default: none) == "0204"
+      ) { address.at("id", default: none) }
       out.push(error(
         "BR-DE-15",
         "recipient.buyer-reference",
         "XRechnung requires the buyer reference (BT-10), e.g. the Leitweg-ID.",
-        hint: "Set `buyer-reference` (or `leitweg-id`) on the recipient.",
+        hint: if routing != none {
+          (
+            "Set the Leitweg-ID of its electronic address as `leitweg-id: id.leitweg("
+              + _quoted(routing)
+              + ")` on the recipient, or another `buyer-reference`."
+          )
+        } else {
+          "Set `buyer-reference` on the recipient, or for a public buyer its Leitweg-ID, e.g. `leitweg-id: id.leitweg(\"04011000-1234512345-06\")`, which can be its electronic address as well."
+        },
       ))
     }
   }
@@ -1870,13 +2025,11 @@
     }
   }
   if origins > 0 and not profile.item-origin {
-    out.push(warning(
-      "IP-PROFILE-01",
+    out.push(_not-carried(
+      profile,
       "item.origin",
-      "The "
-        + profile.name
-        + " profile has no country of origin of an item (BT-159), so `origin` is printed, but not written into the e-invoice.",
-      hint: "Use the \"en16931\" or \"xrechnung\" profile to state it.",
+      "the country of origin of an item (BT-159)",
+      "en16931",
     ))
   }
   out
@@ -1933,6 +2086,95 @@
     + (if number < 10 { "0" } else { "" })
     + str(number)
 )
+
+// The VAT category of the VAT exemption reason codes (BT-121) that have one
+// of their own; every other code of the VATEX list is an exemption (E).
+#let _code-categories = (
+  "VATEX-EU-AE": "AE",
+  "VATEX-EU-IC": "K",
+  "VATEX-EU-G": "G",
+  "VATEX-EU-O": "O",
+)
+
+// The exemption reason codes (BT-121) of a VAT group: BR-CL-22 (a code of
+// the VATEX list), IP-TAX-02 (a code of another VAT category, or of a taxed
+// one), IP-TAX-03 (several codes, which EN 16931 cannot state for one VAT
+// category and rate) and IP-TAX-04 (an exemption with a code but no text,
+// which the printed invoice needs).
+#let _check-exemption-codes(tax, field) = {
+  let out = ()
+  let category = tax.category
+  let codes = tax.at("codes", default: ())
+  for code in codes {
+    if code not in codelists.vatex {
+      out.push(error(
+        "BR-CL-22",
+        field,
+        "The VAT exemption reason code (BT-121) "
+          + _quoted(code)
+          + " is not a code of the VATEX code list.",
+        hint: "Use a code of the CEF VATEX list, e.g. \"VATEX-EU-132-1A\" for an exemption of Art. 132 (1) (a) of the VAT Directive, or leave out `code`: the grounds are stated as text (BT-120).",
+      ))
+      continue
+    }
+    let fits = _code-categories.at(code, default: "E")
+    if category in ("S", "Z", "L", "M") or fits != category {
+      out.push(error(
+        "IP-TAX-02",
+        field,
+        "The VAT exemption reason code (BT-121) "
+          + _quoted(code)
+          + if category in ("S", "Z", "L", "M") {
+            (
+              " cannot be stated for the VAT category "
+                + category
+                + ", which is not exempt: it has no exemption reason."
+            )
+          } else {
+            (
+              " is a code of the VAT category "
+                + fits
+                + ", not of "
+                + category
+                + ", so the e-invoice would state another reason than its category."
+            )
+          },
+        hint: if category in ("S", "Z", "L", "M") {
+          "Leave out `code`."
+        } else {
+          "Use the constructor of the `tax` module that fits the code, e.g. `tax.intra-community()` for \"VATEX-EU-IC\" or `tax.exempt(code: ..)` for an exemption, or leave out `code`."
+        },
+      ))
+    }
+  }
+  if codes.len() > 1 {
+    out.push(warning(
+      "IP-TAX-03",
+      field,
+      "The items of the VAT category "
+        + category
+        + " give the VAT exemption reason codes "
+        + codes.map(_quoted).join(", ")
+        + ", but the e-invoice states one code (BT-121) per VAT category and rate, so it states the reasons as text only (BT-120).",
+      hint: "Give the items of one VAT category and rate the same `code`, or invoice them separately.",
+    ))
+  }
+  if (
+    category == "E"
+      and tax.reason == none
+      and tax.at("code", default: none) != none
+  ) {
+    out.push(error(
+      "IP-TAX-04",
+      field,
+      "Exempt items (E) with the VAT exemption reason code "
+        + _quoted(tax.code)
+        + " (BT-121) need the exemption reason as text as well: the printed invoice states why no VAT is charged (§ 14 Abs. 4 Satz 1 Nr. 8 UStG, Art. 226 No. 11 of the VAT Directive).",
+      hint: "State the legal reason next to the code, e.g. `tax.exempt(grounds: \"Steuerfrei nach § 4 Nr. 14 UStG\", code: \"VATEX-EU-132-1C\")`.",
+    ))
+  }
+  out
+}
 
 // The categories that need a seller VAT identifier or tax number (BR-x-02,
 // -03, -04); K and G need the VAT identifier.
@@ -2112,14 +2354,19 @@
         hint: "Use `tax.outside-scope()`, which has none.",
       ))
     }
-    if category == "E" and tax.reason == none {
+    if (
+      category == "E"
+        and tax.reason == none
+        and tax.at("code", default: none) == none
+    ) {
       out.push(error(
         "BR-E-10",
         field,
         "Exempt items (E) need the VAT exemption reason (BT-120).",
-        hint: "State the legal reason, e.g. `tax.exempt(grounds: \"Steuerfrei nach § 4 Nr. 21 UStG\")`.",
+        hint: "State the legal reason, e.g. `tax.exempt(grounds: \"Steuerfrei nach § 4 Nr. 21 UStG\")`, and its VATEX code if you know it, e.g. `code: \"VATEX-EU-132-1G\"`.",
       ))
     }
+    out += _check-exemption-codes(tax, field)
   }
 
   // The identifiers of the parties each category requires where it occurs:
@@ -2240,21 +2487,6 @@
   none
 }
 
-// An input the profile has no business term for: it is not written into the
-// e-invoice. `lowest` is the lowest profile that states it.
-#let _payment-not-carried(profile, field, term, lowest) = warning(
-  "IP-PROFILE-01",
-  field,
-  "The "
-    + profile.name
-    + " profile cannot state "
-    + term
-    + ", so `"
-    + field
-    + "` is not written into the e-invoice.",
-  hint: "Use the " + _quoted(lowest) + " profile or higher to state it.",
-)
-
 // What a kind of payment means is, and the input that states it, for
 // messages. A means of `paid` without details names its code.
 #let _means-names = (
@@ -2294,6 +2526,13 @@
 
   if means.len() == 0 {
     if xrechnung {
+      // On a credit note or a self-billed invoice, the sender pays the
+      // amount: to the recipient's account, or by a set-off.
+      let document = model.invoice.at("document", default: none)
+      let sender-pays = (
+        type(document) == dictionary
+          and document.at("sender-pays", default: false)
+      )
       out.push(error(
         "BR-DE-1",
         if payment.at("paid", default: false) { "paid.method" } else {
@@ -2302,6 +2541,8 @@
         "XRechnung requires payment instructions (BG-16).",
         hint: if payment.at("paid", default: false) {
           "Set `method` on `paid` to the way the invoice was paid, e.g. `paid(method: \"cash\")`, or add the payment means it was paid with, e.g. `#bank-details(iban: ..)` for a credit transfer."
+        } else if sender-pays {
+          "You pay the amount of a credit note or a self-billed invoice: add `#bank-details(iban: ..)` with the recipient's account you transfer it to (not your own), `#paid(method: ..)` if it is paid already, or for a set-off against an invoice `#paid(method: (code: \"97\", name: [Verrechnung]))`."
         } else { "Add the payment means of the invoice: " + _means-hint + "." },
       ))
     }
@@ -2385,7 +2626,7 @@
         ))
       }
       if entry.account-name != none and not profile.account-name {
-        out.push(_payment-not-carried(
+        out.push(_not-carried(
           profile,
           "bank-details.name",
           "the account name (BT-85)",
@@ -2469,7 +2710,7 @@
           ))
         }
       } else if not profile.payment-card {
-        out.push(_payment-not-carried(
+        out.push(_not-carried(
           profile,
           "card-payment",
           "the payment card (BG-18)",
@@ -2514,23 +2755,31 @@
     // BASIC WL states a direct debit in full, but a payment card only by its
     // payment means code: EN 16931 is the lowest profile that states it.
     if entry.field == "direct-debit" {
-      out.push(_payment-not-carried(
+      out.push(_not-carried(
         profile,
         entry.field,
         "the direct debit (BG-19)",
         "basic-wl",
       ))
     } else if entry.field == "card-payment" {
-      out.push(_payment-not-carried(
+      out.push(_not-carried(
         profile,
         entry.field,
         "the payment card (BG-18)",
         "en16931",
       ))
+    } else if entry.field == "paid" {
+      // `paid(method: "cash")` and the other methods without details.
+      out.push(_not-carried(
+        profile,
+        "paid.method",
+        "the payment means (BT-81)",
+        "basic-wl",
+      ))
     }
   }
   if payment.at("discounts", default: ()).len() > 0 {
-    out.push(_payment-not-carried(
+    out.push(_not-carried(
       profile,
       "payment-goal.discount",
       "a cash discount (BT-20)",
@@ -2710,9 +2959,16 @@
   // add up (BR-CO-10, BR-S-08, ...), so they cannot be written at all.
   let excess = _excess-decimals(model)
   if excess.count > 0 {
+    // A currency with more decimals (e.g. KWD, `invoice(currency: ..)`)
+    // rounds the amounts to them; otherwise the rounding of the locale does.
+    let decimals = model.at("currency-decimals", default: 2)
+    let currency = model.at("currency", default: none)
+    let by-currency = type(decimals) == int and decimals > 2
     out.push(error(
       excess.rule,
-      "locale",
+      if by-currency { model.at("currency-field", default: "locale") } else {
+        "locale"
+      },
       "An e-invoice states amounts with 2 decimals, but "
         + if excess.count == 1 { "the " } else {
           str(excess.count) + " amounts have more, e.g. the "
@@ -2721,8 +2977,27 @@
         + if excess.place != none { " of " + excess.place }
         + " is "
         + str(excess.value)
+        + if by-currency {
+          (
+            ": the invoice currency "
+              + _quoted(currency)
+              + " has "
+              + str(decimals)
+              + " decimals"
+          )
+        }
         + ".",
-      hint: "Round money to 2 decimals in the locale, e.g. `locale.custom.normalize(money: x => calc.round(x, digits: 2))`.",
+      hint: if by-currency {
+        (
+          "EN 16931 and the Factur-X profiles state no amounts with more than 2 decimals. Create this invoice without e-invoice (`zugferd: none`), or round its amounts to 2 decimals with a locale of your own instead of `currency`, e.g. `locale: locale.en-de.with((region: (currency: (code: "
+            + _quoted(currency)
+            + ", symbol: "
+            + _quoted(currency)
+            + ", decimals: 2))))`."
+        )
+      } else {
+        "Round money to 2 decimals in the locale, e.g. `locale.custom.normalize(money: x => calc.round(x, digits: 2))`."
+      },
     ))
     // The sums below would only repeat that the rounded amounts do not add
     // up. Without excess decimals, the amounts of the model are exactly the

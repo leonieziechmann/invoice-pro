@@ -25,7 +25,12 @@
   theme: capturing-theme,
   locale: locale.en-de,
   zugferd: "en16931",
-  references: (references.buyer-reference(),),
+  references: (
+    references.buyer-reference(),
+    // What the law requires on the invoice (IP-PRINT-03, IP-PERIOD-03)
+    references.seller-vat-id(),
+    references.service-time(),
+  ),
   sender: (
     name: "Tech Solutions GmbH",
     address: "Software Allee 10",

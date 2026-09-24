@@ -39,13 +39,20 @@ echo "Compiling ZUGFeRD PDF for $src_file..."
   "$src_file" \
   "$pdf_path"
 
-echo "Extracting factur-x.xml..."
+echo "Extracting the e-invoice XML..."
 "$PDFDETACH" -saveall -o "$extract_dir" "$pdf_path"
 
-if [ ! -f "$extract_dir/factur-x.xml" ]; then
-  echo "Error: factur-x.xml not found in compiled PDF!" >&2
+# The e-invoice is factur-x.xml, or xrechnung.xml in the XRECHNUNG profile.
+xml_file=""
+for name in factur-x.xml xrechnung.xml; do
+  if [ -f "$extract_dir/$name" ]; then
+    xml_file="$extract_dir/$name"
+  fi
+done
+if [ -z "$xml_file" ]; then
+  echo "Error: neither factur-x.xml nor xrechnung.xml found in compiled PDF!" >&2
   exit 1
 fi
 
-echo "Validating ZUGFeRD XML..."
-"$MUSTANG" --action validate --source "$extract_dir/factur-x.xml"
+echo "Validating ZUGFeRD XML ($(basename "$xml_file"))..."
+"$MUSTANG" --action validate --source "$xml_file"

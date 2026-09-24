@@ -156,3 +156,71 @@
     assert(value.scheme in codelists.eas, message: value.scheme)
   }
 }
+
+// --- 4. An identifier input that produces no text stops the compilation
+// with the field, with and without e-invoice: it would be missing from the
+// printed invoice and the XML without notice ---
+#{
+  let party = (name: "Party", address: "Street 1", city: "10115 Berlin")
+  let message(zugferd: none, ..args) = catch(() => invoice(
+    zugferd: zugferd,
+    sender: party,
+    recipient: party,
+    ..args,
+  )[])
+  // A constructor of the `id` module that is not called
+  for zugferd in (none, "en16931") {
+    let error = message(zugferd: zugferd, sender: party + (legal-id: id.siret))
+    assert(
+      error.contains("`sender.legal-id` is the function `siret`"),
+      message: error,
+    )
+  }
+  assert(
+    message(recipient: party + (global-id: id.gln)).contains(
+      "`recipient.global-id` is the function `gln`",
+    ),
+  )
+  assert(
+    message(recipient: party + (electronic-address: id.leitweg)).contains(
+      "`recipient.electronic-address` is the function `leitweg`",
+    ),
+  )
+  assert(
+    message(payee: (name: "Factor", id: id.gln)).contains(
+      "`payee.id` is the function `gln`",
+    ),
+  )
+  // A scheme without an identifier
+  let error = message(sender: party + (legal-id: (scheme: "0002")))
+  assert(
+    error.contains("`sender.legal-id` has no identifier"),
+    message: error,
+  )
+  assert(error.contains("(scheme: \"0002\")"), message: error)
+  assert(
+    message(
+      zugferd: "en16931",
+      recipient: party + (id: (scheme: "0088", id: "")),
+    ).contains("`recipient.id` has no identifier"),
+  )
+  assert(
+    message(delivery-address: party + (location-id: (scheme: "0088"))).contains(
+      "`delivery-address.location-id` has no identifier",
+    ),
+  )
+  assert(
+    message(
+      recipient: party + (delivery-address: party + (global-id: (id: none))),
+    ).contains("`recipient.delivery-address.global-id` has no identifier"),
+  )
+  // Not stopped: an electronic address without identifier counts as not
+  // given, empty values of imported data are no identifiers, and an
+  // identifier of the `id` module reports its problems in the e-invoice
+  // (IP-ID-01)
+  let fine = invoice(
+    sender: party
+      + (legal-id: "", id: none, electronic-address: (scheme: "EM")),
+    recipient: party + (global-id: id.gln("")),
+  )[]
+}
