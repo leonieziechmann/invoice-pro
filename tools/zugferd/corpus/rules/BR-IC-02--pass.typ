@@ -1,4 +1,5 @@
 // expect: AGREE_VALID
+// profiles: en16931
 //
 // An intra-community supply to a buyer with its VAT identifier.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-at,
   invoice-nr: "BR-IC-02--pass",

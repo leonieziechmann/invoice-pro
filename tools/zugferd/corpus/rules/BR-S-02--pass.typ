@@ -1,4 +1,5 @@
 // expect: AGREE_VALID
+// profiles: en16931
 //
 // A tax number (BT-32) identifies the seller for the VAT categories as well.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de + (vat-id: none),
   recipient: buyer-fr,
   invoice-nr: "BR-S-02--pass",

@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-IC-05
+// profiles: basic en16931 xrechnung
 //
 // An intra-community supply (K) with a rate other than 0 %, which the category
 // does not allow (BT-152).
@@ -7,7 +8,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-at,
   invoice-nr: "BR-IC-05",

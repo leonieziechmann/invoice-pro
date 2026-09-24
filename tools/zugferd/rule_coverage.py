@@ -32,10 +32,11 @@ counted apart (the write guard compiles them, IP-GUARD-05).
 
 Classes. Every rule id of every profile is exactly one of:
 
-  fixture       invoice-pro reports the rule under its id: a parity fixture
-                (corpus/rules/<ID>.typ) is an invoice that the official
-                validators reject with the rule and invoice-pro reports
-                under the same id (run.py checks both sides)
+  fixture       invoice-pro reports the rule under its id in the profile: a
+                parity fixture (corpus/rules/<ID>.typ) that runs in the
+                profile (its `// profiles:` header) is an invoice that the
+                official validators reject with the rule and invoice-pro
+                reports under the same id (run.py checks both sides)
   compiled      the write guard enforces the rule: gen_guard.py compiles
                 every assertion of it from the artefact into the guard's
                 tables (or it applies to an element the builder never
@@ -60,14 +61,15 @@ invoice-pro's own rules (IP-*) are listed in the same file with their basis
 (the law or the requirement they enforce) and their tests.
 
 The gate fails on a rule id without a class, on an entry for an id no
-artefact has (stale), on a fixture entry without a fixture file, on an
-entry the guard makes redundant, on an IP rule of the source without an
-entry (or an entry without source or tests), and when the table in
-docs/docs/e-invoicing.md differs from the numbers (`--update-docs` writes
-it). Listed `open` rules do not fail it: they are the work list, and a new
-rule id fails as unclassified. run.py checks that every fixture passes
-(`fixture_results`) and, in every case of the corpus, that invoice-pro
-names no rule the validators of the profile do not have (`foreign_rules`).
+artefact has (stale), on a fixture entry without a fixture in each of its
+profiles, on an entry the guard makes redundant, on an IP rule of the
+source without an entry (or an entry without source or tests), and when
+the table in docs/docs/e-invoicing.md differs from the numbers
+(`--update-docs` writes it). Listed `open` rules do not fail it: they
+are the work list, and a new rule id fails as unclassified. run.py checks
+that every fixture passes in every profile it claims (`fixture_results`)
+and, in every case of the corpus, that invoice-pro names no rule the
+validators of the profile do not have (`foreign_rules`).
 
 Exit code: 0 all classified, 1 problems, 2 setup error.
 """
@@ -110,7 +112,7 @@ PROFILE_NAMES = {
 GUIDELINE = {profile: guideline for guideline, (profile, _) in common.GUIDELINES.items()}
 
 CLASSES = {
-    "fixture": "reported by invoice-pro under its id, shown by a parity fixture",
+    "fixture": "reported by invoice-pro under its id, shown by a parity fixture in the profile",
     "compiled": "enforced by the write guard (compiled from the artefact)",
     "construction": "the builder cannot produce the violation",
     "unreachable": "cannot fire on an XML invoice-pro writes",
@@ -158,7 +160,11 @@ SVRL = gen_guard.SVRL
 SCENARIOS_NS = "{http://www.xoev.de/de/validator/framework/1/scenarios}"
 _BUSINESS_ID = re.compile(r"\[((?:BR|CII|PEPPOL)[A-Za-z0-9-]*)\]")
 _IP_ID = re.compile(r'"(IP-[A-Z]+-\d+)"')
-_EXPECT = re.compile(r"^//\s*(expect|warns):\s*(\S+)(.*)$")
+_HEADER = re.compile(r"^//\s*(expect|warns|profiles):\s*(.*)$")
+# The profile argument of a fixture: `zugferd: fixture-profile("en16931")`
+# (rules/_base.typ), which run.py sets to each profile of the fixture.
+_ZUGFERD_ARG = re.compile(r"(?<![\w-])zugferd\s*:\s*([^,\n]*)")
+_FIXTURE_PROFILE = re.compile(r'^fixture-profile\("([a-z0-9-]+)"\)$')
 
 
 class CoverageError(common.ToolError):
@@ -491,20 +497,25 @@ def load_toml(path=TOML):
     return entries, ip
 
 
-def parse_expect(path):
-    """(class, rules) of the `// expect:` header of a case file, with the
-    rules of its `// warns:` lines (warnings invoice-pro must report)."""
-    expect, rules = None, []
+def fixture_header(path):
+    """(class, rules, profiles) of the header of a parity fixture: the class
+    and rules of `// expect:`, with the rules of its `// warns:` lines
+    (warnings invoice-pro must report), and the profiles of `// profiles:`,
+    the ones it runs in."""
+    expect, rules, profiles = None, [], []
     for line in Path(path).read_text(encoding="utf-8").splitlines():
-        m = _EXPECT.match(line.strip())
-        if m and m.group(1) == "expect":
-            expect = m.group(2)
-            rules += m.group(3).split()
-        elif m:
-            rules += [m.group(2), *m.group(3).split()]
+        m = _HEADER.match(line.strip())
+        if m:
+            key, values = m.group(1), m.group(2).split()
+            if key == "expect":
+                expect, rules = (values[0] if values else None), rules + values[1:]
+            elif key == "warns":
+                rules += values
+            else:
+                profiles += values
         elif line.strip() and not line.startswith("//"):
             break
-    return expect, rules
+    return expect, rules, profiles
 
 
 def fixture_rule(path):
@@ -514,35 +525,65 @@ def fixture_rule(path):
     return rule, variant == "pass" or variant.startswith("pass-")
 
 
-def fixture_case_id(path):
-    """The id of a fixture as a case of the corpus (see run.load_cases)."""
-    return "rule-" + Path(path).stem
+def fixture_case_id(path, profile):
+    """The id of a fixture as a case of the corpus in one of its profiles
+    (see run.load_cases)."""
+    return f"rule-{Path(path).stem}@{profile}"
 
 
 @dataclasses.dataclass
 class Fixture:
-    """A parity fixture file and the rules its `// expect:` header names."""
+    """A parity fixture file: the rules its header names (`// expect:` and
+    `// warns:`) and the profiles it runs in (`// profiles:`)."""
 
     path: Path
     expect: str
     rules: list
+    profiles: list
 
     @property
     def name(self):
         return self.path.name
 
+    @property
+    def rule(self):
+        """The rule of its name (`<ID>.typ`, `<ID>--<variant>.typ`)."""
+        return fixture_rule(self.path)[0]
+
+
+def fixture_source_problems(file, profiles):
+    """Problems of the profile argument of a fixture: its source passes
+    `zugferd: fixture-profile("<profile>")` once, with one of its profiles,
+    which run.py replaces by each profile of the fixture in turn."""
+    code = "\n".join(line for line in Path(file).read_text(encoding="utf-8").splitlines()
+                     if not line.lstrip().startswith("//"))
+    args = [m.group(1).strip() for m in _ZUGFERD_ARG.finditer(code)]
+    defaults = [m.group(1) for m in (_FIXTURE_PROFILE.match(a) for a in args) if m]
+    if len(args) != 1 or len(defaults) != 1:
+        return ["its source must pass the profile as `zugferd: fixture-profile(\"<profile>\")`, once, so that it "
+                f"runs in each profile of its `// profiles:` header (found: {', '.join(args) or 'none'})"]
+    if defaults[0] not in profiles:
+        return [f"`fixture-profile(\"{defaults[0]}\")` names a profile its `// profiles:` header does not list"]
+    return []
+
 
 def fixture_files(directory=RULES_DIR):
-    """({rule id: [Fixture]}, [problems]): the fixtures of every rule, and a
-    problem for every file whose header does not fit. The passing
-    counterparts are checked, but not listed."""
-    fixtures, problems = collections.defaultdict(list), []
+    """([Fixture], [problems]): the fixtures, and a problem for every file
+    whose header or profile argument does not fit. The passing counterparts
+    are checked, but not listed."""
+    fixtures, problems = [], []
     for file in sorted(Path(directory).glob("*.typ")):
         if file.name.startswith("_"):
             continue
         rule, passing = fixture_rule(file)
-        expect, rules = parse_expect(file)
+        expect, rules, profiles = fixture_header(file)
         name = file.relative_to(REPO) if file.is_relative_to(REPO) else file
+        unknown = [p for p in profiles if p not in PROFILES]
+        if not profiles or unknown or len(set(profiles)) != len(profiles):
+            problems.append(f"FIXTURE {name}: `// profiles:` lists the profiles it runs in, each once, of "
+                            f"{', '.join(PROFILES)}" + (f" (not {', '.join(unknown)})" if unknown else ""))
+            continue
+        problems += [f"FIXTURE {name}: {p}" for p in fixture_source_problems(file, profiles)]
         if expect is None:
             problems.append(f"FIXTURE {name}: no `// expect:` header")
         elif passing:
@@ -551,8 +592,26 @@ def fixture_files(directory=RULES_DIR):
         elif not rules:
             problems.append(f"FIXTURE {name}: its `// expect:` header names no rule invoice-pro reports")
         else:
-            fixtures[rule].append(Fixture(file, expect, rules))
-    return dict(fixtures), problems
+            fixtures.append(Fixture(file, expect, rules, profiles))
+    return fixtures, problems
+
+
+def showing(fixtures, rule, profile, reported_as=()):
+    """The fixtures that show a rule in a profile: they run in the profile,
+    and their header names the rule, so run.py checks that invoice-pro and
+    every validator of the profile report it. With `reported_as`: the
+    fixtures of the rule (named after it) that name one of those related
+    rules instead (run.py checks that the validators report the rule)."""
+    out = []
+    for f in fixtures:
+        if profile not in f.profiles:
+            continue
+        if reported_as:
+            if f.rule == rule and rule not in f.rules and set(f.rules) & set(reported_as):
+                out.append(f)
+        elif rule in f.rules:
+            out.append(f)
+    return out
 
 
 def twins_of(assertions):
@@ -633,9 +692,8 @@ def classify(inventory, entries, fixtures):
                                     f"{entry.where()}")
                     continue
                 claimed[(rule, profile)] = entry
-        if entry.cls == "fixture":
-            for rule in entry.ids:
-                problems += _check_fixtures(rule, entry, fixtures.get(rule, []))
+                if entry.cls == "fixture":
+                    problems += _check_fixture(rule, profile, entry, fixtures)
         if entry.cls == "construction":
             for item in entry.evidence:
                 path = _evidence_path(item)
@@ -667,37 +725,55 @@ def classify(inventory, entries, fixtures):
         for rule, d in decisions[profile].items():
             if d.cls == "unclassified":
                 problems.append(f"UNCLASSIFIED {rule} in {profile}: {describe_assertions(d.assertions)}")
-    for rule, files in sorted(fixtures.items()):
-        if rule.startswith("IP-"):
-            continue
-        classes = {decisions[p][rule].cls for p in PROFILES if rule in decisions[p]}
-        if not classes:
-            problems.append(f"FIXTURE {rule}: {files[0].name} shows a rule no validator of any profile has")
-        elif not classes & {"fixture", "open"}:
-            # An open rule may keep the fixture that reproduces the gap.
-            problems.append(f"FIXTURE {rule}: {files[0].name} shows the rule, but it is classified as "
-                            f"{', '.join(sorted(classes))}; classify it as fixture")
+    for f in fixtures:
+        problems += _check_fixture_file(f, decisions)
     return decisions, problems
 
 
-def _check_fixtures(rule, entry, files):
-    """Problems of the fixtures of a rule of class fixture: there is one, and
-    each names the rule in its `// expect:` header, or (`reported-as`) the
-    rules of the entry invoice-pro reports instead."""
-    if not files:
-        return [f"FIXTURE {rule}: class fixture, but tools/zugferd/corpus/rules/ has no fixture {rule}.typ"]
+def _check_fixture(rule, profile, entry, fixtures):
+    """Problems of a rule of class fixture in a profile: a fixture shows it
+    there (see `showing`), and with `reported-as` none of the fixtures of
+    the rule in the profile shows that invoice-pro reports the rule itself."""
+    if not entry.reported_as:
+        if showing(fixtures, rule, profile):
+            return []
+        return [f"FIXTURE {rule} in {profile}: class fixture, but no fixture shows it there: none lists {profile} in "
+                f"its `// profiles:` header and names {rule} in its `// expect:` or `// warns:` header "
+                f"({entry.where()})"]
+    problems = [
+        f"FIXTURE {rule} in {profile}: {f.name} shows that invoice-pro reports the rule itself; remove `reported-as` "
+        f"({entry.where()})"
+        for f in fixtures if f.rule == rule and profile in f.profiles and rule in f.rules
+    ]
+    if not problems and not showing(fixtures, rule, profile, entry.reported_as):
+        problems.append(f"FIXTURE {rule} in {profile}: class fixture with `reported-as`, but no fixture {rule}.typ (or "
+                        f"{rule}--<variant>.typ) runs in {profile} and names one of {', '.join(entry.reported_as)} "
+                        f"({entry.where()})")
+    return problems
+
+
+def _check_fixture_file(f, decisions):
+    """Problems of a fixture against the classification of each profile it
+    runs in: the rule of its name is a fixture there (or open: the fixture
+    may reproduce the gap), which its header names unless the rule's entry
+    has `reported-as`, and every official rule its header names is a rule of
+    the profile."""
     problems = []
-    for f in files:
-        if entry.reported_as:
-            if rule in f.rules:
-                problems.append(f"FIXTURE {rule}: {f.name} shows that invoice-pro reports the rule itself; "
-                                f"remove `reported-as` ({entry.where()})")
-            elif not set(f.rules) & set(entry.reported_as):
-                problems.append(f"FIXTURE {rule}: {f.name} expects none of the rules of `reported-as` "
-                                f"({', '.join(entry.reported_as)})")
-        elif rule not in f.rules:
-            problems.append(f"FIXTURE {rule}: the `// expect:` header of {f.name} does not name {rule} (a "
-                            "fixture of a rule invoice-pro reports under another id needs `reported-as`)")
+    for profile in f.profiles:
+        d = decisions[profile].get(f.rule)
+        if d is None:
+            problems.append(f"FIXTURE {f.name}: runs in {profile}, whose validators do not have {f.rule}")
+        elif d.cls == "fixture":
+            if f.rule not in f.rules and not (d.entry and set(f.rules) & set(d.entry.reported_as)):
+                problems.append(f"FIXTURE {f.name}: its header does not name {f.rule} (a fixture of a rule invoice-pro "
+                                f"reports under another id in {profile} needs `reported-as`)")
+        elif d.cls != "open":
+            problems.append(f"FIXTURE {f.name}: shows {f.rule} in {profile}, but it is classified as {d.cls} there; "
+                            "classify it as fixture")
+        for rule in f.rules:
+            if rule.startswith("IP-") or rule in decisions[profile] or (rule == f.rule and d is None):
+                continue
+            problems.append(f"FIXTURE {f.name}: names {rule}, which the validators of {profile} do not have")
     return problems
 
 
@@ -747,21 +823,28 @@ def check_ip(ip, source):
 # ================================================================ results of the corpus
 
 
-def fixture_results(rows, entries, fixtures):
+def fixture_results(rows, entries, fixtures, levels):
     """Problems of the fixtures in a corpus run (rows of run.py): every rule
-    of class fixture has a fixture that passed."""
+    of class fixture has, in every profile its entry claims, a fixture that
+    shows it there (see `showing`) and passed in that profile. `levels`:
+    the rules of each profile of this run ({profile: {rule: ..}}, see
+    rule_levels)."""
     by_case = {row["id"]: row for row in rows}
     problems = []
     for entry in entries:
         if entry.cls != "fixture":
             continue
         for rule in entry.ids:
-            files = fixtures.get(rule, [])
-            ran = [by_case[fixture_case_id(f.path)] for f in files if fixture_case_id(f.path) in by_case]
-            if not ran:
-                problems.append(f"FIXTURE {rule}: no fixture of the rule ran")
-            elif not any(row["verdict"] == "PASS" for row in ran):
-                problems.append(f"FIXTURE {rule}: no fixture of the rule passed ({', '.join(r['id'] for r in ran)})")
+            for profile in entry.profiles or PROFILES:
+                if rule not in levels.get(profile, {}):
+                    continue  # not a rule of the profile (or of a validator that did not run)
+                cases = [fixture_case_id(f.path, profile) for f in showing(fixtures, rule, profile, entry.reported_as)]
+                ran = [by_case[case] for case in cases if case in by_case]
+                if not ran:
+                    problems.append(f"FIXTURE {rule} in {profile}: no fixture of the rule ran in {profile}")
+                elif not any(row["verdict"] == "PASS" for row in ran):
+                    problems.append(f"FIXTURE {rule} in {profile}: no fixture of the rule passed "
+                                    f"({', '.join(row['id'] for row in ran)})")
     return problems
 
 
@@ -815,7 +898,7 @@ def summarize(decisions):
 
 
 def markdown_table(summary):
-    header = ["Profile", "Rule ids", "Reported under its id", "Enforced by the guard", "Excluded by construction",
+    header = ["Profile", "Rule ids", "Reported by invoice-pro", "Enforced by the guard", "Excluded by construction",
               "Cannot occur", "Open"]
     rows = [header, [":--"] + ["--:"] * (len(header) - 1)]
     for profile in PROFILES:
@@ -940,7 +1023,13 @@ def explain(decisions, only=None):
     return "\n".join(lines)
 
 
-def as_json(inventory, decisions, summary):
+def as_json(inventory, decisions, summary, fixtures=()):
+    def shown_by(d):
+        if d.cls != "fixture":
+            return []
+        reported_as = d.entry.reported_as if d.entry else ()
+        return [f.name for f in showing(fixtures, d.rule, d.profile, reported_as)]
+
     return {
         "artefacts": inventory.artefacts,
         "summary": {p: dict(summary[p]) for p in PROFILES},
@@ -951,6 +1040,7 @@ def as_json(inventory, decisions, summary):
                     "source": d.source,
                     "reason": d.reason,
                     "evidence": d.entry.evidence if d.entry else [],
+                    "fixtures": shown_by(d),
                     "validators": sorted({f"{a.validator}:{a.level}" for a in d.assertions}),
                     "assertions": [
                         {"validator": a.validator, "artefact": a.name, "id": a.id, "level": a.level,
@@ -993,7 +1083,8 @@ def main(argv=None):
     if args.json:
         out = Path(args.json)
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(as_json(inventory, decisions, summary), indent=1) + "\n", encoding="utf-8")
+        document = as_json(inventory, decisions, summary, fixtures)
+        out.write_text(json.dumps(document, indent=1) + "\n", encoding="utf-8")
     print(report(inventory, decisions, summary, problems, ip))
     return 1 if problems else 0
 

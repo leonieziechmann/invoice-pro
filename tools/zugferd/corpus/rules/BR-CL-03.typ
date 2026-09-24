@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-CL-04
+// profiles: basic en16931 xrechnung
 //
 // A currency that is no ISO 4217 code: the validators report it for the
 // invoice currency (BR-CL-04) and for the currency of the VAT total (BR-
@@ -8,7 +9,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   currency: "ABC",
   sender: seller-de,
   recipient: buyer-fr,

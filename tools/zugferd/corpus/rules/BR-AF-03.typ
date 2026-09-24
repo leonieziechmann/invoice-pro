@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-AF-03
+// profiles: basic-wl
 //
 // IGIC items (L) on a document level allowance without the seller VAT
 // identifier (BT-31) or tax number (BT-32). BASIC WL has no lines, so the rule
@@ -8,7 +9,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "basic-wl",
+  zugferd: fixture-profile("basic-wl"),
   sender: seller-de-id,
   recipient: buyer-fr,
   invoice-nr: "BR-AF-03",

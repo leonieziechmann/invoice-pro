@@ -1,5 +1,6 @@
 // expect: AGREE_VALID
 // warns: BR-DE-TMP-32
+// profiles: xrechnung
 //
 // A credit note in XRechnung without dates states no date of the supply
 // (BT-72, BG-14): information in KoSIT, a warning of invoice-pro.
@@ -8,7 +9,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "xrechnung",
+  zugferd: fixture-profile("xrechnung"),
   document-type: "credit-note",
   preceding-invoice-nr: "R-2026-11",
   sender: seller-de,

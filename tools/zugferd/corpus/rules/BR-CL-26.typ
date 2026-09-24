@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-CL-26
+// profiles: basic en16931 xrechnung
 //
 // A deliver-to location identifier (BT-71) with a scheme that is no ISO/IEC
 // 6523 code.
@@ -7,7 +8,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   delivery-address: (
     name: "Lager Client SAS",
     address: "Rue du Port 3",

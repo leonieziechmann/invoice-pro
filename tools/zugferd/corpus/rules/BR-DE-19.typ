@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-DE-19
+// profiles: xrechnung
 //
 // An XRechnung paid by SEPA credit transfer to an IBAN (BT-84) with wrong
 // check digits; KoSIT only warns.
@@ -7,7 +8,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "xrechnung",
+  zugferd: fixture-profile("xrechnung"),
   sender: seller-de,
   recipient: buyer-de,
   invoice-nr: "BR-DE-19",

@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-30
+// profiles: basic en16931 xrechnung
 //
 // An item period (BG-26) that ends before it starts.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr,
   invoice-nr: "BR-30",

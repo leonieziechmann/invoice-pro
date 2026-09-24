@@ -1,4 +1,5 @@
 // expect: AGREE_VALID
+// profiles: xrechnung
 //
 // The cash discount in the XRechnung syntax.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "xrechnung",
+  zugferd: fixture-profile("xrechnung"),
   due-date: "Zahlbar innerhalb von 30 Tagen.\n#SKONTO#TAGE=14#PROZENT=2.00#\n",
   sender: seller-de,
   recipient: buyer-de,

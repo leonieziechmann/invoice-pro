@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-E-10
+// profiles: basic-wl basic en16931 xrechnung
 //
 // Exempt items (E) without an exemption reason (BT-120).
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr,
   invoice-nr: "BR-E-10",

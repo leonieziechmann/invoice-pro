@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-Z-06
+// profiles: basic-wl
 //
 // Zero rated items (Z) with a rate other than 0 %, which the category does not
 // allow (BT-96), on a document level allowance. BASIC WL has no lines, so the
@@ -8,7 +9,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "basic-wl",
+  zugferd: fixture-profile("basic-wl"),
   sender: seller-de,
   recipient: buyer-fr,
   invoice-nr: "BR-Z-06",

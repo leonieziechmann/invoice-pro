@@ -14,11 +14,13 @@
 #   evidence = ["path: ..."]    construction: the code path and its tests
 #   reported-as = ["BR-YY"]     fixture: the related rule invoice-pro reports
 #
-#   fixture       invoice-pro reports the rule under its id: the parity
+#   fixture       invoice-pro reports the rule under its id: a parity
 #                 fixture tools/zugferd/corpus/rules/<ID>.typ proves it
-#                 against both validators (run.py). With `reported-as`,
-#                 invoice-pro reports a related rule that the validators
-#                 report for the same invoice as well.
+#                 against the validators of each profile of the entry
+#                 (run.py), so it runs in each of them (its `// profiles:`
+#                 header). With `reported-as`, invoice-pro reports a related
+#                 rule that the validators report for the same invoice as
+#                 well.
 #   compiled      the write guard enforces the rule, although KoSIT's
 #                 version of it differs from Mustang's (the reason says why
 #                 the guard covers it)
@@ -53,8 +55,15 @@ class = "fixture"
 
 # The lines.
 [[rule]]
-ids = ["BR-16", "BR-25", "BR-30", "BR-CL-15", "BR-CL-23", "PEPPOL-EN16931-R110", "PEPPOL-EN16931-R111"]
+ids = ["BR-16", "BR-25", "BR-30", "BR-CL-23", "PEPPOL-EN16931-R110", "PEPPOL-EN16931-R111"]
 class = "fixture"
+
+# The country of origin of an item (BT-159), from EN 16931 on; BASIC has no
+# element for it (the guard derives `unreachable` there).
+[[rule]]
+ids = ["BR-CL-15"]
+class = "fixture"
+profiles = ["en16931", "xrechnung"]
 
 # Payment terms and payment means.
 [[rule]]
@@ -67,25 +76,52 @@ class = "fixture"
 
 # VAT: categories, exemption reasons and the VAT breakdown.
 [[rule]]
-ids = ["BR-CL-18", "BR-CL-22", "BR-E-10", "BR-O-02", "BR-O-09", "BR-O-11", "BR-IC-11", "BR-CO-18", "BR-AG-05"]
+ids = ["BR-CL-18", "BR-CL-22", "BR-E-10", "BR-O-02", "BR-O-09", "BR-O-11", "BR-IC-11", "BR-AG-05"]
 class = "fixture"
 
+# An invoice without a VAT breakdown: in BASIC WL, one without items; with
+# lines, invoice-pro reports the missing line instead (BR-16, see the
+# construction below).
+[[rule]]
+ids = ["BR-CO-18"]
+class = "fixture"
+profiles = ["basic-wl"]
+
 # The rules of the VAT categories: the seller or buyer identifiers each
-# category requires on lines (-02), allowances (-03) and charges (-04), the
-# rate on lines, allowances and charges (-05 to -07) and the VAT amount of
-# the breakdown (-09).
+# category requires on lines (-02), allowances (-03) and charges (-04), and
+# the rate on lines (-05). The rules of allowances and charges also apply
+# where the invoice has lines, when the category occurs on the allowance or
+# charge only (*--allowance-only.typ, *--charge-only.typ).
 [[rule]]
 ids = [
-  "BR-S-02", "BR-S-03", "BR-S-04", "BR-S-05", "BR-S-06", "BR-S-07",
-  "BR-Z-02", "BR-Z-03", "BR-Z-04", "BR-Z-05", "BR-Z-06", "BR-Z-07", "BR-Z-09",
-  "BR-E-02", "BR-E-03", "BR-E-04", "BR-E-05", "BR-E-06", "BR-E-07", "BR-E-09",
-  "BR-AE-02", "BR-AE-03", "BR-AE-04", "BR-AE-05", "BR-AE-06", "BR-AE-07", "BR-AE-09",
-  "BR-IC-02", "BR-IC-03", "BR-IC-04", "BR-IC-05", "BR-IC-06", "BR-IC-07", "BR-IC-09",
-  "BR-G-02", "BR-G-03", "BR-G-04", "BR-G-05", "BR-G-06", "BR-G-07", "BR-G-09",
-  "BR-AF-02", "BR-AF-03", "BR-AF-04", "BR-AF-05", "BR-AF-06", "BR-AF-07",
-  "BR-AG-02", "BR-AG-03", "BR-AG-04", "BR-AG-06", "BR-AG-07",
+  "BR-S-02", "BR-S-03", "BR-S-04", "BR-S-05",
+  "BR-Z-02", "BR-Z-03", "BR-Z-04", "BR-Z-05",
+  "BR-E-02", "BR-E-03", "BR-E-04", "BR-E-05",
+  "BR-AE-02", "BR-AE-03", "BR-AE-04", "BR-AE-05",
+  "BR-IC-02", "BR-IC-03", "BR-IC-04", "BR-IC-05",
+  "BR-G-02", "BR-G-03", "BR-G-04", "BR-G-05",
+  "BR-AF-02", "BR-AF-03", "BR-AF-04", "BR-AF-05",
+  "BR-AG-02", "BR-AG-03", "BR-AG-04",
 ]
 class = "fixture"
+
+# The rate on allowances (-06) and charges (-07) and the VAT amount of the
+# breakdown (-09), which BASIC WL reports for the VAT groups of its items.
+# Elsewhere, invoice-pro reports the rate of the lines (-05), and the guard
+# enforces these rules (derived as `compiled`).
+[[rule]]
+ids = [
+  "BR-S-06", "BR-S-07",
+  "BR-Z-06", "BR-Z-07", "BR-Z-09",
+  "BR-E-06", "BR-E-07", "BR-E-09",
+  "BR-AE-06", "BR-AE-07", "BR-AE-09",
+  "BR-IC-06", "BR-IC-07", "BR-IC-09",
+  "BR-G-06", "BR-G-07", "BR-G-09",
+  "BR-AF-06", "BR-AF-07",
+  "BR-AG-06", "BR-AG-07",
+]
+class = "fixture"
+profiles = ["basic-wl"]
 
 # ======================================================================
 # fixture: reported under a related rule the validators report as well
@@ -133,6 +169,14 @@ profiles = ["en16931", "xrechnung"]
 reason = """CEN 1.3.16 in KoSIT tests the country code for text (normalize-space); the guard \
 enforces the element and the country code list (BR-CL-14), which an empty code fails as well. A tax \
 representative without `country` gets the country of the locale."""
+
+[[rule]]
+ids = ["BR-AG-06", "BR-AG-07"]
+class = "compiled"
+profiles = ["en16931", "xrechnung"]
+reason = """CEN 1.3.16 in KoSIT allows IPSI (M) at 0 % on an allowance or charge; the guard enforces \
+the rate above 0 of CEN 1.3.12 in Mustang, which is stricter (as for BR-AG-05, see \
+validator-differences.toml)."""
 
 [[rule]]
 ids = ["BR-DEC-01", "BR-DEC-05", "BR-DEC-24", "BR-DEC-27"]
@@ -196,6 +240,17 @@ evidence = [
   "src/data/tax.typ: new",
   "src/zugferd/model.typ: line-model and the VAT breakdown (taxes)",
   "tests/zugferd/vat-categories/test.typ: `tax: none` (IP-TAX-01)",
+]
+
+[[rule]]
+ids = ["BR-CO-18"]
+class = "construction"
+profiles = ["basic", "en16931", "xrechnung"]
+reason = """The VAT breakdown has a group for the VAT category of every line, and an invoice without \
+lines breaks BR-16, which invoice-pro reports (with the guard's finding of the missing breakdown)."""
+evidence = [
+  "src/zugferd/model.typ: the VAT breakdown (taxes)",
+  "tools/zugferd/corpus/rules/BR-16.typ",
 ]
 
 [[rule]]

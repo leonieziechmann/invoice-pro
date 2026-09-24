@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-DE-2
+// profiles: xrechnung
 //
 // An XRechnung without the seller contact (BG-6).
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "xrechnung",
+  zugferd: fixture-profile("xrechnung"),
   sender: seller-de + (contact: none),
   recipient: buyer-de,
   invoice-nr: "BR-DE-2",

@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-02
+// profiles: minimum basic-wl basic en16931 xrechnung
 //
 // An invoice without an invoice number (BT-1).
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr,
 )

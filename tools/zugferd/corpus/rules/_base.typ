@@ -4,17 +4,28 @@
 // official rule: the official validators report the rule, and invoice-pro
 // must report it under the same id (tools/zugferd/run.py checks both sides,
 // see tests/TESTING.md, "Rule Coverage"). A fixture states its expectation
-// like a regression case:
+// like a regression case, and the profiles it shows the rule in:
 //
 //   // expect: AGREE_INVALID <RULE>   the rules invoice-pro must report
 //   // warns: <RULE>                  the rules it must report as warnings
+//   // profiles: basic en16931        the profiles it runs in
 //
-// `<RULE>--<variant>.typ` shows the rule once more (e.g. in another
-// profile), `<RULE>--pass.typ` is the corrected invoice, which everybody
+// run.py compiles a fixture once for each of its profiles, which the
+// fixture passes on as `zugferd: fixture-profile("en16931")` (the argument
+// is the profile of a compilation by hand). In XRechnung, a fixture whose
+// buyer has no buyer reference (BT-10) reports BR-DE-15 as well.
+//
+// `<RULE>--<variant>.typ` shows the rule once more (e.g. with other
+// inputs), `<RULE>--pass.typ` is the corrected invoice, which everybody
 // accepts (`// expect: AGREE_VALID`). The fixtures use the parties and the
 // harness setup of the regression cases.
 
 #import "../regression/_base.typ": *
+
+/// The profile of the compilation: the one run.py passes for each profile
+/// of the fixture's `// profiles:` header (`--input profile=<profile>`),
+/// else `default`.
+#let fixture-profile(default) = sys.inputs.at("profile", default: default)
 
 /// A German seller identified by its seller identifier (BT-29) only, with
 /// neither VAT identifier nor tax number: for the rules of the VAT
@@ -39,3 +50,8 @@
 /// A document level allowance (BG-20) and charge (BG-21).
 #let rebate = discount([Rabatt], amount: 10%)
 #let shipping = surcharge([Versand], amount: 5.90)
+
+/// A document level allowance and charge of their own VAT category, e.g.
+/// next to lines of another one.
+#let rebate-with(tax) = discount([Rabatt], amount: 10, tax: tax)
+#let shipping-with(tax) = surcharge([Versand], amount: 5.90, tax: tax)

@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-CL-23
+// profiles: basic en16931 xrechnung
 //
 // A unit code (BT-130) outside UN/ECE Recommendation 20.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr,
   invoice-nr: "BR-CL-23",

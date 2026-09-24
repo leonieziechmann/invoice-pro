@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-07
+// profiles: minimum basic-wl basic en16931 xrechnung
 //
 // A buyer without a name (BT-44).
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr + (name: none),
   invoice-nr: "BR-07",

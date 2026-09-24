@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-G-04
+// profiles: basic-wl
 //
 // An export outside the EU (G) on a document level charge without the seller
 // VAT identifier (BT-31); its tax number does not do. BASIC WL has no lines,
@@ -8,7 +9,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "basic-wl",
+  zugferd: fixture-profile("basic-wl"),
   sender: seller-de + (vat-id: none),
   recipient: buyer-us,
   invoice-nr: "BR-G-04",

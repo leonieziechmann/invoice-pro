@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-AF-05
+// profiles: basic en16931 xrechnung
 //
 // IGIC items (L) at a rate of 0 %, which the category does not allow (BT-152).
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr,
   invoice-nr: "BR-AF-05",

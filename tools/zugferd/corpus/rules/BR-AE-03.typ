@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-AE-03
+// profiles: basic-wl
 //
 // A reverse charge (AE) on a document level allowance without the buyer VAT
 // identifier (BT-48) or its legal registration identifier (BT-47). BASIC WL
@@ -8,7 +9,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "basic-wl",
+  zugferd: fixture-profile("basic-wl"),
   sender: seller-de,
   recipient: buyer-at + (vat-id: none),
   invoice-nr: "BR-AE-03",

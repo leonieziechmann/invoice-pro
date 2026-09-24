@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-CO-18
+// profiles: basic-wl
 //
 // A BASIC WL invoice without items has no VAT breakdown (BG-23).
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "basic-wl",
+  zugferd: fixture-profile("basic-wl"),
   sender: seller-de,
   recipient: buyer-fr,
   invoice-nr: "BR-CO-18",

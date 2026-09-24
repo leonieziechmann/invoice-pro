@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-DE-24-b
+// profiles: xrechnung
 //
 // An XRechnung with a payment card and the details of a direct debit (BG-19).
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "xrechnung",
+  zugferd: fixture-profile("xrechnung"),
   sender: seller-de,
   recipient: buyer-de,
   invoice-nr: "BR-DE-24-b",

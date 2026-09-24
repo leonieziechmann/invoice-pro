@@ -26,10 +26,11 @@ For every case:
      rule, field and a hint.
   6. Rule ids (rule_coverage.py): every error of invoice-pro names a rule the
      official validators of the case's profile have, or one of its own
-     (O-RULE); a parity fixture (corpus/rules/<RULE>.typ) is reported under
-     its rule by each validator that has the rule (O-PARITY). A run with every
-     fixture checks that each rule the classification calls `fixture` has a
-     fixture that passed.
+     (O-RULE); a parity fixture (corpus/rules/<RULE>.typ), a case in each
+     profile of its `// profiles:` header, is reported under its rule by
+     each validator that has the rule in the profile (O-PARITY). A run with
+     every fixture checks that each rule the classification calls `fixture`
+     has, in each such profile, a fixture that passed.
 
 Failures are grouped by signature. `known-issues.toml` lists the signatures
 of known bugs with their finding: a known signature does not fail the run,
@@ -105,7 +106,7 @@ TOTALS = {
     "BT-112": "ram:GrandTotalAmount",
     "BT-115": "ram:DuePayableAmount",
 }
-_HEADER = re.compile(r"^//\s*(expect|warns|error|finding|facts):\s*(.*)$")
+_HEADER = re.compile(r"^//\s*(expect|warns|profiles|error|finding|facts):\s*(.*)$")
 # Arguments of a regression case that would switch the harness off.
 _THEME_ARG = re.compile(r"(?<![\w-])theme\s*:\s*(\S*)")
 _ERRORS_ARG = re.compile(r"(?<![\w-])zugferd-errors\s*:\s*([^\s,)]*)")
@@ -119,11 +120,12 @@ def parse_header(path):
 
       // expect: <CLASS> [RULE ...]   class and rules invoice-pro must report
       // warns: RULE ...              rules invoice-pro must report as warnings
+      // profiles: PROFILE ...        a parity fixture: the profiles it runs in
       // error: <text>                INPUT_ERROR: text of the expected message
       // finding: <id>                audit finding or issue it reproduces
       // facts: {<json>}              oracle facts (see oracles.py), repeatable
     """
-    expect, rules, warns, finding, facts, error = None, [], [], None, {}, None
+    expect, rules, warns, profiles, finding, facts, error = None, [], [], [], None, {}, None
     for line in Path(path).read_text(encoding="utf-8").splitlines():
         m = _HEADER.match(line.strip())
         if not m:
@@ -136,6 +138,8 @@ def parse_header(path):
             expect, rules = parts[0], parts[1:]
         elif key == "warns":
             warns += value.split()
+        elif key == "profiles":
+            profiles += value.split()
         elif key == "error":
             error = value.strip()
         elif key == "finding":
@@ -151,8 +155,12 @@ def parse_header(path):
         raise common.ToolError(f"{path}: unknown class {expect!r} (one of {', '.join([*CLASSES, *UNIONS])})")
     if expect == "INPUT_ERROR" and not error:
         raise common.ToolError(f"{path}: `// expect: INPUT_ERROR` needs `// error: <text of the message>`")
+    unknown = [p for p in profiles if p not in rule_coverage.PROFILES]
+    if unknown or len(set(profiles)) != len(profiles):
+        raise common.ToolError(f"{path}: `// profiles:` lists profiles of {', '.join(rule_coverage.PROFILES)}, "
+                               f"each once (not {' '.join(profiles)})")
     return {"expect": expect, "expect_rules": rules, "expect_warnings": warns, "expect_error": error,
-            "finding": finding, "facts": facts}
+            "finding": finding, "facts": facts, "profiles": profiles}
 
 
 def load_cases(paths):
@@ -168,9 +176,9 @@ def load_cases(paths):
             # Files starting with "_" are shared definitions, not cases.
             for file in sorted(path.glob("*.typ")):
                 if not file.name.startswith("_"):
-                    cases.append(_file_case(file))
+                    cases += _file_cases(file)
         elif path.suffix == ".typ":
-            cases.append(_file_case(path))
+            cases += _file_cases(path)
         else:
             raise common.ToolError(f"{path}: not a corpus directory or .typ file")
     duplicates = sorted(i for i, n in collections.Counter(c["id"] for c in cases).items() if n > 1)
@@ -188,17 +196,32 @@ def regression_complete(cases, directory=REGRESSION):
 
 
 def rules_complete(cases, directory=RULES):
-    """Whether the cases include every parity fixture: only such a run can
-    tell that every rule classified as `fixture` has a fixture that passed."""
+    """Whether the cases include every parity fixture in every one of its
+    profiles: only such a run can tell that every rule classified as
+    `fixture` has, in each profile, a fixture that passed."""
     return _complete(cases, directory, "rule-")
 
 
 def _complete(cases, directory, prefix):
     ids = {case["id"] for case in cases}
-    return all(prefix + file.stem in ids for file in Path(directory).glob("*.typ") if not file.name.startswith("_"))
+    for file in Path(directory).glob("*.typ"):
+        if file.name.startswith("_"):
+            continue
+        if prefix == "rule-":
+            profiles = parse_header(file)["profiles"]
+            wanted = [rule_coverage.fixture_case_id(file, p) for p in profiles] or [f"rule-{file.stem}@?"]
+        else:
+            wanted = [prefix + file.stem]
+        if not all(case in ids for case in wanted):
+            return False
+    return True
 
 
-def _file_case(file):
+def _file_cases(file):
+    """The cases of a committed case file: a regression case, or a parity
+    fixture in each profile of its `// profiles:` header, which the
+    compilation passes to the fixture (`--input profile=<profile>`, read by
+    `fixture-profile` of corpus/rules/_base.typ)."""
     header = parse_header(file)
     text = Path(file).read_text(encoding="utf-8")
     # Without the harness, "no diagnostics attached" would read as "no errors".
@@ -216,7 +239,7 @@ def _file_case(file):
     # A parity fixture of corpus/rules is a case of its own population; any
     # other case file counts as a regression case.
     prefix, population = FILE_CASES.get(Path(file).resolve().parent, FILE_CASES[REGRESSION])
-    return {
+    case = {
         "id": prefix + file.stem,
         "population": population,
         "file": str(file),
@@ -224,6 +247,17 @@ def _file_case(file):
         "twin": None,
         **header,
     }
+    if population != "rules":
+        if header["profiles"]:
+            raise common.ToolError(f"{file}: only a parity fixture (corpus/rules) runs in several profiles "
+                                   "(`// profiles:`)")
+        return [case]
+    if not header["profiles"]:
+        raise common.ToolError(f"{file}: a parity fixture lists the profiles it runs in (`// profiles:`)")
+    return [
+        dict(case, id=rule_coverage.fixture_case_id(file, profile), profile=profile, inputs={"profile": profile})
+        for profile in header["profiles"]
+    ]
 
 
 # ---------------------------------------------------------------- stage 1: Typst
@@ -232,7 +266,7 @@ def _file_case(file):
 def compile_case(case, out_dir, timestamp=common.DEFAULT_TIMESTAMP):
     """Runs in a worker process: compile, then read XML, diagnostics, text."""
     pdf = Path(out_dir) / f"{case['id']}.pdf"
-    ok, stderr, seconds = common.typst_compile(case["file"], pdf, timestamp=timestamp)
+    ok, stderr, seconds = common.typst_compile(case["file"], pdf, inputs=case.get("inputs"), timestamp=timestamp)
     res = {"id": case["id"], "t_compile": round(seconds, 3)}
     if not ok:
         res["crash"] = stderr.strip()[:4000]
@@ -638,9 +672,10 @@ def make_row(case, res, doc):
 
 
 def fixture_parity(case, res, levels, differences):
-    """Problems of a parity fixture (corpus/rules/<RULE>.typ): each official
-    validator whose artefacts have the rule in the document's profile
-    reports it, and so for every official rule the fixture expects
+    """Problems of a parity fixture (corpus/rules/<RULE>.typ) in one of its
+    profiles: the document is one of that profile, and each official
+    validator whose artefacts have the rule in the profile reports it, and
+    so for every official rule the fixture expects
     invoice-pro to report (normally the same one; a rule of the same
     violation where invoice-pro reports that instead, see `reported-as` in
     rule-coverage.toml). A validator reports a rule of its warning or
@@ -653,6 +688,11 @@ def fixture_parity(case, res, levels, differences):
     (rule_coverage.rule_levels)."""
     rule, passing = rule_coverage.fixture_rule(case["file"])
     profile = res.get("profile")
+    wanted_profile = case.get("profile")
+    if wanted_profile and "xml_path" in res and profile != wanted_profile:
+        # The source must take the profile of the run: `zugferd: fixture-profile(..)`.
+        return [f"O-PARITY: the fixture ran as {profile or 'an unknown profile'}, not as {wanted_profile} "
+                "(`zugferd: fixture-profile(..)`)"]
     if passing or profile not in levels:
         return []
     views = (res.get("official") or {}).get("validators", {})
@@ -753,10 +793,10 @@ def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass, use_kosit
 
     failures, hits, xpass, stale = triage(rows, known, strict, check_xpass, differences, check_stale)
     coverage = []
-    if check_fixtures:
+    if check_fixtures and levels is not None:
         entries, _ = rule_coverage.load_toml()
         fixtures, _ = rule_coverage.fixture_files()
-        coverage = rule_coverage.fixture_results(rows, entries, fixtures)
+        coverage = rule_coverage.fixture_results(rows, entries, fixtures, levels)
     timing = {
         "total_s": round(time.perf_counter() - started, 1),
         "compile_s": round(t_compile, 1),

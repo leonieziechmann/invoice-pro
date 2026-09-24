@@ -1,4 +1,5 @@
 // expect: AGREE_VALID
+// profiles: en16931
 //
 // A payment due date (BT-9) is enough.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   due-date: datetime(year: 2026, month: 9, day: 30),
   sender: seller-de,
   recipient: buyer-fr,

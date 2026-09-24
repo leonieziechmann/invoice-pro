@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-DE-31
+// profiles: xrechnung
 //
 // An XRechnung collected by direct debit without the debited account (BT-91).
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "xrechnung",
+  zugferd: fixture-profile("xrechnung"),
   sender: seller-de,
   recipient: buyer-de,
   invoice-nr: "BR-DE-31",

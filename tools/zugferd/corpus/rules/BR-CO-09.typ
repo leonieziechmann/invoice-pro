@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-CO-09
+// profiles: minimum basic-wl basic en16931 xrechnung
 //
 // A seller VAT identifier (BT-31) without a country prefix.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de + (vat-id: "123456788"),
   recipient: buyer-fr,
   invoice-nr: "BR-CO-09",

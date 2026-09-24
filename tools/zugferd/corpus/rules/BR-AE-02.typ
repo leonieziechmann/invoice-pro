@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-AE-02
+// profiles: basic en16931 xrechnung
 //
 // A reverse charge (AE) on invoice lines without the buyer VAT identifier
 // (BT-48) or its legal registration identifier (BT-47).
@@ -7,7 +8,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-at + (vat-id: none),
   invoice-nr: "BR-AE-02",

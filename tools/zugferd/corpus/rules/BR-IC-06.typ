@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-IC-06
+// profiles: basic-wl
 //
 // An intra-community supply (K) with a rate other than 0 %, which the category
 // does not allow (BT-96), on a document level allowance. BASIC WL has no
@@ -8,7 +9,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "basic-wl",
+  zugferd: fixture-profile("basic-wl"),
   sender: seller-de,
   recipient: buyer-at,
   invoice-nr: "BR-IC-06",

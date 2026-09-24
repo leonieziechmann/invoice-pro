@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-O-02
+// profiles: basic en16931 xrechnung
 //
 // An invoice not subject to VAT (O) with a seller tax representative, whose
 // VAT identifier (BT-63) it states, and a document level charge: the
@@ -9,7 +10,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de + (vat-id: none, tax-representative: representative),
   recipient: buyer-us,
   invoice-nr: "BR-O-04",

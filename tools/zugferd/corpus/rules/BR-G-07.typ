@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-G-07
+// profiles: basic-wl
 //
 // An export outside the EU (G) with a rate other than 0 %, which the category
 // does not allow (BT-103), on a document level charge. BASIC WL has no lines,
@@ -8,7 +9,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "basic-wl",
+  zugferd: fixture-profile("basic-wl"),
   sender: seller-de,
   recipient: buyer-us,
   invoice-nr: "BR-G-07",

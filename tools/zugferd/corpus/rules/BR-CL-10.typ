@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-CL-10
+// profiles: basic en16931 xrechnung
 //
 // A buyer identifier (BT-46) with a scheme that is no ISO/IEC 6523 code.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr + (global-id: (scheme: "9999", id: "4711")),
   invoice-nr: "BR-CL-10",

@@ -1,4 +1,5 @@
 // expect: AGREE_VALID
+// profiles: en16931
 //
 // A domestic reverse charge (e.g. section 13b UStG) identifies the buyer by
 // its legal registration identifier (BT-47) instead of a VAT identifier.
@@ -7,7 +8,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-de
     + (

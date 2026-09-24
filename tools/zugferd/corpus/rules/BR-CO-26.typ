@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-CO-26
+// profiles: basic-wl basic en16931 xrechnung
 //
 // A seller that cannot be identified: no seller identifier (BT-29), legal
 // registration identifier (BT-30) or VAT identifier (BT-31).
@@ -7,7 +8,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de + (vat-id: none, tax-nr: none),
   recipient: buyer-fr,
   invoice-nr: "BR-CO-26",

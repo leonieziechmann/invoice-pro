@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-DE-11
+// profiles: xrechnung
 //
 // An XRechnung whose deliver-to address has no post code (BT-78).
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "xrechnung",
+  zugferd: fixture-profile("xrechnung"),
   delivery-address: (
     name: "Lager Kunde AG",
     address: "Lagerweg 9",

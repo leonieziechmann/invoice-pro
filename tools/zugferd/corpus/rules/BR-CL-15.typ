@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-CL-15
+// profiles: en16931 xrechnung
 //
 // A country of origin (BT-159) outside ISO 3166-1.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr,
   invoice-nr: "BR-CL-15",

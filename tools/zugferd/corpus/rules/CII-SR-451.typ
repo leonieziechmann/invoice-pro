@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID CII-SR-451
+// profiles: basic en16931 xrechnung
 //
 // A payee with both an identifier and a global identifier (BT-60).
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   payee: (
     name: "Factoring Bank AG",
     id: "F-17",

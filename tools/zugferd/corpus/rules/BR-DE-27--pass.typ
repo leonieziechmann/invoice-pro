@@ -1,4 +1,5 @@
 // expect: AGREE_VALID
+// profiles: xrechnung
 //
 // Three digits are enough.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "xrechnung",
+  zugferd: fixture-profile("xrechnung"),
   sender: seller-de + (contact: contact + (phone: "030")),
   recipient: buyer-de,
   invoice-nr: "BR-DE-27--pass",

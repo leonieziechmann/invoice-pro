@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-O-11
+// profiles: basic-wl basic en16931 xrechnung
 //
 // BASIC WL: items not subject to VAT (O) next to standard rated items, and a
 // document level charge, split over both categories: the validators report the
@@ -9,7 +10,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "basic-wl",
+  zugferd: fixture-profile("basic-wl"),
   sender: seller-de + (vat-id: none),
   recipient: buyer-fr,
   invoice-nr: "BR-O-14",

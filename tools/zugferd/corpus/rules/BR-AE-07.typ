@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-AE-07
+// profiles: basic-wl
 //
 // A reverse charge (AE) with a rate other than 0 %, which the category does
 // not allow (BT-103), on a document level charge. BASIC WL has no lines, so
@@ -8,7 +9,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "basic-wl",
+  zugferd: fixture-profile("basic-wl"),
   sender: seller-de,
   recipient: buyer-at,
   invoice-nr: "BR-AE-07",

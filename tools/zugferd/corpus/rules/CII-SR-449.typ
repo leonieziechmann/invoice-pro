@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID CII-SR-449
+// profiles: basic en16931 xrechnung
 //
 // A deliver-to location with both a location identifier (BT-71) and a global
 // identifier.
@@ -7,7 +8,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   delivery-address: (
     name: "Lager Client SAS",
     address: "Rue du Port 3",

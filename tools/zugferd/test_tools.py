@@ -566,6 +566,40 @@ class Headers(unittest.TestCase):
         # A fixture is no regression case, and the other way round.
         self.assertFalse(run.regression_complete(cases))
         self.assertTrue(run.rules_complete(run.load_cases([run.RULES, run.REGRESSION])))
+        # A fixture is a case in each profile of its header; a run without
+        # one of them is not complete either.
+        several = [c for c in cases if c["file"].endswith("/BR-02.typ")]
+        self.assertEqual([c["id"] for c in several], [f"rule-BR-02@{p}" for p in run.rule_coverage.PROFILES])
+        self.assertEqual([c["inputs"] for c in several], [{"profile": p} for p in run.rule_coverage.PROFILES])
+        self.assertFalse(run.rules_complete([c for c in cases if c["id"] != "rule-BR-02@basic"]))
+
+    def test_fixture_profiles(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "BR-01.typ"
+            source = '\n#import "_base.typ": *\n#show: invoice.with(..setup, zugferd: fixture-profile("basic"))\n'
+            file.write_text("// expect: AGREE_INVALID BR-01\n// profiles: basic en16931\n" + source, encoding="utf-8")
+            # A regression case runs in the profile of its source only.
+            with self.assertRaisesRegex(common.ToolError, "only a parity fixture"):
+                run.load_cases([file])
+            with unittest.mock.patch.dict(run.FILE_CASES, {Path(tmp).resolve(): ("rule-", "rules")}):
+                cases = run.load_cases([file])
+                self.assertEqual([(c["id"], c["profile"], c["inputs"], c["population"]) for c in cases], [
+                    ("rule-BR-01@basic", "basic", {"profile": "basic"}, "rules"),
+                    ("rule-BR-01@en16931", "en16931", {"profile": "en16931"}, "rules"),
+                ])
+                file.write_text("// expect: AGREE_INVALID BR-01\n" + source, encoding="utf-8")
+                with self.assertRaisesRegex(common.ToolError, "lists the profiles it runs in"):
+                    run.load_cases([file])
+            file.write_text("// expect: AGREE_INVALID BR-01\n// profiles: full\n" + source, encoding="utf-8")
+            with self.assertRaisesRegex(common.ToolError, "`// profiles:` lists profiles of"):
+                run.load_cases([file])
+
+    def test_the_profile_goes_to_typst(self):
+        case = {"id": "rule-BR-01@basic", "file": "x.typ", "inputs": {"profile": "basic"}}
+        with tempfile.TemporaryDirectory() as tmp, \
+                unittest.mock.patch.object(common, "typst_compile", return_value=(False, "error: x", 0.1)) as compile_:
+            run.compile_case(case, tmp)
+        self.assertEqual(compile_.call_args.kwargs["inputs"], {"profile": "basic"})
 
 
 def fixture_case(name, *rules, warns=()):
@@ -637,6 +671,18 @@ class RuleChecks(unittest.TestCase):
         res = collected(mustang_report("BR-O-11"), ours=["BR-O-11"])
         self.assertEqual(self.parity(fixture_case("BR-O-11", "BR-O-11"), res),
                          ["O-PARITY: no official validator of the xrechnung profile has BR-O-11"])
+
+    def test_the_profile_of_the_run(self):
+        # A fixture that ignores the profile of its run (a literal `zugferd:`)
+        # would show the rule in another profile than it claims.
+        res = collected(mustang_report("BR-02"), kosit_report("BR-02"), ours=["BR-02"])
+        case = dict(fixture_case("BR-02", "BR-02"), profile="xrechnung")
+        self.assertEqual(self.parity(case, res), [])
+        self.assertEqual(self.parity(dict(case, profile="basic"), res),
+                         ["O-PARITY: the fixture ran as xrechnung, not as basic (`zugferd: fixture-profile(..)`)"])
+        # Also for a passing counterpart.
+        passing = dict(fixture_case("BR-02--pass"), profile="basic")
+        self.assertEqual(len(self.parity(passing, collected(mustang_report(), kosit_report()))), 1)
 
     def test_foreign_rules(self):
         res = collected(mustang_report("BR-O-03"), ours=["BR-O-02", "IP-VAT-226"])

@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-CL-08
+// profiles: basic en16931 xrechnung
 //
 // An invoice note (BT-22) with a subject code (BT-21) outside UNTDID 4451.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   notes: ((text: "Lieferung frei Haus.", subject-code: "XYZ"),),
   sender: seller-de,
   recipient: buyer-fr,

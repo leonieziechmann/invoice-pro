@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-25
+// profiles: basic en16931 xrechnung
 //
 // An item whose name (BT-153) has no text.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr,
   invoice-nr: "BR-25",

@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-AG-05
+// profiles: basic en16931 xrechnung
 //
 // IPSI items (M) at a rate of 0 % (BT-152), which the CEN Schematron 1.3.12 in
 // Mustang does not allow; KoSIT's CEN 1.3.16 accepts it (see
@@ -8,7 +9,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr,
   invoice-nr: "BR-AG-05",

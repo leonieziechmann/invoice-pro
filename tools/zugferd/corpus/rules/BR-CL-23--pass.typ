@@ -1,4 +1,5 @@
 // expect: AGREE_VALID
+// profiles: en16931
 //
 // A unit code of UN/ECE Recommendation 20.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr,
   invoice-nr: "BR-CL-23--pass",

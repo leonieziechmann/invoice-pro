@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-CL-16
+// profiles: basic en16931 xrechnung
 //
 // A payment means code (BT-81) outside UNTDID 4461.
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr,
   invoice-nr: "BR-CL-16",

@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-IC-11
+// profiles: basic-wl basic en16931 xrechnung
 //
 // A credit note for an intra-community supply (K) without dates: its own date
 // is not the date of the supply (BT-72, BG-14).
@@ -7,7 +8,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   document-type: "credit-note",
   preceding-invoice-nr: "R-2026-31",
   sender: seller-de,

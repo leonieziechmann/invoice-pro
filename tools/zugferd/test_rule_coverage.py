@@ -104,8 +104,8 @@ def entry(ids, cls, profiles=None, reason="r", evidence=(), reported_as=(), inde
     return rc.Entry(index, list(ids), cls, profiles, reason, list(evidence), None, list(reported_as))
 
 
-def fixture(rule, *rules, expect="AGREE_INVALID", name=None):
-    return rc.Fixture(Path(f"/x/{name or rule}.typ"), expect, list(rules) or [rule])
+def fixture(rule, *rules, expect="AGREE_INVALID", name=None, profiles=("en16931",)):
+    return rc.Fixture(Path(f"/x/{name or rule}.typ"), expect, list(rules) or [rule], list(profiles))
 
 
 class Artefacts(unittest.TestCase):
@@ -188,7 +188,7 @@ class Derivation(unittest.TestCase):
         mustang = assertion("CII-SR-004")
         kosit = twin(mustang, id="CII-SR-04", ref="CII-SR-04")
         inv = inventory(en16931={"CII-SR-004": [mustang], "CII-SR-04": [kosit]})
-        decisions, problems = rc.classify(inv, [], {})
+        decisions, problems = rc.classify(inv, [], [])
         self.assertEqual(problems, [])
         self.assertEqual({r: d.cls for r, d in decisions["en16931"].items()},
                          {"CII-SR-004": "compiled", "CII-SR-04": "compiled"})
@@ -210,7 +210,7 @@ class Classification(unittest.TestCase):
     def classes(self, entries, fixtures=None, unclassified=True):
         """({(profile, rule): class}, problems), without the unclassified
         rules the test does not look at unless `unclassified`."""
-        decisions, problems = rc.classify(self.inv, entries, fixtures or {})
+        decisions, problems = rc.classify(self.inv, entries, fixtures or [])
         if not unclassified:
             problems = [p for p in problems if not p.startswith("UNCLASSIFIED")]
         return {(p, r): d.cls for p in rc.PROFILES for r, d in decisions[p].items()}, problems
@@ -256,42 +256,63 @@ class Classification(unittest.TestCase):
     def test_fixtures(self):
         entries = [entry(["BR-27", "BR-61"], "fixture"), entry(["BR-06"], "fixture", index=1),
                    entry(["BR-20"], "compiled", profiles=["en16931"], index=2)]
-        fixtures = {
-            "BR-27": [fixture("BR-27")],
+        fixtures = [
+            fixture("BR-27", profiles=["basic", "en16931"]),
             # A fixture entry may take a rule the guard settles (BR-06).
-            "BR-06": [fixture("BR-06")],
+            fixture("BR-06"),
             # BR-61 has no fixture; BR-20 is classified otherwise.
-            "BR-20": [fixture("BR-20")],
-        }
+            fixture("BR-20"),
+        ]
         classes, problems = self.classes(entries, fixtures)
         self.assertEqual(classes[("en16931", "BR-06")], "fixture")
-        self.assertEqual(sorted(p.split(":")[0] for p in problems), ["FIXTURE BR-20", "FIXTURE BR-61"])
+        self.assertEqual(sorted(p.split(":")[0] for p in problems), ["FIXTURE BR-20.typ", "FIXTURE BR-61 in en16931"])
         self.assertIn("classify it as fixture", [p for p in problems if p.startswith("FIXTURE BR-20")][0])
 
-    def test_fixture_header_names_the_rule(self):
+    def test_a_fixture_in_every_profile(self):
+        # BR-27 is a rule of BASIC and EN 16931: its class fixture needs a
+        # fixture in each, and any fixture whose header names it counts.
         entries = [entry(["BR-27"], "fixture")]
-        _, problems = self.classes(entries, {"BR-27": [fixture("BR-27", "BR-28")]}, unclassified=False)
-        self.assertEqual(len(problems), 1)
-        self.assertIn("does not name BR-27", problems[0])
+        _, problems = self.classes(entries, [fixture("BR-27")], unclassified=False)
+        self.assertEqual([p.split(":")[0] for p in problems], ["FIXTURE BR-27 in basic"])
+        self.assertIn("none lists basic in its `// profiles:` header", problems[0])
+        shown = [fixture("BR-27"), fixture("BR-06", "BR-06", "BR-27", name="BR-06--more", profiles=["basic"])]
+        self.assertEqual(self.classes(entries, shown, unclassified=False)[1],
+                         ["FIXTURE BR-06--more.typ: runs in basic, whose validators do not have BR-06"])
+        # An entry limited to some profiles needs fixtures in those only.
+        entries = [entry(["BR-27"], "fixture", profiles=["en16931"]), entry(["BR-27"], "open", profiles=["basic"],
+                                                                            index=1)]
+        self.assertEqual(self.classes(entries, [fixture("BR-27")], unclassified=False)[1], [])
+
+    def test_fixture_header_names_the_rule(self):
+        entries = [entry(["BR-06"], "fixture")]
+        _, problems = self.classes(entries, [fixture("BR-06", "BR-61")], unclassified=False)
+        self.assertEqual(len(problems), 2)
+        self.assertIn("no fixture shows it there", problems[0])
+        self.assertIn("does not name BR-06", problems[1])
 
     def test_reported_as(self):
         entries = [entry(["BR-61"], "fixture", reported_as=["BR-27"])]
-        self.assertEqual(self.classes(entries, {"BR-61": [fixture("BR-61", "BR-27")]}, unclassified=False)[1], [])
-        problems = self.classes(entries, {"BR-61": [fixture("BR-61", "BR-06")]}, unclassified=False)[1]
-        self.assertIn("expects none of the rules of `reported-as`", problems[0])
-        problems = self.classes(entries, {"BR-61": [fixture("BR-61", "BR-61")]}, unclassified=False)[1]
+        self.assertEqual(self.classes(entries, [fixture("BR-61", "BR-27")], unclassified=False)[1], [])
+        problems = self.classes(entries, [fixture("BR-61", "BR-06")], unclassified=False)[1]
+        self.assertIn("names one of BR-27", problems[0])
+        self.assertIn("does not name BR-61", problems[1])
+        problems = self.classes(entries, [fixture("BR-61", "BR-61")], unclassified=False)[1]
         self.assertIn("remove `reported-as`", problems[0])
+        # Only a fixture named after the rule shows it under a related rule.
+        problems = self.classes(entries, [fixture("BR-06", "BR-06", "BR-27")], unclassified=False)[1]
+        self.assertIn("no fixture BR-61.typ (or BR-61--<variant>.typ) runs in en16931", problems[0])
 
     def test_open_rules_may_keep_a_fixture(self):
         entries = [entry(["BR-61"], "open")]
-        self.assertEqual(self.classes(entries, {"BR-61": [fixture("BR-61")]}, unclassified=False)[1], [])
-        _, problems = self.classes(entries, {"BR-61": [fixture("BR-61")], "BR-98": [fixture("BR-98")]},
-                                   unclassified=False)
-        self.assertEqual(len(problems), 1)
-        self.assertIn("a rule no validator of any profile has", problems[0])
+        self.assertEqual(self.classes(entries, [fixture("BR-61")], unclassified=False)[1], [])
+        _, problems = self.classes(entries, [fixture("BR-61"), fixture("BR-98")], unclassified=False)
+        self.assertEqual(problems, ["FIXTURE BR-98.typ: runs in en16931, whose validators do not have BR-98"])
+        # A rule the header names must be one of the profile as well.
+        _, problems = self.classes(entries, [fixture("BR-61", "BR-61", "BR-97")], unclassified=False)
+        self.assertEqual(problems, ["FIXTURE BR-61.typ: names BR-97, which the validators of en16931 do not have"])
 
     def test_explain(self):
-        decisions, _ = rc.classify(self.inv, [entry(["BR-27"], "construction", evidence=["src/x.typ"])], {})
+        decisions, _ = rc.classify(self.inv, [entry(["BR-27"], "construction", evidence=["src/x.typ"])], [])
         text = rc.explain(decisions)
         self.assertIn("BR-27\n  basic     construction (entry) r\n  en16931   construction (entry) r\n", text)
         self.assertNotIn("context:", text)
@@ -304,7 +325,7 @@ class Classification(unittest.TestCase):
 
     def test_summary_and_open_rules(self):
         decisions, _ = rc.classify(self.inv, [entry(["BR-27", "BR-61"], "open"),
-                                              entry(["BR-20"], "compiled", profiles=["en16931"], index=1)], {})
+                                              entry(["BR-20"], "compiled", profiles=["en16931"], index=1)], [])
         summary = rc.summarize(decisions)
         self.assertEqual(dict(summary["en16931"]), {"compiled": 2, "open": 2, "total": 4})
         self.assertEqual(rc.open_rules(decisions), {"BR-27": ["basic", "en16931"], "BR-61": ["en16931"]})
@@ -353,56 +374,96 @@ class ClassificationFile(unittest.TestCase):
         entries, ip = rc.load_toml()
         fixtures, problems = rc.fixture_files()
         self.assertEqual(problems, [])
+        named = {rule for f in fixtures for rule in (f.rule, *f.rules)}
         for e in entries:
             if e.cls == "fixture":
                 for rule in e.ids:
-                    self.assertIn(rule, fixtures, rule)
+                    self.assertIn(rule, named, rule)
         self.assertEqual(rc.check_ip(ip, rc.ip_rules_in_source()), [])
 
 
+def fixture_source(expect, profiles="en16931", argument='fixture-profile("en16931")', more=""):
+    """The text of a fixture file."""
+    header = f"// expect: {expect}\n" + (f"// profiles: {profiles}\n" if profiles else "") + more
+    return f"{header}//\n// A fixture.\n\n#import \"_base.typ\": *\n\n#show: invoice.with(\n  zugferd: {argument},\n)\n"
+
+
 class Fixtures(unittest.TestCase):
-    def test_files(self):
-        files = {
-            "BR-01.typ": "// expect: AGREE_INVALID BR-01\n//\n// A fixture.\n\n#import \"_base.typ\": *\n",
-            "BR-01--pass.typ": "// expect: AGREE_VALID\n",
-            "BR-01--minimum.typ": "// expect: AGREE_INVALID BR-01 BR-02\n",
-            "BR-05.typ": "// expect: AGREE_VALID\n// warns: BR-05\n",
-            "BR-02--pass.typ": "// expect: AGREE_INVALID BR-02\n",
-            "BR-03.typ": "// A fixture without header.\n",
-            "BR-04.typ": "// expect: AGREE_VALID\n",
-            "_base.typ": "// shared definitions\n",
-        }
+    def files(self, files):
         with tempfile.TemporaryDirectory() as tmp:
             for name, text in files.items():
                 (Path(tmp) / name).write_text(text, encoding="utf-8")
-            found, problems = rc.fixture_files(tmp)
-        self.assertEqual({rule: [(f.name, f.expect, f.rules) for f in fs] for rule, fs in found.items()}, {
-            "BR-01": [("BR-01--minimum.typ", "AGREE_INVALID", ["BR-01", "BR-02"]),
-                      ("BR-01.typ", "AGREE_INVALID", ["BR-01"])],
-            "BR-05": [("BR-05.typ", "AGREE_VALID", ["BR-05"])],
+            return rc.fixture_files(tmp)
+
+    def test_files(self):
+        found, problems = self.files({
+            "BR-01.typ": fixture_source("AGREE_INVALID BR-01", "basic en16931"),
+            "BR-01--pass.typ": fixture_source("AGREE_VALID"),
+            "BR-01--minimum.typ": fixture_source("AGREE_INVALID BR-01 BR-02", "minimum", 'fixture-profile("minimum")'),
+            "BR-05.typ": fixture_source("AGREE_VALID", more="// warns: BR-05\n"),
+            "BR-02--pass.typ": fixture_source("AGREE_INVALID BR-02"),
+            "BR-03.typ": "// A fixture without header.\n// profiles: en16931\n",
+            "BR-04.typ": fixture_source("AGREE_VALID"),
+            "_base.typ": "// shared definitions\n",
         })
-        self.assertEqual(len(problems), 3)
+        self.assertEqual([(f.name, f.rule, f.expect, f.rules, f.profiles) for f in found], [
+            ("BR-01--minimum.typ", "BR-01", "AGREE_INVALID", ["BR-01", "BR-02"], ["minimum"]),
+            ("BR-01.typ", "BR-01", "AGREE_INVALID", ["BR-01"], ["basic", "en16931"]),
+            ("BR-05.typ", "BR-05", "AGREE_VALID", ["BR-05"], ["en16931"]),
+        ])
+        self.assertEqual(len(problems), 4, problems)
         self.assertIn("BR-02--pass.typ: a passing counterpart expects `AGREE_VALID`", problems[0])
-        self.assertIn("BR-03.typ: no `// expect:` header", problems[1])
-        self.assertIn("BR-04.typ: its `// expect:` header names no rule", problems[2])
+        self.assertIn("BR-03.typ: its source must pass the profile", problems[1])
+        self.assertIn("BR-03.typ: no `// expect:` header", problems[2])
+        self.assertIn("BR-04.typ: its `// expect:` header names no rule", problems[3])
+
+    def test_profiles(self):
+        # Every fixture lists the profiles it runs in, and passes the one
+        # of the run on to `zugferd` (run.py sets it for each).
+        cases = {
+            fixture_source("AGREE_INVALID BR-01", profiles=""): "`// profiles:` lists the profiles it runs in",
+            fixture_source("AGREE_INVALID BR-01", "en16931 full"): "(not full)",
+            fixture_source("AGREE_INVALID BR-01", "en16931 en16931"): "each once",
+            fixture_source("AGREE_INVALID BR-01", argument='"en16931"'): "found: \"en16931\"",
+            fixture_source("AGREE_INVALID BR-01", "basic", 'fixture-profile("en16931")'):
+                "names a profile its `// profiles:` header does not list",
+        }
+        for text, message in cases.items():
+            found, problems = self.files({"BR-01.typ": text})
+            self.assertEqual(len(problems), 1, (text, problems))
+            self.assertIn(message, problems[0], text)
+        # A comment does not count as the argument.
+        text = fixture_source("AGREE_INVALID BR-01").replace("#show", '// zugferd: "basic",\n#show')
+        self.assertEqual(self.files({"BR-01.typ": text})[1], [])
 
     def test_names(self):
         self.assertEqual(rc.fixture_rule("x/BR-DE-23-a.typ"), ("BR-DE-23-a", False))
         self.assertEqual(rc.fixture_rule("x/BR-CO-26--minimum.typ"), ("BR-CO-26", False))
         self.assertEqual(rc.fixture_rule("x/BR-AE-02--pass.typ"), ("BR-AE-02", True))
         self.assertEqual(rc.fixture_rule("x/BR-AE-02--pass-13b.typ"), ("BR-AE-02", True))
-        self.assertEqual(rc.fixture_case_id("x/BR-CO-26--minimum.typ"), "rule-BR-CO-26--minimum")
+        self.assertEqual(rc.fixture_case_id("x/BR-CO-26--minimum.typ", "minimum"), "rule-BR-CO-26--minimum@minimum")
 
     def test_every_fixture_rule_passes_in_a_run(self):
-        entries = [entry(["BR-01", "BR-02", "BR-03"], "fixture"), entry(["BR-04"], "open", index=1)]
-        fixtures = {"BR-01": [fixture("BR-01"), fixture("BR-01", name="BR-01--minimum")],
-                    "BR-02": [fixture("BR-02")], "BR-04": [fixture("BR-04")]}
-        rows = [{"id": "rule-BR-01", "verdict": "FAIL"}, {"id": "rule-BR-01--minimum", "verdict": "PASS"},
-                {"id": "rule-BR-02", "verdict": "FAIL"}, {"id": "rule-BR-04", "verdict": "FAIL"}]
-        self.assertEqual(rc.fixture_results(rows, entries, fixtures), [
-            "FIXTURE BR-02: no fixture of the rule passed (rule-BR-02)",
-            "FIXTURE BR-03: no fixture of the rule ran",
+        entries = [entry(["BR-01", "BR-02", "BR-03"], "fixture"), entry(["BR-04"], "open", index=1),
+                   entry(["BR-05"], "fixture", profiles=["en16931"], index=2)]
+        fixtures = [fixture("BR-01", profiles=["basic", "en16931"]),
+                    fixture("BR-01", name="BR-01--minimum", profiles=["basic"]),
+                    fixture("BR-02"), fixture("BR-04"), fixture("BR-05", profiles=["basic", "en16931"])]
+        levels = {"basic": {"BR-01": {}, "BR-05": {}}, "en16931": {"BR-01": {}, "BR-02": {}, "BR-03": {}, "BR-05": {}}}
+        rows = [{"id": "rule-BR-01@basic", "verdict": "FAIL"}, {"id": "rule-BR-01--minimum@basic", "verdict": "PASS"},
+                {"id": "rule-BR-01@en16931", "verdict": "FAIL"},
+                {"id": "rule-BR-02@en16931", "verdict": "FAIL"}, {"id": "rule-BR-04@en16931", "verdict": "FAIL"},
+                {"id": "rule-BR-05@basic", "verdict": "FAIL"}, {"id": "rule-BR-05@en16931", "verdict": "PASS"}]
+        # BR-01 passed in BASIC (its variant), but not in EN 16931; BR-05 is a
+        # fixture in EN 16931 only.
+        self.assertEqual(rc.fixture_results(rows, entries, fixtures, levels), [
+            "FIXTURE BR-01 in en16931: no fixture of the rule passed (rule-BR-01@en16931)",
+            "FIXTURE BR-02 in en16931: no fixture of the rule passed (rule-BR-02@en16931)",
+            "FIXTURE BR-03 in en16931: no fixture of the rule ran in en16931",
         ])
+        # A rule the validators of the run do not have (e.g. of KoSIT, which
+        # did not run) is not asked for.
+        self.assertEqual(rc.fixture_results(rows, [entry(["BR-03"], "fixture")], fixtures, {"en16931": {}}), [])
 
     def test_foreign_rules(self):
         res = {"profile": "basic-wl", "diagnostics": [

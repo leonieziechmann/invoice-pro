@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-S-05
+// profiles: basic en16931 xrechnung
 //
 // Standard rated items (S) at a rate of 0 %, which the category does not allow
 // (BT-152).
@@ -7,7 +8,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr,
   invoice-nr: "BR-S-05",

@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-CL-18
+// profiles: basic en16931 xrechnung
 //
 // A VAT category (BT-151) EN 16931 does not know (AA).
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "en16931",
+  zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr,
   invoice-nr: "BR-CL-18",

@@ -1,4 +1,5 @@
 // expect: AGREE_INVALID BR-DE-3
+// profiles: xrechnung
 //
 // An XRechnung whose seller address has no city (BT-37).
 
@@ -6,7 +7,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: "xrechnung",
+  zugferd: fixture-profile("xrechnung"),
   sender: seller-de + (city: (post-code: "10115")),
   recipient: buyer-de,
   invoice-nr: "BR-DE-3",
