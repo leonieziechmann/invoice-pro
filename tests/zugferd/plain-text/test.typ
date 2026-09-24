@@ -68,3 +68,103 @@
   )
   assert.eq(plain-text(none, keep-newlines: true), "")
 }
+
+// --- 4. The common values take a shorter way to the same text ---
+// A string, a single text and a sequence of texts and spaces skip the walk
+// of the content, and printable ASCII words the replacements: the result is
+// that of the whole algorithm, which `reference` spells out.
+#import "/src/utils/text.typ": _collect-text, _hyphens, invalid-xml-chars
+#let reference(it, keep-newlines: false) = {
+  let whitespace = regex("\\s+")
+  let text = (
+    _collect-text(it, if keep-newlines { "\n" } else { " " })
+      .replace(invalid-xml-chars, "")
+      .replace(_hyphens, "-")
+  )
+  if not keep-newlines { return text.replace(whitespace, " ").trim() }
+  let lines = ()
+  for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n") {
+    lines.push(line.replace(whitespace, " ").trim())
+  }
+  lines.join("\n").trim("\n")
+}
+#{
+  let year = 2026
+  let values = (
+    // Strings: ASCII, other whitespace (no-break, em and ideographic
+    // spaces, line and paragraph separators, NEL), characters XML does not
+    // allow, hyphens, line breaks, invisible characters that are no
+    // whitespace (zero width space, BOM).
+    "",
+    " ",
+    "a",
+    "Consulting",
+    "INV-2026-102",
+    "  a  b  ",
+    "a\tb",
+    "a\u{00A0}b",
+    "a\u{2003}b\u{3000}c",
+    "a\u{2028}b\u{2029}c\u{0085}d",
+    "a\u{200B}b\u{FEFF}c",
+    "x\u{2212}1 A\u{2010}B\u{2011}C",
+    "ctrl\u{0}\u{1F}\u{FFFE}chars",
+    "line\nbreak",
+    "cr\r\nlf\rcr",
+    "  Zahlbar   in 30 Tagen. \r\n\t#SKONTO#  \n\n",
+    "Café Straße",
+    "tab\t\tend ",
+    // Content: a single text, sequences of texts and spaces, and what else
+    // an item name can hold.
+    [],
+    [ ],
+    [Consulting],
+    [Position 0 with a longer description text],
+    [Travel & expenses],
+    [ spaced ],
+    [Café und Straße],
+    [Nr. 5, 10 % off],
+    [It's "quoted"],
+    [A \ B],
+    [Line one \ line two],
+    [Beratung -- Phase 1],
+    [10--12 Uhr],
+    [*Bold* name],
+    [_Emphasis_ and `raw`],
+    [#link("https://example.com")[Site]],
+    [Note#footnote[A footnote]],
+    [a#h(1em)b#v(1em)c],
+    [#box[Boxed] text],
+    [#text(fill: red)[Red] text],
+    [Rohr $1/2$ Zoll],
+    [Fläche 20 m$""^2$],
+    [#{ year }-001],
+    [x#sym.minus;1],
+    [
+      Erster Absatz.
+
+      Zweiter Absatz.
+    ],
+    // Other values
+    $x^2 + sqrt(2)$,
+    5,
+    2.5,
+    decimal("-12.50"),
+    none,
+    auto,
+    sym.arrow,
+    ("a", [b], 3),
+  )
+  for value in values {
+    assert.eq(plain-text(value), reference(value), message: repr(value))
+    assert.eq(
+      plain-text(value, keep-newlines: true),
+      reference(value, keep-newlines: true),
+      message: repr(value),
+    )
+  }
+  // The texts of section 1 to 3 once more, by the shorter way.
+  assert.eq(plain-text([Travel & expenses]), "Travel & expenses")
+  assert.eq(plain-text([ spaced ]), "spaced")
+  assert.eq(plain-text("a\u{00A0} \u{2003}b"), "a b")
+  assert.eq(plain-text([Café und Straße]), "Café und Straße")
+}
