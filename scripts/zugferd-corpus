@@ -46,5 +46,10 @@ done
 # Every business term of EN 16931 has a disposition: an input, a derivation
 # or a reason why it is not supported (tools/zugferd/bt-disposition.toml).
 "$PYTHON" tools/zugferd/bt_disposition.py
+# The tables of the XML write guard are those the generator compiles from the
+# pinned artefacts and src/zugferd/build.typ (drift test), and the guard
+# passes the mutation test against the XSD and Mustang (tests/TESTING.md).
+"$PYTHON" tools/zugferd/gen_guard.py --check
+"$PYTHON" tools/zugferd/mutate.py
 "$PYTHON" tools/zugferd/corpus/gen.py --population "$population"
 exec "$PYTHON" tools/zugferd/run.py ${run_args[@]+"${run_args[@]}"}

@@ -38,6 +38,7 @@ tests/
 │
 └── zugferd/               # Unit tests of the e-invoice (ZUGFeRD) pipeline
     ├── xml/               # Plain text, number formatting, XML serialization
+    ├── guard/             # XML write guard: structure, values, names, diagnostics
     ├── codelists/         # Construction of the code lists
     ├── model/             # E-invoice data model built from an invoice
     ├── validate/          # Business rule checks (diagnostics)
@@ -467,6 +468,7 @@ The Mustang validation above checks two dozen hand-written documents. The CI add
 | :--------------------- | :--------------------------------------------------------------------------------------------- | :---------------------------------- | :----------------------------------------- |
 | Conformance corpus     | invoice-pro's verdict equals the official one, and the XML says what the input and the PDF say | `nix run .#zugferd-corpus`          | `corpus` in `zugferd-validation.yaml`      |
 | Business terms         | every business term of EN 16931 has an input, a derivation or a reason why it is not supported | (part of `zugferd-corpus`)          | `corpus`                                   |
+| XML write guard        | the guard's tables are those of the pinned artefacts, and the guard passes the mutation test   | (part of `zugferd-corpus`)          | `corpus`                                   |
 | Golden XML             | the XML of every e-invoice test document is unchanged, or changed on purpose                   | `nix run .#zugferd-golden`          | `golden` in `zugferd-validation.yaml`      |
 | Reproducibility        | two compilations of a document give bit-identical PDFs (same Typst and package version)        | (part of `zugferd-golden`)          | `golden`                                   |
 | Performance gate       | the e-invoice path stays within its budget                                                     | `nix run .#perf-gate`               | `performance` in `zugferd-validation.yaml` |
@@ -484,6 +486,7 @@ The scripts take their tools from environment variables, and their generated fil
 | `MUSTANG_JAR`                            | corpus         | none: `Mustang-CLI-2.14.0.jar` from the [Mustang releases](https://github.com/ZUGFeRD/mustangproject/releases)                      |
 | `JAVA_BIN`, `JAVAC_BIN` (or `JAVA_HOME`) | corpus         | `java`, `javac`: a JDK, because the batch validator `tools/zugferd/java/MustangBatch.java` is compiled against the jar on first use |
 | `ZUGFERD_BUILD_DIR`                      | corpus, golden | `build/zugferd`; must be inside the repository (the cases import `/src/lib.typ`)                                                    |
+| `KOSIT_JAR`, `KOSIT_CONFIG`              | `mutate.py`    | none: only for `--kosit`, the KoSIT validator jar and the directory of the XRechnung configuration (with `scenarios.xml`)           |
 
 ```bash
 export MUSTANG_JAR=~/Downloads/Mustang-CLI-2.14.0.jar
@@ -582,6 +585,36 @@ When the corpus fails:
 python3 tools/zugferd/bt_disposition.py   # ✔ 196 business terms of EN 16931 have a disposition (...)
 ```
 
+#### The XML Write Guard
+
+The serializer checks every element it writes against tables of the profile (see [the documentation](../docs/docs/e-invoicing.md#the-xml-write-guard)). `tools/zugferd/gen_guard.py` compiles these tables from the official artefacts inside the Mustang CLI jar 2.14.0 (pinned by their SHA-256): the Factur-X 1.0.07 XSDs and Schematron, the CEN Schematron of EN 16931 and the XRechnung 3.0 Schematron. It writes `src/zugferd/guard/lists.typ` and one module per profile, and covers exactly the elements `src/zugferd/build.typ` can write. It fails on any XSD construct or Schematron shape outside the subset it understands, instead of guessing, and prints what it did with every rule:
+
+```bash
+python3 tools/zugferd/gen_guard.py            # regenerate the tables (after a change of build.typ)
+python3 tools/zugferd/gen_guard.py --check    # drift test: the committed tables are the generator's
+python3 tools/zugferd/gen_guard.py --explain  # every rule with its disposition (compiled, business, ...)
+```
+
+A new element in the builder changes the tables, and the drift test fails until they are regenerated and committed with the builder change; review their diff like code. `tools/zugferd/test_gen_guard.py` tests the generator on small synthetic schemas and rules (and, with `$MUSTANG_JAR`, the drift, the determinism and the size budget of the real tables); `tests/zugferd/guard/test.typ` tests the checks of the serializer with the validator bypassed, on the element tree of valid invoices changed after the validation.
+
+`tools/zugferd/mutate.py` is the mutation test of the guard. It derives mutants from the golden XML files of every profile with a fixed seed: structural ones (an element deleted, duplicated, swapped with its next sibling, moved, renamed, emptied, or an unknown one inserted), codes (another code of any list, or none), lexical values (decimals, dates, indicators) and the values of tax elements (the rate, VAT amount, exemption reason or VAT category). `tools/zugferd/mutate.typ` reads each mutant with Typst's XML parser, turns it back into the builder's element tree and serializes it with the guard; the XSD of the profile and Mustang (`--kosit`: also KoSIT) validate it. It fails when one of these criteria does not hold:
+
+| Criterion | Holds when                                                                                                                                                                                                                                                 |
+| :-------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1        | the guard accepts no mutant that the XSD rejects                                                                                                                                                                                                           |
+| C2        | the guard blocks no structural mutant the official validators accept, except by its documented stricter checks (an element the builder never writes, one the Factur-X Schematron marks as not used, a required element without text, a date naming no day) |
+| C3        | the guard rejects a mutated code exactly when the official validator reports a code list rule of that position                                                                                                                                             |
+| C4        | for a mutated tax element or category code, the guard reports exactly the rules of the VAT categories (rate, VAT amount, exemption reason) that Mustang reports                                                                                            |
+| C5        | the guard accepts no mutant with a deleted or emptied element for which Mustang reports a rule that the tables compile as a requirement of that element (e.g. `BR-06` for an empty seller name)                                                            |
+
+```bash
+python3 tools/zugferd/mutate.py                          # 38 golden files, 2 mutants per operator: about 750 mutants
+python3 tools/zugferd/mutate.py --per-operator 4 --kosit # a larger sample, codes also against KoSIT
+python3 tools/zugferd/mutate.py --only 'zugferd-basic*'  # from some golden files only
+```
+
+A failure lists the mutant, what was changed, the guard's findings and Mustang's rules; `build/zugferd/mutate/` holds the mutants and `mutate-report.json`. A mutant the builder's element tree cannot express as it is (for example a repeated element with another one between) is left out and counted.
+
 #### Golden XML and Reproducibility
 
 `tools/zugferd/golden.py` takes the documents of `scripts/validate-all-zugferd` (one list for both checks), compiles each twice with a fixed creation timestamp and requires bit-identical PDFs: the same Typst and package version produce the same document, PDF and XML. It then compares the attached XML, pretty-printed, with `tests/zugferd/golden/<document>.xml` and shows a diff when they differ. Documents that import the published package (the template) are compiled against the checkout.
@@ -612,7 +645,7 @@ where the time in e-invoice code is every trace event of a file in `src/zugferd/
 
 #### Not Covered Yet
 
-- **KoSIT validator:** the official reference for XRechnung is not part of the CI yet. TODO: add KoSIT 1.5.0 with the pinned XRechnung configuration to the corpus runner (a second verdict next to Mustang, and the class `OFFICIAL_DISAGREE` when they differ); it differs from Mustang on BR-DE-27/BR-DE-28, which invoice-pro treats as errors like Mustang.
+- **KoSIT validator:** the official reference for XRechnung is not part of the CI yet. TODO: add KoSIT 1.5.0 with the pinned XRechnung configuration to the corpus runner (a second verdict next to Mustang, and the class `OFFICIAL_DISAGREE` when they differ); it differs from Mustang on BR-DE-27/BR-DE-28, which invoice-pro treats as errors like Mustang. Locally, `mutate.py --kosit` compares the guard's code lists with KoSIT.
 - **Rule coverage gate:** the check that every official rule id of a profile is covered by a rule, by construction or by a generated table follows with the rule registry.
 
 ---

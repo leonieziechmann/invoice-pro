@@ -108,10 +108,14 @@
 }
 
 // --- 4. dict-to-xml ---
+// The serializer writes elements the guard tables do not know unchecked, the
+// same way as known ones; the guard's findings are tested in
+// tests/zugferd/guard/.
+#let xml-of(data) = dict-to-xml(data, "en16931").xml
 #{
   // Attributes, text, repeated elements and empty structural elements
   assert.eq(
-    dict-to-xml((
+    xml-of((
       a: (
         b: "x & y",
         f: ("@s": "2", "": "v"),
@@ -124,7 +128,7 @@
 
   // Missing values leave the element out instead of writing it empty
   assert.eq(
-    dict-to-xml((
+    xml-of((
       a: (
         b: none,
         c: "",
@@ -139,7 +143,7 @@
   // Attributes come first in the order given, wherever their keys are; an
   // element with attributes can hold elements instead of text
   assert.eq(
-    dict-to-xml((
+    xml-of((
       t: (
         b: "1",
         "@x": "a\"<",
@@ -152,7 +156,7 @@
   // An element with a value key but only blank text is left out, attributes
   // and all; an element whose children are all missing stays as an empty one
   assert.eq(
-    dict-to-xml((
+    xml-of((
       a: ("@s": "1", "": " "),
       b: ("@s": "1", "": (c: none)),
       g: (c: none, d: ""),
@@ -162,24 +166,23 @@
   // Arrays repeat the element; nested arrays are flattened and missing items
   // skipped
   assert.eq(
-    dict-to-xml((
+    xml-of((
       h: (("1", none), "2", (v: "3"), ()),
     )),
     "<h>1</h><h>2</h><h><v>3</v></h>",
   )
   // Content, numbers and arrays are written as their plain text
   assert.eq(
-    dict-to-xml((
+    xml-of((
       n: [*Bold* & "quoted"],
       m: decimal("-1.50"),
       o: ("@unitCode": "HUR", "": ([a], "b")),
     )),
     "<n>Bold &amp; &quot;quoted&quot;</n><m>-1.50</m><o unitCode=\"HUR\">a b</o>",
   )
-  // Values outside an element
-  assert.eq(dict-to-xml(none), "")
-  assert.eq(dict-to-xml("a<b"), "a&lt;b")
-  assert.eq(dict-to-xml((:)), "")
+  // No document at all
+  assert.eq(xml-of(none), "")
+  assert.eq(xml-of((:)), "")
 }
 
 // --- 5. Large documents ---
@@ -191,7 +194,7 @@
     "ram:Name": "Item " + str(i),
     "ram:Amount": ("@currencyID": "EUR", "": str(i) + ".00"),
   ))
-  let xml = dict-to-xml(("rsm:Doc": ("ram:Line": lines)))
+  let xml = xml-of(("rsm:Doc": ("ram:Line": lines)))
   assert(xml.starts-with(
     "<rsm:Doc><ram:Line><ram:LineID>1</ram:LineID><ram:Name>Item 0</ram:Name>"
       + "<ram:Amount currencyID=\"EUR\">0.00</ram:Amount></ram:Line>",

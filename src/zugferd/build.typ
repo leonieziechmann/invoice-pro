@@ -519,10 +519,11 @@
   summation
 }
 
-/// Serializes an e-invoice data model into the CrossIndustryInvoice XML.
+/// The element tree of the CrossIndustryInvoice XML of an e-invoice data
+/// model, for the serializer `dict-to-xml` (xml.typ).
 ///
-/// -> str
-#let build-xml(model) = {
+/// -> dictionary
+#let build-tree(model) = {
   let profile = model.profile
   let invoice = model.invoice
   let payment = model.payment
@@ -682,8 +683,20 @@
     ),
   )
 
-  "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + dict-to-xml(data)
+  data
 }
+
+/// The XML declaration in front of every e-invoice.
+#let xml-declaration = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+
+/// Serializes an e-invoice data model into the CrossIndustryInvoice XML.
+/// The write guard's findings are left out here; `process-zugferd` writes
+/// the same XML and reports them.
+///
+/// -> str
+#let build-xml(model) = (
+  xml-declaration + dict-to-xml(build-tree(model), model.profile.id).xml
+)
 
 /// Generates a ZUGFeRD 2.x / Factur-X 1.0 CrossIndustryInvoice XML document
 /// from the fully-computed invoice context, without validating it.
