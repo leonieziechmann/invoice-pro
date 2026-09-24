@@ -328,6 +328,19 @@
   "Set `service-period` on the invoice to a period that includes the dates of all items, or leave it out: the dates of the items are the service period then.",
 )
 
+// A payee without a name, or that is the seller (BR-17, IP-PAY-05).
+#let _payee(f) = if f.kind == "name" {
+  (
+    "The name of the payee (BT-59) is missing.",
+    "Set `name` on the payee, e.g. the name of the factoring company that receives the payment.",
+  )
+} else {
+  (
+    "The payee (BG-10) is stated when someone other than the seller receives the payment, but its name, identifier or legal registration identifier is the seller's.",
+    "Leave out `payee` when the seller receives the payment itself.",
+  )
+}
+
 // A seller tax representative on an invoice not subject to VAT (BR-O-02,
 // BR-O-03, BR-O-04, IP-TAX-05).
 #let _outside-scope-representative(f) = (
@@ -823,17 +836,8 @@
       "Set `vat-id` on the recipient. The BASIC WL profile has no invoice lines, so its validators do not check this.",
     )
   },
-  "BR-17": f => if f.kind == "name" {
-    (
-      "The name of the payee (BT-59) is missing.",
-      "Set `name` on the payee, e.g. the name of the factoring company that receives the payment.",
-    )
-  } else {
-    (
-      "The payee (BG-10) is stated when someone other than the seller receives the payment, but its name, identifier or legal registration identifier is the seller's.",
-      "Leave out `payee` when the seller receives the payment itself.",
-    )
-  },
+  "BR-17": _payee,
+  "IP-PAY-05": _payee,
   "IP-ID-02": f => if f.kind == "id" {
     (
       if f.second == "global-id" {

@@ -174,8 +174,11 @@
   out
 }
 
-/// The payee (BG-10): it is named only when it is not the seller (BR-17),
-/// with one identifier (CII-SR-451) of a known scheme (BR-CL-10, BR-CL-11).
+/// The payee (BG-10): it has a name and is named only when it is not the
+/// seller (BR-17), with one identifier (CII-SR-451) of a known scheme
+/// (BR-CL-10, BR-CL-11). The Factur-X Schematron of BASIC WL compares the
+/// payee with a path of the seller that never matches, so it requires the
+/// name only: a payee that is the seller is IP-PAY-05 there.
 ///
 /// -> array
 #let payee(model) = {
@@ -202,7 +205,11 @@
           and payee.legal-id.id == seller-legal-id.id
       )
   ) {
-    out.push((key: "BR-17", field: field, kind: "seller"))
+    out.push((
+      key: if profile.id == "basic-wl" { "IP-PAY-05" } else { "BR-17" },
+      field: field,
+      kind: "seller",
+    ))
   }
   out += identifiers(payee, field, "payee")
   out += global-id(payee, "BR-CL-10", field)

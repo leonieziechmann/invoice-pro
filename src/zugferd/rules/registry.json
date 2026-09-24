@@ -505,6 +505,19 @@
       "level": "error",
       "field": "payee.name",
       "summary": "The payee (BG-10) has a name (BT-59), and is someone other than the seller.",
+      "legal": null,
+      "note": "BASIC WL checks the name only: its Factur-X rule compares the payee with a path of the seller that never matches, so invoice-pro reports a payee that is the seller as IP-PAY-05 there."
+    },
+    "IP-PAY-05": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["basic-wl"],
+      "scope": "party",
+      "terms": ["BT-59", "BT-60", "BT-61"],
+      "level": "error",
+      "field": "payee",
+      "summary": "A `payee` that is the seller (its name, identifier or legal registration identifier) in `\"basic-wl\"`: the payee (BG-10) is someone other than the seller (`BR-17`), which the validation of the profile does not check.",
       "legal": null
     },
     "IP-ID-02": {

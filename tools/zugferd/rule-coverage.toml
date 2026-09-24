@@ -848,6 +848,14 @@ tests = [
   "tools/zugferd/corpus/regression/payment-paid-transfer-without-bank-basic.typ",
 ]
 
+[ip."IP-PAY-05"]
+level = "error"
+summary = "A payee that is the seller, in BASIC WL."
+basis = """EN 16931 BR-17: the payee (BG-10) is someone other than the seller; the Factur-X Schematron \
+of BASIC WL compares it with a path of the seller that never matches, so its validation does not \
+check it."""
+tests = ["tests/zugferd/party-details/test.typ", "tools/zugferd/corpus/regression/payee-is-seller-basic-wl.typ"]
+
 [ip."IP-GUARD-00"]
 level = "error"
 summary = "Summarizes the guard's findings next to errors of the validator."
