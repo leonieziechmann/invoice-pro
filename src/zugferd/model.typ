@@ -53,9 +53,16 @@
 // test is cheaper than `plain-text`, which runs three replacements.
 #let _plain-ascii = regex("^[!-~]+(?: [!-~]+)*$")
 
-// The plain text of a value, or `none` if it has no visible text.
+// The plain text of a value, or `none` if it has no visible text. A text
+// element of such a string, e.g. the name `[Consulting]` of an item, is
+// its string as well.
 #let text-or-none(value) = {
   if type(value) == str and _plain-ascii in value { return value }
+  if (
+    type(value) == content
+      and value.func() == text
+      and _plain-ascii in value.text
+  ) { return value.text }
   let result = plain-text(value)
   if result == "" { none } else { result }
 }
@@ -788,12 +795,14 @@
     if type(reference) != array or reference.len() != 2 { continue }
     let (title, value) = reference
     let mark = if type(value) == content { value.at("label", default: none) }
-    let titled = (
-      label != none
-        and type(title) in (str, content)
-        and text-or-none(title) == label
-    )
-    if mark in (service-period-label, service-period-text-label) or titled {
+    if (
+      mark in (service-period-label, service-period-text-label)
+        or (
+          label != none
+            and type(title) in (str, content)
+            and text-or-none(title) == label
+        )
+    ) {
       if type(value) not in (str, content) { return none }
       let text = text-or-none(value)
       if text == none { return none }

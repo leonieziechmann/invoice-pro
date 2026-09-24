@@ -4,7 +4,7 @@
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/model.typ": (
-  build-model, get-electronic-address, map-unit-code,
+  build-model, get-electronic-address, map-unit-code, text-or-none,
 )
 #import "/src/zugferd/profile.typ": resolve-profile, switch-profile
 #import "/tests/data-test.typ": data-test, loom
@@ -336,4 +336,20 @@
     (switched.id, switched.name, switched.xrechnung, switched.automatic),
     ("en16931", "EN 16931 (COMFORT)", false, true),
   )
+}
+
+// --- 10. Plain texts ---
+#{
+  // A plain ASCII text, as a string or a text element, is taken as it is.
+  assert.eq(text-or-none("Consulting"), "Consulting")
+  assert.eq(text-or-none([Consulting]), "Consulting")
+  assert.eq(text-or-none(text("Two words")), "Two words")
+  // Anything else goes through `plain-text`: other characters, markup,
+  // spaces at the ends, and nothing visible.
+  assert.eq(text-or-none([Beratung München]), "Beratung München")
+  assert.eq(text-or-none([*Seller* GmbH]), "Seller GmbH")
+  assert.eq(text-or-none([2026#sym.minus;001]), "2026-001")
+  assert.eq(text-or-none(text(" Padded ")), "Padded")
+  assert.eq(text-or-none([]), none)
+  assert.eq(text-or-none(none), none)
 }
