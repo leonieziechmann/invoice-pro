@@ -140,6 +140,17 @@ Instructions executed (millions, `--jobs 1`, see [above](#measuring-small-change
 | E-invoice path (zf minus plain), after  |   162.7 |    278.8 |     922.1 |
 | Change                                  |   −17 % |    −15 % |     −11 % |
 
+The perf gate (`scripts/perf-gate --runs 5`), run for both commits one after the other:
+
+| Gate metric                  | 5 lines         | 50 lines       | 300 lines        |
+| :--------------------------- | :-------------- | :------------- | :--------------- |
+| Share of the plain compile   | 23.9 % → 18.4 % | 11.8 % → 9.3 % | 7.7 % → 5.4 %    |
+| E-invoice path               | 56.6 → 45.4 ms  | 86.9 → 69.6 ms | 293.3 → 204.7 ms |
+| Module import (budget 12 ms) | 26.5 → 24.1 ms  | 26.1 → 24.8 ms | 26.6 → 24.6 ms   |
+| Serializer per line          | 2.48 → 1.81 ms  | 0.50 → 0.40 ms | 0.37 → 0.31 ms   |
+
+The gate is yellow before and after: the share at 5 lines is above its target of 15 % and the module import above its budget of 12 ms. Of the import, `validate.typ` and `codelists.typ` take about 10 ms; the other modules about 13 ms, mostly for their size.
+
 ## Keeping the e-invoice path cheap
 
 These rules come from measurements of the e-invoice path. They apply to all code that runs for every invoice or for every line. Instruction counts are from `cachegrind` (see above); on the test machine, the e-invoice path executes about 4 000 instructions per microsecond.
