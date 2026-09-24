@@ -7,7 +7,9 @@ Greedy delta debugging over the generator's feature vector: every dimension
 is set to its simplest value (corpus/gen.py SIMPLE) and `lines` is lowered,
 as long as the failure signature (class, rules of both sides, oracle ids)
 stays the same. Legal cases stay legal (`gen.allowed`). One Mustang JVM
-serves all trials.
+serves all trials; KoSIT validates each trial in a JVM of its own, which
+costs a few seconds (`--no-kosit` skips it when the signature does not
+depend on KoSIT).
 
 The minimal case is written to <build dir>/min/<CASE_ID>.typ; add a
 `// expect:` header and move it to tools/zugferd/corpus/regression/ to keep
@@ -37,6 +39,7 @@ def evaluate(case, features, work, checker):
     trial = dict(case, features=features, facts=facts, file=str(file))
     res = run.compile_case(trial, str(work))
     doc = checker.submit(res)
+    checker.validate_kosit([res])
     checker.collect(res)
     row = run.make_row(trial, res, doc)
     oracle_ids = sorted({p.split(":")[0] for p in row["oracle"]})
@@ -47,6 +50,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("case")
     ap.add_argument("--corpus", default=None, help="corpus directory (default: <build dir>/corpus)")
+    ap.add_argument("--no-kosit", action="store_true",
+                    help="skip KoSIT, e.g. when the signature does not involve it (a KoSIT run costs a few seconds per trial)")
     args = ap.parse_args(argv)
     build = common.build_dir()
     corpus = Path(args.corpus) if args.corpus else build / "corpus"
@@ -58,7 +63,11 @@ def main(argv=None):
     work = build / "min"
     work.mkdir(parents=True, exist_ok=True)
     started = time.perf_counter()
-    checker = run.Checker(build)
+    try:
+        checker = run.Checker(build, use_kosit=not args.no_kosit)
+    except common.ToolError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
     try:
         features = dict(case["features"])
         target, row = evaluate(case, features, work, checker)

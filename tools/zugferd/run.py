@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Conformance runner: invoice-pro's verdict against the official validators.
 
-  run.py [PATH ...] [--jobs N] [--only ID,..] [--strict] [--no-mustang]
+  run.py [PATH ...] [--jobs N] [--only ID,..] [--strict] [--no-mustang] [--no-kosit]
 
 PATH is a generated corpus (a directory with `manifest.json`, see
 corpus/gen.py), a directory of regression cases, or single `.typ` files.
@@ -14,15 +14,26 @@ For every case:
   2. XSD of the profile (lxml; the Factur-X XSDs come from the Mustang jar).
   3. Mustang 2.14 (EN 16931, Factur-X and XRechnung Schematron) in a single
      JVM for the whole run (java/MustangBatch.java, compiled on first use).
-  4. Classification (see CLASSES), the case's expectation, the semantic
-     oracles (oracles.py), the metamorphic relations between twins, and
-     that every error of invoice-pro names its rule, field and a hint.
+  4. KoSIT 1.6.3 with the XRechnung configuration (CEN Schematron 1.3.16,
+     XRechnung Schematron 2.6.0), the reference validator for XRechnung: one
+     JVM validates the EN 16931 and XRechnung documents of the run as a
+     batch. KoSIT has no scenario for MINIMUM, BASIC WL and BASIC.
+  5. Classification (see CLASSES) against the official verdict: valid only
+     when the XSD, Mustang and KoSIT accept the XML. Then the case's
+     expectation, the semantic oracles (oracles.py), the metamorphic
+     relations between twins, and that every error of invoice-pro names its
+     rule, field and a hint.
 
 Failures are grouped by signature. `known-issues.toml` lists the signatures
 of known bugs with their finding: a known signature does not fail the run,
 an unknown one does, and so does a known one that no longer occurs (xpass),
 so the list can only shrink. `--strict` ignores the list. The hard gate,
 every legal invoice is AGREE_VALID, cannot be excused by the list.
+
+When only one of Mustang and KoSIT rejects a document, every rule behind the
+disagreement must be documented in `validator-differences.toml`; an
+undocumented one fails the run (OFFICIAL_DISAGREE), and so does a documented
+one that no case of a full run shows any more.
 
 Exit code: 0 all green (or only known issues), 1 failures, 2 setup error.
 """
@@ -63,7 +74,12 @@ CLASSES = {
 # known-issues.toml can excuse another class there. The report counts these
 # classes separately (silently invalid, falsely blocked, crashed).
 HARD = ("FALSE_NEGATIVE", "FALSE_POSITIVE", "CRASH", "GUARD_ONLY")
-STRUCTURAL = re.compile(r"^(XSD|\?|FX-SCH-.*|MUSTANG-CRASH)$")
+# Official ids that name no business rule: schema and well-formedness,
+# Factur-X structure rules and failures of the validators themselves.
+STRUCTURAL = re.compile(r"^(XSD|XML|\?|FX-SCH-.*|MUSTANG-CRASH|KOSIT-.*)$")
+# The official validators, in the order of the report.
+VALIDATORS = ("mustang", "kosit")
+VALIDATOR_NAMES = {"mustang": "Mustang", "kosit": "KoSIT"}
 # How Typst reports a `panic(..)` or a failed `assert(..)` of the package.
 _DELIBERATE = re.compile(r"^error: (panicked with|assertion failed)", re.M)
 TOTALS = {
@@ -208,20 +224,25 @@ def error_rules(res):
     return sorted({d.get("rule", "?") for d in res.get("diagnostics", []) if d.get("level") == "error"})
 
 
-def classify(res):
+def classify(res, official=None):
+    """The class of a compiled case against the official verdict, or against
+    the view of one validator (`official`, see `Checker.collect`). In such a
+    view, an error of invoice-pro on a rule the validator only warns about is
+    stricter than the validator, not a false positive."""
     if "crash" in res:
         return "CRASH"
     if "xml_path" not in res:
         return "NO_XML"
     errors = [d for d in res.get("diagnostics", []) if d.get("level") == "error"]
     ours = error_rules(res)
-    official = res["official"]
+    official = official or res["official"]
     if errors and all(d.get("source") == "guard" for d in errors):
         return "GUARD_ONLY"
     if not ours:
         return "AGREE_VALID" if official["valid"] else "FALSE_NEGATIVE"
     if official["valid"]:
-        return "STRICTER" if all(r.startswith("IP-") for r in ours) else "FALSE_POSITIVE"
+        warned = set(official.get("warned", ()))
+        return "STRICTER" if all(r.startswith("IP-") or r in warned for r in ours) else "FALSE_POSITIVE"
     named_official = {r for r in official["rules"] if not STRUCTURAL.match(r)}
     named_ours = {r for r in ours if not r.startswith("IP-")}
     if named_official and named_ours and not named_official & named_ours:
@@ -261,6 +282,9 @@ def signature(row):
     ids = sorted({p.split(":")[0] for p in row["oracle"]})
     if ids:
         parts.append("oracle=" + ",".join(ids))
+    undocumented = (row.get("disagreement") or {}).get("undocumented")
+    if undocumented:
+        parts.append(f"OFFICIAL_DISAGREE only-{row['disagreement']['rejected_by']}=" + ",".join(undocumented))
     return " ".join(parts)
 
 
@@ -356,16 +380,77 @@ def match_known(row, entries):
     return None
 
 
+# ---------------------------------------------------------------- validator differences
+
+
+def load_differences(path):
+    """{rule: entry} of validator-differences.toml: the rules on which Mustang
+    and KoSIT are known to disagree, with the validator that rejects and why."""
+    if not path or not Path(path).exists():
+        return {}
+    data = tomllib.loads(Path(path).read_text(encoding="utf-8"))
+    for rule, entry in data.items():
+        if not isinstance(entry, dict):
+            raise common.ToolError(f"{path}: [{rule}] must be a table")
+        if entry.get("rejected-by") not in VALIDATORS:
+            raise common.ToolError(f"{path}: [{rule}] needs `rejected-by = \"mustang\"` or `\"kosit\"`")
+        # What the other validator reports: one level, or a list of them.
+        other = entry.get("other")
+        others = other if isinstance(other, list) else [other]
+        if not others or any(level not in ("warning", "nothing") for level in others):
+            raise common.ToolError(f"{path}: [{rule}] needs `other = \"warning\"` or `\"nothing\"` (or a list of both)")
+        entry["other"] = others
+        if not entry.get("reason"):
+            raise common.ToolError(f"{path}: [{rule}] needs a `reason`")
+    return data
+
+
+def documented(rule, rejected_by, other, differences):
+    """Whether validator-differences.toml documents this disagreement: the
+    rule, the validator that rejects it and what the other one reports."""
+    entry = differences.get(rule)
+    return bool(entry) and entry["rejected-by"] == rejected_by and other in entry["other"]
+
+
+def disagreement(official):
+    """How Mustang and KoSIT disagree on a document both validated, or None:
+    the validator that rejects it, and the rules it reports as errors that
+    the other one does not (with what the other one reports for each)."""
+    views = official.get("validators", {})
+    mustang, kosit = views.get("mustang"), views.get("kosit")
+    if not mustang or not kosit or mustang["valid"] == kosit["valid"]:
+        return None
+    rejecting, other = ("mustang", kosit) if not mustang["valid"] else ("kosit", mustang)
+    rules = sorted(set(views[rejecting]["rules"]) - set(other["rules"]))
+    return {
+        "rejected_by": rejecting,
+        "rules": rules,
+        "other": {rule: "warning" if rule in other.get("warned", ()) else "nothing" for rule in rules},
+    }
+
+
 # ---------------------------------------------------------------- main
 
 
 class Checker:
-    """The official side: XSD with lxml, Schematron with Mustang (one JVM)."""
+    """The official side: XSD with lxml, Schematron with Mustang (one JVM for
+    the run, streaming) and KoSIT (one JVM per batch)."""
 
-    def __init__(self, cache_dir, use_mustang=True):
+    def __init__(self, cache_dir, use_mustang=True, use_kosit=True):
         jar = common.mustang_jar() if use_mustang or os.environ.get("MUSTANG_JAR") else None
+        self.kosit = common.Kosit(*common.kosit_setup(), cache_dir) if use_kosit else None
         self.schemas = common.Schemas(jar, cache_dir) if jar else None
         self.mustang = common.Mustang(jar, cache_dir) if use_mustang else None
+        self.mustang_version = common.jar_version(jar, "org.mustangproject/Mustang-CLI") if jar else None
+
+    def describe(self):
+        """The official validators of this run, for the report."""
+        parts = ["XSD (Factur-X 1.0.07)" if self.schemas else "no XSD"]
+        if self.mustang:
+            parts.append(f"Mustang {self.mustang_version or '(unknown version)'}")
+        if self.kosit:
+            parts.append(self.kosit.describe())
+        return ", ".join(parts)
 
     def submit(self, res):
         """Parses the XML of a compiled case, checks the XSD and queues it for
@@ -386,22 +471,59 @@ class Checker:
             res["_future"] = self.mustang.submit(res["xml_path"])
         return doc
 
+    def validate_kosit(self, results):
+        """Validates the XML of the EN 16931 and XRechnung documents among the
+        compiled cases with KoSIT, in one JVM; sets `res["kosit"]`. The other
+        profiles have no KoSIT scenario. Returns the number of files."""
+        if not self.kosit:
+            return 0
+        batch = {res["xml_path"]: res for res in results
+                 if "xml_path" in res and "xml_error" not in res and res.get("profile") in common.KOSIT_PROFILES}
+        reports = self.kosit.validate(list(batch))
+        for path, res in batch.items():
+            report = reports[str(Path(path).resolve())]
+            if report["status"] == "no-scenario":
+                # The configuration has scenarios for both profiles: a
+                # document of them that matches none is not what it claims.
+                report = dict(report, status="reject",
+                              errors={"KOSIT-NO-SCENARIO": f"no KoSIT scenario for this {res['profile']} document"})
+            res["kosit"] = report
+        return len(batch)
+
     @staticmethod
     def collect(res):
-        """Waits for Mustang and sets `res["official"]`."""
+        """Waits for Mustang and sets `res["official"]`: the verdict of all
+        official validators together, and the view of each one."""
         future = res.pop("_future", None)
         if future:
             res["mustang"] = future.result()
         if "xml_path" not in res:
             return
-        m = res.get("mustang") or {"status": "valid", "errors": {}}
         xsd_errors = res.get("xsd_errors", [])
         if "xml_error" in res:
             xsd_errors = res["xsd_errors"] = ["not well-formed: " + res["xml_error"]]
+        views = {}
+        m = res.get("mustang")
+        if m:
+            views["mustang"] = {
+                "valid": m["status"] == "valid" and not m["errors"],
+                "rules": sorted(m["errors"]),
+                "warned": sorted({w.split(":")[0] for w in m["warnings"]}),
+            }
+        k = res.get("kosit")
+        if k:
+            views["kosit"] = {
+                "valid": k["status"] == "accept",
+                "rules": sorted(k["errors"]),
+                "warned": sorted(k["warnings"]),
+            }
+        rules = set().union(*(set(v["rules"]) for v in views.values()))
         res["official"] = {
-            "valid": not xsd_errors and m["status"] == "valid" and not m["errors"],
-            "rules": sorted(set(m["errors"]) | ({"XSD"} if xsd_errors else set())),
+            "valid": not xsd_errors and all(v["valid"] for v in views.values()),
+            "rules": sorted(rules | ({"XSD"} if xsd_errors else set())),
+            "validators": views,
         }
+        res["official"]["disagreement"] = disagreement(res["official"])
 
     def close(self):
         if self.mustang:
@@ -425,6 +547,10 @@ def make_row(case, res, doc):
     if cls == "AGREE_VALID" and doc is not None:
         problems += oracles.check(case.get("facts") or {}, doc, res.get("pdf_text"), res.get("profile"))
     mustang = res.get("mustang") or {}
+    official = res.get("official", {})
+    # The class against each validator on its own, e.g. STRICTER than KoSIT
+    # for a rule KoSIT only warns about, next to AGREE_INVALID with Mustang.
+    validators = {name: dict(view, cls=classify(res, view)) for name, view in official.get("validators", {}).items()}
     return {
         "id": case["id"],
         "population": case["population"],
@@ -434,12 +560,18 @@ def make_row(case, res, doc):
         "class_ok": class_ok,
         "missing_rules": missing,
         "ours": ours,
-        "official": res.get("official", {}).get("rules", []),
+        "official": official.get("rules", []),
+        "validators": validators,
+        "disagreement": official.get("disagreement"),
         "profile": res.get("profile"),
         "oracle": problems,
         "diagnostics": res.get("diagnostics", []),
         "xsd_errors": res.get("xsd_errors", [])[:5],
-        "official_messages": mustang.get("errors", {}),
+        "official_messages": [
+            [name, rule, message]
+            for name, report in (("mustang", mustang), ("kosit", res.get("kosit") or {}))
+            for rule, message in report.get("errors", {}).items()
+        ],
         "crash": res.get("crash"),
         "t_compile": res.get("t_compile"),
         "t_mustang_ms": mustang.get("ms"),
@@ -448,41 +580,51 @@ def make_row(case, res, doc):
     }
 
 
-def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass):
+def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass, use_kosit=True, differences=None):
     started = time.perf_counter()
-    checker = Checker(out_dir.parent, use_mustang)
-    results, docs = {}, {}
-    t_compile = time.perf_counter()
-    # Typst runs in worker processes; the XSD check and the queueing for
-    # Mustang happen here as soon as a case is compiled, so the JVM validates
-    # while Typst still compiles.
-    # "spawn": the workers must not inherit the JVM's pipes or the reader thread.
-    with ProcessPoolExecutor(jobs, mp_context=multiprocessing.get_context("spawn")) as pool:
-        pending = [pool.submit(compile_case, case, str(out_dir)) for case in cases]
-        for done in as_completed(pending):
-            res = done.result()
-            results[res["id"]] = res
-            doc = checker.submit(res)
-            if doc is not None:
-                docs[res["id"]] = doc
-    t_compile = time.perf_counter() - t_compile
-    t_wait = time.perf_counter()
-    for res in results.values():
-        checker.collect(res)
-    t_wait = time.perf_counter() - t_wait
-    checker.close()
+    checker = Checker(out_dir.parent, use_mustang, use_kosit)
+    try:
+        results, docs = {}, {}
+        t_compile = time.perf_counter()
+        # Typst runs in worker processes; the XSD check and the queueing for
+        # Mustang happen here as soon as a case is compiled, so the JVM
+        # validates while Typst still compiles.
+        # "spawn": the workers must not inherit the JVM's pipes or the reader thread.
+        with ProcessPoolExecutor(jobs, mp_context=multiprocessing.get_context("spawn")) as pool:
+            pending = [pool.submit(compile_case, case, str(out_dir)) for case in cases]
+            for done in as_completed(pending):
+                res = done.result()
+                results[res["id"]] = res
+                doc = checker.submit(res)
+                if doc is not None:
+                    docs[res["id"]] = doc
+        t_compile = time.perf_counter() - t_compile
+        # KoSIT validates the whole batch in one JVM, while Mustang works off
+        # what is left in its queue.
+        t_kosit = time.perf_counter()
+        kosit_files = checker.validate_kosit(results.values())
+        t_kosit = time.perf_counter() - t_kosit
+        t_wait = time.perf_counter()
+        for res in results.values():
+            checker.collect(res)
+        t_wait = time.perf_counter() - t_wait
+    finally:
+        checker.close()
 
     rows = [make_row(case, results[case["id"]], docs.get(case["id"])) for case in cases]
     metamorphic(rows, docs, {c["id"]: c for c in cases})
 
-    failures, hits, xpass = triage(rows, known, strict, check_xpass)
+    failures, hits, xpass, stale = triage(rows, known, strict, check_xpass, differences)
     timing = {
         "total_s": round(time.perf_counter() - started, 1),
         "compile_s": round(t_compile, 1),
+        "kosit_s": round(t_kosit, 1),
+        "kosit_files": kosit_files,
         "mustang_wait_s": round(t_wait, 1),
         "jobs": jobs,
+        "validators": checker.describe(),
     }
-    return rows, failures, hits, xpass, timing
+    return rows, failures, hits, xpass, stale, timing
 
 
 def breaks_hard_gate(row):
@@ -492,28 +634,42 @@ def breaks_hard_gate(row):
     return row.get("population") == "legal" and row["cls"] != "AGREE_VALID"
 
 
-def triage(rows, known, strict=False, check_xpass=True):
+def triage(rows, known, strict=False, check_xpass=True, differences=None):
     """Sets verdict and signature of every row and sorts the failures into
     new ones and known issues. Returns (new failures, [(entry, signature,
-    case ids)], [(entry, signature)] of listed signatures that did not occur).
+    case ids)], [(entry, signature)] of listed signatures that did not occur,
+    [rule] of documented validator differences that did not occur).
+
+    A disagreement of Mustang and KoSIT on a rule that `differences` does not
+    document with the rejecting validator fails the case: it is no bug of
+    invoice-pro that known-issues.toml could list, but a difference of the
+    official validators to understand and document.
     """
-    failures, known_hits, seen = [], {}, set()
+    differences = differences or {}
+    failures, known_hits, seen, shown = [], {}, set(), set()
     for row in rows:
-        passed = row["class_ok"] and not row["missing_rules"] and not row["oracle"] and not breaks_hard_gate(row)
+        dis = row.get("disagreement")
+        if dis:
+            known_rules = [r for r in dis["rules"] if documented(r, dis["rejected_by"], dis["other"][r], differences)]
+            shown.update(known_rules)
+            dis["undocumented"] = [r for r in dis["rules"] if r not in known_rules]
+        undocumented = bool(dis and dis["undocumented"])
+        passed = (row["class_ok"] and not row["missing_rules"] and not row["oracle"] and not breaks_hard_gate(row)
+                  and not undocumented)
         row["verdict"] = "PASS" if passed else "FAIL"
         if row["verdict"] == "FAIL":
             row["signature"] = signature(row)
             hit = None if strict else match_known(row, known)
             if hit:
                 seen.add(hit)  # the issue still occurs, excused or not
-            if hit and not breaks_hard_gate(row):
+            if hit and not breaks_hard_gate(row) and not undocumented:
                 row["known"] = known[hit[0]]["finding"]
                 known_hits.setdefault(hit, []).append(row["id"])
             else:
                 failures.append(row)
     # Every listed signature must still occur, so the list can only shrink.
     # Entries that cover no case of this run are left alone.
-    xpass = []
+    xpass, stale = [], []
     if not strict and check_xpass:
         for index, entry in enumerate(known):
             if not any(covers(entry, row) for row in rows):
@@ -521,8 +677,12 @@ def triage(rows, known, strict=False, check_xpass=True):
             for sig in entry["signatures"]:
                 if (index, sig) not in seen:
                     xpass.append((entry, sig))
+    # Every documented difference is shown by a case of a full run (both
+    # validators ran), so that the documentation stays true.
+    if check_xpass and any(len(row.get("validators") or {}) == len(VALIDATORS) for row in rows):
+        stale = sorted(rule for rule in differences if rule not in shown)
     hits = [(known[index], sig, ids) for (index, sig), ids in known_hits.items()]
-    return failures, hits, xpass
+    return failures, hits, xpass, stale
 
 
 def _stop_message(crash):
@@ -534,16 +694,43 @@ def _stop_message(crash):
     return re.sub(r"\d+", "#", first)[:70].rstrip()
 
 
-def report(rows, failures, known_hits, xpass, timing, use_mustang):
+def _disagreements(rows, differences):
+    """Lines of the report on the documented disagreements of Mustang and
+    KoSIT, grouped by the rules and by what invoice-pro does."""
+    groups = {}
+    for row in rows:
+        dis = row.get("disagreement")
+        if not dis or dis.get("undocumented"):
+            continue
+        key = (dis["rejected_by"], tuple(dis["rules"]), tuple(dis["other"][r] for r in dis["rules"]), bool(row["ours"]))
+        groups.setdefault(key, []).append(row["id"])
+    lines = []
+    for (rejecting, rules, others, ours), ids in sorted(groups.items(), key=lambda kv: (kv[0][0], kv[0][1])):
+        other = "KoSIT" if rejecting == "mustang" else "Mustang"
+        said = ", ".join(sorted(set(others)))
+        verdict = (f"invoice-pro reports an error (stricter than {other})" if ours
+                   else "invoice-pro reports NO error (FALSE_NEGATIVE)")
+        lines.append(f"  [{len(ids):3d}] only {VALIDATOR_NAMES[rejecting]} rejects {', '.join(rules)} "
+                     f"({other}: {said}); {verdict}")
+        lines.append(f"        cases: {' '.join(ids[:8])}{' ...' if len(ids) > 8 else ''}")
+    return lines
+
+
+def report(rows, failures, known_hits, xpass, timing, use_mustang, stale=(), use_kosit=True, differences=None):
     lines = []
     by_pop = {}
     for row in rows:
         by_pop.setdefault(row["population"], {}).setdefault(row["cls"], 0)
         by_pop[row["population"]][row["cls"]] += 1
     lines.append(f"cases: {len(rows)}   time: {timing['total_s']} s (compile {timing['compile_s']} s with "
-                 f"{timing['jobs']} jobs, then waiting for Mustang {timing['mustang_wait_s']} s)")
+                 f"{timing['jobs']} jobs, KoSIT {timing.get('kosit_s', 0)} s for {timing.get('kosit_files', 0)} "
+                 f"files, then waiting for Mustang {timing['mustang_wait_s']} s)")
+    if timing.get("validators"):
+        lines.append(f"official verdict: {timing['validators']}")
     if not use_mustang:
-        lines.append("WARNING: --no-mustang: only the XSD was checked; the classes are NOT the official verdict")
+        lines.append("WARNING: --no-mustang: Mustang did not run; the classes are NOT the official verdict")
+    if not use_kosit:
+        lines.append("WARNING: --no-kosit: KoSIT did not run; the classes are NOT the official verdict")
     for pop, counts in sorted(by_pop.items()):
         shown = ", ".join(f"{k} {v}" for k, v in sorted(counts.items(), key=lambda kv: -kv[1]))
         lines.append(f"  {pop:12s} {sum(counts.values()):4d}: {shown}")
@@ -561,6 +748,10 @@ def report(rows, failures, known_hits, xpass, timing, use_mustang):
     oracle_fail = sum(1 for r in rows if r["oracle"])
     lines.append(f"PASS {sum(r['verdict'] == 'PASS' for r in rows)}  FAIL {sum(r['verdict'] == 'FAIL' for r in rows)}"
                  f"  (known issues {sum(len(ids) for _, _, ids in known_hits)}, oracle failures {oracle_fail})")
+    documented = _disagreements(rows, differences or {})
+    if documented:
+        lines.append("\nMustang and KoSIT disagree (documented in validator-differences.toml):")
+        lines += documented
     if known_hits:
         lines.append("\nKnown issues (known-issues.toml):")
         for entry, sig, ids in sorted(known_hits, key=lambda e: (e[0]["finding"], e[1])):
@@ -570,6 +761,10 @@ def report(rows, failures, known_hits, xpass, timing, use_mustang):
         lines.append("\nXPASS - known issues that no longer occur; remove them from known-issues.toml:")
         for entry, sig in xpass:
             lines.append(f"  {entry['finding']}: {sig!r}")
+    if stale:
+        lines.append("\nSTALE - documented validator differences that no case shows any more; remove them from "
+                     "validator-differences.toml (or add a regression case that shows them):")
+        lines += [f"  {rule}" for rule in stale]
     if failures:
         groups = {}
         for row in failures:
@@ -583,8 +778,14 @@ def report(rows, failures, known_hits, xpass, timing, use_mustang):
             lines.append(f"        example: {ex['file']}")
             for p in ex["oracle"][:3]:
                 lines.append(f"        oracle: {p[:300]}")
-            for rule, msg in list(ex["official_messages"].items())[:3]:
-                lines.append(f"        official [{rule}]: {msg[:200]}")
+            dis = ex.get("disagreement") or {}
+            if dis.get("undocumented"):
+                other = dis["other"]
+                lines.append(f"        only {VALIDATOR_NAMES[dis['rejected_by']]} rejects: "
+                             + ", ".join(f"{r} (the other: {other[r]})" for r in dis["undocumented"])
+                             + "; document it in validator-differences.toml")
+            for name, rule, msg in ex["official_messages"][:4]:
+                lines.append(f"        {VALIDATOR_NAMES.get(name, name)} [{rule}]: {msg[:200]}")
             for d in ex["diagnostics"][:3]:
                 if d.get("level") == "error":
                     lines.append(f"        invoice-pro [{d.get('rule')}] {d.get('field')}: {str(d.get('message'))[:200]}")
@@ -593,8 +794,9 @@ def report(rows, failures, known_hits, xpass, timing, use_mustang):
             if ex["crash"]:
                 crash = [l for l in ex["crash"].splitlines() if l.strip()]
                 lines.append("        crash: " + " | ".join(crash[:3])[:400])
-    ok = not failures and not xpass
-    lines.append("\n" + ("OK: no new failures" if ok else "FAILED: see NEW FAILURES / XPASS above (tests/TESTING.md explains the triage)"))
+    ok = not failures and not xpass and not stale
+    lines.append("\n" + ("OK: no new failures" if ok else
+                         "FAILED: see NEW FAILURES / XPASS / STALE above (tests/TESTING.md explains the triage)"))
     return "\n".join(lines), ok
 
 
@@ -607,10 +809,17 @@ def main(argv=None):
     ap.add_argument("--only", default=None, help="comma separated case ids (glob patterns allowed)")
     ap.add_argument("--population", default=None, help="only cases of these populations (comma separated)")
     ap.add_argument("--strict", action="store_true", help="known issues fail too")
-    ap.add_argument("--no-mustang", action="store_true", help="skip the official Schematron (XSD only; not a gate)")
+    ap.add_argument("--no-mustang", action="store_true", help="skip Mustang (not the official verdict; refused in CI)")
+    ap.add_argument("--no-kosit", action="store_true", help="skip KoSIT (not the official verdict; refused in CI)")
+    ap.add_argument("--validator-differences", default=str(HERE / "validator-differences.toml"))
     ap.add_argument("--json", default=None, help="write the results to this file (default: <build>/results.json)")
     args = ap.parse_args(argv)
     try:
+        # CI must always give the official verdict: skipping a validator is
+        # only a shortcut for a local run.
+        skipped = [flag for flag, on in (("--no-mustang", args.no_mustang), ("--no-kosit", args.no_kosit)) if on]
+        if skipped and common.in_ci():
+            raise common.ToolError(f"{' and '.join(skipped)} in CI: the corpus needs the official verdict")
         build = common.build_dir(args.build_dir)
         paths = args.paths or [p for p in (build / "corpus", HERE / "corpus" / "regression") if p.exists()]
         cases = load_cases(paths)
@@ -630,13 +839,18 @@ def main(argv=None):
         out_dir = build / "out"
         out_dir.mkdir(parents=True, exist_ok=True)
         known = load_known(args.known_issues)
-        rows, failures, known_hits, xpass, timing = run(
-            cases, args.jobs, out_dir, not args.no_mustang, known, args.strict, check_xpass=not subset
+        differences = load_differences(args.validator_differences)
+        rows, failures, known_hits, xpass, stale, timing = run(
+            cases, args.jobs, out_dir, not args.no_mustang, known, args.strict, check_xpass=not subset,
+            use_kosit=not args.no_kosit, differences=differences,
         )
     except common.ToolError as e:
         print(f"error: {e}", file=sys.stderr)
+        if not args.no_kosit and "KOSIT_" in str(e):
+            print("For a quick local run without KoSIT, pass --no-kosit (not the official verdict).", file=sys.stderr)
         return 2
-    text, ok = report(rows, failures, known_hits, xpass, timing, not args.no_mustang)
+    text, ok = report(rows, failures, known_hits, xpass, timing, not args.no_mustang, stale,
+                      not args.no_kosit, differences)
     print(text)
     out = Path(args.json) if args.json else build / "results.json"
     out.write_text(json.dumps({"timing": timing, "cases": rows}, indent=1, ensure_ascii=False, default=str), encoding="utf-8")

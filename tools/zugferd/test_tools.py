@@ -2,14 +2,16 @@
 
   python3 -m unittest discover -s tools/zugferd -p 'test_*.py'
 
-The proof layer is only as good as its classification, report parsing,
-oracles and generator constraints, so these parts are tested on their own.
+The proof layer is only as good as its classification, the parsing of the
+reports of Mustang and KoSIT, the combined official verdict, oracles and
+generator constraints, so these parts are tested on their own.
 """
 
 import itertools
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -44,6 +46,203 @@ class MustangReport(unittest.TestCase):
         crashed = common.parse_mustang_report("<crash>java.lang.OutOfMemoryError</crash>")
         self.assertEqual(crashed["status"], "crash")
         self.assertIn("MUSTANG-CRASH", crashed["errors"])
+
+
+def varl(body, assessment="reject"):
+    """A trimmed KoSIT report (VARL), as the validator writes it for a file."""
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?><rep:report xmlns:rep="http://www.xoev.de/de/validator/varl/1"'
+        ' xmlns:s="http://www.xoev.de/de/validator/framework/1/scenarios" varlVersion="1.0.0">'
+        "<rep:engine><rep:name>KoSIT Validator 1.6.3</rep:name></rep:engine>" + body
+        + f'<rep:assessment><rep:{assessment}><rep:explanation><html xmlns="http://www.w3.org/1999/xhtml">'
+        f"<body><p>Prüfbericht</p></body></html></rep:explanation></rep:{assessment}></rep:assessment></rep:report>"
+    )
+
+
+def scenario(name, *steps):
+    return (f"<rep:scenarioMatched><s:scenario><s:name>{name}</s:name></s:scenario>" + "".join(steps)
+            + '<rep:validationStepResult id="val-xml" valid="true"/></rep:scenarioMatched>')
+
+
+def step(step_id, *messages):
+    body = "".join(
+        f'<rep:message id="{step_id}.{n}" level="{level}" code="{code}">{text}</rep:message>'
+        for n, (level, code, text) in enumerate(messages, 1)
+    )
+    return f'<rep:validationStepResult id="{step_id}" valid="{"false" if body else "true"}">{body}</rep:validationStepResult>'
+
+
+class KositReport(unittest.TestCase):
+    def test_rejected_xrechnung(self):
+        report = varl(scenario(
+            "EN16931 XRechnung (CII)",
+            step("val-xsd"),
+            step("val-sch.1", ("warning", "BR-DE-27", "[BR-DE-27] Telefonnummer ...")),
+            step("val-sch.2", ("error", "BR-DE-15", "[BR-DE-15] Das Element \"Buyer reference\" (BT-10) muss "
+                                                      "übermittelt werden."),
+                 ("information", "BR-CL-10", "[BR-CL-10] ...")),
+        ))
+        result = common.parse_kosit_report(report)
+        self.assertEqual((result["status"], result["scenario"]), ("reject", "EN16931 XRechnung (CII)"))
+        self.assertEqual(set(result["errors"]), {"BR-DE-15"})
+        self.assertIn("muss übermittelt", result["errors"]["BR-DE-15"])
+        # Warnings are kept apart, information is left out.
+        self.assertEqual(set(result["warnings"]), {"BR-DE-27"})
+
+    def test_accepted_with_warnings(self):
+        report = varl(scenario("EN16931 (CII)", step("val-xsd"), step("val-sch.1", ("warning", "BR-DE-28", "x"))),
+                      assessment="accept")
+        result = common.parse_kosit_report(report)
+        self.assertEqual((result["status"], result["errors"], set(result["warnings"])), ("accept", {}, {"BR-DE-28"}))
+
+    def test_schema_errors_are_xsd(self):
+        report = varl(scenario("EN16931 (CII)", step("val-xsd", ("error", "cvc-complex-type.2.4.a", "Invalid content"))))
+        self.assertEqual(set(common.parse_kosit_report(report)["errors"]), {"XSD"})
+
+    def test_no_scenario_and_unreadable_documents(self):
+        # MINIMUM, BASIC WL and BASIC match no scenario of the configuration.
+        minimum = varl('<rep:noScenarioMatched><rep:validationStepResult id="val-xml" valid="true"/></rep:noScenarioMatched>')
+        self.assertEqual(common.parse_kosit_report(minimum)["status"], "no-scenario")
+        # A file that is not well-formed matches none either, and is rejected.
+        broken = varl('<rep:noScenarioMatched><rep:validationStepResult id="val-xml" valid="false">'
+                      '<rep:message id="val-xml.1" level="error" code="generic-error">SXXP0003 ...</rep:message>'
+                      "</rep:validationStepResult></rep:noScenarioMatched>")
+        result = common.parse_kosit_report(broken)
+        self.assertEqual((result["status"], set(result["errors"])), ("reject", {"XML"}))
+
+    def test_broken_reports_are_errors(self):
+        self.assertEqual(set(common.parse_kosit_report("<rep:report")["errors"]), {"KOSIT-CRASH"})
+        silent = varl(scenario("EN16931 (CII)", step("val-xsd")))  # rejected without a message
+        self.assertEqual(set(common.parse_kosit_report(silent)["errors"]), {"KOSIT-REJECT"})
+
+    def test_setup_says_what_is_missing(self):
+        with unittest.mock.patch.dict("os.environ", {"KOSIT_JAR": "", "KOSIT_CONFIG": ""}):
+            with self.assertRaisesRegex(common.ToolError, "KOSIT_JAR and KOSIT_CONFIG are not set"):
+                common.kosit_setup()
+        with tempfile.TemporaryDirectory() as tmp:
+            jar = Path(tmp) / "validator.jar"
+            jar.write_bytes(b"")
+            with unittest.mock.patch.dict("os.environ", {"KOSIT_JAR": str(jar), "KOSIT_CONFIG": tmp}):
+                with self.assertRaisesRegex(common.ToolError, "no scenarios.xml"):
+                    common.kosit_setup()
+                (Path(tmp) / "scenarios.xml").write_text("<scenarios/>", encoding="utf-8")
+                self.assertEqual(common.kosit_setup(), (jar.resolve(), Path(tmp).resolve()))
+
+    def test_skipping_a_validator_is_refused_in_ci(self):
+        with unittest.mock.patch.dict("os.environ", {"CI": "true"}):
+            with unittest.mock.patch("sys.stderr"):
+                self.assertEqual(run.main(["--no-kosit"]), 2)
+                self.assertEqual(run.main(["--no-mustang"]), 2)
+
+
+def mustang_report(*errors, warnings=()):
+    return {"status": "invalid" if errors else "valid", "errors": {e: e for e in errors},
+            "warnings": [f"{w}: text" for w in warnings]}
+
+
+def kosit_report(*errors, warnings=(), status=None):
+    return {"status": status or ("reject" if errors else "accept"), "scenario": "EN16931 XRechnung (CII)",
+            "errors": {e: e for e in errors}, "warnings": {w: w for w in warnings}}
+
+
+def collected(mustang=None, kosit=None, ours=(), xsd_errors=()):
+    """A compiled case after the official validation (Checker.collect)."""
+    res = {"xml_path": "x.xml", "xsd_errors": list(xsd_errors), "profile": "xrechnung",
+           "diagnostics": [{"level": "error", "rule": rule, "field": "f", "message": "m", "hint": "h"} for rule in ours]}
+    if mustang is not None:
+        res["mustang"] = mustang
+    if kosit is not None:
+        res["kosit"] = kosit
+    run.Checker.collect(res)
+    return res
+
+
+class OfficialVerdict(unittest.TestCase):
+    def test_every_validator_must_accept(self):
+        self.assertTrue(collected(mustang_report(), kosit_report())["official"]["valid"])
+        # Only KoSIT rejects: officially invalid, and silent XML is a FALSE_NEGATIVE.
+        res = collected(mustang_report(), kosit_report("CII-SR-467"))
+        self.assertEqual((res["official"]["valid"], res["official"]["rules"]), (False, ["CII-SR-467"]))
+        self.assertEqual(run.classify(res), "FALSE_NEGATIVE")
+        self.assertFalse(collected(mustang_report(), kosit_report(), xsd_errors=["line 1: x"])["official"]["valid"])
+        # Profiles without KoSIT scenario: Mustang and the XSD decide.
+        self.assertTrue(collected(mustang_report())["official"]["valid"])
+
+    def test_disagreements(self):
+        # BR-DE-27: Mustang rejects, KoSIT only warns. invoice-pro reports an
+        # error: AGREE_INVALID overall, stricter than KoSIT on its own.
+        res = collected(mustang_report("BR-DE-27"), kosit_report(warnings=["BR-DE-27"]), ours=["BR-DE-27"])
+        self.assertEqual(run.classify(res), "AGREE_INVALID")
+        self.assertEqual(res["official"]["disagreement"],
+                         {"rejected_by": "mustang", "rules": ["BR-DE-27"], "other": {"BR-DE-27": "warning"}})
+        row = run.make_row({"id": "rg-x", "population": "regression", "expect": "AGREE_INVALID", "file": "x.typ"}, res, None)
+        self.assertEqual({name: view["cls"] for name, view in row["validators"].items()},
+                         {"mustang": "AGREE_INVALID", "kosit": "STRICTER"})
+        # KoSIT rejects a rule Mustang does not know at all.
+        res = collected(mustang_report(), kosit_report("CII-SR-470"), ours=["BR-61"])
+        self.assertEqual(res["official"]["disagreement"]["other"], {"CII-SR-470": "nothing"})
+        # Both reject, with other rules: no disagreement of the verdict.
+        self.assertIsNone(collected(mustang_report("BR-CO-25", "BR-S-08"), kosit_report("BR-S-08"))["official"]["disagreement"])
+
+    def test_undocumented_disagreements_fail(self):
+        differences = {"BR-DE-27": {"rejected-by": "mustang", "other": ["warning"], "reason": "r"}}
+
+        def case_row(cid, mustang, kosit, ours=()):
+            case = {"id": cid, "population": "regression", "expect": "AGREE_INVALID", "file": "x.typ"}
+            return run.make_row(case, collected(mustang, kosit, ours=ours), None)
+
+        documented = case_row("rg-a", mustang_report("BR-DE-27"), kosit_report(warnings=["BR-DE-27"]), ["BR-DE-27"])
+        unknown = case_row("rg-b", mustang_report(), kosit_report("CII-SR-467"), ["IP-PAY-03"])
+        # BR-DE-27 is documented as rejected by Mustang, not by KoSIT.
+        reversed_ = case_row("rg-c", mustang_report(), kosit_report("BR-DE-27"), ["BR-DE-27"])
+        known = [{"finding": "f", "signatures": [run.signature(dict(unknown, disagreement=dict(unknown["disagreement"],
+                                                                                            undocumented=["CII-SR-467"])))]}]
+        failures, hits, xpass, stale = run.triage([documented, unknown, reversed_], known, differences=differences)
+        self.assertEqual([r["id"] for r in failures], ["rg-b", "rg-c"])
+        self.assertEqual(failures[0]["signature"], "AGREE_INVALID OFFICIAL_DISAGREE only-kosit=CII-SR-467")
+        self.assertEqual(hits, [])  # known-issues.toml cannot excuse it
+        self.assertEqual(stale, [])
+        text, ok = run.report([documented, unknown, reversed_], failures, hits, xpass,
+                              {"total_s": 0, "compile_s": 0, "mustang_wait_s": 0, "jobs": 1}, True, stale, True, differences)
+        self.assertFalse(ok)
+        self.assertIn("only Mustang rejects BR-DE-27 (KoSIT: warning); invoice-pro reports an error (stricter than KoSIT)", text)
+        self.assertIn("document it in validator-differences.toml", text)
+
+    def test_documented_differences_must_occur(self):
+        differences = {
+            "BR-DE-27": {"rejected-by": "mustang", "other": ["warning"], "reason": "r"},
+            "BR-CO-25": {"rejected-by": "mustang", "other": ["nothing"], "reason": "r"},
+        }
+        case = {"id": "rg-a", "population": "regression", "expect": "AGREE_INVALID", "file": "x.typ"}
+        rows = [run.make_row(case, collected(mustang_report("BR-DE-27"), kosit_report(warnings=["BR-DE-27"]),
+                                             ours=["BR-DE-27"]), None)]
+        self.assertEqual(run.triage(rows, [], differences=differences)[3], ["BR-CO-25"])
+        # Not on a subset (--only), nor without KoSIT.
+        self.assertEqual(run.triage(rows, [], check_xpass=False, differences=differences)[3], [])
+        rows = [run.make_row(case, collected(mustang_report("BR-DE-27"), ours=["BR-DE-27"]), None)]
+        self.assertEqual(run.triage(rows, [], differences=differences)[3], [])
+
+    def test_differences_file(self):
+        differences = run.load_differences(HERE / "validator-differences.toml")
+        for rule, entry in differences.items():
+            self.assertIn(entry["rejected-by"], run.VALIDATORS, rule)
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = Path(tmp) / "differences.toml"
+            bad.write_text('[BR-DE-27]\nrejected-by = "kosit"\nother = "error"\nreason = "r"\n', encoding="utf-8")
+            with self.assertRaisesRegex(common.ToolError, "other"):
+                run.load_differences(bad)
+            # What the other validator reports may depend on the document.
+            good = Path(tmp) / "good.toml"
+            good.write_text('[BR-DE-28]\nrejected-by = "mustang"\nother = ["warning", "nothing"]\nreason = "r"\n',
+                            encoding="utf-8")
+            entries = run.load_differences(good)
+            self.assertTrue(run.documented("BR-DE-28", "mustang", "nothing", entries))
+            self.assertTrue(run.documented("BR-DE-28", "mustang", "warning", entries))
+            self.assertFalse(run.documented("BR-DE-28", "kosit", "nothing", entries))
+            self.assertFalse(run.documented("BR-DE-17", "mustang", "warning", entries))
+        # Only the documented level of the other validator counts.
+        entries = {"BR-DE-27": {"rejected-by": "mustang", "other": ["warning"], "reason": "r"}}
+        self.assertFalse(run.documented("BR-DE-27", "mustang", "nothing", entries))
 
 
 def result(ours=(), official=(), valid=None, crash=None, source=None):
@@ -110,7 +309,7 @@ class Classification(unittest.TestCase):
             stop("ru0002", "The modifier `Versand` (5.9) cannot be split over the VAT categories 20% S, 0% Z"),
             stop("ru0003", "`sender.city.post-code` must be a string such as \"01067\""),
         ]
-        failures, hits, xpass = run.triage(rows, [])
+        failures, hits, xpass, _ = run.triage(rows, [])
         self.assertEqual(failures, [])
         text, ok = run.report(rows, failures, hits, xpass, {"total_s": 0, "compile_s": 0, "mustang_wait_s": 0, "jobs": 1}, True)
         self.assertTrue(ok)
@@ -140,7 +339,7 @@ def row(cid, cls="AGREE_VALID", expect="AGREE_VALID", oracle=(), missing=(), our
         "oracle": list(oracle),
         # what the report shows of a failure
         "file": f"{cid}.typ",
-        "official_messages": {},
+        "official_messages": [],
         "diagnostics": [],
         "xsd_errors": [],
         "crash": None,
@@ -182,13 +381,13 @@ class KnownIssues(unittest.TestCase):
             row("pw002", oracle=["O-BT1: x"]),  # known (f2)
             row("pw003"),  # passes
         ]
-        failures, hits, xpass = run.triage(rows, known)
+        failures, hits, xpass, _ = run.triage(rows, known)
         self.assertEqual([r["id"] for r in failures], ["rl001"])
         self.assertEqual(sorted((e["finding"], ids[0]) for e, _, ids in hits), [("f1", "pw001"), ("f2", "pw002")])
         # f2's second signature did not occur; f3 covers no case of this run.
         self.assertEqual([(e["finding"], s) for e, s in xpass], [("f2", "AGREE_VALID oracle=O-BT5")])
         # --strict: every failure is new, nothing is xpass.
-        failures, hits, xpass = run.triage(rows, known, strict=True)
+        failures, hits, xpass, _ = run.triage(rows, known, strict=True)
         self.assertEqual(len(failures), 3)
         self.assertEqual((hits, xpass), ([], []))
 
@@ -197,7 +396,7 @@ class KnownIssues(unittest.TestCase):
         mixed = dict(row("pw001", oracle=["O-BG14: x"]), features={"delivery": "dates-mixed", "lines": 3})
         dated = dict(row("pw002", oracle=["O-BG14: x"]), features={"delivery": "dates-all", "lines": 3})
         regression = row("rg-a", oracle=["O-BG14: x"])  # no features
-        failures, hits, xpass = run.triage([mixed, dated, regression], known)
+        failures, hits, xpass, _ = run.triage([mixed, dated, regression], known)
         # The same signature outside the named features is a new failure.
         self.assertEqual([r["id"] for r in failures], ["pw002", "rg-a"])
         self.assertEqual([ids for _, _, ids in hits], [["pw001"]])
@@ -225,7 +424,7 @@ class KnownIssues(unittest.TestCase):
             row("pw003", cls="STRICTER", ours=["IP-VAT-226"], population="legal"),
         ]
         known.append({"finding": "f3", "signatures": [run.signature(rows[-1])]})
-        failures, hits, xpass = run.triage(rows, known)
+        failures, hits, xpass, _ = run.triage(rows, known)
         self.assertEqual([r["id"] for r in failures], ["pw001", "pw003"])
         self.assertEqual(sorted(ids[0] for _, _, ids in hits), ["pw002", "rg-a"])
         self.assertEqual(xpass, [])
