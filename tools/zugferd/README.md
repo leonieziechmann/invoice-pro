@@ -8,6 +8,7 @@ How to run them, how to read their results and how to update golden files and kn
 | :----------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `corpus/gen.py`          | Generates the corpus: legal invoices (all pairs of 14 dimensions and a random sample), mutations, metamorphic twins, adversarial inputs, random invoices. |
 | `corpus/regression/`     | Committed regression cases, each with an `// expect:` header.                                                                                             |
+| `corpus/rules/`          | Parity fixtures: the smallest invoice that breaks one official rule, for every rule invoice-pro reports; both validators must report the rule.            |
 | `harness.typ`            | Theme wrapper that attaches invoice-pro's diagnostics to the PDF as JSON, so that one compilation yields the XML and the verdict.                         |
 | `run.py`                 | The runner: Typst, XSD, Mustang in one JVM, KoSIT in one batch, classification, oracles, known issues, gates.                                             |
 | `kosit.py`               | Validates the EN 16931 and XRechnung documents of `scripts/validate-all-zugferd` with KoSIT in one JVM.                                                   |
@@ -15,6 +16,8 @@ How to run them, how to read their results and how to update golden files and kn
 | `upstream.py`            | Compares the pinned Mustang, KoSIT, XRechnung configuration and Typst with their latest releases (weekly workflow).                                       |
 | `oracles.py`             | Semantic checks of the XML against the input and against the printed PDF.                                                                                 |
 | `known-issues.toml`      | Failure signatures of known bugs with their finding; the list can only shrink.                                                                            |
+| `rule_coverage.py`       | The rule coverage gate: every rule id of the official validators has a class in each profile; `--update-docs` writes the table of the docs.               |
+| `rule-coverage.toml`     | The class of each rule id the write guard does not settle (fixture, compiled, construction, unreachable, open), and the rules `IP-*`.                     |
 | `bt-disposition.toml`    | The disposition of every business term of EN 16931: the input that states it, what it is derived from, or why it is not supported.                        |
 | `bt_disposition.py`      | Checks that every business term has a disposition; `scripts/zugferd-corpus` runs it before the corpus.                                                    |
 | `minimize.py`            | Shrinks a failing generated case to a minimal reproduction.                                                                                               |
