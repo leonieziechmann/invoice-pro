@@ -61,9 +61,9 @@
 /// accepts the code. `finding` is the field and the values of the message
 /// of `cen`, the code list rule of the CEN Schematron, whose entry reports
 /// `fx`, the one of the Factur-X Schematron, as well (`id`, with `fx-only`
-/// where only the Factur-X list lacks the code). A withdrawn code is
-/// IP-CODE-01, whose message names it by `term` (`scheme`: the code is the
-/// scheme of the term).
+/// where only the Factur-X list lacks the code, and `xrechnung` for the
+/// messages). A withdrawn code is IP-CODE-01, whose message names it by
+/// `term` (`scheme`: the code is the scheme of the term).
 ///
 /// -> array
 #let code-finding(
@@ -94,7 +94,10 @@
   let fx-only = (
     rule == fx and in-list(lists.at(name).at("xrechnung", default: ""), code)
   )
-  (finding + (key: cen, id: rule, fx-only: fx-only),)
+  (
+    finding
+      + (key: cen, id: rule, fx-only: fx-only, xrechnung: profile.xrechnung),
+  )
 }
 
 // The code list checks of engine.typ, for a code that not every validation

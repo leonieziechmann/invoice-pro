@@ -237,6 +237,19 @@
   assert(
     diagnostic(m, "BR-CL-04").message.ends-with("is not an ISO 4217 code."),
   )
+  // XRechnung is validated with the lists of EN 16931 alone, whose older
+  // version lacks the code.
+  m.currency = "XCG"
+  m.profile = resolve-profile("xrechnung", "DE")
+  let d = diagnostic(m, "BR-CL-04")
+  assert.eq(
+    d.message,
+    "The invoice currency code (BT-5) \"XCG\" is not in the code list of every validator of XRechnung yet: only the newest version of the EN 16931 code list has it.",
+  )
+  assert.eq(
+    d.hint,
+    "Use another code while the validators of XRechnung do not know it yet.",
+  )
 })[
   #line-items[#item([Consulting], price: 1000)]
   #payment-goal(days: 14)
@@ -359,6 +372,16 @@
   m.profile = resolve-profile("xrechnung", "DE")
   assert.eq(code-rules(m), ())
   assert("BR-B-01" in rules(m), message: repr(rules(m)))
+  // ... so B is one of the categories it allows
+  m.taxes.at(0).category = "AA"
+  m.lines.at(0).category = "AA"
+  assert(
+    diagnostic(m, "BR-CL-18")
+      .message
+      .ends-with(
+        "is not allowed in EN 16931 (allowed: S, Z, E, AE, K, G, O, L, M, B).",
+      ),
+  )
 })[
   #line-items[#item([Consulting], price: 1000)]
   #payment-goal(days: 14)

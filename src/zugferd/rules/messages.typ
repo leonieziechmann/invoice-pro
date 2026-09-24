@@ -27,15 +27,24 @@
     and (" " + code + " ") in list.newer
 )
 
-// The sentence for such a code, e.g. XCG (the Caribbean guilder, 2025):
-// `subject` names the code, e.g. `The scheme "0240" of the global
-// identifier`.
-#let _not-yet(subject) = (
-  subject
-    + " is not in the code list of the Factur-X validation yet: only the newest version of the EN 16931 code list has it."
-)
-
-#let _not-yet-hint = "Use another code while the validators of the Factur-X profiles do not know it yet."
+// The message and the hint for such a code, e.g. XCG (the Caribbean
+// guilder, 2025): `subject` names the code, e.g. `The scheme "0240" of the
+// global identifier`. XRechnung is validated with the lists of EN 16931
+// alone (`xrechnung` of the finding, see `code-finding` of rare.typ).
+#let _not-yet(f, subject) = {
+  let (validation, validators) = if f.at("xrechnung", default: false) {
+    ("every validator of XRechnung", "the validators of XRechnung")
+  } else {
+    ("the Factur-X validation", "the validators of the Factur-X profiles")
+  }
+  (
+    subject
+      + " is not in the code list of "
+      + validation
+      + " yet: only the newest version of the EN 16931 code list has it.",
+    "Use another code while " + validators + " do not know it yet.",
+  )
+}
 
 // A code that only the code list of the Factur-X validation lacks (`fx-only`
 // of a finding, see `code-finding` of rare.typ), which the validation of
@@ -166,10 +175,7 @@
 )
 
 #let _global-id-scheme(f) = if _newer(lists.icd, f.scheme) {
-  (
-    _not-yet("The scheme " + _quoted(f.scheme) + " of the global identifier"),
-    _not-yet-hint,
-  )
+  _not-yet(f, "The scheme " + _quoted(f.scheme) + " of the global identifier")
 } else {
   (
     "The scheme "
@@ -406,10 +412,7 @@
       "Invoice in another currency, or use the \"minimum\" or \"basic-wl\" profile, whose validation knows the code.",
     )
   } else if _newer(lists.currency, f.code) {
-    (
-      _not-yet("The invoice currency code (BT-5) " + _quoted(f.code)),
-      _not-yet-hint,
-    )
+    _not-yet(f, "The invoice currency code (BT-5) " + _quoted(f.code))
   } else {
     (
       "The invoice currency code (BT-5) "
@@ -810,17 +813,15 @@
     )
   },
   "BR-CL-11": f => if _newer(lists.icd, f.scheme) {
-    (
-      _not-yet(
-        "The scheme "
-          + _quoted(f.scheme)
-          + " of the "
-          + f.term
-          + " legal registration identifier ("
-          + f.bt
-          + ")",
-      ),
-      _not-yet-hint,
+    _not-yet(
+      f,
+      "The scheme "
+        + _quoted(f.scheme)
+        + " of the "
+        + f.term
+        + " legal registration identifier ("
+        + f.bt
+        + ")",
     )
   } else {
     (
@@ -931,10 +932,7 @@
       "Use another scheme, e.g. \"EM\" for an email address.",
     )
   } else if _newer(lists.eas, f.scheme) {
-    (
-      _not-yet("The scheme " + _quoted(f.scheme) + " of the " + f.term),
-      _not-yet-hint,
-    )
+    _not-yet(f, "The scheme " + _quoted(f.scheme) + " of the " + f.term)
   } else {
     (
       "The scheme "
@@ -1124,7 +1122,9 @@
           + _quoted(f.category)
           + " is not allowed in "
           + _list-of(f)
-          + " (allowed: S, Z, E, AE, K, G, O, L, M).",
+          + " (allowed: S, Z, E, AE, K, G, O, L, M"
+          + if f.at("xrechnung", default: false) { ", B" }
+          + ").",
         hint,
       )
     }
@@ -1151,10 +1151,7 @@
     "State the legal reason, e.g. `tax.exempt(grounds: \"Steuerfrei nach § 4 Nr. 21 UStG\")`, and its VATEX code if you know it, e.g. `code: \"VATEX-EU-132-1G\"`.",
   ),
   "BR-CL-22": f => if _newer(lists.vatex, f.code) {
-    (
-      _not-yet("The VAT exemption reason code (BT-121) " + _quoted(f.code)),
-      _not-yet-hint,
-    )
+    _not-yet(f, "The VAT exemption reason code (BT-121) " + _quoted(f.code))
   } else {
     (
       "The VAT exemption reason code (BT-121) "
