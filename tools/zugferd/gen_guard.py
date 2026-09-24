@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Generates the tables of the XML write guard (src/zugferd/guard/).
 
-  gen_guard.py [--jar PATH] [--out DIR] [--check] [--stats FILE] [--explain]
+  gen_guard.py [--jar PATH] [--kosit-config DIR] [--out DIR] [--check]
+               [--stats FILE] [--explain]
 
 The guard (concept, section 4.4) checks every element while the serializer
 writes it: that the profile's XSD knows it at this position, in this order
@@ -13,8 +14,13 @@ or --jar; read with zipfile, nothing is vendored):
 
   schema/ZF_230/<P>/*.xsd                                Factur-X 1.0.07 XSD
   xslt/ZF_230/FACTUR-X_<P>.xslt, FACTUR-X_<P>_codedb.xml Factur-X Schematron
-  xslt/cii16931schematron/EN16931-CII-validation.xslt    CEN EN 16931 (CII)
+  xslt/cii16931schematron/EN16931-CII-validation.xslt    CEN EN 16931 (CII) 1.3.12
   xslt/XR_30/XRechnung-CII-validation.xslt               XRechnung 3.0 (CII)
+
+and from the unpacked XRechnung configuration of the KoSIT validator
+($KOSIT_CONFIG or --kosit-config, configuration 2026-08-31, also pinned):
+
+  resources/cii/16b/xsl/EN16931-CII-validation.xsl       CEN EN 16931 (CII) 1.3.16
 
 Which artefacts apply to which profile mirrors Mustang's validator: the
 Factur-X Schematron of the profile for MINIMUM, BASIC WL, BASIC and
@@ -25,11 +31,28 @@ Schematrons as errors too. The reports of the Factur-X Schematron mark
 elements and attributes as not used in a profile; Mustang ignores them, the
 guard does not, since they define the profile.
 
+The KoSIT validator applies a newer CEN Schematron (1.3.16) to EN 16931 and
+XRechnung documents, whose code lists have withdrawn codes that the older
+lists still have (e.g. the currencies BGN and HRK, the scheme 9901) and added
+new ones. Its code list rules join the CEN rules of the profiles with the
+CEN Schematron (see `load_cen_code_lists`): a code at such a position must be
+in the lists of both versions. Everything else of CEN 1.3.16 is left to the
+corpus, which runs KoSIT. There is no fallback without the configuration:
+the tables would silently accept the withdrawn codes.
+
+Global variables and parameters of the XRechnung Schematron that stand for
+a literal (e.g. $XR-CIUS-ID) or a path (e.g. $documentCurrencyCode) are
+replaced by it in the tests of its rules (see `global_values`), so that
+rules such as BR-DE-21 and PEPPOL-EN16931-R053 compile.
+
 Output (data shipped with the package, see `emit_lists` and `emit_profile`;
 the serializer src/zugferd/guard/write.typ reads it and describes the
 format):
 
-  src/zugferd/guard/lists.typ       the code lists (Typst)
+  src/zugferd/guard/lists.typ       the code lists (Typst), and the lists of
+                                    the validator (`validator`, see
+                                    VALIDATOR_LISTS), the one source of the
+                                    code lists of src/zugferd/rules/
   src/zugferd/guard/<profile>.json  the nodes of each profile, and the rule
                                     that forbids an empty leaf (JSON, which
                                     Typst reads several times faster than
@@ -178,6 +201,46 @@ class Jar:
 
     def names(self, prefix):
         return sorted(n for n in self.zip.namelist() if n.startswith(prefix) and not n.endswith("/"))
+
+
+# The CEN Schematron of the KoSIT validator's XRechnung configuration
+# 2026-08-31 (CEN EN 16931 CII 1.3.16, compiled with SchXslt), relative to the
+# unpacked configuration, and its SHA-256: another configuration fails
+# instead of silently changing the code lists.
+KOSIT_CEN = "resources/cii/16b/xsl/EN16931-CII-validation.xsl"
+KOSIT_CEN_VERSION = "1.3.16"
+KOSIT_PINS = {
+    KOSIT_CEN: "0911e927f13f9ae2cdc7f973643f27bf0ad3c5da02483c04a5b8a47eb4822199",
+}
+
+
+class KositConfig:
+    """Reads files of the unpacked KoSIT configuration and checks them
+    against KOSIT_PINS."""
+
+    def __init__(self, path, pinned=True):
+        if not path:
+            raise GenError(
+                "the code lists need the KoSIT XRechnung configuration 2026-08-31 (CEN Schematron "
+                "1.3.16): set KOSIT_CONFIG or --kosit-config to the unpacked configuration"
+            )
+        self.path = Path(path)
+        self.pinned = pinned
+        self.digests = {}
+
+    def read(self, name):
+        try:
+            data = (self.path / name).read_bytes()
+        except OSError as e:
+            raise GenError(f"{self.path}: no {name} ({e}); is it the KoSIT XRechnung configuration 2026-08-31?")
+        digest = hashlib.sha256(data).hexdigest()
+        if self.pinned and KOSIT_PINS.get(name) != digest:
+            raise GenError(
+                f"{name} in {self.path} is not the pinned artefact (sha256 {digest}, pinned "
+                f"{KOSIT_PINS.get(name)}); the code lists are compiled from the configuration 2026-08-31"
+            )
+        self.digests["kosit:" + name] = digest
+        return data
 
 
 def normalize(text):
@@ -393,6 +456,7 @@ class CodeList:
     rule: str
     source: str  # "FX", "CEN", "XR"
     casefold: bool = False  # the value is compared in upper case
+    newest: bool = False  # the list of the newest CEN Schematron (KoSIT, KOSIT_CEN_VERSION)
 
 
 @dataclasses.dataclass(eq=False)
@@ -497,6 +561,7 @@ class Rule:
     text: str
     variables: dict  # template variables, name -> select
     codedb: dict  # Factur-X: code list id -> frozenset
+    newest: bool = False  # a code list rule of the newest CEN Schematron (see load_cen_code_lists)
 
     @property
     def business_id(self):
@@ -514,6 +579,54 @@ class Rule:
         return f"{self.source} {self.id or '(report)'} [{self.context}] {self.test}"
 
 
+_LITERAL = re.compile(r"^'([^']*)'$")
+_ABSOLUTE_PATH = re.compile(r"^(?:/(?:rsm|ram):\w+)+$")
+_GLOBAL_REF = re.compile(r"\$([A-Za-z][\w.-]*)")
+
+
+def global_values(root):
+    """The global variables and parameters of a Schematron that stand for a
+    literal or a path, by name: a string literal or a `concat` of literals and
+    such variables becomes a quoted literal (e.g. $XR-CIUS-ID), an absolute
+    path stays a path (e.g. $documentCurrencyCode). Any other (a condition,
+    a regular expression used by `matches`) is left out, and so remains a
+    `$name` that no test shape of the compiler accepts."""
+    selects = {}
+    for tag in ("variable", "param"):
+        for node in root.findall(XSL + tag):
+            select = node.get("select")
+            if node.get("name") and select is not None:
+                selects[node.get("name")] = normalize(select)
+    values = {}
+
+    def literal(expr, seen):
+        expr = expr.strip()
+        m = _LITERAL.match(expr)
+        if m:
+            return m.group(1)
+        m = re.fullmatch(r"\$([A-Za-z][\w.-]*)", expr)
+        if m and m.group(1) in selects and m.group(1) not in seen:
+            return literal(selects[m.group(1)], seen | {m.group(1)})
+        m = re.fullmatch(r"concat\((.*)\)", expr)
+        if m:
+            parts = [literal(part, seen) for part in split_top(m.group(1), ",")]
+            return None if None in parts else "".join(parts)
+        return None
+
+    for name, select in selects.items():
+        text = literal(select, {name})
+        if text is not None and "'" not in text:
+            values[name] = f"'{text}'"
+        elif text is None and _ABSOLUTE_PATH.match(select):
+            values[name] = select
+    return values
+
+
+def substitute(test, values):
+    """`test` with the references of `values` replaced by their value."""
+    return _GLOBAL_REF.sub(lambda m: values.get(m.group(1), m.group(0)), test)
+
+
 def load_rules(jar, artefact, source, codedb_name=None):
     root = etree.fromstring(jar.read(artefact))
     codedb = {}
@@ -521,6 +634,9 @@ def load_rules(jar, artefact, source, codedb_name=None):
         db = etree.fromstring(jar.read(codedb_name))
         for cl in db.findall("cl"):
             codedb[cl.get("id")] = frozenset(e.get("value") for e in cl.findall("enumeration"))
+    # The global variables of the XRechnung Schematron (see `global_values`);
+    # the other Schematrons use none in their tests.
+    values = global_values(root) if source == "XR" else {}
     rules = []
     for template in root.iter(XSL + "template"):
         mode = template.get("mode") or ""
@@ -540,7 +656,7 @@ def load_rules(jar, artefact, source, codedb_name=None):
                         priority=int(priority),
                         context=normalize(template.get("match")),
                         kind=kind,
-                        test=normalize(node.get("test")),
+                        test=substitute(normalize(node.get("test")), values),
                         id=attrs.get("id"),
                         flag=attrs.get("flag"),
                         text=normalize("".join(text.itertext())) if text is not None else "",
@@ -550,6 +666,50 @@ def load_rules(jar, artefact, source, codedb_name=None):
                 )
     if not rules:
         raise GenError(f"{artefact}: no Schematron rules found")
+    return rules
+
+
+def is_code_list_test(test):
+    """Whether a test is a code list of the CEN Schematron (a `contains` of
+    the codes, or `@a = '..' or ..` of an attribute)."""
+    test = strip_parens(test)
+    return bool(_T_LIST.match(test) or _T_ATTR_VALUES.match(test))
+
+
+def load_cen_code_lists(kosit, cen_rules):
+    """The code list rules of the newest CEN Schematron (KOSIT_CEN, compiled
+    with SchXslt), as rules of the CEN Schematron the compiler knows: each is
+    the twin of the rule of CEN 1.3.12 with the same id and context, whose
+    mode and priority it takes, so that it applies at the same positions, and
+    adds its list there (`newest`). A code list rule without such a twin
+    fails: the newest version then checks a code the tables do not know."""
+    root = etree.fromstring(kosit.read(KOSIT_CEN))
+    twins = {(r.id, r.context): r for r in cen_rules if r.kind == "assert"}
+    rules = []
+    for template in root.iter(XSL + "template"):
+        context = normalize(template.get("match"))
+        for node in template.iter(SVRL + "failed-assert"):
+            tests = [a for a in node.findall(XSL + "attribute") if a.get("name") == "test"]
+            test = normalize("".join(tests[0].itertext())) if tests else ""
+            if not is_code_list_test(test):
+                continue
+            twin = twins.get((node.get("id"), context))
+            if twin is None:
+                raise GenError(
+                    f"{KOSIT_CEN}: the code list rule {node.get('id')} [{context}] has no rule of the same id "
+                    f"and context in {CEN_XSLT}"
+                )
+            text = node.find(SVRL + "text")
+            rules.append(dataclasses.replace(
+                twin,
+                artefact=KOSIT_CEN,
+                test=test,
+                flag=node.get("flag"),
+                text=normalize("".join(text.itertext())) if text is not None else "",
+                newest=True,
+            ))
+    if not rules:
+        raise GenError(f"{KOSIT_CEN}: no code list rules found")
     return rules
 
 
@@ -915,7 +1075,9 @@ RELPATH = r"(?:\.\./)*(?:ram|udt|qdt|rsm):\w+(?:/(?:ram|udt|qdt|rsm):\w+)*"
 _T_REQUIRED = re.compile(rf"^({RELPATH})$")
 _T_FORBIDDEN = re.compile(rf"^not ?\(({RELPATH})\)$")
 _T_COUNT = re.compile(rf"^count\(({RELPATH})\) ?(=|<=|>=) ?1$")
-_T_VARIANT_COUNT = re.compile(r"^count\(((?:ram):\w+)\[(.*)\]\) ?<= ?1$")
+# `count(ram:A/ram:B[p]) <= 1`: the steps before the counted element (here
+# ram:A) must each occur at most once, so that the count is one per element.
+_T_VARIANT_COUNT = re.compile(r"^count\(((?:ram:\w+/)*)(ram:\w+)\[(.*)\]\) ?<= ?1$")
 _T_ATTR = re.compile(r"^@(\w+)$")
 _T_NOT_ATTR = re.compile(r"^not ?\(@(\w+)\)$")
 _T_NOT_CHILD_ATTR = re.compile(rf"^not ?\(({RELPATH})/@(\w+)\)$")
@@ -947,6 +1109,9 @@ _T_DATE_102 = re.compile(
     r"^matches\(\.,'\^\\s\*\(\\d\{4\}\)\(1\[0-2\]\|0\[1-9\]\)\{1\}\(3\[01\]\|\[12\]\[0-9\]\|0\[1-9\]\)\{1\}\\s\*\$'\)$"
 )
 _T_VALUE = re.compile(rf"^not ?\(({RELPATH})\) or \(\1 ?= ?'(\w+)'\)$")
+# One of several literals: `E = 'a' or E = 'b'` (e.g. BR-DE-21 on the
+# specification identifier, once its variables are replaced).
+_T_ONE_OF = re.compile(rf"^({RELPATH}) ?= ?'([^'\s]+)'$")
 _T_INDICATOR = re.compile(
     r"^normalize-space\(ram:ChargeIndicator/udt:Indicator/text\(\)\) = 'true' or "
     r"normalize-space\(ram:ChargeIndicator/udt:Indicator/text\(\)\) = 'false'$"
@@ -1329,7 +1494,7 @@ class Compiler:
             prefix = m.group(3).startswith("substring")
             casefold = "upper-case(" in m.group(3)
             for pos, conds in matched:
-                self.add_list(r, pos, conds, target, CodeList(codes, rule, r.source, casefold), prefix)
+                self.add_list(r, pos, conds, target, CodeList(codes, rule, r.source, casefold, r.newest), prefix)
             return "prefix list" if prefix else f"code list of {target}"
         m = _T_CODEDB.match(test)
         if m:
@@ -1350,7 +1515,7 @@ class Compiler:
                 raise GenError(f"unsupported attribute list: {r.label()}")
             codes = frozenset(v for _, v in pairs)
             for pos, conds in matched:
-                self.add_list(r, pos, conds, "@" + names[0], CodeList(codes, rule, r.source), False)
+                self.add_list(r, pos, conds, "@" + names[0], CodeList(codes, rule, r.source, newest=r.newest), False)
             return f"code list of @{names[0]}"
         m = _T_INDICATOR.match(test)
         if m:
@@ -1366,6 +1531,18 @@ class Compiler:
                 for leaf in self.targets(pos, m.group(1)):
                     leaf.lists.append(CodeList(frozenset({m.group(2)}), rule, r.source))
             return f"value of {m.group(1)}"
+        one_of = [_T_ONE_OF.match(strip_parens(d)) for d in split_top(test, " or ")]
+        if len(one_of) > 1 and all(one_of) and len({o.group(1) for o in one_of}) == 1:
+            path = one_of[0].group(1)
+            codes = frozenset(o.group(2) for o in one_of)
+            for pos, conds in matched:
+                self.expect_conditions(r, pos, conds)
+                leaves = self.targets(pos, path)
+                if any(not leaf.leaf for leaf in leaves):
+                    raise GenError(f"a value list of a complex element {path}: {r.label()}")
+                for leaf in leaves:
+                    leaf.lists.append(CodeList(codes, rule, r.source))
+            return f"one of the values of {path}"
         m = _T_FRACTION.match(test)
         if m:
             for pos, conds in matched:
@@ -1404,11 +1581,17 @@ class Compiler:
             return f"count({path}) {op} 1"
         m = _T_VARIANT_COUNT.match(test)
         if m:
-            tag, pred = m.group(1), m.group(2)
+            steps, tag, pred = m.group(1).rstrip("/"), m.group(2), m.group(3)
             for pos, conds in matched:
                 self.expect_conditions(r, pos, conds)
-                self.variant_limit(r, pos, tag, pred)
-            return f"count({tag}[...]) <= 1"
+                bases = [pos]
+                for step in steps.split("/") if steps else []:
+                    if any(effective_max(b, step) not in (0, 1) for b in bases):
+                        raise GenError(f"a count through {step}, which may occur more than once: {r.label()}")
+                    bases = [c for b in bases for c in b.child_positions(step)]
+                for base in bases:
+                    self.variant_limit(r, base, tag, pred)
+            return f"count({m.group(1)}{tag}[...]) <= 1"
         m = _T_ATTR.match(test)
         if m:
             for pos, conds in matched:
@@ -2019,13 +2202,19 @@ def combine_lists(code_lists):
     """One ListRef for the lists of every validator at a position."""
     if not code_lists:
         return None
-    ordered = sorted(code_lists, key=lambda c: (rule_priority(c), sorted(c.codes)))
+    # The list of the newest CEN Schematron comes after the list of the same
+    # rule it narrows, which stays the primary list.
+    ordered = sorted(code_lists, key=lambda c: (rule_priority(c), c.newest, sorted(c.codes)))
     primary = ordered[0]
     # A list compared in upper case only counts as such when all are.
     casefold = all(c.casefold for c in code_lists)
     codes = frozenset.intersection(*(c.codes for c in code_lists))
     exceptions = {}
     for c in ordered[1:]:
+        # Two versions of a list of one rule (CEN 1.3.12 and 1.3.16) name the
+        # primary's rule, which a code outside of `codes` gets anyway.
+        if c.rule == primary.rule:
+            continue
         for code in sorted(primary.codes - c.codes):
             if code not in codes and code not in exceptions:
                 exceptions[code] = c.rule
@@ -2318,6 +2507,64 @@ def count_text(n, noun):
     return f"{n} {noun}" + ("" if n == 1 else "s")
 
 
+# The code lists of the validator (src/zugferd/rules/), which are lists of
+# the tables: per name, the position whose list it is, as (profile, path,
+# attribute or None). `every` is the list of every validation of the
+# profiles based on EN 16931 (Factur-X, CEN 1.3.12 and 1.3.16), which the
+# validator applies to the codes of every profile unless `factur-x` is
+# given: the list of the Factur-X validation of the profiles without the CEN
+# rules (MINIMUM and BASIC WL), where it accepts codes the CEN lists lack.
+# `newer` (computed) are the codes only the newest CEN list has at the
+# `every` position: codes that are right, but newer than the other lists,
+# which the messages name as such.
+_SELLER = "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty"
+_SETTLEMENT = "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement"
+_LINE = "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem"
+VALIDATOR_LISTS = {
+    "country": {
+        "every": ("en16931", f"{_SELLER}/ram:PostalTradeAddress/ram:CountryID", None),
+        "factur-x": ("basic-wl", f"{_SELLER}/ram:PostalTradeAddress/ram:CountryID", None),
+    },
+    "currency": {
+        "every": ("en16931", f"{_SETTLEMENT}/ram:InvoiceCurrencyCode", None),
+        "factur-x": ("basic-wl", f"{_SETTLEMENT}/ram:InvoiceCurrencyCode", None),
+    },
+    "eas": {"every": ("en16931", f"{_SELLER}/ram:URIUniversalCommunication/ram:URIID", "schemeID")},
+    "icd": {"every": ("en16931", f"{_SELLER}/ram:GlobalID", "schemeID")},
+    "payment-means": {
+        "every": ("en16931", f"{_SETTLEMENT}/ram:SpecifiedTradeSettlementPaymentMeans/ram:TypeCode", None),
+    },
+    "unit": {"every": ("en16931", f"{_LINE}/ram:SpecifiedLineTradeDelivery/ram:BilledQuantity", "unitCode")},
+    "vat-category": {"every": ("en16931", f"{_SETTLEMENT}/ram:ApplicableTradeTax/ram:CategoryCode", None)},
+    "vatex": {"every": ("en16931", f"{_SETTLEMENT}/ram:ApplicableTradeTax/ram:ExemptionReasonCode", None)},
+}
+
+
+def validator_lists(compilers, names):
+    """The lists of VALIDATOR_LISTS: per name, the name of each list in
+    lists.typ (`every`, `factur-x`) and the codes of `newer`, sorted."""
+    out = {}
+    for name, where in sorted(VALIDATOR_LISTS.items()):
+        entry = {}
+        for kind, (profile, path, attr) in sorted(where.items()):
+            found = [p for p in compilers[profile].positions if p.path() == path and p.leaf]
+            if len(found) != 1:
+                raise GenError(f"VALIDATOR_LISTS {name}: no leaf {path} in the profile {profile}")
+            pos = found[0]
+            lists = pos.attrs[attr].lists if attr else pos.lists
+            ref = combine_lists(lists)
+            if ref is None or ref.codes not in names.names:
+                raise GenError(f"VALIDATOR_LISTS {name}: no code list of the tables at {path} ({profile})")
+            entry[kind] = names.name(ref.codes)
+            if kind == "every":
+                older = frozenset().union(*(c.codes for c in lists if not c.newest))
+                newer = frozenset().union(*(c.codes for c in lists if c.newest)) - older
+                if newer:
+                    entry["newer"] = sorted(newer)
+        out[name] = entry
+    return out
+
+
 # Names of the tables of VAT category rules, by where they apply: (parent,
 # its variant, tax element). A table elsewhere fails the generator.
 VAT_TABLE_NAMES = {
@@ -2406,11 +2653,12 @@ def chunks(codes, width=72):
     return lines
 
 
-def emit_lists(names):
+def emit_lists(names, validator=None):
     """src/zugferd/guard/lists.typ: every code list as one string of its
     codes, each between two spaces, so that a lookup is one substring search
     and loading the module builds nothing; a list that differs from the
-    first list of its name by a few codes is derived from it."""
+    first list of its name by a few codes is derived from it. `validator`
+    (see `validator_lists`) names the lists of the validator."""
     for codes in names.names:
         bad = sorted(c for c in codes if not c or re.search(r"\s", c))
         if bad:
@@ -2433,20 +2681,30 @@ def emit_lists(names):
         "",
     ]
     ordered = sorted(names.names.items(), key=lambda kv: kv[1])
+    written = []  # (codes, name) of the lists written in full, the bases of others
     for codes, name in ordered:
-        base = names.base[codes]
-        added, removed = sorted(codes - base), sorted(base - codes)
-        if base != codes and len(added) + len(removed) <= max(8, len(codes) // 10):
-            args = [names.names[base]]
+        # Chunks of 75 characters: `  "<chunk>",` fills the width of 80.
+        full = wrap(f"#let {name} = _codes(", [typ_str(line) for line in chunks(sorted(codes), 75)], ")", 0)
+        # The shortest derivation of a list written before (e.g. `vat-prefix`
+        # of `country`), where it is shorter than the codes and keeps to the
+        # width (its arrays of codes are not wrapped): not for lists of one
+        # or two long codes. (`gen_guard.py --stats` lists the size of each.)
+        best = full
+        for base, base_name in written:
+            added, removed = sorted(codes - base), sorted(base - codes)
+            if len(added) + len(removed) > max(8, len(codes) // 10):
+                continue
+            args = [base_name]
             if added:
                 args.append("add: " + typ_array([typ_str(c) for c in added]))
             if removed:
                 args.append("remove: " + typ_array([typ_str(c) for c in removed]))
-            out.append(f"// {count_text(len(codes), 'code')}: `{names.names[base]}` with other codes.")
-            out.append(wrap(f"#let {name} = _derive(", args, ")", 0))
-        else:
-            out.append(f"// {count_text(len(codes), 'code')}.")
-            out.append(wrap(f"#let {name} = _codes(", [typ_str(line) for line in chunks(sorted(codes))], ")", 0))
+            derived = wrap(f"#let {name} = _derive(", args, ")", 0)
+            if len(derived) < len(best) and all(len(line) <= 80 for line in derived.split("\n")):
+                best = derived
+        if best is full:
+            written.append((codes, name))
+        out.append(best)
         out.append("")
     if names.vat:
         out += [
@@ -2457,13 +2715,29 @@ def emit_lists(names):
             '// ("e": true required, false forbidden); see src/zugferd/guard/write.typ.',
             "",
         ]
+        emitted_tables = []
         for table, name in sorted(names.vat.items(), key=lambda kv: kv[1]):
-            entries = [
-                f"{typ_str(code)}: "
-                + typ_array([typ_array([typ_str(check), typ_value(value), typ_str(rule)]) for check, value, rule in checks])
-                for code, checks in table
-            ]
-            out.append(wrap(f"#let {name} = (", entries, ")", 0))
+            entries = dict(table)
+            larger = next(
+                (
+                    (other, other_name) for other, other_name in emitted_tables
+                    if set(entries) < set(dict(other))
+                    and all(dict(other)[code] == checks for code, checks in entries.items())
+                ),
+                None,
+            )
+            if larger:
+                # The table of another one without some categories.
+                removed = "".join(f"  let _ = t.remove({typ_str(c)})\n" for c in sorted(set(dict(larger[0])) - set(entries)))
+                out.append(f"#let {name} = {{\n  let t = {larger[1]}\n{removed}  t\n}}")
+            else:
+                items = [
+                    f"{typ_str(code)}: "
+                    + typ_array([typ_array([typ_str(check), typ_value(value), typ_str(rule)]) for check, value, rule in checks])
+                    for code, checks in table
+                ]
+                out.append(wrap(f"#let {name} = (", items, ")", 0))
+            emitted_tables.append((table, name))
             out.append("")
     out += [
         "/// The code lists by name.",
@@ -2475,6 +2749,13 @@ def emit_lists(names):
         out += [
             "/// The rules of the VAT categories by name.",
             wrap("#let vat-rules = (", [f"{typ_str(name)}: {name}" for name in vat], ")", 0),
+            "",
+        ]
+    if validator:
+        out += [
+            "/// The code lists of the validator (src/zugferd/rules/); see VALIDATOR_LISTS",
+            "/// of tools/zugferd/gen_guard.py.",
+            emit_validator(validator),
             "",
         ]
     return "\n".join(out)
@@ -2496,6 +2777,32 @@ JSON_NOTICE = (
 def json_value(value):
     """A value as compact JSON: no spaces, the keys in the order given."""
     return json.dumps(value, separators=(",", ":"))
+
+
+def emit_validator(validator, width=80):
+    """The `validator` dictionary of lists.typ in typstyle's layout: an
+    entry on one line when it fits, else one field per line."""
+    lines = ["#let validator = ("]
+    for name, entry in validator.items():
+        fields = [f"{kind}: {entry[kind]}" for kind in ("every", "factur-x") if kind in entry]
+        newer = [typ_str(line) for line in chunks(entry.get("newer", ()), width - 10)]
+        if newer:
+            fields.append("newer: _codes(" + ", ".join(newer) + ")")
+        one = f"  {name}: (" + ", ".join(fields) + "),"
+        if len(one) <= width:
+            lines.append(one)
+            continue
+        lines.append(f"  {name}: (")
+        for field in fields:
+            if len(field) + 5 <= width or not field.startswith("newer:"):
+                lines.append(f"    {field},")
+            else:
+                lines.append("    newer: _codes(")
+                lines += [f"      {chunk}," for chunk in newer]
+                lines.append("    ),")
+        lines.append("  ),")
+    lines.append(")")
+    return "\n".join(lines)
 
 
 def emit_profile(profile, nodes, names, digests):
@@ -2708,13 +3015,17 @@ def known_tags(schemas):
     return tags
 
 
-def load_profile(jar, profile, schemas):
+def load_profile(jar, profile, schemas, cen_code_lists=()):
+    """The compiled rules of a profile. `cen_code_lists` are the code list
+    rules of the newest CEN Schematron (`load_cen_code_lists`), which join
+    the CEN rules; without them, the lists are those of the Mustang jar."""
     directory, fx, cen, xr = PROFILES[profile]
     rules = []
     if fx:
         rules += load_rules(jar, fx_xslt(fx), "FX", fx_codedb(fx))
     if cen:
         rules += load_rules(jar, CEN_XSLT, "CEN")
+        rules += list(cen_code_lists)
     if xr:
         rules += load_rules(jar, XR_XSLT, "XR")
     return Compiler(profile, schemas[directory], rules, known_tags(schemas.values())).compile()
@@ -2745,16 +3056,19 @@ OUTPUT_FILES = ["lists.typ"] + [f"{p}.json" for p in PROFILES]
 SIZE_BUDGET = 100 * 1024
 
 
-def generate(jar_path, out_dir, pinned=True, builder=BUILDER):
+def generate(jar_path, out_dir, pinned=True, builder=BUILDER, kosit_config=None):
     """Compiles the tables and writes them into `out_dir`; returns the
-    statistics."""
+    statistics. `kosit_config` is the unpacked KoSIT configuration
+    (default: $KOSIT_CONFIG), whose CEN Schematron narrows the code lists."""
     jar = Jar(jar_path, pinned=pinned)
+    kosit = KositConfig(kosit_config or os.environ.get("KOSIT_CONFIG"), pinned=pinned)
     schemas = load_schemas(jar)
-    compilers = {p: load_profile(jar, p, schemas) for p in PROFILES}
+    cen_code_lists = load_cen_code_lists(kosit, load_rules(jar, CEN_XSLT, "CEN"))
+    compilers = {p: load_profile(jar, p, schemas, cen_code_lists) for p in PROFILES}
     emitted = builder_tags(builder)
     nodes = {p: Nodes(c, emitted) for p, c in compilers.items()}
     names = ListNames(nodes[p] for p in PROFILES)
-    files = {"lists.typ": emit_lists(names)}
+    files = {"lists.typ": emit_lists(names, validator_lists(compilers, names))}
     for p in PROFILES:
         files[f"{p}.json"] = emit_profile(p, nodes[p], names, jar.digests)
     size = sum(len(text.encode("utf-8")) for text in files.values())
@@ -2764,6 +3078,7 @@ def generate(jar_path, out_dir, pinned=True, builder=BUILDER):
     out_dir.mkdir(parents=True, exist_ok=True)
     for name, text in files.items():
         (out_dir / name).write_text(text, encoding="utf-8")
+    jar.digests.update(kosit.digests)
     return stats(compilers, nodes, names, files, jar)
 
 
@@ -2780,7 +3095,12 @@ def stats(compilers, nodes, names, files, jar):
     for p, c in compilers.items():
         dispositions = collections.defaultdict(list)
         for r, d, detail in c.dispositions:
-            dispositions[d].append({"source": r.source, "id": r.id, "rule": r.ref, "context": r.context, "detail": detail})
+            # `artefact` tells the twins of the CEN code lists apart (the
+            # KoSIT configuration's CEN 1.3.16, see `load_cen_code_lists`).
+            dispositions[d].append({
+                "source": r.source, "id": r.id, "rule": r.ref, "context": r.context, "detail": detail,
+                "artefact": r.artefact,
+            })
         out["profiles"][p] = {
             "positions": len(c.positions),
             "nodes": len(nodes[p].order),
@@ -2845,17 +3165,22 @@ def compare(fresh_dir, committed_dir=OUT):
     return diffs
 
 
-def check(jar_path):
+def check(jar_path, kosit_config=None):
     """Regenerates into a temporary directory and compares with the
     committed tables (see `compare`)."""
     with tempfile.TemporaryDirectory() as tmp:
-        generate(jar_path, tmp)
+        generate(jar_path, tmp, kosit_config=kosit_config)
         return compare(tmp)
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--jar", default=os.environ.get("MUSTANG_JAR"), help="Mustang-CLI-2.14.0.jar ($MUSTANG_JAR)")
+    ap.add_argument(
+        "--kosit-config",
+        default=os.environ.get("KOSIT_CONFIG"),
+        help="the unpacked KoSIT XRechnung configuration 2026-08-31 ($KOSIT_CONFIG)",
+    )
     ap.add_argument("--out", default=str(OUT), help="output directory (default: src/zugferd/guard)")
     ap.add_argument("--check", action="store_true", help="fail when the committed tables differ from a fresh generation")
     ap.add_argument("--stats", help="write the statistics as JSON to this file")
@@ -2866,7 +3191,7 @@ def main(argv=None):
         return 2
     try:
         if args.check:
-            diffs = check(args.jar)
+            diffs = check(args.jar, args.kosit_config)
             if diffs:
                 print("The guard tables in src/zugferd/guard/ differ from a fresh generation. "
                       "Run `python3 tools/zugferd/gen_guard.py` and commit the result:\n", file=sys.stderr)
@@ -2875,7 +3200,7 @@ def main(argv=None):
                 return 1
             print("✔ the guard tables match the pinned artefacts and src/zugferd/build.typ")
             return 0
-        result = generate(args.jar, args.out)
+        result = generate(args.jar, args.out, kosit_config=args.kosit_config)
     except GenError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

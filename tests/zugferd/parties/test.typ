@@ -9,8 +9,10 @@
   vat-id-prefix,
 )
 #import "/src/zugferd/profile.typ": resolve-profile
-#import "/src/zugferd/validate.typ": validate
+#import "/src/zugferd/rules/engine.typ": run-rules
 #import "/tests/data-test.typ": data-test, loom
+// `run-rules`, checking that the registry lists each rule for the profile.
+#import "/tests/zugferd/harness.typ": diagnostics as checked
 
 // --- 1. Electronic addresses (BT-34, BT-49) ---
 #{
@@ -295,16 +297,16 @@
 
 // --- 6. Validation of the parties ---
 #let rules(model, level: "error") = (
-  validate(model).filter(d => d.level == level).map(d => d.rule).sorted()
+  checked(model).filter(d => d.level == level).map(d => d.rule).sorted()
 )
-#let find(model, rule) = validate(model).find(d => d.rule == rule)
+#let find(model, rule) = checked(model).find(d => d.rule == rule)
 #let normalized(role, ..fields) = party-model(
   normalize-party(fields.named(), "de", is-recipient: role != "seller"),
   role: role,
 )
 
 #let check(base) = {
-  assert.eq(validate(base), ())
+  assert.eq(run-rules(base), ())
 
   // A scheme identifier is required (BR-62, BR-63), not only a known one
   let m = base

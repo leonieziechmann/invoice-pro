@@ -11,7 +11,7 @@
   party-model, payee-model, seller-model, tax-representative-model,
 )
 #import "/src/zugferd/profile.typ": resolve-profile
-#import "/src/zugferd/validate.typ": validate
+#import "/src/zugferd/rules/engine.typ": run-rules
 #import "/src/zugferd/build.typ": build-xml
 #import "/tests/zugferd/harness.typ": (
   buyer-fr, diagnostic, model-test, rules, seller, xml-elements,
@@ -47,7 +47,7 @@
 ))
 
 #let check(base) = {
-  assert.eq(validate(base), ())
+  assert.eq(run-rules(base), ())
 
   // --- 1. Legal registration identifiers (BT-30, BT-47) ---
   // With a scheme, and without one; `seller-model` does not replace them
@@ -78,7 +78,7 @@
   )
   // ... in MINIMUM as well, for the seller and the buyer
   let minimum = with-profile(m, "minimum")
-  assert.eq(validate(minimum), ())
+  assert.eq(run-rules(minimum), ())
   assert.eq(xml-elements(minimum, "ram:SpecifiedLegalOrganization").len(), 2)
 
   // An ISO/IEC 6523 scheme (BR-CL-11)
@@ -108,7 +108,7 @@
   assert(co26.message.contains("(BT-30)"), message: co26.message)
   assert(co26.hint.contains("`legal-id: id.siret(\"..\")`"), message: co26.hint)
   minimum.seller.legal-id = (scheme: "0009", id: "12345678200010")
-  assert.eq(validate(minimum), ())
+  assert.eq(run-rules(minimum), ())
 
   // --- 2. Typed identifiers: their problems (IP-ID-01) and the business
   // term they belong to (IP-ID-03) ---
@@ -223,13 +223,13 @@
       "<ram:TradingBusinessName>Kunde Shop</ram:TradingBusinessName>",
     ),
   )
-  assert.eq(validate(m), ())
+  assert.eq(run-rules(m), ())
   // Profiles without them leave them out and say so
   let basic = with-profile(m, "basic")
   assert.eq(rules(basic), ())
   assert.eq(rules(basic, level: "warning"), ("IP-PROFILE-01", "IP-PROFILE-01"))
   assert.eq(
-    validate(basic).map(d => d.field),
+    run-rules(basic).map(d => d.field),
     ("sender.legal-info", "recipient.trading-name"),
   )
   assert(not str(build-xml(basic)).contains("ram:Description"))
@@ -279,7 +279,7 @@
   // --- 6. The seller tax representative (BG-11) ---
   let m = base
   m.tax-representative = representative()
-  assert.eq(validate(m), ())
+  assert.eq(run-rules(m), ())
   let agreement = element(m, "ram:ApplicableHeaderTradeAgreement")
   assert(
     in-order(
@@ -290,7 +290,7 @@
     message: agreement,
   )
   // BASIC WL has it, MINIMUM not
-  assert.eq(validate(with-profile(m, "basic-wl")), ())
+  assert.eq(run-rules(with-profile(m, "basic-wl")), ())
   let minimum = with-profile(m, "minimum")
   assert.eq(rules(minimum), ())
   assert.eq(
@@ -383,6 +383,14 @@
   assert.eq(rules(m), ("IP-COUNTRY-01",))
   m.tax-representative.address.country = "SS"
   assert("BR-CL-14" in rules(m))
+  m.tax-representative.address.country = none
+  assert.eq(rules(m), ("BR-20",))
+  let country = diagnostic(m, "BR-20")
+  assert.eq(country.field, "sender.tax-representative.country")
+  assert.eq(
+    country.message,
+    "The tax representative country code (BT-69) is missing.",
+  )
   m.tax-representative = representative(email: "f@fiskal.de")
   assert.eq(rules(m, level: "warning"), ("IP-KEY-01",))
   // Not subject to VAT: no VAT identifiers at all (BR-O-02)
@@ -399,7 +407,7 @@
     id: id.gln("4000001123452"),
     legal-id: id.register("HRB 12345", court: "Amtsgericht Köln"),
   )
-  assert.eq(validate(m), ())
+  assert.eq(run-rules(m), ())
   let settlement = element(m, "ram:ApplicableHeaderTradeSettlement")
   assert(
     in-order(
@@ -410,7 +418,7 @@
     ),
     message: settlement,
   )
-  assert.eq(validate(with-profile(m, "basic-wl")), ())
+  assert.eq(run-rules(with-profile(m, "basic-wl")), ())
   let minimum = with-profile(m, "minimum")
   assert.eq(diagnostic(minimum, "IP-PROFILE-01").field, "payee")
   assert.eq(xml-elements(minimum, "ram:PayeeTradeParty"), ())

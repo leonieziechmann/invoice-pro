@@ -1,5 +1,6 @@
-// Presents the diagnostics of the e-invoice validation (see `validate.typ`),
-// either as the message of a compiler error or as content in the document.
+// Presents the diagnostics of the e-invoice validation (see
+// `rules/engine.typ`), either as the message of a compiler error or as
+// content in the document.
 
 #let _errors(diagnostics) = diagnostics.filter(d => d.level == "error")
 #let _warnings(diagnostics) = diagnostics.filter(d => d.level != "error")

@@ -12,7 +12,7 @@
 #import "/src/lib.typ": *
 #import "/src/zugferd/build.typ": build-seller-trade-party
 #import "/src/zugferd/model.typ": build-model
-#import "/src/zugferd/validate.typ": validate
+#import "/src/zugferd/rules/engine.typ": run-rules
 #import "/tests/data-test.typ": data-test, loom
 
 #let sender = (
@@ -53,7 +53,7 @@
       )
       test(
         build-seller-trade-party(model.seller, model.profile),
-        validate(
+        run-rules(
           model,
         ),
       )

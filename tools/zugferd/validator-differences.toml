@@ -127,8 +127,10 @@ instead; KoSIT (CEN 1.3.16) reports an error. invoice-pro reports BR-61."""
 # Factur-X 1.0.07, KoSIT with those of CEN Schematron 1.3.16. The newer lists
 # have codes the older ones lack, and have withdrawn codes the older ones
 # still have. invoice-pro accepts only the codes that every list the
-# validation of a profile applies contains (src/zugferd/codelists.typ), and
-# reports an error for any other.
+# validation of a profile applies contains (the lists of the write guard,
+# which tools/zugferd/gen_guard.py intersects from the Factur-X lists and
+# both CEN versions: `validator` of src/zugferd/guard/lists.typ), and reports
+# an error for any other.
 
 ["BR-CL-03"]
 rejected-by = ["mustang", "kosit"]
@@ -137,7 +139,7 @@ reason = """The currency of an amount (currencyID) is in the ISO 4217 list of th
 Schematron. CEN 1.3.12 in Mustang lacks newer codes such as the current bolivar (VES), which CEN \
 1.3.16 in KoSIT has; CEN 1.3.16 has withdrawn codes such as the Bulgarian lev (BGN, the euro since \
 2026) and the Croatian kuna (HRK), which CEN 1.3.12 still has. invoice-pro reports both kinds in \
-the profiles based on EN 16931 as BR-CL-04 (`cen-rejected-currencies`)."""
+the profiles based on EN 16931 as BR-CL-04 (the list `currency.every`)."""
 
 ["BR-CL-04"]
 rejected-by = ["mustang", "kosit"]

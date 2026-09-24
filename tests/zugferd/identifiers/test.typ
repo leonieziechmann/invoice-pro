@@ -3,7 +3,8 @@
 // (IP-ID-01) instead of stopping the compilation.
 
 #import "/src/lib.typ": *
-#import "/src/zugferd/codelists.typ"
+#import "/src/zugferd/guard/lists.typ": validator as lists
+#import "/src/zugferd/rules/engine.typ": in-list
 
 // The problems of an identifier.
 #let problems(value) = value.problems
@@ -146,14 +147,14 @@
     id.siret("12345678200010"),
     id.uid-ch("CHE-123.456.788"),
   ) {
-    assert(value.scheme in codelists.icd, message: value.scheme)
+    assert(in-list(lists.icd.every, value.scheme), message: value.scheme)
   }
   for value in (
     id.gln("4000001123452"),
     id.siret("12345678200010"),
     id.leitweg("991-33333TEST-33"),
   ) {
-    assert(value.scheme in codelists.eas, message: value.scheme)
+    assert(in-list(lists.eas.every, value.scheme), message: value.scheme)
   }
 }
 

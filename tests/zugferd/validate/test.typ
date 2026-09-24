@@ -5,24 +5,26 @@
 #import "/src/lib.typ": *
 #import "/src/zugferd/model.typ": build-model
 #import "/src/zugferd/profile.typ": resolve-profile
-#import "/src/zugferd/validate.typ": validate
+#import "/src/zugferd/rules/engine.typ": run-rules
 #import "/tests/data-test.typ": data-test, loom
+// `run-rules`, checking that the registry lists each rule for the profile.
+#import "/tests/zugferd/harness.typ": diagnostics as checked
 
 // Sorted rules of the diagnostics of `level`.
 #let rules(model, level: "error") = (
-  validate(model).filter(d => d.level == level).map(d => d.rule).sorted()
+  checked(model).filter(d => d.level == level).map(d => d.rule).sorted()
 )
 
 #let check(base) = {
   // --- The base invoice is valid ---
-  assert.eq(validate(base), ())
+  assert.eq(run-rules(base), ())
 
   // Errors are listed before warnings, each with a rule, field and message.
   let m = base
   m.invoice.number = none
   m.totals.prepaid = m.totals.gross + 1
   m.totals.due = decimal("-1")
-  let diagnostics = validate(m)
+  let diagnostics = run-rules(m)
   assert.eq(diagnostics.map(d => d.level), ("error", "warning"))
   assert.eq(diagnostics.first(), (
     level: "error",
@@ -257,6 +259,114 @@
   let m = base
   m.taxes.at(0).basis += decimal("0.01")
   assert.eq(rules(m), ("BR-CO-13", "BR-S-08"))
+
+  // --- BR-48: a VAT breakdown without rate names its VAT group, which the
+  // write guard can only name by the element of the XML ---
+  let m = base
+  m.taxes.at(0).rate = none
+  assert.eq(rules(m), ("BR-48",))
+  let d = run-rules(m).first()
+  assert.eq(d.field, "tax S (no rate)")
+  assert.eq(
+    d.message,
+    "The VAT group of the category \"S\" has no VAT category rate (BT-119), which every VAT breakdown but one not subject to VAT (O) has.",
+  )
+  // Not subject to VAT (O): it has no rate.
+  assert.eq(rules(with-tax(base, tax("O", reason: "x") + (rate: none))), ())
+}
+
+// --- The rule registry: every finding of a check has an entry and a
+// message, and a diagnostic takes its level and id from the entry ---
+#import "/src/zugferd/rules/engine.typ": diagnostics, rule-registry
+#import "/src/zugferd/rules/messages.typ": messages
+#import "/src/zugferd/rules/xrechnung-messages.typ": (
+  messages as xrechnung-messages,
+)
+#{
+  let registry = rule-registry()
+  // The rules of the write guard (IP-GUARD-*) build their messages in
+  // guard/report.typ. Every other rule has one message, in messages.typ or,
+  // for a rule of XRechnung that no other profile reports (BR-DE-*), in
+  // xrechnung-messages.typ, which `diagnostics` loads for such a rule.
+  assert.eq(
+    registry.keys().filter(key => not key.starts-with("IP-GUARD-")).sorted(),
+    (messages.keys() + xrechnung-messages.keys()).sorted(),
+  )
+  for key in xrechnung-messages.keys() {
+    assert(key.starts-with("BR-DE-"), message: key)
+    assert(key not in messages, message: key)
+    assert.eq(registry.at(key).profiles, ("xrechnung",), message: key)
+  }
+  // `profiles` lists the profiles in which a check can report its rule:
+  // EN 16931 and XRechnung state every input IP-PROFILE-01 looks for.
+  assert.eq(registry.at("IP-PROFILE-01").profiles, (
+    "minimum",
+    "basic-wl",
+    "basic",
+  ))
+  let missing = (key: "BR-02", field: "invoice-nr")
+  let negative = (
+    key: "IP-DOC-04",
+    field: "line-items",
+    code: "380",
+    gross: decimal("-1"),
+  )
+  // The level of the entry, errors first.
+  assert.eq(diagnostics((negative, missing)), (
+    (
+      level: "error",
+      rule: "BR-02",
+      field: "invoice-nr",
+      message: "The invoice number (BT-1) is missing.",
+      hint: "Set `invoice-nr` on the invoice.",
+    ),
+    (
+      level: "warning",
+      rule: "IP-DOC-04",
+      field: "line-items",
+      message: diagnostics((negative,)).first().message,
+      hint: diagnostics((negative,)).first().hint,
+    ),
+  ))
+  // The id and the level a finding names, among those of its entry.
+  let rate = (
+    key: "vat-rate-zero",
+    id: "BR-E-05",
+    field: "tax E 19%",
+    category: "E",
+  )
+  assert.eq(diagnostics((rate,)).first().rule, "BR-E-05")
+  let address = (
+    key: "PEPPOL-EN16931-R020",
+    level: "warning",
+    field: "sender",
+    term: "seller electronic address (BT-34)",
+    vat-id: none,
+    represented: false,
+    reference: none,
+  )
+  assert.eq(diagnostics((address,)).first().level, "warning")
+  assert.eq(diagnostics((address + (level: "error"),)).first().level, "error")
+  // Anything else stops the compilation: every diagnostic is in the registry.
+  let fails(finding, expected) = {
+    let message = catch(() => diagnostics((finding,)))
+    assert(
+      message != none and message.contains(expected),
+      message: "Expected `" + expected + "`, got " + repr(message),
+    )
+  }
+  fails(
+    (key: "BR-99", field: "x"),
+    "invoice-pro: the rule BR-99 is not in the rule registry",
+  )
+  fails(
+    rate + (id: "BR-S-05"),
+    "invoice-pro: the rule registry has no error BR-S-05 for the entry vat-rate-zero",
+  )
+  fails(
+    missing + (level: "warning"),
+    "invoice-pro: the rule registry has no warning BR-02 for the entry BR-02",
+  )
 }
 
 #show: invoice.with(

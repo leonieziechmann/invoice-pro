@@ -3,9 +3,10 @@
   python3 -m unittest discover -s tools/zugferd -p 'test_*.py'
 
 The tests of the parts run on small synthetic schemas and rules and need
-only lxml. With the Mustang CLI jar 2.14.0 ($MUSTANG_JAR), the tables are
-also regenerated: they must equal the committed ones (drift test), come out
-the same twice, and stay within the size budget.
+only lxml. With the Mustang CLI jar 2.14.0 ($MUSTANG_JAR) and the KoSIT
+XRechnung configuration ($KOSIT_CONFIG), the tables are also regenerated:
+they must equal the committed ones (drift test), come out the same twice,
+and stay within the size budget.
 """
 
 import io
@@ -430,10 +431,194 @@ class Output(unittest.TestCase):
             g.emit_lists(Names())
 
 
+SCHXSLT = (
+    '<xsl:transform xmlns:xsl="http://www.w3.org/1999/XSL/Transform" '
+    'xmlns:svrl="http://purl.oclc.org/dsdl/svrl" xmlns:schxslt="https://doi.org/10.5281/zenodo.1495494" '
+    'version="2.0">{}</xsl:transform>'
+)
+
+
+def schxslt_rule(context, test, rid, priority="3"):
+    """A rule as SchXslt compiles it (the CEN Schematron of KoSIT)."""
+    return (
+        f'<xsl:template match="{context}" priority="{priority}" mode="d1"><schxslt:rule pattern="p1">'
+        f'<xsl:if test="not({test})"><svrl:failed-assert location="x" flag="fatal" id="{rid}">'
+        f'<xsl:attribute name="test">{test}</xsl:attribute><svrl:text>[{rid}] test</svrl:text>'
+        "</svrl:failed-assert></xsl:if></schxslt:rule></xsl:template>"
+    )
+
+
+def kosit(templates, pinned=False):
+    """An unpacked KoSIT configuration whose CEN Schematron has `templates`."""
+    root = Path(tempfile.mkdtemp())
+    (root / g.KOSIT_CEN).parent.mkdir(parents=True)
+    (root / g.KOSIT_CEN).write_text(SCHXSLT.format("".join(templates)), encoding="utf-8")
+    return g.KositConfig(root, pinned=pinned)
+
+
+class NewestSchematron(unittest.TestCase):
+    """The code lists of the newest CEN Schematron (KoSIT) narrow the older
+    ones, and the global variables of the XRechnung Schematron are replaced
+    in the tests of its rules."""
+
+    def test_the_configuration_is_needed_and_pinned(self):
+        with self.assertRaises(g.GenError) as caught:
+            g.KositConfig(None)
+        self.assertIn("KOSIT_CONFIG", str(caught.exception))
+        with self.assertRaises(g.GenError) as caught:
+            kosit([], pinned=True).read(g.KOSIT_CEN)
+        self.assertIn("is not the pinned artefact", str(caught.exception))
+        with self.assertRaises(g.GenError):
+            g.KositConfig(tempfile.mkdtemp()).read(g.KOSIT_CEN)
+
+    def test_code_lists_join_their_twins(self):
+        codes = "contains(' {} ', concat(' ', normalize-space(.), ' '))"
+        older = rule(DOC + "/ram:TypeCode", codes.format("380 381 384"), rid="BR-T-5", mode="M7", priority=1010)
+        newest = g.load_cen_code_lists(kosit([
+            schxslt_rule(DOC + "/ram:TypeCode", codes.format("380 381 389"), "BR-T-5"),
+            # Not a code list: left out.
+            schxslt_rule(DOC, "ram:ID", "BR-T-6"),
+        ]), [older])
+        self.assertEqual(len(newest), 1)
+        self.assertTrue(newest[0].newest)
+        self.assertEqual((newest[0].mode, newest[0].priority, newest[0].id), ("M7", 1010, "BR-T-5"))
+        fx = rule(DOC + "/ram:TypeCode", codes.format("380 381"), rid="FX-T-1", source="FX")
+        c = compiled([older, newest[0], fx])
+        ref = g.combine_lists(position(c, DOC + "/ram:TypeCode").lists)
+        # 384 only the newest list lacks: the rule of both versions; the
+        # older list stays the primary one.
+        self.assertEqual((sorted(ref.codes), ref.rule, ref.exceptions), (["380", "381"], "BR-T-5", (("384", "FX-T-1"),)))
+        # A code list of the newest Schematron without a rule of the same id
+        # and context in the older one fails.
+        with self.assertRaises(g.GenError) as caught:
+            g.load_cen_code_lists(kosit([schxslt_rule(DOC + "/ram:Name", codes.format("A"), "BR-T-7")]), [older])
+        self.assertIn("has no rule of the same id and context", str(caught.exception))
+
+    def test_global_values(self):
+        from lxml import etree
+
+        root = etree.fromstring(
+            '<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="2.0">'
+            "<xsl:param name=\"cur\" select=\"/rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/"
+            "ram:ApplicableHeaderTradeSettlement/ram:InvoiceCurrencyCode\"/>"
+            "<xsl:param name=\"profile\" select=\"if (x) then 'a' else 'b'\"/>"
+            "<xsl:variable name=\"V\" select=\"'3.0'\"/>"
+            "<xsl:variable name=\"ID\" select=\"concat('urn:x_', $V)\"/>"
+            "<xsl:variable name=\"EXT\" select=\"concat($ID, '#ext_', $V)\"/>"
+            "</xsl:stylesheet>"
+        )
+        values = g.global_values(root)
+        self.assertEqual(values, {
+            "cur": "/rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/"
+                   "ram:InvoiceCurrencyCode",
+            "V": "'3.0'",
+            "ID": "'urn:x_3.0'",
+            "EXT": "'urn:x_3.0#ext_3.0'",
+        })
+        self.assertEqual(g.substitute("ram:ID = $ID or ram:ID = $EXT or $profile", values),
+                         "ram:ID = 'urn:x_3.0' or ram:ID = 'urn:x_3.0#ext_3.0' or $profile")
+
+    def test_one_of_several_values(self):
+        c = compiled([rule(DOC, "ram:TypeCode = 'urn:a' or ram:TypeCode = 'urn:b#c'", rid="BR-DE-T")])
+        leaf = position(c, DOC + "/ram:TypeCode")
+        self.assertEqual([(sorted(cl.codes), cl.rule) for cl in leaf.lists], [(["urn:a", "urn:b#c"], "BR-DE-T")])
+        # One value, or values of two elements, are business rules.
+        for test in ("ram:TypeCode = 'a'", "ram:TypeCode = 'a' or ram:ID = 'b'"):
+            c = compiled([rule(DOC, test, rid="BR-T-8")])
+            self.assertEqual([d for _, d, _ in c.dispositions], ["business"], test)
+
+    def test_a_count_through_an_element_that_occurs_once(self):
+        root = xsd(
+            RSM,
+            f'<xs:import namespace="{RAM}" schemaLocation="ram.xsd"/>'
+            '<xs:element name="CrossIndustryInvoice" type="rsm:CrossIndustryInvoiceType"/>'
+            '<xs:complexType name="CrossIndustryInvoiceType"><xs:sequence>'
+            '<xs:element name="SupplyChainTradeTransaction" type="ram:TransactionType"/>'
+            "</xs:sequence></xs:complexType>",
+        )
+        body = (
+            '<xs:complexType name="TransactionType"><xs:sequence>'
+            '<xs:element name="ApplicableHeaderTradeSettlement" type="ram:SettlementType"/>'
+            "</xs:sequence></xs:complexType>"
+            '<xs:complexType name="SettlementType"><xs:sequence>'
+            '<xs:element name="InvoiceCurrencyCode" type="xs:token"/>'
+            '<xs:element name="SpecifiedTradeSettlementHeaderMonetarySummation" type="ram:SumType" {}/>'
+            "</xs:sequence></xs:complexType>"
+            '<xs:complexType name="SumType"><xs:sequence>'
+            '<xs:element name="TaxTotalAmount" type="ram:AmountType" minOccurs="0" maxOccurs="2"/>'
+            "</xs:sequence></xs:complexType>"
+            '<xs:complexType name="AmountType"><xs:simpleContent><xs:extension base="xs:decimal">'
+            '<xs:attribute name="currencyID" type="xs:token"/></xs:extension></xs:simpleContent></xs:complexType>'
+        )
+        test = (
+            "count(ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:TaxTotalAmount[@currencyID = "
+            "/rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/"
+            "ram:InvoiceCurrencyCode]) <=1"
+        )
+        once = schema(body.format(""), root=root)
+        c = compiled([rule("ram:ApplicableHeaderTradeSettlement", test, rid="PEPPOL-T-53")], once)
+        settlement = position(
+            c, "/rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement"
+        )
+        self.assertEqual(settlement.xref, [("count", ("InvoiceCurrencyCode",), "PEPPOL-T-53")])
+        twice = schema(body.format('maxOccurs="2"'), root=root)
+        with self.assertRaises(g.GenError) as caught:
+            compiled([rule("ram:ApplicableHeaderTradeSettlement", test, rid="PEPPOL-T-53")], twice)
+        self.assertIn("may occur more than once", str(caught.exception))
+
+
+class ListsOutput(unittest.TestCase):
+    """lists.typ: lists derived from the list written before that takes the
+    fewest characters, and the lists of the validator."""
+
+    def test_derived_from_the_best_list(self):
+        country = frozenset(f"C{i:02}" for i in range(60))
+
+        class Names:
+            names = {
+                country: "country",
+                country - {"C01"}: "country-2",
+                country | {"EL"}: "vat-prefix",
+                frozenset({"urn:" + "x" * 70}): "guideline",
+                frozenset({"urn:" + "y" * 70}): "guideline-2",
+            }
+            vat = {}
+
+        text = g.emit_lists(Names())
+        self.assertIn('#let country-2 = _derive(country, remove: ("C01",))', text)
+        self.assertIn('#let vat-prefix = _derive(country, add: ("EL",))', text)
+        # A list of one long code: written, not derived.
+        self.assertIn("#let guideline-2 = _codes(\n  \"urn:" + "y" * 70 + "\",\n)", text)
+
+    def test_validator_layout(self):
+        text = g.emit_validator({
+            "currency": {"every": "currency-3", "factur-x": "currency", "newer": ["CNH", "XCG"]},
+            "icd": {"every": "icd", "newer": [f"02{i:02}" for i in range(31, 49)]},
+            "unit": {"every": "unit"},
+        })
+        self.assertEqual(text, (
+            "#let validator = (\n"
+            '  currency: (every: currency-3, factur-x: currency, newer: _codes("CNH XCG")),\n'
+            "  icd: (\n"
+            "    every: icd,\n"
+            "    newer: _codes(\n"
+            '      "0231 0232 0233 0234 0235 0236 0237 0238 0239 0240 0241 0242 0243 0244",\n'
+            '      "0245 0246 0247 0248",\n'
+            "    ),\n"
+            "  ),\n"
+            "  unit: (every: unit),\n"
+            ")"
+        ))
+
+
 JAR = os.environ.get("MUSTANG_JAR")
+KOSIT = os.environ.get("KOSIT_CONFIG")
 
 
-@unittest.skipUnless(JAR and Path(JAR).is_file(), "needs the Mustang CLI jar 2.14.0 ($MUSTANG_JAR)")
+@unittest.skipUnless(
+    JAR and Path(JAR).is_file() and KOSIT and Path(KOSIT).is_dir(),
+    "needs the Mustang CLI jar 2.14.0 ($MUSTANG_JAR) and the KoSIT XRechnung configuration ($KOSIT_CONFIG)",
+)
 class Tables(unittest.TestCase):
     """The committed tables are the generator's (the drift test of
     `gen_guard.py --check`), deterministically, within the size budget."""
@@ -442,7 +627,7 @@ class Tables(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
         cls.fresh = Path(cls.tmp.name)
-        cls.stats = g.generate(JAR, cls.fresh)
+        cls.stats = g.generate(JAR, cls.fresh, kosit_config=KOSIT)
 
     @classmethod
     def tearDownClass(cls):
@@ -469,7 +654,7 @@ class Tables(unittest.TestCase):
 
     def test_deterministic_and_small(self):
         with tempfile.TemporaryDirectory() as again:
-            g.generate(JAR, again)
+            g.generate(JAR, again, kosit_config=KOSIT)
             for name in g.OUTPUT_FILES:
                 self.assertEqual((self.fresh / name).read_bytes(), (Path(again) / name).read_bytes(), name)
         self.assertLessEqual(self.stats["bytes"]["total"], g.SIZE_BUDGET)
@@ -483,8 +668,31 @@ class Tables(unittest.TestCase):
             builder = Path(tmp) / "build.typ"
             builder.write_text(g.BUILDER.read_text(encoding="utf-8").replace('"ram:TypeCode"', '"ram:X"'))
             with self.assertRaises(g.GenError) as caught:
-                g.generate(JAR, tmp, builder=builder)
+                g.generate(JAR, tmp, builder=builder, kosit_config=KOSIT)
             self.assertIn("never writes", str(caught.exception))
+
+    def test_codes_withdrawn_from_the_newest_lists(self):
+        # The lists of the validator hold what every validation accepts:
+        # the currencies and the scheme the CEN Schematron 1.3.16 withdrew
+        # are missing from `every`, which the profiles based on EN 16931
+        # apply, and the codes only it has are `newer`.
+        text = (self.fresh / "lists.typ").read_text(encoding="utf-8")
+        validator = text[text.index("#let validator = ("):]
+        self.assertIn('newer: _codes("CNH VED XCG ZWG")', validator)
+        currency = validator[validator.index("currency: ("):].split("),", 1)[0]
+        every = currency.split("every: ")[1].split(",")[0]
+        derived = text[text.index(f"#let {every} = _derive("):].split("\n)", 1)[0]
+        for code in ("ANG", "BGN", "CUC", "HRK", "MRU", "STN", "UYW", "VES", "ZWL"):
+            self.assertIn(f'"{code}"', derived.split("remove:")[1])
+        self.assertIn("0231 0232", validator)
+        disposition = {
+            (p, r["id"]): d
+            for p, info in self.stats["profiles"].items()
+            for d, rules in info["dispositions"].items()
+            for r in rules
+        }
+        self.assertEqual(disposition[("xrechnung", "BR-DE-21")], "compiled")
+        self.assertEqual(disposition[("xrechnung", "PEPPOL-EN16931-R053")], "compiled")
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/model.typ": build-model
-#import "/src/zugferd/validate.typ": validate
+#import "/src/zugferd/rules/engine.typ": rule-registry, run-rules
 #import "/src/zugferd/build.typ": build-xml
 #import "/src/logic/payment-means.typ": resolve as resolve-payment-means
 #import "/tests/data-test.typ": data-test, loom
@@ -89,14 +89,42 @@
   ),
 )
 
+/// The diagnostics the validator reports for a model (`run-rules`). Each
+/// must name a rule that an entry of the rule registry reports in the
+/// profile of the model (its `ids` and `profiles`), so that the tests check
+/// the metadata the proof tools read as well.
+#let diagnostics(model) = {
+  let found = run-rules(model)
+  for d in found {
+    let listed = false
+    for (key, entry) in rule-registry() {
+      if (
+        d.rule in entry.at("ids", default: (key,))
+          and model.profile.id in entry.profiles
+      ) {
+        listed = true
+        break
+      }
+    }
+    assert(
+      listed,
+      message: d.rule
+        + " is reported in the profile "
+        + model.profile.id
+        + ", which no entry of the rule registry lists for it",
+    )
+  }
+  found
+}
+
 /// The sorted rules of the diagnostics of `level` the validator reports for
 /// a model.
 #let rules(model, level: "error") = (
-  validate(model).filter(d => d.level == level).map(d => d.rule).sorted()
+  diagnostics(model).filter(d => d.level == level).map(d => d.rule).sorted()
 )
 
 /// The first diagnostic of `rule`, or `none`.
-#let diagnostic(model, rule) = validate(model).find(d => d.rule == rule)
+#let diagnostic(model, rule) = diagnostics(model).find(d => d.rule == rule)
 
 /// Every element `tag` (e.g. "ram:BilledQuantity") with its attributes and
 /// text, as written in the XML the builder writes for a model.
