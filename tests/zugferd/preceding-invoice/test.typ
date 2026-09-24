@@ -35,7 +35,7 @@
     assert.eq(d.field, "preceding-invoice-nr")
     assert.eq(
       d.message,
-      "The MINIMUM profile has no preceding invoice reference (BG-3), so `preceding-invoice-nr` and `preceding-invoice-date` are not written into the e-invoice.",
+      "The MINIMUM profile cannot state the preceding invoice reference (BG-3), so `preceding-invoice-nr` and `preceding-invoice-date` are not written into the e-invoice.",
     )
   },
 )[

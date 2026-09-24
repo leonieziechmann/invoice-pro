@@ -447,4 +447,21 @@
 #model-test(zugferd: "minimum", model => {
   assert.eq(xml-values(model, "ram:DuePayableAmount"), ("0.00",))
   assert.eq(rules(model), ())
+  // ... nor the payment means of `paid` (IP-PROFILE-01)
+  let warnings = validate(model).filter(d => d.level == "warning")
+  assert.eq(warnings.map(d => (d.rule, d.field)), (
+    ("IP-PROFILE-01", "paid.method"),
+  ))
+  assert.eq(
+    warnings.first().message,
+    "The MINIMUM profile cannot state the payment means (BT-81), so `paid.method` is not written into the e-invoice.",
+  )
+  assert.eq(
+    warnings.first().hint,
+    "Use the \"basic-wl\" profile or higher to state it.",
+  )
 })[#items #paid(method: "cash")]
+// Without a method of its own, `paid` states none
+#model-test(zugferd: "minimum", model => {
+  assert.eq(rules(model, level: "warning"), ())
+})[#items #paid()]

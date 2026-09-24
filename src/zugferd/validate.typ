@@ -53,6 +53,22 @@
   fmt-number(rate * 100, min-digits: 0, max-digits: rate-digits) + "%"
 )
 
+// IP-PROFILE-01: an input the profile has no business term for, which is
+// therefore not written into the e-invoice. `lowest` is the lowest profile
+// that states it; `inputs` names several inputs in the message.
+#let _not-carried(profile, field, term, lowest, inputs: none) = warning(
+  "IP-PROFILE-01",
+  field,
+  "The "
+    + profile.name
+    + " profile cannot state "
+    + term
+    + ", so "
+    + if inputs == none { "`" + field + "` is" } else { inputs + " are" }
+    + " not written into the e-invoice.",
+  hint: "Use the " + _quoted(lowest) + " profile or higher to state it.",
+)
+
 // Human readable reference to an invoice line, e.g. `item 2 (Consulting)`.
 #let _line-field(line) = {
   "item " + line.id + if line.name != none { " (" + line.name + ")" }
@@ -392,13 +408,11 @@
   // profiles can state them.
   let notes = model.invoice.at("notes", default: ())
   if notes.len() > 0 and not profile.notes {
-    out.push(warning(
-      "IP-PROFILE-01",
+    out.push(_not-carried(
+      profile,
       "notes",
-      "The "
-        + profile.name
-        + " profile has no invoice notes (BT-22), so `notes` are printed, but not written into the e-invoice.",
-      hint: "Use the \"basic-wl\" profile or a richer one to state them.",
+      "invoice notes (BT-22)",
+      "basic-wl",
     ))
   }
   // The project reference (BT-11) exists in EN 16931 and XRechnung only.
@@ -406,13 +420,11 @@
     model.invoice.at("project", default: none) != none
       and not profile.procuring-project
   ) {
-    out.push(warning(
-      "IP-PROFILE-01",
+    out.push(_not-carried(
+      profile,
       "project",
-      "The "
-        + profile.name
-        + " profile has no project reference (BT-11), so `project` is not written into the e-invoice.",
-      hint: "Use the \"en16931\" or \"xrechnung\" profile to state it.",
+      "the project reference (BT-11)",
+      "en16931",
     ))
   }
   // MINIMUM states neither the service period (BT-72, BG-14) nor the
@@ -422,13 +434,11 @@
       and model.at("delivery", default: (:)).at("source", default: none)
         == "invoice"
   ) {
-    out.push(warning(
-      "IP-PROFILE-01",
+    out.push(_not-carried(
+      profile,
       "service-period",
-      "The "
-        + profile.name
-        + " profile has no service period (BT-72, BG-14), so `service-period` is not written into the e-invoice.",
-      hint: "Use the \"basic-wl\" profile or a richer one to state it.",
+      "the service period (BT-72, BG-14)",
+      "basic-wl",
     ))
   }
   if not profile.document-references {
@@ -437,16 +447,14 @@
       if model.invoice.at(key, default: none) != none { given.push(key) }
     }
     if given.len() > 0 {
-      out.push(warning(
-        "IP-PROFILE-01",
+      out.push(_not-carried(
+        profile,
         given.first(),
-        "The "
-          + profile.name
-          + " profile has no preceding invoice reference (BG-3), so "
-          + given.map(key => "`" + key + "`").join(" and ")
-          + if given.len() == 1 { " is" } else { " are" }
-          + " not written into the e-invoice.",
-        hint: "Use the \"basic-wl\" profile or a richer one to state it.",
+        "the preceding invoice reference (BG-3)",
+        "basic-wl",
+        inputs: if given.len() > 1 {
+          given.map(key => "`" + key + "`").join(" and ")
+        },
       ))
     }
   }
@@ -1106,20 +1114,6 @@
   )
 }
 
-// An input the profile has no business term for is not written into the
-// e-invoice: `lowest` is the lowest profile that states it.
-#let _not-carried(profile, field, term, lowest) = warning(
-  "IP-PROFILE-01",
-  field,
-  "The "
-    + profile.name
-    + " profile cannot state "
-    + term
-    + ", so `"
-    + field
-    + "` is not written into the e-invoice.",
-  hint: "Use the " + _quoted(lowest) + " profile or higher to state it.",
-)
 
 // The seller tax representative (BG-11): its name (BR-18), country (BR-20)
 // and VAT identifier (BR-56, BR-CO-09), and the address the VAT Directive
@@ -1970,13 +1964,11 @@
     }
   }
   if origins > 0 and not profile.item-origin {
-    out.push(warning(
-      "IP-PROFILE-01",
+    out.push(_not-carried(
+      profile,
       "item.origin",
-      "The "
-        + profile.name
-        + " profile has no country of origin of an item (BT-159), so `origin` is printed, but not written into the e-invoice.",
-      hint: "Use the \"en16931\" or \"xrechnung\" profile to state it.",
+      "the country of origin of an item (BT-159)",
+      "en16931",
     ))
   }
   out
@@ -2434,21 +2426,6 @@
   none
 }
 
-// An input the profile has no business term for: it is not written into the
-// e-invoice. `lowest` is the lowest profile that states it.
-#let _payment-not-carried(profile, field, term, lowest) = warning(
-  "IP-PROFILE-01",
-  field,
-  "The "
-    + profile.name
-    + " profile cannot state "
-    + term
-    + ", so `"
-    + field
-    + "` is not written into the e-invoice.",
-  hint: "Use the " + _quoted(lowest) + " profile or higher to state it.",
-)
-
 // What a kind of payment means is, and the input that states it, for
 // messages. A means of `paid` without details names its code.
 #let _means-names = (
@@ -2579,7 +2556,7 @@
         ))
       }
       if entry.account-name != none and not profile.account-name {
-        out.push(_payment-not-carried(
+        out.push(_not-carried(
           profile,
           "bank-details.name",
           "the account name (BT-85)",
@@ -2663,7 +2640,7 @@
           ))
         }
       } else if not profile.payment-card {
-        out.push(_payment-not-carried(
+        out.push(_not-carried(
           profile,
           "card-payment",
           "the payment card (BG-18)",
@@ -2708,23 +2685,31 @@
     // BASIC WL states a direct debit in full, but a payment card only by its
     // payment means code: EN 16931 is the lowest profile that states it.
     if entry.field == "direct-debit" {
-      out.push(_payment-not-carried(
+      out.push(_not-carried(
         profile,
         entry.field,
         "the direct debit (BG-19)",
         "basic-wl",
       ))
     } else if entry.field == "card-payment" {
-      out.push(_payment-not-carried(
+      out.push(_not-carried(
         profile,
         entry.field,
         "the payment card (BG-18)",
         "en16931",
       ))
+    } else if entry.field == "paid" {
+      // `paid(method: "cash")` and the other methods without details.
+      out.push(_not-carried(
+        profile,
+        "paid.method",
+        "the payment means (BT-81)",
+        "basic-wl",
+      ))
     }
   }
   if payment.at("discounts", default: ()).len() > 0 {
-    out.push(_payment-not-carried(
+    out.push(_not-carried(
       profile,
       "payment-goal.discount",
       "a cash discount (BT-20)",
