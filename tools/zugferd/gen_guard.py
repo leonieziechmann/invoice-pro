@@ -2455,7 +2455,10 @@ def emit_profile(profile, nodes, names, digests):
         + "; src/zugferd/guard/write.typ describes them."
     )
     imports = set()
-    body = ["  " + emit_node(key, nodes, names, imports) + "," for key in nodes.order]
+    # One node per line at the margin, its children indented below it: the
+    # nodes take most of the tables, and indentation adds up (typstyle is
+    # off for them).
+    body = [emit_node(key, nodes, names, imports) + "," for key in nodes.order]
     out = [
         HEADER,
         *("// " + line for line in textwrap.wrap(intro, 73)),
@@ -2636,7 +2639,7 @@ def emit_node(key, nodes, names, imports):
     fields.append("z: " + ("(" + ", ".join(extras) + ")" if extras else "none"))
     if not specs:
         return "(" + ", ".join(fields) + ", c: (:))"
-    return "(" + ", ".join(fields) + ", c: (\n" + "".join(f"    {s},\n" for s in specs) + "  ))"
+    return "(" + ", ".join(fields) + ", c: (\n" + "".join(f"  {s},\n" for s in specs) + "))"
 
 
 # ================================================================ main

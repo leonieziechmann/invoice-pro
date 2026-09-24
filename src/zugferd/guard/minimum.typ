@@ -12,94 +12,94 @@
 
 // @typstyle off
 #let nodes = (
-  (n: 3, z: none, c: (
-    "rsm:ExchangedDocumentContext": (1, 0, 1, 1, 1),
-    "rsm:ExchangedDocument": (6, 1, 1, 1, 6),
-    "rsm:SupplyChainTradeTransaction": (10, 2, 1, 1, 10),
-  )),
-  (n: 1, z: none, c: (
-    "ram:BusinessProcessSpecifiedDocumentContextParameter": (2, 0, 0, 1, 2),
-    "ram:GuidelineSpecifiedDocumentContextParameter": (4, 1, 1, 1, 4),
-  )),
-  (n: 1, z: none, c: (
-    "ram:ID": ("s", 0, 1, 1, 3),
-  )),
-  ("s", ("schemeID": (false, "IP-GUARD-05", none)), none, none, none, none),
-  (n: 1, z: none, c: (
-    "ram:ID": (guideline-4, 0, 1, 1, 5, "BR-01"),
-  )),
-  ("s", ("schemeID": (false, "IP-GUARD-05", none)), ("guideline-4", "FX-SCH-A-000026", none, false), none, none, none),
-  (n: 3, z: none, c: (
-    "ram:ID": ("s", 0, 1, 1, 3, "BR-02"),
-    "ram:TypeCode": (document-type, 1, 1, 1, 7, "BR-04"),
-    "ram:IssueDateTime": (8, 2, 1, 1, 8),
-  )),
-  ("s", none, ("document-type", "FX-SCH-A-000023", none, false), none, none, none),
-  (n: 1, z: none, c: (
-    "udt:DateTimeString": (none, 0, 1, 1, 9, "BR-03"),
-  )),
-  ("s", ("format": ("FX-SCH-A-000021", none, ("date-format", "BR-03", none, false))), none, none, none, "IP-GUARD-08"),
-  (n: 3, z: none, c: (
-    "ram:ApplicableHeaderTradeAgreement": (11, 0, 1, 1, 11),
-    "ram:ApplicableHeaderTradeDelivery": (26, 1, 1, 1, 26),
-    "ram:ApplicableHeaderTradeSettlement": (27, 2, 1, 1, 27),
-  )),
-  (n: 2, z: none, c: (
-    "ram:BuyerReference": ("s", 0, 0, 1, 12),
-    "ram:SellerTradeParty": (13, 1, 1, 1, 13),
-    "ram:BuyerTradeParty": (23, 2, 1, 1, 23),
-    "ram:BuyerOrderReferencedDocument": (25, 3, 0, 1, 25),
-  )),
-  "s",
-  (n: 2, z: none, c: (
-    "ram:Name": ("s", 0, 1, 1, 12, "BR-06"),
-    "ram:SpecifiedLegalOrganization": (14, 1, 0, 1, 14),
-    "ram:PostalTradeAddress": (16, 2, 1, 1, 16, "BR-08"),
-    "ram:SpecifiedTaxRegistration": (none, 3, 0, 2, 18),
-  )),
-  (n: 0, z: none, c: (
-    "ram:ID": ("s", 0, 0, 1, 15),
-  )),
-  ("s", ("schemeID": (false, none, ("icd", "FX-SCH-A-000031", none, false))), none, none, none, none),
-  (n: 1, z: none, c: (
-    "ram:CountryID": (country-2, 0, 1, 1, 17, "BR-09"),
-  )),
-  ("s", none, ("country-2", "FX-SCH-A-000036", none, false), none, none, none),
-  (d: ("ram:ID", "@schemeID"), m: ("FC": 19, "VA": 21), o: "IP-GUARD-05", k: ("FC": (1, "FX-SCH-A-000034"), "VA": (1, "FX-SCH-A-000033"))),
-  (n: 1, z: none, c: (
-    "ram:ID": (none, 0, 1, 1, 20),
-  )),
-  ("s", ("schemeID": ("FX-SCH-A-000037", none, none)), none, none, none, none),
-  (n: 1, z: none, c: (
-    "ram:ID": (none, 0, 1, 1, 22),
-  )),
-  ("s", ("schemeID": ("FX-SCH-A-000037", none, none)), none, (("vat-prefix", "BR-CO-09", none, false), none), none, none),
-  (n: 1, z: none, c: (
-    "ram:Name": ("s", 0, 1, 1, 12, "BR-07"),
-    "ram:SpecifiedLegalOrganization": (24, 1, 0, 1, 24),
-    "ram:PostalTradeAddress": ("IP-GUARD-05",),
-    "ram:SpecifiedTaxRegistration": ("IP-GUARD-05",),
-  )),
-  (n: 1, z: none, c: (
-    "ram:ID": ("s", 0, 1, 1, 15, "FX-SCH-A-000019"),
-  )),
-  (n: 1, z: none, c: (
-    "ram:IssuerAssignedID": ("s", 0, 1, 1, 3),
-  )),
-  (n: 0, z: none, c: (:)),
-  (n: 2, z: (r: (("count", ("ram:InvoiceCurrencyCode",), "FX-SCH-A-000042"), ("other", ("ram:InvoiceCurrencyCode", "ram:TaxCurrencyCode"), "IP-GUARD-05"))), c: (
-    "ram:InvoiceCurrencyCode": (currency, 0, 1, 1, 28, "BR-05"),
-    "ram:SpecifiedTradeSettlementHeaderMonetarySummation": (29, 1, 1, 1, 29),
-  )),
-  ("s", none, ("currency", "FX-SCH-A-000040", none, false), none, none, none),
-  (n: 3, z: none, c: (
-    "ram:TaxBasisTotalAmount": ("d2", 0, 1, 1, 30, "BR-13"),
-    "ram:TaxTotalAmount": (none, 1, 0, 2, 31),
-    "ram:GrandTotalAmount": ("d2", 2, 1, 1, 32, "BR-14"),
-    "ram:DuePayableAmount": ("d2", 3, 1, 1, 33, "BR-15"),
-  )),
-  ("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-12"), none),
-  ("d", ("currencyID": ("FX-SCH-A-000046", none, none)), none, none, (2, false, "BR-DEC-13"), none),
-  ("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-14"), none),
-  ("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-18"), none),
+(n: 3, z: none, c: (
+  "rsm:ExchangedDocumentContext": (1, 0, 1, 1, 1),
+  "rsm:ExchangedDocument": (6, 1, 1, 1, 6),
+  "rsm:SupplyChainTradeTransaction": (10, 2, 1, 1, 10),
+)),
+(n: 1, z: none, c: (
+  "ram:BusinessProcessSpecifiedDocumentContextParameter": (2, 0, 0, 1, 2),
+  "ram:GuidelineSpecifiedDocumentContextParameter": (4, 1, 1, 1, 4),
+)),
+(n: 1, z: none, c: (
+  "ram:ID": ("s", 0, 1, 1, 3),
+)),
+("s", ("schemeID": (false, "IP-GUARD-05", none)), none, none, none, none),
+(n: 1, z: none, c: (
+  "ram:ID": (guideline-4, 0, 1, 1, 5, "BR-01"),
+)),
+("s", ("schemeID": (false, "IP-GUARD-05", none)), ("guideline-4", "FX-SCH-A-000026", none, false), none, none, none),
+(n: 3, z: none, c: (
+  "ram:ID": ("s", 0, 1, 1, 3, "BR-02"),
+  "ram:TypeCode": (document-type, 1, 1, 1, 7, "BR-04"),
+  "ram:IssueDateTime": (8, 2, 1, 1, 8),
+)),
+("s", none, ("document-type", "FX-SCH-A-000023", none, false), none, none, none),
+(n: 1, z: none, c: (
+  "udt:DateTimeString": (none, 0, 1, 1, 9, "BR-03"),
+)),
+("s", ("format": ("FX-SCH-A-000021", none, ("date-format", "BR-03", none, false))), none, none, none, "IP-GUARD-08"),
+(n: 3, z: none, c: (
+  "ram:ApplicableHeaderTradeAgreement": (11, 0, 1, 1, 11),
+  "ram:ApplicableHeaderTradeDelivery": (26, 1, 1, 1, 26),
+  "ram:ApplicableHeaderTradeSettlement": (27, 2, 1, 1, 27),
+)),
+(n: 2, z: none, c: (
+  "ram:BuyerReference": ("s", 0, 0, 1, 12),
+  "ram:SellerTradeParty": (13, 1, 1, 1, 13),
+  "ram:BuyerTradeParty": (23, 2, 1, 1, 23),
+  "ram:BuyerOrderReferencedDocument": (25, 3, 0, 1, 25),
+)),
+"s",
+(n: 2, z: none, c: (
+  "ram:Name": ("s", 0, 1, 1, 12, "BR-06"),
+  "ram:SpecifiedLegalOrganization": (14, 1, 0, 1, 14),
+  "ram:PostalTradeAddress": (16, 2, 1, 1, 16, "BR-08"),
+  "ram:SpecifiedTaxRegistration": (none, 3, 0, 2, 18),
+)),
+(n: 0, z: none, c: (
+  "ram:ID": ("s", 0, 0, 1, 15),
+)),
+("s", ("schemeID": (false, none, ("icd", "FX-SCH-A-000031", none, false))), none, none, none, none),
+(n: 1, z: none, c: (
+  "ram:CountryID": (country-2, 0, 1, 1, 17, "BR-09"),
+)),
+("s", none, ("country-2", "FX-SCH-A-000036", none, false), none, none, none),
+(d: ("ram:ID", "@schemeID"), m: ("FC": 19, "VA": 21), o: "IP-GUARD-05", k: ("FC": (1, "FX-SCH-A-000034"), "VA": (1, "FX-SCH-A-000033"))),
+(n: 1, z: none, c: (
+  "ram:ID": (none, 0, 1, 1, 20),
+)),
+("s", ("schemeID": ("FX-SCH-A-000037", none, none)), none, none, none, none),
+(n: 1, z: none, c: (
+  "ram:ID": (none, 0, 1, 1, 22),
+)),
+("s", ("schemeID": ("FX-SCH-A-000037", none, none)), none, (("vat-prefix", "BR-CO-09", none, false), none), none, none),
+(n: 1, z: none, c: (
+  "ram:Name": ("s", 0, 1, 1, 12, "BR-07"),
+  "ram:SpecifiedLegalOrganization": (24, 1, 0, 1, 24),
+  "ram:PostalTradeAddress": ("IP-GUARD-05",),
+  "ram:SpecifiedTaxRegistration": ("IP-GUARD-05",),
+)),
+(n: 1, z: none, c: (
+  "ram:ID": ("s", 0, 1, 1, 15, "FX-SCH-A-000019"),
+)),
+(n: 1, z: none, c: (
+  "ram:IssuerAssignedID": ("s", 0, 1, 1, 3),
+)),
+(n: 0, z: none, c: (:)),
+(n: 2, z: (r: (("count", ("ram:InvoiceCurrencyCode",), "FX-SCH-A-000042"), ("other", ("ram:InvoiceCurrencyCode", "ram:TaxCurrencyCode"), "IP-GUARD-05"))), c: (
+  "ram:InvoiceCurrencyCode": (currency, 0, 1, 1, 28, "BR-05"),
+  "ram:SpecifiedTradeSettlementHeaderMonetarySummation": (29, 1, 1, 1, 29),
+)),
+("s", none, ("currency", "FX-SCH-A-000040", none, false), none, none, none),
+(n: 3, z: none, c: (
+  "ram:TaxBasisTotalAmount": ("d2", 0, 1, 1, 30, "BR-13"),
+  "ram:TaxTotalAmount": (none, 1, 0, 2, 31),
+  "ram:GrandTotalAmount": ("d2", 2, 1, 1, 32, "BR-14"),
+  "ram:DuePayableAmount": ("d2", 3, 1, 1, 33, "BR-15"),
+)),
+("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-12"), none),
+("d", ("currencyID": ("FX-SCH-A-000046", none, none)), none, none, (2, false, "BR-DEC-13"), none),
+("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-14"), none),
+("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-18"), none),
 )
