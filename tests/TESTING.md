@@ -464,7 +464,7 @@ If Mustang reports validation errors:
 
 ### 3. E-invoice Conformance and Performance (CI)
 
-The Mustang validation above checks two dozen hand-written documents. The CI adds a proof layer on top: it runs invoice-pro against the official validators on some 650 generated invoices, regression cases and parity fixtures, keeps the XML of the test documents under review, checks that compiling is reproducible and watches the compile time of the e-invoice path. The tools live in `tools/` and are not part of the package.
+The Mustang validation above checks two dozen hand-written documents. The CI adds a proof layer on top: it runs invoice-pro against the official validators on some 830 generated invoices, regression cases and parity fixtures, keeps the XML of the test documents under review, checks that compiling is reproducible and watches the compile time of the e-invoice path. The tools live in `tools/` and are not part of the package.
 
 | Check                  | What it shows                                                                                  | Command                             | CI job                                     |
 | :--------------------- | :--------------------------------------------------------------------------------------------- | :---------------------------------- | :----------------------------------------- |
@@ -517,9 +517,9 @@ export KOSIT_CONFIG=~/Downloads/xrechnung-configuration   # the unpacked zip
 1. **Typst, once per case.** The cases use `zugferd-errors: "report"` and the harness theme `tools/zugferd/harness.typ`, which attaches invoice-pro's diagnostics to the PDF as `invoice-pro-diagnostics.json`. One compilation yields the XML, invoice-pro's verdict and the printed text.
 2. **XSD** of the profile with lxml. The Factur-X 1.0.07 XSDs are read from the Mustang jar.
 3. **Mustang 2.14** (EN 16931, Factur-X and XRechnung Schematron) in a single JVM for the whole run, validating while Typst still compiles. The XRechnung Schematron reports its rules (BR-DE-\*, PEPPOL-\*) with message type 27: as errors for an XRechnung, as notices for the other profiles. The runner counts every error, whatever its type.
-4. **KoSIT 1.6.3** with the XRechnung configuration 2026-08-31 (CEN Schematron 1.3.16, XRechnung Schematron 2.6.0), the reference validator for XRechnung: one JVM validates the EN 16931 and XRechnung cases of the run as a batch after Typst is done (about 14 s for the some 410 files of a PR run). KoSIT has no scenario for MINIMUM, BASIC WL and BASIC.
+4. **KoSIT 1.6.3** with the XRechnung configuration 2026-08-31 (CEN Schematron 1.3.16, XRechnung Schematron 2.6.0), the reference validator for XRechnung: one JVM validates the EN 16931 and XRechnung cases of the run as a batch after Typst is done (about 15 s for the some 500 files of a PR run). KoSIT has no scenario for MINIMUM, BASIC WL and BASIC.
 5. **Verdict:** the class (table below), the expectation of the case, the semantic oracles, the metamorphic relations between twin cases and the quality of invoice-pro's messages (`O-DIAG`).
-6. **Rule ids** (`tools/zugferd/rule_coverage.py`): every error of invoice-pro names a rule that the validators of the profile have, or an `IP-*` rule of its own (`O-RULE`), and both validators report the rule of a parity fixture (`O-PARITY`).
+6. **Rule ids** (`tools/zugferd/rule_coverage.py`): every error of invoice-pro names a rule that the validators of the profile have, or an `IP-*` rule of its own (`O-RULE`), and the validators of the profile report the rule of a parity fixture (`O-PARITY`).
 
 | Population    | Cases                                                                                                                                                                                                                                                                 | Expectation                                                                                                                        |
 | :------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
@@ -528,7 +528,7 @@ export KOSIT_CONFIG=~/Downloads/xrechnung-configuration   # the unpacked zip
 | `metamorphic` | twins: bundle quantity 1 against 2, reversed lines, items split into two lines, another profile, another currency                                                                                                                                                     | the bundle amounts double, the totals stay equal                                                                                   |
 | `adversarial` | unusual but valid input: content instead of strings, invisible characters, a post code as number, countries as text, XML special characters, long names                                                                                                               | no crash, no lost or altered data                                                                                                  |
 | `regression`  | minimal reproductions of audit findings and issues, `tools/zugferd/corpus/regression/*.typ`                                                                                                                                                                           | as stated in their header                                                                                                          |
-| `rules`       | parity fixtures, `tools/zugferd/corpus/rules/*.typ`: the smallest invoice that breaks one official rule, for every rule invoice-pro reports                                                                                                                           | as stated in their header, and both validators report the rule (`O-PARITY`)                                                        |
+| `rules`       | parity fixtures, `tools/zugferd/corpus/rules/*.typ`, each in every profile of its header: the smallest invoice that breaks one official rule, for every rule invoice-pro reports                                                                                      | as stated in their header, and the validators of the profile report the rule (`O-PARITY`)                                          |
 | `random`      | nightly only: random invoices without the legal constraints                                                                                                                                                                                                           | invoice-pro and the official validators agree, or invoice-pro applies one of its own rules or stops with a message about the input |
 
 | Class            | Meaning                                                                                                 |
@@ -660,7 +660,7 @@ The corpus shows that invoice-pro agrees with the official validators on the inv
 
 | Class          | Meaning                                                                                                              | Shown by                                                                    |
 | :------------- | :------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------- |
-| `fixture`      | invoice-pro reports the rule under its id                                                                            | a parity fixture that both validators reject with the rule                  |
+| `fixture`      | invoice-pro reports the rule under its id                                                                            | a parity fixture in the profile, which its validators reject with the rule  |
 | `compiled`     | the write guard enforces the rule                                                                                    | `gen_guard.py`, which compiles every assertion of it                        |
 | `construction` | the builder cannot produce the violation, e.g. it writes a negative price as a negative quantity (`BR-27`)           | a reason and the evidence: the code path and its tests                      |
 | `unreachable`  | the rule cannot fire on an XML of invoice-pro: its test is always true, or it tests an element that is never written | a reason, or the guard's compiler (a test that is always true, no position) |
@@ -676,7 +676,7 @@ reason = "A negative price is written as a positive net price (BT-146) and a neg
 evidence = ["src/zugferd/model.typ: line-model", "tests/zugferd/model/test.typ: the credited line of BR-27"]
 ```
 
-`profiles` limits an entry to some profiles. A `fixture` needs no reason; with `reported-as`, its fixture shows a violation that invoice-pro reports under a related rule which the validators report for the same invoice as well, e.g. `BR-DE-16`, the XRechnung variant of `BR-S-02`. The same file lists invoice-pro's own rules with their level, what they check, their basis in law or in a requirement of the format, and the tests that name them:
+`profiles` limits an entry to some profiles. A `fixture` needs no reason, but a fixture in each of its profiles; with `reported-as`, its fixture shows a violation that invoice-pro reports under a related rule which the validators report for the same invoice as well, e.g. `BR-DE-16`, the XRechnung variant of `BR-S-02`. The same file lists invoice-pro's own rules with their level, what they check, their basis in law or in a requirement of the format, and the tests that name them:
 
 ```toml
 [ip."IP-TAX-04"]
@@ -686,25 +686,47 @@ basis = "§ 14 Abs. 4 Satz 1 Nr. 8 UStG; Art. 226 No. 11 of the VAT Directive 20
 tests = ["tests/zugferd/exemption-codes/test.typ"]
 ```
 
-A **parity fixture** `tools/zugferd/corpus/rules/<ID>.typ` is the smallest invoice that breaks one rule. It imports `_base.typ` (the parties and the harness setup of the regression cases) and states what invoice-pro must report in its header, like a regression case:
+Some official rule ids are named in `src/` although no invoice can show invoice-pro report them: a check that cannot fire, e.g. of a country code that defaults to the one of the locale, or an id that invoice-pro uses for another condition than the official rule, which the validators do not report for such an invoice (a bug to fix). The file lists them under `[[without-fixture]]` with the reason, so that every official rule id of the validator is either shown by a fixture or explained:
 
-```typ
-// expect: AGREE_INVALID BR-DE-27
-//
-// An XRechnung whose seller contact phone number (BT-42) has fewer than three
-// digits; KoSIT only warns (maintainer decision: an error).
+```toml
+[[without-fixture]]
+ids = ["BR-55"]
+reason = "Used for another condition: a preceding invoice date without its number, which the builder does not write."
 ```
 
-`run.py` runs the fixtures as the population `rules` in every run of the corpus and checks both sides: invoice-pro reports the rules of the header, and every validator whose artefacts have the rule in the fixture's profile reports it at its level (`O-PARITY`; a KoSIT warning or information counts for a rule KoSIT only warns or informs about). A validator may stay silent where `validator-differences.toml` documents that only the other one rejects the rule, and KoSIT runs no Schematron on a document that fails its schema; at least one validator must report the rule. `<ID>--<variant>.typ` shows the rule once more, e.g. in another profile (`BR-CO-26--minimum.typ`), and `<ID>--pass.typ` is the corrected invoice (`// expect: AGREE_VALID`) where the boundary of a rule is subtle. In every case of the corpus, `O-RULE` checks the other direction: an error of invoice-pro that names a rule the validators of the profile do not have (a wrong id, or a rule of another profile) fails the case.
+A **parity fixture** `tools/zugferd/corpus/rules/<ID>.typ` is the smallest invoice that breaks one rule. It imports `_base.typ` (the parties and the harness setup of the regression cases), states what invoice-pro must report in its header, like a regression case, and lists the profiles it shows the rule in:
+
+```typ
+// expect: AGREE_INVALID BR-02
+// profiles: minimum basic-wl basic en16931 xrechnung
+//
+// An invoice without an invoice number (BT-1).
+
+#import "_base.typ": *
+
+#show: invoice.with(
+  ..setup,
+  zugferd: fixture-profile("en16931"),
+  sender: seller-de,
+  recipient: buyer-fr,
+)
+
+#line-items[
+  #item-s
+]
+```
+
+`run.py` runs the fixtures as the population `rules` in every run of the corpus, each once per profile of its header (`rule-BR-02@basic`, ...): it passes the profile to the compilation (`--input profile=basic`), and `fixture-profile` returns it (its argument is the profile of a compilation by hand). In each profile, `run.py` checks both sides: invoice-pro reports the rules of the header, and every validator whose artefacts have the rule in the profile reports it at its level (`O-PARITY`; a KoSIT warning or information counts for a rule KoSIT only warns or informs about). A validator may stay silent where `validator-differences.toml` documents that only the other one rejects the rule, and KoSIT runs no Schematron on a document that fails its schema; at least one validator must report the rule. The rule ids of a violation can depend on the profile: BASIC WL has no lines, so an allowance of a VAT category breaks the rule of the allowance (`BR-S-03`), which the other profiles report only when no line has the category (`BR-S-03--allowance-only.typ`). `<ID>--<variant>.typ` shows the rule once more with other inputs, and `<ID>--pass.typ` is the corrected invoice (`// expect: AGREE_VALID`) where the boundary of a rule is subtle. In XRechnung, a fixture whose buyer has no buyer reference reports `BR-DE-15` as well. In every case of the corpus, `O-RULE` checks the other direction: an error of invoice-pro that names a rule the validators of the profile do not have (a wrong id, or a rule of another profile) fails the case.
 
 `scripts/zugferd-corpus` runs `rule_coverage.py` before the corpus and archives the classification as `build/zugferd/rule-coverage.json`. It fails on
 
 - a rule id without a class (`UNCLASSIFIED`), an entry for a rule id the artefacts of the profile do not have (`STALE`), a rule id in two entries (`DUPLICATE`), an entry for a rule the guard settles, unless it is a fixture (`REDUNDANT`), and a `compiled` entry for a rule the guard does not compile (`NOT COMPILED`);
-- a `fixture` without a fixture file, a fixture whose header does not name its rule (or with `reported-as`, none of those rules), and a fixture file of a rule that is not classified as `fixture` or `open` (`FIXTURE`); evidence that names a file that does not exist (`EVIDENCE`);
+- a `fixture` without a fixture in each profile of its entry (one that lists the profile in its `// profiles:` header and names the rule in its `// expect:` or `// warns:` header, or with `reported-as`, one of those rules), a fixture of a rule that is not classified as `fixture` or `open` in one of its profiles, and a fixture without `// profiles:` or without `zugferd: fixture-profile(..)` (`FIXTURE`); evidence that names a file that does not exist (`EVIDENCE`);
 - an `IP-*` rule of `src/` without an entry, an entry without the rule in `src/`, and tests that do not exist or do not name the rule (`IP`; the rules of the guard, `IP-GUARD-*`, are tested by the kind of finding);
+- an official rule id that `src/` names outside the guard's tables without a fixture in any profile or an entry `[[without-fixture]]`, and such an entry for an id that `src/` no longer names or that a fixture shows (`NAMED`);
 - a table in `docs/docs/e-invoicing.md` that differs from the classification (`DOCS`).
 
-`run.py` fails when a rule classified as `fixture` has no fixture that passed (`RULE COVERAGE`, in a run of every fixture). The open rules do not fail the gate, but a new rule id does, as it has no class; the documentation states the numbers and the open rules, so it cannot claim more than the classification.
+`run.py` fails when a rule classified as `fixture` has, in one of the profiles of its entry, no fixture that passed there (`RULE COVERAGE`, in a run of every fixture). The open rules do not fail the gate, but a new rule id does, as it has no class; the documentation states the numbers and the open rules, so it cannot claim more than the classification.
 
 ```bash
 python3 tools/zugferd/rule_coverage.py                   # the numbers per profile, the open rules, the problems
@@ -717,13 +739,13 @@ python3 tools/zugferd/run.py tools/zugferd/corpus/rules  # the parity fixtures o
 To classify a new rule id, e.g. after an update of Mustang, KoSIT or the XRechnung configuration:
 
 1. Run the gate: `UNCLASSIFIED` names the rule, its validators and levels and what the guard did with it; `--id` shows its context and test.
-2. If invoice-pro reports it, or should: write the fixture, check it with `run.py tools/zugferd/corpus/rules/<ID>.typ` and classify the rule as `fixture`. A rule invoice-pro reports under another id is `open` until the id is fixed; a validator difference goes into `validator-differences.toml`.
+2. If invoice-pro reports it, or should: write the fixture with the profiles it shows the rule in, check it with `run.py tools/zugferd/corpus/rules/<ID>.typ` and classify the rule as `fixture` (with `profiles`, if other profiles need another class). A rule invoice-pro reports under another id is `open` until the id is fixed; a validator difference goes into `validator-differences.toml`.
 3. If the guard compiles Mustang's version of the rule but KoSIT's differs: `compiled`, with the reason why the guard covers KoSIT's version too.
 4. If the builder cannot produce the violation: `construction`, with the code path and a test that shows it (write one if there is none).
 5. If the rule cannot fire on invoice-pro's XML: `unreachable`, with the reason.
 6. Otherwise, the rule is `open`: implement it in `src/zugferd/validate.typ` under its id, and then write its fixture.
 
-Then update the table of the documentation (`--update-docs`) and commit it with the classification.
+Then update the table of the documentation (`--update-docs`) and commit it with the classification. Likewise, when the validator names a new official rule id, the gate asks for its fixture (`NAMED`), and an id it no longer names must leave `[[without-fixture]]`.
 
 #### Golden XML and Reproducibility
 
