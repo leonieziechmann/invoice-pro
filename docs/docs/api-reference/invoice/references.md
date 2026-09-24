@@ -22,7 +22,7 @@ The `references` module is exported directly from the package root:
 
 Preset packages bundle the most common reference combinations for specific business workflows. Any reference field that resolves to `none` is **automatically omitted**, so you can use presets safely without worrying about empty fields appearing on the invoice.
 
-Every preset prints what the law requires on an invoice besides the parties and the items (§ 14 Abs. 4 UStG in Germany, Art. 226 of the VAT Directive): the date of the supply (`service-time`), the seller's tax number and VAT ID and the buyer's VAT ID (`seller-tax-nr`, `seller-vat-id`, `buyer-vat-id`, which on a self-billed invoice are the recipient's and the sender's) and the `payee`, each if it is given. Earlier versions printed the sender's tax identifiers on a self-billed invoice, and `preset-din-5008` none of them.
+Every preset prints what the law requires on an invoice besides the parties and the items (§ 14 Abs. 4 UStG in Germany, Art. 226 of the VAT Directive): the date of the supply (`service-time`), the seller's tax number and VAT ID and the buyer's VAT ID (`seller-tax-nr`, `seller-vat-id`, `buyer-vat-id`, which on a self-billed invoice are the recipient's and the sender's) and the `payee`, each if it is given. Earlier versions printed none of them with `preset-din-5008`.
 
 ### `references.preset-b2b`
 
