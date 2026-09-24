@@ -33,7 +33,7 @@ every legal invoice is AGREE_VALID, cannot be excused by the list.
 When only one of Mustang and KoSIT rejects a document, every rule behind the
 disagreement must be documented in `validator-differences.toml`; an
 undocumented one fails the run (OFFICIAL_DISAGREE), and so does a documented
-one that no case of a full run shows any more.
+one that no case shows any more in a run of all regression cases.
 
 Exit code: 0 all green (or only known issues), 1 failures, 2 setup error.
 """
@@ -57,6 +57,9 @@ sys.path.insert(0, str(HERE))
 
 import common  # noqa: E402
 import oracles  # noqa: E402
+
+# The committed regression cases (default path of a run).
+REGRESSION = HERE / "corpus" / "regression"
 
 CLASSES = {
     "AGREE_VALID": "no invoice-pro error, officially valid",
@@ -159,6 +162,15 @@ def load_cases(paths):
     if duplicates:
         raise common.ToolError(f"duplicate case ids: {', '.join(duplicates)}")
     return cases
+
+
+def regression_complete(cases, directory=REGRESSION):
+    """Whether the cases include every committed regression case. Together
+    they show every documented validator difference, so only such a run can
+    tell that a difference no longer occurs; a single case file run on its
+    own is a regression case as well, but shows only its own."""
+    ids = {case["id"] for case in cases}
+    return all("rg-" + file.stem in ids for file in Path(directory).glob("*.typ") if not file.name.startswith("_"))
 
 
 def _file_case(file):
@@ -580,7 +592,8 @@ def make_row(case, res, doc):
     }
 
 
-def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass, use_kosit=True, differences=None):
+def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass, use_kosit=True, differences=None,
+        check_stale=False):
     started = time.perf_counter()
     checker = Checker(out_dir.parent, use_mustang, use_kosit)
     try:
@@ -614,7 +627,7 @@ def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass, use_kosit
     rows = [make_row(case, results[case["id"]], docs.get(case["id"])) for case in cases]
     metamorphic(rows, docs, {c["id"]: c for c in cases})
 
-    failures, hits, xpass, stale = triage(rows, known, strict, check_xpass, differences)
+    failures, hits, xpass, stale = triage(rows, known, strict, check_xpass, differences, check_stale)
     timing = {
         "total_s": round(time.perf_counter() - started, 1),
         "compile_s": round(t_compile, 1),
@@ -634,7 +647,7 @@ def breaks_hard_gate(row):
     return row.get("population") == "legal" and row["cls"] != "AGREE_VALID"
 
 
-def triage(rows, known, strict=False, check_xpass=True, differences=None):
+def triage(rows, known, strict=False, check_xpass=True, differences=None, check_stale=False):
     """Sets verdict and signature of every row and sorts the failures into
     new ones and known issues. Returns (new failures, [(entry, signature,
     case ids)], [(entry, signature)] of listed signatures that did not occur,
@@ -643,7 +656,9 @@ def triage(rows, known, strict=False, check_xpass=True, differences=None):
     A disagreement of Mustang and KoSIT on a rule that `differences` does not
     document with the rejecting validator fails the case: it is no bug of
     invoice-pro that known-issues.toml could list, but a difference of the
-    official validators to understand and document.
+    official validators to understand and document. `check_stale`: the run
+    has every committed regression case (`regression_complete`), so every
+    documented difference must occur.
     """
     differences = differences or {}
     failures, known_hits, seen, shown = [], {}, set(), set()
@@ -677,11 +692,10 @@ def triage(rows, known, strict=False, check_xpass=True, differences=None):
             for sig in entry["signatures"]:
                 if (index, sig) not in seen:
                     xpass.append((entry, sig))
-    # Every documented difference is shown by a case of a full run, so that
-    # the documentation stays true: a run of the regression cases, which have
-    # a case for every difference, with both validators.
-    if check_xpass and any(row.get("population") == "regression" and len(row.get("validators") or {}) == len(VALIDATORS)
-                           for row in rows):
+    # Every documented difference is shown by a case, so that the
+    # documentation stays true: checked on a run of all regression cases,
+    # which have a case for every difference, with both validators.
+    if check_stale and any(len(row.get("validators") or {}) == len(VALIDATORS) for row in rows):
         stale = sorted(rule for rule in differences if rule not in shown)
     hits = [(known[index], sig, ids) for (index, sig), ids in known_hits.items()]
     return failures, hits, xpass, stale
@@ -823,7 +837,7 @@ def main(argv=None):
         if skipped and common.in_ci():
             raise common.ToolError(f"{' and '.join(skipped)} in CI: the corpus needs the official verdict")
         build = common.build_dir(args.build_dir)
-        paths = args.paths or [p for p in (build / "corpus", HERE / "corpus" / "regression") if p.exists()]
+        paths = args.paths or [p for p in (build / "corpus", REGRESSION) if p.exists()]
         cases = load_cases(paths)
         subset = False
         if args.only:
@@ -845,6 +859,7 @@ def main(argv=None):
         rows, failures, known_hits, xpass, stale, timing = run(
             cases, args.jobs, out_dir, not args.no_mustang, known, args.strict, check_xpass=not subset,
             use_kosit=not args.no_kosit, differences=differences,
+            check_stale=not subset and regression_complete(cases),
         )
     except common.ToolError as e:
         print(f"error: {e}", file=sys.stderr)

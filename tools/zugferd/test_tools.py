@@ -216,14 +216,27 @@ class OfficialVerdict(unittest.TestCase):
         case = {"id": "rg-a", "population": "regression", "expect": "AGREE_INVALID", "file": "x.typ"}
         rows = [run.make_row(case, collected(mustang_report("BR-DE-27"), kosit_report(warnings=["BR-DE-27"]),
                                              ours=["BR-DE-27"]), None)]
-        self.assertEqual(run.triage(rows, [], differences=differences)[3], ["BR-CO-25"])
-        # Not on a subset (--only), not without the regression cases, which
-        # show every difference, nor without KoSIT.
-        self.assertEqual(run.triage(rows, [], check_xpass=False, differences=differences)[3], [])
-        generated = [dict(rows[0], population="random")]
-        self.assertEqual(run.triage(generated, [], differences=differences)[3], [])
-        rows = [run.make_row(case, collected(mustang_report("BR-DE-27"), ours=["BR-DE-27"]), None)]
+        self.assertEqual(run.triage(rows, [], differences=differences, check_stale=True)[3], ["BR-CO-25"])
+        # Only a run of all regression cases, which show every difference,
+        # checks the list: not a subset (--only, --population, single case
+        # files), nor a run without KoSIT.
         self.assertEqual(run.triage(rows, [], differences=differences)[3], [])
+        rows_without_kosit = [run.make_row(case, collected(mustang_report("BR-DE-27"), ours=["BR-DE-27"]), None)]
+        self.assertEqual(run.triage(rows_without_kosit, [], differences=differences, check_stale=True)[3], [])
+
+    def test_only_all_regression_cases_check_the_differences(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for name in ("a.typ", "b.typ", "_base.typ"):
+                (Path(tmp) / name).write_text("", encoding="utf-8")
+            both = [{"id": "rg-a"}, {"id": "rg-b"}, {"id": "pw001"}]
+            self.assertTrue(run.regression_complete(both, tmp))  # `_base.typ` is no case
+            # A single case file, e.g. `run.py tools/zugferd/corpus/regression/a.typ`.
+            self.assertFalse(run.regression_complete([{"id": "rg-a"}], tmp))
+            self.assertFalse(run.regression_complete([{"id": "pw001"}], tmp))
+        # The committed regression cases are complete on their own.
+        cases = run.load_cases([run.REGRESSION])
+        self.assertTrue(run.regression_complete(cases))
+        self.assertFalse(run.regression_complete(cases[1:]))
 
     def test_differences_file(self):
         differences = run.load_differences(HERE / "validator-differences.toml")

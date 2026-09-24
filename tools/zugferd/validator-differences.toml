@@ -13,10 +13,10 @@
 # rejects a document, every rule behind the disagreement is listed here with
 # the validator that rejects it, what the other one reports and why they
 # differ. An unlisted rule fails the run (OFFICIAL_DISAGREE), and so does a
-# listed rule that no case of a full run shows any more, so that the list
-# stays true. Every entry has a regression case that shows it
-# (tools/zugferd/corpus/regression/); a run without the regression cases does
-# not check the list.
+# listed rule that no case shows any more in a run of all regression cases,
+# so that the list stays true. Every entry has a regression case that shows
+# it (tools/zugferd/corpus/regression/); a run without all of them (`--only`,
+# `--population` or single case files) does not check the list.
 #
 #   rejected-by  the validator that reports an error: "mustang" or "kosit"
 #   other        what the other validator reports: "warning" or "nothing",

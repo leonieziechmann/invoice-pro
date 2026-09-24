@@ -592,7 +592,7 @@ reason = """The phone number of the seller contact (BT-42) has at least three di
 ```
 
 - An undocumented disagreement fails the run with the signature `OFFICIAL_DISAGREE only-<validator>=<rules>`. `known-issues.toml` cannot excuse it: it is no bug of invoice-pro, but a difference of the official validators to understand and document.
-- A listed rule that no case of a full run shows any more fails the run (`STALE`), so that the list stays true, e.g. after a validator update resolved the difference. Every entry has a regression case that shows it; a run without the regression cases (e.g. with `--only`) does not check the list.
+- A listed rule that no case shows any more in a run of all regression cases fails the run (`STALE`), so that the list stays true, e.g. after a validator update resolved the difference. Every entry has a regression case that shows it; a run without all of them (with `--only`, `--population` or single case files) does not check the list.
 - The report lists the documented disagreements with their cases. Where one validator only warns and invoice-pro reports an error, invoice-pro is stricter than that validator, e.g. for `BR-DE-27` and `BR-DE-28` (a maintainer decision). An invoice that invoice-pro accepts although one of the validators rejects it is a `FALSE_NEGATIVE`.
 
 #### Business Term Dispositions
