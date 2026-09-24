@@ -93,8 +93,8 @@
 ///
 /// -> dictionary
 #let dict-to-xml(data, profile) = {
-  // Loaded on the first call, so that the modules of the e-invoice load
-  // without the guard.
+  // Imported here, as guard/write.typ imports this module; zugferd.typ loads
+  // it with the other modules of the e-invoice.
   import "guard/write.typ": write
   write(data, profile)
 }

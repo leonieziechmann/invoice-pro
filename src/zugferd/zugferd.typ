@@ -7,6 +7,9 @@
 #import "validate.typ": validate
 #import "build.typ": build-tree, xml-declaration
 #import "xml.typ": dict-to-xml
+// The code of the write guard loads with the other modules; the tables of a
+// profile only when an invoice of the profile is written.
+#import "guard/write.typ": malformed-kinds, root-tag
 
 #let _has-errors(diagnostics) = diagnostics.any(d => d.level == "error")
 
@@ -128,8 +131,7 @@
   // fail on them; a finding after which the document may not be well-formed
   // (an invalid name, a missing namespace, not one root element) skips the
   // parse, as a parse error would stop the compilation (it is an error
-  // anyway). The serializer has loaded the module already.
-  import "guard/write.typ": malformed-kinds, root-tag
+  // anyway).
   if findings.all(f => f.kind not in malformed-kinds) {
     let parsed = xml(xml-bytes)
     let roots = parsed.filter(n => type(n) == dictionary)

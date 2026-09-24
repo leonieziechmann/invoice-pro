@@ -1,6 +1,7 @@
 // The write guard (G1 and G2): the serializer of the e-invoice XML, which
 // checks every element against the guard tables of its profile while it
-// writes it. `dict-to-xml` (../xml.typ) loads this module on its first call.
+// writes it. `dict-to-xml` (../xml.typ) calls it; the tables of a profile
+// load when the first invoice of the profile is written.
 //
 // The builder (build.typ) describes the document as a tree of dictionaries:
 // keys are element names, `@name` keys attributes and the key `""` the text
