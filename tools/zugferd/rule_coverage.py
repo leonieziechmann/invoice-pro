@@ -1,0 +1,1223 @@
+#!/usr/bin/env python3
+"""Rule coverage gate: every rule of the official validators is handled.
+
+  rule_coverage.py [--explain] [--id ID,..] [--json FILE] [--update-docs]
+
+Inventory. The rule ids of every profile, collected from the pinned
+artefacts of the two official validators and applied to the profiles the
+way each validator selects them:
+
+  Mustang CLI 2.14.0 ($MUSTANG_JAR; the artefacts are pinned in gen_guard.py)
+    MINIMUM, BASIC WL   the Factur-X 1.0.07 Schematron of the profile
+    BASIC, EN 16931     the Factur-X Schematron of the profile and the CEN
+                        Schematron of EN 16931 (CII, 1.3.12)
+    XRechnung           the CEN Schematron and the XRechnung 3.0 Schematron
+                        (CII); Mustang applies no Factur-X Schematron to it
+  KoSIT 1.6.3 with its XRechnung configuration 2026-08-31 ($KOSIT_CONFIG;
+  pinned below), by the scenarios of its scenarios.xml:
+    EN 16931            "EN16931 (CII)": the CEN Schematron 1.3.16
+    XRechnung           "EN16931 XRechnung (CII)": the CEN Schematron 1.3.16
+                        and the XRechnung 3.0.2 Schematron, with the levels
+                        the scenario overrides (customLevel)
+    MINIMUM, BASIC WL, BASIC match no scenario.
+
+A rule id is the id a validator reports: the id of the assertion, or for
+the Factur-X Schematron the business rule its message names (Mustang reports
+"[BR-CO-26]..." as BR-CO-26), else its FX-SCH-A-* id. Mustang reports every
+failed assertion as an error, whatever its flag; the XRechnung Schematron
+only for XRechnung documents (a notice elsewhere). KoSIT reports a rule at
+the level of its flag or of the scenario's customLevel. The reports of the
+Factur-X Schematron that mark an element as not used have no id; they are
+counted apart (the write guard compiles them, IP-GUARD-05).
+
+Classes. Every rule id of every profile is exactly one of:
+
+  fixture       invoice-pro reports the rule under its id in the profile: a
+                parity fixture (corpus/rules/<ID>.typ) that runs in the
+                profile (its `// profiles:` header) is an invoice that the
+                official validators reject with the rule and invoice-pro
+                reports under the same id (run.py checks both sides)
+  compiled      the write guard enforces the rule: gen_guard.py compiles
+                every assertion of it from the artefact into the guard's
+                tables (or it applies to an element the builder never
+                writes, which the guard rejects as unknown)
+  construction  the builder cannot produce the violation: a reason and the
+                evidence (the code path, and a test, corpus or mutation
+                case where there is one)
+  unreachable   the rule cannot fire on an XML of invoice-pro: the test is
+                always true, the profile's schema has no position for its
+                context, the element is never written, or it belongs to
+                an extension of XRechnung invoice-pro does not produce
+  open          not handled yet: the target is none
+
+`compiled` and `unreachable` are derived from the guard's compiler where
+its dispositions settle a rule in a profile: every assertion of the rule is
+compiled (or cannot fire: `tautology`, `shadowed`, `unmatched`), and the
+assertions of KoSIT are the same as Mustang's (same context and test).
+Every other rule id needs an entry in rule-coverage.toml; an entry for a
+rule the guard settles is refused as redundant, unless it is a fixture.
+
+invoice-pro's own rules (IP-*) are listed in the same file with their basis
+(the law or the requirement they enforce) and their tests. So are the
+official rule ids that src/ names outside the guard's tables, but that no
+parity fixture shows invoice-pro report ([[without-fixture]], with the
+reason: a check that cannot fire, or an id used for another condition).
+
+The gate fails on a rule id without a class, on an entry for an id no
+artefact has (stale), on a fixture entry without a fixture in each of its
+profiles, on an entry the guard makes redundant, on an IP rule of the
+source without an entry (or an entry without source or tests), on an
+official rule id of the source without a fixture or a [[without-fixture]]
+entry, and when the table in docs/docs/e-invoicing.md differs from the
+numbers (`--update-docs` writes it). The `open` rules are the work list
+(OPEN_WORK_LIST), which can only become shorter: a rule open beyond it
+fails, like a new rule id without a class, and so does one of the list
+that is no longer open. run.py checks that every fixture passes in every
+profile it claims (`fixture_results`) and, in every case of the corpus,
+that invoice-pro names no rule the validators of the profile do not have
+(`foreign_rules`).
+
+Exit code: 0 all classified, 1 problems, 2 setup error.
+"""
+
+import argparse
+import collections
+import dataclasses
+import hashlib
+import json
+import re
+import sys
+import tomllib
+from pathlib import Path
+
+from lxml import etree
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+
+import common  # noqa: E402
+import gen_guard  # noqa: E402
+
+REPO = common.REPO
+TOML = HERE / "rule-coverage.toml"
+RULES_DIR = HERE / "corpus" / "rules"
+DOCS = REPO / "docs" / "docs" / "e-invoicing.md"
+# The write guard: its generated tables name every rule it compiles. The
+# other files of src/ name the rules invoice-pro reports.
+GUARD_DIR = REPO / "src" / "zugferd" / "guard"
+# The generated table of the documentation sits between these two lines.
+DOCS_BEGIN = '[//]: # "rule-coverage table: generated by tools/zugferd/rule_coverage.py --update-docs"'
+DOCS_END = '[//]: # "end of the rule-coverage table"'
+
+PROFILES = tuple(gen_guard.PROFILES)
+PROFILE_NAMES = {
+    "minimum": "MINIMUM",
+    "basic-wl": "BASIC WL",
+    "basic": "BASIC",
+    "en16931": "EN 16931",
+    "xrechnung": "XRechnung",
+}
+# The guideline (BT-24) of every profile, as the validators match it.
+GUIDELINE = {profile: guideline for guideline, (profile, _) in common.GUIDELINES.items()}
+
+CLASSES = {
+    "fixture": "reported by invoice-pro under its id, shown by a parity fixture in the profile",
+    "compiled": "enforced by the write guard (compiled from the artefact)",
+    "construction": "the builder cannot produce the violation",
+    "unreachable": "cannot fire on an XML invoice-pro writes",
+    "open": "not handled yet",
+}
+# Dispositions of gen_guard.py that settle a rule without an entry.
+GUARD_COMPILED = ("compiled", "conservative", "defect")
+GUARD_UNREACHABLE = {
+    "tautology": "the official test is always true",
+    "shadowed": "a rule of higher priority of the same Schematron pattern takes every position",
+    "unmatched": "the profile's schema has no position for the rule's context",
+}
+# The fields of an entry of rule-coverage.toml each class needs.
+NEEDS = {
+    "fixture": (),
+    "compiled": ("reason",),
+    "construction": ("reason", "evidence"),
+    "unreachable": ("reason",),
+    "open": ("reason",),
+}
+# The rules classified as open, by profile: the work list, which can only
+# become shorter. A rule open beyond it fails the gate (NEW OPEN), and one
+# that is no longer open must leave it (OPEN), like the known issues.
+OPEN_WORK_LIST = {
+    "BR-B-01": ("basic", "en16931", "xrechnung"),
+    "BR-B-02": ("basic", "en16931", "xrechnung"),
+    "BR-O-03": ("basic-wl",),
+    "BR-O-04": ("basic-wl",),
+    "CII-SR-467": ("en16931", "xrechnung"),
+    "CII-SR-470": ("en16931", "xrechnung"),
+    "PEPPOL-EN16931-R120": ("xrechnung",),
+}
+
+# The artefacts of KoSIT's XRechnung configuration 2026-08-31 the inventory
+# reads, by their SHA-256; another configuration fails instead of silently
+# changing the inventory.
+KOSIT_PINS = {
+    "scenarios.xml": "3e8161a39dfaa6aea4d990b279aab848be4f4c6169e820f354a159bda7693fb0",
+    "resources/cii/16b/xsl/EN16931-CII-validation.xsl":
+        "0911e927f13f9ae2cdc7f973643f27bf0ad3c5da02483c04a5b8a47eb4822199",
+    "resources/xrechnung/3.0.2/xsl/XRechnung-CII-validation.xsl":
+        "ec54f662803a87f527ec606d1320bc404f1657a848af6a76f37f32905e4aac40",
+}
+# Names of the artefacts in reports.
+ARTEFACT_NAMES = {
+    ("mustang", "FX"): "Factur-X 1.0.07 Schematron",
+    ("mustang", "CEN"): "CEN EN 16931 Schematron 1.3.12",
+    ("mustang", "XR"): "XRechnung 3.0 Schematron",
+    ("kosit", "resources/cii/16b/xsl/EN16931-CII-validation.xsl"): "CEN EN 16931 Schematron 1.3.16",
+    ("kosit", "resources/xrechnung/3.0.2/xsl/XRechnung-CII-validation.xsl"): "XRechnung 3.0.2 Schematron",
+}
+# How KoSIT reports the flag of an assertion.
+KOSIT_LEVELS = {"fatal": "error", "error": "error", "warning": "warning", "information": "information"}
+
+XSL = gen_guard.XSL
+SVRL = gen_guard.SVRL
+SCENARIOS_NS = "{http://www.xoev.de/de/validator/framework/1/scenarios}"
+_BUSINESS_ID = re.compile(r"\[((?:BR|CII|PEPPOL)[A-Za-z0-9-]*)\]")
+_IP_ID = re.compile(r'"(IP-[A-Z]+-\d+)"')
+# An official rule id in the source: a quoted id with a number (not a
+# prefix such as "BR-AE" that the source completes).
+_OFFICIAL_ID = re.compile(r'"((?:BR|CII|PEPPOL|FX-SCH)-[A-Za-z0-9-]*\d[A-Za-z0-9-]*)"')
+_HEADER = re.compile(r"^//\s*(expect|warns|profiles):\s*(.*)$")
+# The profile argument of a fixture: `zugferd: fixture-profile("en16931")`
+# (rules/_base.typ), which run.py sets to each profile of the fixture.
+_ZUGFERD_ARG = re.compile(r"(?<![\w-])zugferd\s*:\s*([^,\n]*)")
+_FIXTURE_PROFILE = re.compile(r'^fixture-profile\("([a-z0-9-]+)"\)$')
+
+
+class CoverageError(common.ToolError):
+    """A problem of the inputs (an artefact, the classification file)."""
+
+
+def normalize(text):
+    return " ".join((text or "").split())
+
+
+# ================================================================ inventory
+
+
+@dataclasses.dataclass
+class Assertion:
+    """One assertion of an official Schematron, as a validator applies it."""
+
+    validator: str  # "mustang" or "kosit"
+    artefact: str  # the Schematron, see ARTEFACT_NAMES
+    id: str  # the id of the assertion (FX-SCH-A-* for Factur-X)
+    ref: str  # the rule id the validator reports
+    context: str
+    test: str
+    flag: str | None
+    level: str  # "error", "warning" or "information", as the validator reports it
+    text: str
+    dispositions: tuple = ()  # the guard's dispositions (Mustang's artefacts only)
+    details: tuple = ()
+
+    @property
+    def name(self):
+        return ARTEFACT_NAMES.get((self.validator, self.artefact), self.artefact)
+
+    def signature(self):
+        return self.context, self.test
+
+
+@dataclasses.dataclass
+class Inventory:
+    rules: dict  # profile -> {rule id: [Assertion]}
+    reports: dict  # profile -> Counter of the dispositions of the reports without id
+    artefacts: dict  # artefact -> sha256
+    guard: bool  # whether the guard's dispositions are known
+    kosit: bool  # whether KoSIT's artefacts are part of it
+
+    def ids(self, profile):
+        return set(self.rules.get(profile, {}))
+
+    def profiles_of(self, rule):
+        return [p for p in PROFILES if rule in self.rules.get(p, {})]
+
+
+def business_ref(rule_id, text):
+    """The rule id a validator reports for an assertion: the business rule a
+    Factur-X message names (e.g. "[BR-CO-26]-..."), else the assertion's."""
+    m = _BUSINESS_ID.match(text or "")
+    return m.group(1) if m else rule_id
+
+
+def mustang_assertions(jar, profile, schemas=None, guard=True):
+    """The assertions Mustang applies to a profile. With `guard`, each one
+    carries the dispositions of gen_guard's compiler for the profile."""
+    directory, fx, cen, xr = gen_guard.PROFILES[profile]
+    if guard:
+        compiler = gen_guard.load_profile(jar, profile, schemas or gen_guard.load_schemas(jar))
+        rules = compiler.rules
+        found = collections.defaultdict(list)
+        for rule, disposition, detail in compiler.dispositions:
+            found[id(rule)].append((disposition, detail))
+    else:
+        rules = []
+        if fx:
+            rules += gen_guard.load_rules(jar, gen_guard.fx_xslt(fx), "FX", gen_guard.fx_codedb(fx))
+        if cen:
+            rules += gen_guard.load_rules(jar, gen_guard.CEN_XSLT, "CEN")
+        if xr:
+            rules += gen_guard.load_rules(jar, gen_guard.XR_XSLT, "XR")
+        found = {}
+    out = []
+    for rule in rules:
+        records = found.get(id(rule), [])
+        out.append(Assertion(
+            validator="mustang",
+            artefact=rule.source,
+            id=rule.id,
+            ref=rule.ref,
+            context=rule.context,
+            test=normalize(rule.test),
+            flag=rule.flag,
+            level="error",
+            text=rule.text,
+            dispositions=tuple(sorted({d for d, _ in records})),
+            details=tuple(detail for _, detail in records),
+        ))
+    return out
+
+
+class KositConfig:
+    """The artefacts of KoSIT's XRechnung configuration, checked against
+    KOSIT_PINS."""
+
+    def __init__(self, path, pinned=True):
+        self.path = Path(path)
+        self.pinned = pinned
+        self.digests = {}
+
+    def read(self, relative):
+        file = self.path / relative
+        try:
+            data = file.read_bytes()
+        except OSError as e:
+            raise CoverageError(f"cannot read {file}: {e}")
+        digest = hashlib.sha256(data).hexdigest()
+        if self.pinned and KOSIT_PINS.get(relative) != digest:
+            raise CoverageError(
+                f"{file} is not the pinned artefact (sha256 {digest}, pinned {KOSIT_PINS.get(relative)}); "
+                "the inventory reads KoSIT's XRechnung configuration 2026-08-31"
+            )
+        self.digests[relative] = digest
+        return data
+
+    def scenarios(self):
+        """(name, match, [Schematron locations], {code: level}) of every
+        scenario of scenarios.xml."""
+        root = etree.fromstring(self.read("scenarios.xml"))
+        out = []
+        for scenario in root.iter(SCENARIOS_NS + "scenario"):
+            name = normalize(scenario.findtext(SCENARIOS_NS + "name"))
+            match = normalize(scenario.findtext(SCENARIOS_NS + "match"))
+            locations = [
+                normalize(r.findtext(SCENARIOS_NS + "location"))
+                for step in scenario.findall(SCENARIOS_NS + "validateWithSchematron")
+                for r in step.findall(SCENARIOS_NS + "resource")
+            ]
+            levels = {
+                normalize(c.text): c.get("level")
+                for c in scenario.iter(SCENARIOS_NS + "customLevel")
+            }
+            out.append((name, match, locations, levels))
+        return out
+
+    def scenario_for(self, profile):
+        """The scenario KoSIT applies to a CII document of the profile: the
+        one whose match names the profile's guideline exactly; None when
+        none does (MINIMUM, BASIC WL, BASIC)."""
+        guideline = GUIDELINE[profile]
+        chosen = [
+            s for s in self.scenarios()
+            if "rsm:CrossIndustryInvoice" in s[1] and guideline in re.findall(r"'([^']*)'", s[1])
+        ]
+        if len(chosen) > 1:
+            raise CoverageError(f"several KoSIT scenarios match the guideline of {profile}: {[s[0] for s in chosen]}")
+        return chosen[0] if chosen else None
+
+
+def load_schxslt(data, artefact, levels):
+    """The assertions of a Schematron compiled by SchXslt (KoSIT's format):
+    the id and flag are attributes of svrl:failed-assert, the test an
+    xsl:attribute of it, the context the match of its template."""
+    root = etree.fromstring(data)
+    out = []
+    for template in root.iter(XSL + "template"):
+        context = normalize(template.get("match"))
+        for node in template.iter(SVRL + "failed-assert", SVRL + "successful-report"):
+            rule_id = node.get("id")
+            if not rule_id:
+                raise CoverageError(f"{artefact}: an assertion without id in the template for {context}")
+            test = next((normalize("".join(a.itertext())) for a in node.findall(XSL + "attribute")
+                         if a.get("name") == "test"), None)
+            if test is None:
+                raise CoverageError(f"{artefact}: the assertion {rule_id} has no test")
+            flag = node.get("flag")
+            level = levels.get(rule_id) or KOSIT_LEVELS.get(flag or "error")
+            if level is None:
+                raise CoverageError(f"{artefact}: the flag {flag!r} of {rule_id} is unknown")
+            text = node.find(SVRL + "text")
+            out.append(Assertion(
+                validator="kosit",
+                artefact=artefact,
+                id=rule_id,
+                ref=rule_id,
+                context=context,
+                test=test,
+                flag=flag,
+                level=level,
+                text=normalize("".join(text.itertext())) if text is not None else "",
+            ))
+    if not out:
+        raise CoverageError(f"{artefact}: no Schematron assertions found")
+    return out
+
+
+def kosit_assertions(config, profile):
+    """The assertions KoSIT applies to a profile (empty without a scenario)."""
+    scenario = config.scenario_for(profile)
+    if scenario is None:
+        return []
+    _, _, locations, levels = scenario
+    out = []
+    for location in locations:
+        out += load_schxslt(config.read(location), location, levels)
+    return out
+
+
+def load_inventory(jar_path, kosit_path=None, guard=True):
+    """The rule ids of every profile, with their assertions. `kosit_path`:
+    KoSIT's configuration directory (None leaves KoSIT out). `guard`: with
+    the dispositions of the guard's compiler (a few seconds)."""
+    try:
+        jar = gen_guard.Jar(jar_path)
+        schemas = gen_guard.load_schemas(jar) if guard else None
+        config = KositConfig(kosit_path) if kosit_path else None
+        rules, reports = {}, {}
+        for profile in PROFILES:
+            by_ref = collections.defaultdict(list)
+            counts = collections.Counter()
+            assertions = mustang_assertions(jar, profile, schemas, guard)
+            if config:
+                assertions += kosit_assertions(config, profile)
+            for a in assertions:
+                if a.ref is None:
+                    # A report of the Factur-X Schematron without id: an
+                    # element or attribute not used in the profile.
+                    counts.update(a.dispositions or ("(not compiled)",))
+                    continue
+                by_ref[a.ref].append(a)
+            rules[profile] = dict(sorted(by_ref.items()))
+            reports[profile] = counts
+    except gen_guard.GenError as e:
+        raise CoverageError(str(e))
+    artefacts = dict(jar.digests)
+    if config:
+        artefacts.update({f"kosit:{k}": v for k, v in config.digests.items()})
+    return Inventory(rules, reports, dict(sorted(artefacts.items())), guard, config is not None)
+
+
+# ================================================================ classification
+
+
+@dataclasses.dataclass
+class Entry:
+    """An entry `[[rule]]` of rule-coverage.toml."""
+
+    index: int
+    ids: list
+    cls: str
+    profiles: list | None = None
+    reason: str | None = None
+    evidence: list = dataclasses.field(default_factory=list)
+    note: str | None = None
+    # A fixture of a violation invoice-pro reports under another official
+    # rule that the validators report for it as well (e.g. BR-DE-16, the
+    # XRechnung variant of BR-S-02).
+    reported_as: list = dataclasses.field(default_factory=list)
+
+    def where(self):
+        return f"rule-coverage.toml, entry {self.index + 1} ({', '.join(self.ids[:3])}{' ...' if len(self.ids) > 3 else ''})"
+
+
+@dataclasses.dataclass
+class Decision:
+    """The class of a rule id in a profile, and where it comes from."""
+
+    rule: str
+    profile: str
+    cls: str
+    source: str  # "guard" (derived) or "entry"
+    reason: str
+    entry: Entry | None
+    assertions: list
+
+
+@dataclasses.dataclass
+class WithoutFixture:
+    """An entry `[[without-fixture]]` of rule-coverage.toml: official rule
+    ids that src/ names, but that no parity fixture shows invoice-pro
+    report, and why."""
+
+    index: int
+    ids: list
+    reason: str
+
+    def where(self):
+        return f"rule-coverage.toml, [[without-fixture]] {self.index + 1} ({', '.join(self.ids[:3])}" \
+               f"{' ...' if len(self.ids) > 3 else ''})"
+
+
+def load_toml(path=TOML):
+    """(entries, IP rules, [[without-fixture]] entries) of the
+    classification file."""
+    path = Path(path)
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as e:
+        raise CoverageError(f"{path}: {e}")
+    unknown = set(data) - {"rule", "ip", "without-fixture"}
+    if unknown:
+        raise CoverageError(f"{path}: unknown tables {sorted(unknown)} "
+                            "(only [[rule]], [[without-fixture]] and [ip.\"IP-..\"])")
+    entries = []
+    for index, raw in enumerate(data.get("rule", [])):
+        where = f"{path.name}, entry {index + 1}"
+        allowed = {"ids", "class", "profiles", "reason", "evidence", "note", "reported-as"}
+        if set(raw) - allowed:
+            raise CoverageError(f"{where}: unknown keys {sorted(set(raw) - allowed)}")
+        ids = raw.get("ids")
+        if not isinstance(ids, list) or not ids or not all(isinstance(i, str) and i for i in ids):
+            raise CoverageError(f"{where}: `ids` must be a non-empty list of rule ids")
+        cls = raw.get("class")
+        if cls not in CLASSES:
+            raise CoverageError(f"{where}: `class` must be one of {', '.join(CLASSES)}, not {cls!r}")
+        profiles = raw.get("profiles")
+        if profiles is not None and (not isinstance(profiles, list) or not profiles
+                                     or any(p not in PROFILES for p in profiles)):
+            raise CoverageError(f"{where}: `profiles` must be a non-empty list of {', '.join(PROFILES)}")
+        evidence = raw.get("evidence", [])
+        if not isinstance(evidence, list) or not all(isinstance(e, str) and e for e in evidence):
+            raise CoverageError(f"{where}: `evidence` must be a list of texts")
+        reported_as = raw.get("reported-as", [])
+        if not isinstance(reported_as, list) or not all(isinstance(r, str) and r for r in reported_as):
+            raise CoverageError(f"{where}: `reported-as` must be a list of rule ids")
+        if reported_as and cls != "fixture":
+            raise CoverageError(f"{where}: only a fixture has `reported-as`")
+        if reported_as and not raw.get("reason"):
+            raise CoverageError(f"{where}: a fixture with `reported-as` needs a `reason`")
+        entry = Entry(index, list(ids), cls, profiles, raw.get("reason"), evidence, raw.get("note"), reported_as)
+        for field in NEEDS[cls]:
+            if not getattr(entry, field):
+                raise CoverageError(f"{where}: class {cls} needs `{field}`")
+        entries.append(entry)
+    ip = {}
+    for rule, raw in data.get("ip", {}).items():
+        where = f"{path.name}, [ip.{rule!r}]"
+        if not re.fullmatch(r"IP-[A-Z]+-\d+", rule):
+            raise CoverageError(f"{where}: an IP rule id looks like IP-VAT-226")
+        allowed = {"level", "summary", "basis", "tests"}
+        if set(raw) - allowed:
+            raise CoverageError(f"{where}: unknown keys {sorted(set(raw) - allowed)}")
+        for field in ("level", "summary", "basis", "tests"):
+            if not raw.get(field):
+                raise CoverageError(f"{where}: needs `{field}`")
+        if raw["level"] not in ("error", "warning", "error or warning"):
+            raise CoverageError(f"{where}: `level` is \"error\", \"warning\" or \"error or warning\"")
+        if not isinstance(raw["tests"], list):
+            raise CoverageError(f"{where}: `tests` must be a list of paths")
+        ip[rule] = raw
+    without = []
+    for index, raw in enumerate(data.get("without-fixture", [])):
+        where = f"{path.name}, [[without-fixture]] {index + 1}"
+        if set(raw) - {"ids", "reason"}:
+            raise CoverageError(f"{where}: unknown keys {sorted(set(raw) - {'ids', 'reason'})}")
+        ids = raw.get("ids")
+        if not isinstance(ids, list) or not ids or not all(isinstance(i, str) and i for i in ids):
+            raise CoverageError(f"{where}: `ids` must be a non-empty list of rule ids")
+        if not isinstance(raw.get("reason"), str) or not raw["reason"].strip():
+            raise CoverageError(f"{where}: needs `reason`")
+        without.append(WithoutFixture(index, list(ids), raw["reason"]))
+    return entries, ip, without
+
+
+def fixture_header(path):
+    """(class, rules, profiles) of the header of a parity fixture: the class
+    and rules of `// expect:`, with the rules of its `// warns:` lines
+    (warnings invoice-pro must report), and the profiles of `// profiles:`,
+    the ones it runs in."""
+    expect, rules, profiles = None, [], []
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
+        m = _HEADER.match(line.strip())
+        if m:
+            key, values = m.group(1), m.group(2).split()
+            if key == "expect":
+                expect, rules = (values[0] if values else None), rules + values[1:]
+            elif key == "warns":
+                rules += values
+            else:
+                profiles += values
+        elif line.strip() and not line.startswith("//"):
+            break
+    return expect, rules, profiles
+
+
+def fixture_rule(path):
+    """The rule id a fixture file shows and whether it is the passing
+    counterpart: `<ID>.typ`, `<ID>--<variant>.typ`, `<ID>--pass.typ`."""
+    rule, _, variant = Path(path).stem.partition("--")
+    return rule, variant == "pass" or variant.startswith("pass-")
+
+
+def fixture_case_id(path, profile):
+    """The id of a fixture as a case of the corpus in one of its profiles
+    (see run.load_cases)."""
+    return f"rule-{Path(path).stem}@{profile}"
+
+
+@dataclasses.dataclass
+class Fixture:
+    """A parity fixture file: the rules its header names (`// expect:` and
+    `// warns:`) and the profiles it runs in (`// profiles:`)."""
+
+    path: Path
+    expect: str
+    rules: list
+    profiles: list
+
+    @property
+    def name(self):
+        return self.path.name
+
+    @property
+    def rule(self):
+        """The rule of its name (`<ID>.typ`, `<ID>--<variant>.typ`)."""
+        return fixture_rule(self.path)[0]
+
+
+def fixture_source_problems(file, profiles):
+    """Problems of the profile argument of a fixture: its source passes
+    `zugferd: fixture-profile("<profile>")` once, with one of its profiles,
+    which run.py replaces by each profile of the fixture in turn."""
+    code = "\n".join(line for line in Path(file).read_text(encoding="utf-8").splitlines()
+                     if not line.lstrip().startswith("//"))
+    args = [m.group(1).strip() for m in _ZUGFERD_ARG.finditer(code)]
+    defaults = [m.group(1) for m in (_FIXTURE_PROFILE.match(a) for a in args) if m]
+    if len(args) != 1 or len(defaults) != 1:
+        return ["its source must pass the profile as `zugferd: fixture-profile(\"<profile>\")`, once, so that it "
+                f"runs in each profile of its `// profiles:` header (found: {', '.join(args) or 'none'})"]
+    if defaults[0] not in profiles:
+        return [f"`fixture-profile(\"{defaults[0]}\")` names a profile its `// profiles:` header does not list"]
+    return []
+
+
+def fixture_files(directory=RULES_DIR):
+    """([Fixture], [problems]): the fixtures, and a problem for every file
+    whose header or profile argument does not fit. The passing counterparts
+    are checked, but not listed."""
+    fixtures, problems = [], []
+    for file in sorted(Path(directory).glob("*.typ")):
+        if file.name.startswith("_"):
+            continue
+        rule, passing = fixture_rule(file)
+        expect, rules, profiles = fixture_header(file)
+        name = file.relative_to(REPO) if file.is_relative_to(REPO) else file
+        unknown = [p for p in profiles if p not in PROFILES]
+        if not profiles or unknown or len(set(profiles)) != len(profiles):
+            problems.append(f"FIXTURE {name}: `// profiles:` lists the profiles it runs in, each once, of "
+                            f"{', '.join(PROFILES)}" + (f" (not {', '.join(unknown)})" if unknown else ""))
+            continue
+        problems += [f"FIXTURE {name}: {p}" for p in fixture_source_problems(file, profiles)]
+        if expect is None:
+            problems.append(f"FIXTURE {name}: no `// expect:` header")
+        elif passing:
+            if expect != "AGREE_VALID" or rules:
+                problems.append(f"FIXTURE {name}: a passing counterpart expects `AGREE_VALID` and no rules")
+        elif not rules:
+            problems.append(f"FIXTURE {name}: its `// expect:` header names no rule invoice-pro reports")
+        else:
+            fixtures.append(Fixture(file, expect, rules, profiles))
+    return fixtures, problems
+
+
+def showing(fixtures, rule, profile, reported_as=()):
+    """The fixtures that show a rule in a profile: they run in the profile,
+    and their header names the rule, so run.py checks that invoice-pro and
+    every validator of the profile report it. With `reported_as`: the
+    fixtures of the rule (named after it) that name one of those related
+    rules instead (run.py checks that the validators report the rule)."""
+    out = []
+    for f in fixtures:
+        if profile not in f.profiles:
+            continue
+        if reported_as:
+            if f.rule == rule and rule not in f.rules and set(f.rules) & set(reported_as):
+                out.append(f)
+        elif rule in f.rules:
+            out.append(f)
+    return out
+
+
+def twins_of(assertions):
+    """{(context, test): [Mustang's assertions]} of a profile: KoSIT reports
+    an assertion under its id attribute, Mustang under the id its message
+    names, so the same assertion may have two rule ids (CII-SR-04 in KoSIT
+    is CII-SR-004 in Mustang)."""
+    twins = collections.defaultdict(list)
+    for rule_assertions in assertions:
+        for a in rule_assertions:
+            if a.validator == "mustang":
+                twins[a.signature()].append(a)
+    return twins
+
+
+def automatic(assertions, twins=None):
+    """(class, reason) of a rule in a profile that the guard's dispositions
+    settle, or None. Every assertion of Mustang must be compiled or unable
+    to fire, and every assertion of KoSIT the same (context and test) as one
+    of Mustang's in the profile (`twins`, see twins_of)."""
+    mustang = [a for a in assertions if a.validator == "mustang"]
+    kosit = [a for a in assertions if a.validator == "kosit"]
+    twins = twins if twins is not None else twins_of([assertions])
+    for a in kosit:
+        same = twins.get(a.signature())
+        if not same:
+            return None
+        mustang += [m for m in same if m not in mustang]
+    if not mustang or any(not a.dispositions for a in mustang):
+        return None
+    found = set().union(*(set(a.dispositions) for a in mustang))
+    if not found <= set(GUARD_COMPILED) | set(GUARD_UNREACHABLE):
+        return None
+    if found & set(GUARD_COMPILED):
+        return "compiled", "the write guard enforces every assertion of the rule"
+    return "unreachable", "; ".join(GUARD_UNREACHABLE[d] for d in sorted(found))
+
+
+def guard_compiles(assertions, twins=None):
+    """Whether the guard compiles every assertion of Mustang of the rule, or
+    of the same assertion under another id (an explicit `compiled` entry
+    needs it; its reason says why KoSIT's version of the rule is covered)."""
+    mustang = [a for a in assertions if a.validator == "mustang"]
+    for a in assertions:
+        if a.validator == "kosit":
+            mustang += [m for m in (twins or {}).get(a.signature(), []) if m not in mustang]
+    return bool(mustang) and all(
+        a.dispositions and set(a.dispositions) <= set(GUARD_COMPILED) | set(GUARD_UNREACHABLE)
+        and set(a.dispositions) & set(GUARD_COMPILED)
+        for a in mustang
+    )
+
+
+def _evidence_path(text):
+    """The path an item of `evidence` names first, or None."""
+    m = re.match(r"^([\w./-]+\.\w+)(?::|$| )", text)
+    return m.group(1) if m else None
+
+
+def classify(inventory, entries, fixtures):
+    """({profile: {rule id: Decision}}, [problems])."""
+    problems = []
+    claimed = {}  # (rule, profile) -> entry
+    for entry in entries:
+        for rule in entry.ids:
+            profiles = inventory.profiles_of(rule)
+            if not profiles:
+                problems.append(f"STALE {rule}: no artefact has this rule id ({entry.where()})")
+                continue
+            wanted = entry.profiles or profiles
+            for profile in wanted:
+                if profile not in profiles:
+                    problems.append(f"STALE {rule}: the validators of {profile} do not have it ({entry.where()}); "
+                                    f"it applies to {', '.join(profiles)}")
+                    continue
+                if (rule, profile) in claimed:
+                    problems.append(f"DUPLICATE {rule} in {profile}: {claimed[(rule, profile)].where()} and "
+                                    f"{entry.where()}")
+                    continue
+                claimed[(rule, profile)] = entry
+                if entry.cls == "fixture":
+                    problems += _check_fixture(rule, profile, entry, fixtures)
+        if entry.cls == "construction":
+            for item in entry.evidence:
+                path = _evidence_path(item)
+                if path and not (REPO / path).exists():
+                    problems.append(f"EVIDENCE {', '.join(entry.ids)}: {path} does not exist ({entry.where()})")
+    decisions = {}
+    for profile in PROFILES:
+        decisions[profile] = {}
+        twins = twins_of(inventory.rules[profile].values())
+        for rule, assertions in inventory.rules[profile].items():
+            entry = claimed.get((rule, profile))
+            derived = automatic(assertions, twins) if inventory.guard else None
+            if entry is not None:
+                if derived and entry.cls != "fixture":
+                    problems.append(
+                        f"REDUNDANT {rule} in {profile}: the guard settles it ({derived[0]}: {derived[1]}); "
+                        f"leave {profile} out of {entry.where()}"
+                    )
+                if entry.cls == "compiled" and inventory.guard and not guard_compiles(assertions, twins):
+                    problems.append(f"NOT COMPILED {rule} in {profile}: the guard does not compile every assertion "
+                                    f"of Mustang ({entry.where()})")
+                reason = entry.reason or CLASSES[entry.cls]
+                decisions[profile][rule] = Decision(rule, profile, entry.cls, "entry", reason, entry, assertions)
+            elif derived:
+                decisions[profile][rule] = Decision(rule, profile, derived[0], "guard", derived[1], None, assertions)
+            else:
+                decisions[profile][rule] = Decision(rule, profile, "unclassified", "-", "", None, assertions)
+    for profile in PROFILES:
+        for rule, d in decisions[profile].items():
+            if d.cls == "unclassified":
+                problems.append(f"UNCLASSIFIED {rule} in {profile}: {describe_assertions(d.assertions)}")
+    for f in fixtures:
+        problems += _check_fixture_file(f, decisions)
+    return decisions, problems
+
+
+def _check_fixture(rule, profile, entry, fixtures):
+    """Problems of a rule of class fixture in a profile: a fixture shows it
+    there (see `showing`), and with `reported-as` none of the fixtures of
+    the rule in the profile shows that invoice-pro reports the rule itself."""
+    if not entry.reported_as:
+        if showing(fixtures, rule, profile):
+            return []
+        return [f"FIXTURE {rule} in {profile}: class fixture, but no fixture shows it there: none lists {profile} in "
+                f"its `// profiles:` header and names {rule} in its `// expect:` or `// warns:` header "
+                f"({entry.where()})"]
+    problems = [
+        f"FIXTURE {rule} in {profile}: {f.name} shows that invoice-pro reports the rule itself; remove `reported-as` "
+        f"({entry.where()})"
+        for f in fixtures if f.rule == rule and profile in f.profiles and rule in f.rules
+    ]
+    if not problems and not showing(fixtures, rule, profile, entry.reported_as):
+        problems.append(f"FIXTURE {rule} in {profile}: class fixture with `reported-as`, but no fixture {rule}.typ (or "
+                        f"{rule}--<variant>.typ) runs in {profile} and names one of {', '.join(entry.reported_as)} "
+                        f"({entry.where()})")
+    return problems
+
+
+def _check_fixture_file(f, decisions):
+    """Problems of a fixture against the classification of each profile it
+    runs in: the rule of its name is a fixture there (or open: the fixture
+    may reproduce the gap), which its header names unless the rule's entry
+    has `reported-as`, and every official rule its header names is a rule of
+    the profile."""
+    problems = []
+    for profile in f.profiles:
+        d = decisions[profile].get(f.rule)
+        if f.rule.startswith("IP-"):
+            pass  # a case of invoice-pro's own rule: no official rule to compare
+        elif d is None:
+            problems.append(f"FIXTURE {f.name}: runs in {profile}, whose validators do not have {f.rule}")
+        elif d.cls == "fixture":
+            if f.rule not in f.rules and not (d.entry and set(f.rules) & set(d.entry.reported_as)):
+                problems.append(f"FIXTURE {f.name}: its header does not name {f.rule} (a fixture of a rule invoice-pro "
+                                f"reports under another id in {profile} needs `reported-as`)")
+        elif d.cls != "open":
+            problems.append(f"FIXTURE {f.name}: shows {f.rule} in {profile}, but it is classified as {d.cls} there; "
+                            "classify it as fixture")
+        for rule in f.rules:
+            if rule.startswith("IP-") or rule in decisions[profile] or (rule == f.rule and d is None):
+                continue
+            problems.append(f"FIXTURE {f.name}: names {rule}, which the validators of {profile} do not have")
+    return problems
+
+
+def describe_assertions(assertions, width=110):
+    parts = []
+    for a in assertions:
+        where = f"{a.validator} {a.name}"
+        guard = f" [guard: {'/'.join(a.dispositions)}]" if a.dispositions else ""
+        parts.append(f"{where} ({a.level}){guard}: {a.text[:width]}")
+    return "; ".join(parts)
+
+
+# ================================================================ IP rules
+
+
+def ip_rules_in_source(root=REPO / "src"):
+    """{IP rule id: [files of src/ that name it]}: the Typst sources and the
+    data of the rule registry (src/zugferd/rules/registry.json)."""
+    found = collections.defaultdict(list)
+    for file in sorted(list(Path(root).rglob("*.typ")) + list(Path(root).rglob("*.json"))):
+        for rule in sorted(set(_IP_ID.findall(file.read_text(encoding="utf-8")))):
+            found[rule].append(file)
+    return dict(found)
+
+
+def check_ip(ip, source):
+    """Problems of the IP rules: every rule of the source has an entry, every
+    entry a rule of the source, and tests that exist and name the rule."""
+    problems = []
+    for rule in sorted(set(source) - set(ip)):
+        problems.append(f"IP {rule}: named in {source[rule][0].relative_to(REPO)} but not listed in "
+                        "rule-coverage.toml ([ip.\"..\"] with level, summary, basis and tests)")
+    for rule in sorted(set(ip) - set(source)):
+        problems.append(f"IP {rule}: listed in rule-coverage.toml, but no file of src/ names it (stale)")
+    for rule, raw in sorted(ip.items()):
+        named = False
+        for test in raw["tests"]:
+            path = REPO / test
+            if not path.exists():
+                problems.append(f"IP {rule}: its test {test} does not exist")
+            elif path.is_file() and rule in path.read_text(encoding="utf-8"):
+                named = True
+        if not named and not rule.startswith("IP-GUARD-"):
+            problems.append(f"IP {rule}: none of its tests names the rule")
+    return problems
+
+
+def official_rules_in_source(root=REPO / "src", guard=GUARD_DIR):
+    """{official rule id: [files of src/ that name it]}, outside the write
+    guard, whose generated tables name every rule it compiles. The data of
+    the rule registry (src/zugferd/rules/registry.json) counts: its entries
+    name the official ids each rule covers."""
+    found = collections.defaultdict(list)
+    files = sorted(list(Path(root).rglob("*.typ")) + list(Path(root).rglob("*.json")))
+    for file in files:
+        if file.is_relative_to(guard):
+            continue
+        rules = set(_OFFICIAL_ID.findall(file.read_text(encoding="utf-8")))
+        if file.suffix == ".json":
+            # The registry names the Factur-X aliases of its rules as well
+            # (`covers`), which the inventory counts under the rule they
+            # implement.
+            rules = {rule for rule in rules if not rule.startswith("FX-SCH-")}
+        for rule in sorted(rules):
+            found[rule].append(file)
+    return dict(found)
+
+
+def check_without_fixture(without, source, decisions):
+    """Problems of the official rule ids the source names (see
+    official_rules_in_source): each is a rule of a profile and has a fixture
+    in one (invoice-pro reports it under that id), or an entry
+    [[without-fixture]] says why there is none; every entry names such an
+    id, one that no fixture shows."""
+    shown = {rule for p in PROFILES for rule, d in decisions[p].items() if d.cls == "fixture"}
+    known = {rule for p in PROFILES for rule in decisions[p]}
+    listed, problems = {}, []
+    for entry in without:
+        for rule in entry.ids:
+            if rule in listed:
+                problems.append(f"DUPLICATE {rule}: {listed[rule].where()} and {entry.where()}")
+            listed[rule] = entry
+    for rule, files in sorted(source.items()):
+        where = files[0].relative_to(REPO) if files[0].is_relative_to(REPO) else files[0]
+        if rule not in known:
+            problems.append(f"NAMED {rule}: {where} names a rule id that no artefact of any profile has")
+        elif rule not in shown and rule not in listed:
+            problems.append(f"NAMED {rule}: {where} names it, but no parity fixture shows invoice-pro report it; "
+                            "write one, or say why there is none in [[without-fixture]]")
+    for rule, entry in sorted(listed.items()):
+        if rule not in source:
+            problems.append(f"NAMED {rule}: no file of src/ names it any more (stale); remove it from {entry.where()}")
+        elif rule in shown:
+            problems.append(f"NAMED {rule}: a parity fixture shows it; remove it from {entry.where()}")
+    return problems
+
+
+# ================================================================ results of the corpus
+
+
+def fixture_results(rows, entries, fixtures, levels):
+    """Problems of the fixtures in a corpus run (rows of run.py): every rule
+    of class fixture has, in every profile its entry claims, a fixture that
+    shows it there (see `showing`) and passed in that profile. `levels`:
+    the rules of each profile of this run ({profile: {rule: ..}}, see
+    rule_levels)."""
+    by_case = {row["id"]: row for row in rows}
+    problems = []
+    for entry in entries:
+        if entry.cls != "fixture":
+            continue
+        for rule in entry.ids:
+            for profile in entry.profiles or PROFILES:
+                if rule not in levels.get(profile, {}):
+                    continue  # not a rule of the profile (or of a validator that did not run)
+                cases = [fixture_case_id(f.path, profile) for f in showing(fixtures, rule, profile, entry.reported_as)]
+                ran = [by_case[case] for case in cases if case in by_case]
+                if not ran:
+                    problems.append(f"FIXTURE {rule} in {profile}: no fixture of the rule ran in {profile}")
+                elif not any(row["verdict"] == "PASS" for row in ran):
+                    problems.append(f"FIXTURE {rule} in {profile}: no fixture of the rule passed "
+                                    f"({', '.join(row['id'] for row in ran)})")
+    return problems
+
+
+def foreign_rules(res, rules_by_profile):
+    """The errors of invoice-pro in a case that name a rule the official
+    validators of the case's profile do not have (backward check): an
+    official id reported in the wrong profile, or no official id at all.
+    invoice-pro's own rules (IP-*) are left out."""
+    profile = res.get("profile")
+    if profile not in rules_by_profile:
+        return []
+    known = rules_by_profile[profile]
+    return sorted({
+        d.get("rule") for d in res.get("diagnostics", [])
+        if d.get("level") == "error" and not str(d.get("rule", "")).startswith("IP-")
+        and d.get("rule") not in known
+    })
+
+
+_LEVEL_RANK = {"information": 0, "warning": 1, "error": 2}
+
+
+def rule_levels(jar_path, kosit_path=None):
+    """{profile: {rule id: {validator: level}}} of the official validators,
+    without the guard (about a second): the level at which each validator
+    reports the rule, the highest of its assertions."""
+    inventory = load_inventory(jar_path, kosit_path, guard=False)
+    out = {}
+    for profile in PROFILES:
+        out[profile] = {}
+        for rule, assertions in inventory.rules[profile].items():
+            levels = {}
+            for a in assertions:
+                if _LEVEL_RANK[a.level] > _LEVEL_RANK.get(levels.get(a.validator), -1):
+                    levels[a.validator] = a.level
+            out[profile][rule] = levels
+    return out
+
+
+# ================================================================ report
+
+
+def summarize(decisions):
+    """{profile: Counter of classes} plus the total per profile."""
+    out = {}
+    for profile in PROFILES:
+        counts = collections.Counter(d.cls for d in decisions[profile].values())
+        counts["total"] = len(decisions[profile])
+        out[profile] = counts
+    return out
+
+
+def markdown_table(summary):
+    header = ["Profile", "Rule ids", "Reported by invoice-pro", "Enforced by the guard", "Excluded by construction",
+              "Cannot occur", "Open"]
+    rows = [header, [":--"] + ["--:"] * (len(header) - 1)]
+    for profile in PROFILES:
+        c = summary[profile]
+        rows.append([PROFILE_NAMES[profile], str(c["total"]), str(c["fixture"]), str(c["compiled"]),
+                     str(c["construction"]), str(c["unreachable"]), str(c["open"])])
+    widths = [max(len(r[i]) for r in rows) for i in range(len(header))]
+    lines = []
+    for k, r in enumerate(rows):
+        if k == 1:
+            cells = [(r[i][0] + "-" * (widths[i] - 2) + r[i][-1]) if r[i] != ":--" else ":" + "-" * (widths[i] - 1)
+                     for i in range(len(r))]
+        else:
+            cells = [r[i].ljust(widths[i]) if i == 0 else r[i].rjust(widths[i]) for i in range(len(r))]
+        lines.append("| " + " | ".join(cells) + " |")
+    return "\n".join(lines)
+
+
+def open_rules(decisions):
+    """{rule id: [profiles]} of the rules classified as open."""
+    out = collections.defaultdict(list)
+    for profile in PROFILES:
+        for rule, d in decisions[profile].items():
+            if d.cls == "open":
+                out[rule].append(profile)
+    return dict(sorted(out.items()))
+
+
+def check_open(decisions, work_list=None):
+    """Problems of the open rules against the work list (OPEN_WORK_LIST): no
+    rule is open beyond it, and every rule of it is still open."""
+    work_list = OPEN_WORK_LIST if work_list is None else work_list
+    opened = open_rules(decisions)
+    problems = []
+    for rule, profiles in opened.items():
+        new = [p for p in profiles if p not in work_list.get(rule, ())]
+        if new:
+            problems.append(f"NEW OPEN {rule} in {', '.join(new)}: the open rules can only become fewer; classify it "
+                            "otherwise (tests/TESTING.md, \"Rule Coverage\")")
+    for rule, profiles in sorted(work_list.items()):
+        done = [p for p in profiles if p not in opened.get(rule, ())]
+        if done:
+            problems.append(f"OPEN {rule} in {', '.join(done)}: no longer open; remove it from OPEN_WORK_LIST in "
+                            "tools/zugferd/rule_coverage.py")
+    return problems
+
+
+def docs_block(decisions, summary):
+    """The generated part of the documentation: the table of the classes per
+    profile and the open rules."""
+    opened = open_rules(decisions)
+    listed = ", ".join(f"`{rule}` ({', '.join(PROFILE_NAMES[p] for p in profiles)})"
+                       for rule, profiles in opened.items())
+    return markdown_table(summary) + "\n\nOpen: " + (listed or "none") + "."
+
+
+def docs_table(text):
+    """The generated part of the documentation, or None without markers."""
+    start, end = text.find(DOCS_BEGIN), text.find(DOCS_END)
+    if start < 0 or end < start:
+        return None
+    return text[start + len(DOCS_BEGIN):end].strip()
+
+
+def check_docs(decisions, summary, path=DOCS):
+    text = Path(path).read_text(encoding="utf-8")
+    table = docs_table(text)
+    if table is None:
+        return [f"DOCS {Path(path).relative_to(REPO)}: the markers of the rule-coverage table are missing"]
+    if table != docs_block(decisions, summary):
+        return [f"DOCS {Path(path).relative_to(REPO)}: the rule-coverage table differs from the classification; "
+                "run `python3 tools/zugferd/rule_coverage.py --update-docs`"]
+    return []
+
+
+def update_docs(decisions, summary, path=DOCS):
+    text = Path(path).read_text(encoding="utf-8")
+    start, end = text.find(DOCS_BEGIN), text.find(DOCS_END)
+    if start < 0 or end < start:
+        raise CoverageError(f"{path}: the markers of the rule-coverage table are missing")
+    new = text[:start + len(DOCS_BEGIN)] + "\n\n" + docs_block(decisions, summary) + "\n\n" + text[end:]
+    Path(path).write_text(new, encoding="utf-8")
+
+
+def report(inventory, decisions, summary, problems, ip, without=()):
+    lines = ["Rule coverage of the official validators (tools/zugferd/rule-coverage.toml)"]
+    lines.append("  artefacts: Mustang CLI 2.14.0 (Factur-X 1.0.07, CEN 1.3.12, XRechnung 3.0)"
+                 + (", KoSIT XRechnung configuration 2026-08-31 (CEN 1.3.16, XRechnung 3.0.2)" if inventory.kosit
+                    else ", without KoSIT"))
+    width = max(len(n) for n in PROFILE_NAMES.values())
+    for profile in PROFILES:
+        c = summary[profile]
+        shown = "  ".join(f"{cls} {c[cls]}" for cls in CLASSES)
+        extra = f"  UNCLASSIFIED {c['unclassified']}" if c["unclassified"] else ""
+        reports = sum(inventory.reports[profile].values())
+        note = f"  (+{reports} not-used reports without id)" if reports else ""
+        lines.append(f"  {PROFILE_NAMES[profile]:{width}s} {c['total']:4d} ids: {shown}{extra}{note}")
+    opened = open_rules(decisions)
+    if opened:
+        lines.append(f"open ({len(opened)} rule ids; the target is none):")
+        for rule, profiles in opened.items():
+            reason = normalize(decisions[profiles[0]][rule].reason)
+            lines.append(f"  {rule} ({', '.join(profiles)}): {reason[:160]}")
+    lines.append(f"invoice-pro's own rules: {len(ip)} (IP-*)")
+    unshown = sorted({rule for entry in without for rule in entry.ids})
+    if unshown:
+        lines.append(f"official rule ids src/ names without a parity fixture ([[without-fixture]]): {len(unshown)}")
+    if problems:
+        lines.append(f"\nPROBLEMS ({len(problems)}):")
+        lines += [f"  {p}" for p in problems]
+        lines.append("\nFAILED: classify every rule id (tests/TESTING.md, \"Rule Coverage\")")
+    else:
+        lines.append("\nOK: every rule id of every profile is classified")
+    return "\n".join(lines)
+
+
+def explain(decisions, only=None):
+    """Every rule id (or those of `only`) with its class per profile and the
+    assertions of all profiles; for the rules of `only` also their context
+    and test."""
+    lines = []
+    rules = sorted({r for p in PROFILES for r in decisions[p]})
+    for rule in sorted(set(only or ()) - set(rules)):
+        lines.append(f"{rule}: no artefact of any profile has this rule id")
+    for rule in rules:
+        if only and rule not in only:
+            continue
+        per = [(p, decisions[p][rule]) for p in PROFILES if rule in decisions[p]]
+        lines.append(f"{rule}")
+        for profile, d in per:
+            lines.append(f"  {profile:9s} {d.cls:12s} ({d.source}) {normalize(d.reason)[:140]}")
+        seen = set()
+        for _, d in per:
+            for a in d.assertions:
+                key = (a.validator, a.artefact, a.id, a.context, a.test)
+                if key in seen:
+                    continue
+                seen.add(key)
+                guard = f" guard: {'/'.join(a.dispositions)}" if a.dispositions else ""
+                lines.append(f"    {a.validator} {a.name} {a.id} ({a.level}){guard}: {a.text[:120]}")
+                if only:
+                    lines.append(f"      context: {a.context}")
+                    lines.append(f"      test: {a.test}")
+    return "\n".join(lines)
+
+
+def as_json(inventory, decisions, summary, fixtures=(), without=()):
+    def shown_by(d):
+        if d.cls != "fixture":
+            return []
+        reported_as = d.entry.reported_as if d.entry else ()
+        return [f.name for f in showing(fixtures, d.rule, d.profile, reported_as)]
+
+    return {
+        "artefacts": inventory.artefacts,
+        "summary": {p: dict(summary[p]) for p in PROFILES},
+        "without_fixture": {rule: normalize(entry.reason) for entry in without for rule in entry.ids},
+        "profiles": {
+            p: {
+                rule: {
+                    "class": d.cls,
+                    "source": d.source,
+                    "reason": d.reason,
+                    "evidence": d.entry.evidence if d.entry else [],
+                    "fixtures": shown_by(d),
+                    "validators": sorted({f"{a.validator}:{a.level}" for a in d.assertions}),
+                    "assertions": [
+                        {"validator": a.validator, "artefact": a.name, "id": a.id, "level": a.level,
+                         "guard": list(a.dispositions), "context": a.context, "test": a.test, "text": a.text}
+                        for a in d.assertions
+                    ],
+                }
+                for rule, d in decisions[p].items()
+            }
+            for p in PROFILES
+        },
+    }
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--explain", action="store_true", help="list every rule id with its class per profile")
+    ap.add_argument("--id", default=None, help="explain these rule ids only (comma separated)")
+    ap.add_argument("--json", default=None, help="write the classification as JSON to this file")
+    ap.add_argument("--update-docs", action="store_true", help="rewrite the table in docs/docs/e-invoicing.md")
+    ap.add_argument("--toml", default=str(TOML), help=argparse.SUPPRESS)
+    args = ap.parse_args(argv)
+    try:
+        inventory = load_inventory(common.mustang_jar(), common.kosit_config(), guard=True)
+        entries, ip, without = load_toml(args.toml)
+        fixtures, problems = fixture_files()
+        decisions, found = classify(inventory, entries, fixtures)
+        problems += found
+        problems += check_ip(ip, ip_rules_in_source())
+        problems += check_without_fixture(without, official_rules_in_source(), decisions)
+        problems += check_open(decisions)
+        summary = summarize(decisions)
+        if args.update_docs:
+            update_docs(decisions, summary)
+        else:
+            problems += check_docs(decisions, summary)
+    except common.ToolError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    if args.explain or args.id:
+        print(explain(decisions, set(args.id.split(",")) if args.id else None))
+    if args.json:
+        out = Path(args.json)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        document = as_json(inventory, decisions, summary, fixtures, without)
+        out.write_text(json.dumps(document, indent=1) + "\n", encoding="utf-8")
+    print(report(inventory, decisions, summary, problems, ip, without))
+    return 1 if problems else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

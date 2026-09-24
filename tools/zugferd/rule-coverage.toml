@@ -1,0 +1,886 @@
+# How invoice-pro handles every rule id of the official validators.
+#
+# tools/zugferd/rule_coverage.py collects the rule ids of every profile from
+# the pinned artefacts of Mustang and KoSIT and fails on any id without a
+# class (see tests/TESTING.md, "Rule Coverage"). The write guard settles most
+# of them (`compiled`, `unreachable`), derived from gen_guard.py; this file
+# classifies the others:
+#
+#   [[rule]]
+#   ids = ["BR-XX", ..]         rule ids as the validators report them
+#   class = "fixture"           see below
+#   profiles = ["en16931", ..]  optional: only these profiles
+#   reason = "..."              why (all classes but a plain fixture)
+#   evidence = ["path: ..."]    construction: the code path and its tests
+#   reported-as = ["BR-YY"]     fixture: the related rule invoice-pro reports
+#
+#   fixture       invoice-pro reports the rule under its id: a parity
+#                 fixture tools/zugferd/corpus/rules/<ID>.typ proves it
+#                 against the validators of each profile of the entry
+#                 (run.py), so it runs in each of them (its `// profiles:`
+#                 header). With `reported-as`, invoice-pro reports a related
+#                 rule that the validators report for the same invoice as
+#                 well.
+#   compiled      the write guard enforces the rule, although KoSIT's
+#                 version of it differs from Mustang's (the reason says why
+#                 the guard covers it)
+#   construction  the builder cannot produce the violation
+#   unreachable   the rule cannot fire on an XML invoice-pro writes
+#   open          not handled yet (the target is none; the work list
+#                 OPEN_WORK_LIST of rule_coverage.py can only become shorter)
+#
+# invoice-pro's own rules are listed at the end ([ip."IP-.."]) with their
+# level, what they check, their basis and their tests, and so are the
+# official rule ids src/ names that no parity fixture shows
+# ([[without-fixture]]).
+
+# ======================================================================
+# fixture: reported under the rule's own id
+# ======================================================================
+
+# The document and its references.
+[[rule]]
+ids = ["BR-02", "BR-05", "BR-CL-04", "BR-CL-08", "BR-DE-17", "BR-DE-26", "BR-DE-TMP-32"]
+class = "fixture"
+
+# The parties: names, addresses, identifiers, electronic addresses and the
+# contact that XRechnung requires.
+[[rule]]
+ids = [
+  "BR-06", "BR-07", "BR-17", "BR-18", "BR-56", "BR-62", "BR-63",
+  "BR-CL-10", "BR-CL-11", "BR-CL-14", "BR-CL-25", "BR-CL-26", "BR-CO-09", "BR-CO-26",
+  "CII-SR-449", "CII-SR-450", "CII-SR-451",
+  "PEPPOL-EN16931-R010", "PEPPOL-EN16931-R020",
+  "BR-DE-2", "BR-DE-3", "BR-DE-4", "BR-DE-5", "BR-DE-6", "BR-DE-7", "BR-DE-8", "BR-DE-9",
+  "BR-DE-10", "BR-DE-11", "BR-DE-15", "BR-DE-27", "BR-DE-28",
+]
+class = "fixture"
+
+# The lines.
+[[rule]]
+ids = ["BR-16", "BR-25", "BR-30", "BR-CL-23", "PEPPOL-EN16931-R110", "PEPPOL-EN16931-R111"]
+class = "fixture"
+
+# The country of origin of an item (BT-159), from EN 16931 on; BASIC has no
+# element for it (the guard derives `unreachable` there).
+[[rule]]
+ids = ["BR-CL-15"]
+class = "fixture"
+profiles = ["en16931", "xrechnung"]
+
+# Payment terms and payment means.
+[[rule]]
+ids = [
+  "BR-CO-25", "BR-CL-16",
+  "BR-DE-1", "BR-DE-18", "BR-DE-19", "BR-DE-20", "BR-DE-23-a", "BR-DE-23-b", "BR-DE-24-a",
+  "BR-DE-24-b", "BR-DE-25-a", "BR-DE-31", "PEPPOL-EN16931-R061",
+]
+class = "fixture"
+
+# VAT: categories, exemption reasons and the VAT breakdown.
+[[rule]]
+ids = ["BR-CL-18", "BR-CL-22", "BR-E-10", "BR-O-02", "BR-O-09", "BR-O-11", "BR-IC-11", "BR-AG-05"]
+class = "fixture"
+
+# An invoice without a VAT breakdown: in BASIC WL, one without items; with
+# lines, invoice-pro reports the missing line instead (BR-16, see the
+# construction below).
+[[rule]]
+ids = ["BR-CO-18"]
+class = "fixture"
+profiles = ["basic-wl"]
+
+# The rules of the VAT categories: the seller or buyer identifiers each
+# category requires on lines (-02), allowances (-03) and charges (-04), and
+# the rate on lines (-05). The rules of allowances and charges also apply
+# where the invoice has lines, when the category occurs on the allowance or
+# charge only (*--allowance-only.typ, *--charge-only.typ).
+[[rule]]
+ids = [
+  "BR-S-02", "BR-S-03", "BR-S-04", "BR-S-05",
+  "BR-Z-02", "BR-Z-03", "BR-Z-04", "BR-Z-05",
+  "BR-E-02", "BR-E-03", "BR-E-04", "BR-E-05",
+  "BR-AE-02", "BR-AE-03", "BR-AE-04", "BR-AE-05",
+  "BR-IC-02", "BR-IC-03", "BR-IC-04", "BR-IC-05",
+  "BR-G-02", "BR-G-03", "BR-G-04", "BR-G-05",
+  "BR-AF-02", "BR-AF-03", "BR-AF-04", "BR-AF-05",
+  "BR-AG-02", "BR-AG-03", "BR-AG-04",
+]
+class = "fixture"
+
+# The rate on allowances (-06) and charges (-07) and the VAT amount of the
+# breakdown (-09), which BASIC WL reports for the VAT groups of its items.
+# Elsewhere, invoice-pro reports the rate of the lines (-05), and the guard
+# enforces these rules (derived as `compiled`).
+[[rule]]
+ids = [
+  "BR-S-06", "BR-S-07",
+  "BR-Z-06", "BR-Z-07", "BR-Z-09",
+  "BR-E-06", "BR-E-07", "BR-E-09",
+  "BR-AE-06", "BR-AE-07", "BR-AE-09",
+  "BR-IC-06", "BR-IC-07", "BR-IC-09",
+  "BR-G-06", "BR-G-07", "BR-G-09",
+  "BR-AF-06", "BR-AF-07",
+  "BR-AG-06", "BR-AG-07",
+]
+class = "fixture"
+profiles = ["basic-wl"]
+
+# ======================================================================
+# fixture: reported under a related rule the validators report as well
+# ======================================================================
+
+[[rule]]
+ids = ["BR-DE-16"]
+class = "fixture"
+reported-as = ["BR-S-02"]
+reason = """The XRechnung variant of BR-S-02: the XRechnung Schematron reports BR-DE-16, the CEN \
+Schematron BR-S-02 for the same seller without VAT identifier or tax number."""
+
+[[rule]]
+ids = ["BR-CL-03"]
+class = "fixture"
+reported-as = ["BR-CL-04"]
+reason = """The builder states the invoice currency (BT-5) as the currency of the VAT total, so \
+BR-CL-03 fails exactly when BR-CL-04 does."""
+
+[[rule]]
+ids = ["BR-O-12", "BR-O-13", "BR-O-14"]
+class = "fixture"
+reported-as = ["BR-O-11"]
+reason = """Other VAT categories next to "not subject to VAT" (O): invoice-pro reports the other VAT \
+breakdown (BR-O-11), which the validators report for the same invoice besides the line, allowance or \
+charge of the other category."""
+
+[[rule]]
+ids = ["BR-O-03", "BR-O-04"]
+class = "fixture"
+profiles = ["basic", "en16931", "xrechnung"]
+reported-as = ["BR-O-02"]
+reason = """A VAT identifier on an invoice not subject to VAT (O), e.g. of the seller tax \
+representative: invoice-pro reports BR-O-02, which the validators report for the lines of the same \
+invoice besides the allowance or charge."""
+
+# ======================================================================
+# compiled: the guard enforces Mustang's version, KoSIT's differs
+# ======================================================================
+
+[[rule]]
+ids = ["BR-20"]
+class = "compiled"
+profiles = ["en16931", "xrechnung"]
+reason = """CEN 1.3.16 in KoSIT tests the country code for text (normalize-space); the guard \
+enforces the element and the country code list (BR-CL-14), which an empty code fails as well. A tax \
+representative without `country` gets the country of the locale."""
+
+[[rule]]
+ids = ["BR-AG-06", "BR-AG-07"]
+class = "compiled"
+profiles = ["en16931", "xrechnung"]
+reason = """CEN 1.3.16 in KoSIT allows IPSI (M) at 0 % on an allowance or charge; the guard enforces \
+the rate above 0 of CEN 1.3.12 in Mustang, which is stricter (as for BR-AG-05, see \
+validator-differences.toml)."""
+
+[[rule]]
+ids = ["BR-DEC-01", "BR-DEC-05", "BR-DEC-24", "BR-DEC-27"]
+class = "compiled"
+profiles = ["en16931", "xrechnung"]
+reason = """CEN 1.3.16 in KoSIT tests the first `ram:ActualAmount` of an allowance or charge only; \
+the guard enforces the decimals of every one (and the schema allows one)."""
+
+[[rule]]
+ids = ["BR-DEC-23"]
+class = "compiled"
+profiles = ["en16931", "xrechnung"]
+reason = """CEN 1.3.12 in Mustang names the path `ram:SpecifiedTradeSettlement`, which never \
+matches; the guard compiles the corrected path, which CEN 1.3.16 in KoSIT has."""
+
+[[rule]]
+ids = ["CII-DT-001", "CII-DT-002", "CII-DT-003", "CII-DT-004"]
+class = "compiled"
+profiles = ["en16931", "xrechnung"]
+reason = """CEN 1.3.16 in KoSIT tests the attribute on four identifiers (BT-24, BT-1, BT-126, \
+BT-155); the guard enforces Mustang's test on every element whose name ends in ID, which includes \
+them."""
+
+# ======================================================================
+# construction: the builder cannot produce the violation
+# ======================================================================
+
+[[rule]]
+ids = ["BR-27"]
+class = "construction"
+reason = """A negative price is written as a positive net price (BT-146) and a negative quantity \
+(BT-129)."""
+evidence = [
+  "src/zugferd/model.typ: line-model",
+  "tests/zugferd/model/test.typ: the credited line of BR-27",
+]
+
+[[rule]]
+ids = ["BR-29"]
+class = "construction"
+reason = "`invoice` refuses a service period that ends before it starts."
+evidence = ["src/invoice.typ: invoice::service-period ends before it starts"]
+
+[[rule]]
+ids = ["BR-32", "BR-37"]
+class = "construction"
+reason = """A document level allowance or charge takes the VAT category of its items or its own \
+`tax:`; one without either stops the compilation."""
+evidence = [
+  "src/logic/modifier-applicator.typ: has no items to take its VAT category from",
+  "tests/line-items/modifier-allocation/test.typ: a modifier without any item needs `tax:`",
+]
+
+[[rule]]
+ids = ["BR-CO-04", "BR-47"]
+class = "construction"
+profiles = ["basic", "en16931", "xrechnung"]
+reason = """Every item has a VAT category: `tax` requires one, and `tax: none` is written as zero \
+rated (Z) with IP-TAX-01. The VAT breakdown is built from the categories of the items."""
+evidence = [
+  "src/data/tax.typ: new",
+  "src/zugferd/model.typ: line-model and the VAT breakdown (taxes)",
+  "tests/zugferd/vat-categories/test.typ: `tax: none` (IP-TAX-01)",
+]
+
+[[rule]]
+ids = ["BR-CO-18"]
+class = "construction"
+profiles = ["basic", "en16931", "xrechnung"]
+reason = """The VAT breakdown has a group for the VAT category of every line, and an invoice without \
+lines breaks BR-16, which invoice-pro reports (with the guard's finding of the missing breakdown)."""
+evidence = [
+  "src/zugferd/model.typ: the VAT breakdown (taxes)",
+  "tools/zugferd/corpus/rules/BR-16.typ",
+]
+
+[[rule]]
+ids = ["BR-50", "BR-61"]
+class = "construction"
+reason = """The builder writes the account of a credit transfer (BG-17) only with its IBAN, and the \
+debited account (BT-91) only in the payment means of a direct debit (59): Mustang's version \
+(debited account of a credit transfer) and KoSIT's (credited account) cannot fail. A credit transfer \
+without account is CII-SR-470 in KoSIT (open)."""
+evidence = [
+  "src/zugferd/build.typ: build-payment-means",
+  "tools/zugferd/corpus/regression/payment-paid-transfer-without-bank.typ",
+]
+
+[[rule]]
+ids = ["BR-51"]
+class = "construction"
+profiles = ["en16931", "xrechnung"]
+reason = "`card-payment` takes the last 4 to 6 digits of the card number (BT-87) only."
+evidence = [
+  "src/components/payment-means.typ: card-payment",
+  "tests/integration/payment-means-print/test.typ: `last4` must be the last 4 digits",
+]
+
+[[rule]]
+ids = ["BR-S-01", "BR-Z-01", "BR-E-01", "BR-AE-01", "BR-IC-01", "BR-G-01", "BR-O-01", "BR-AF-01", "BR-AG-01"]
+class = "construction"
+reason = """The VAT breakdown has one group per VAT category and rate of the lines, allowances and \
+charges; the categories with rate 0 have one group each."""
+evidence = [
+  "src/data/tax.typ: to-tax-key",
+  "src/zugferd/model.typ: the VAT breakdown (taxes)",
+  "tools/zugferd/oracles.py: O-BG23 on every invoice of the corpus",
+]
+
+[[rule]]
+ids = [
+  "BR-S-08", "BR-Z-08", "BR-E-08", "BR-AE-08", "BR-IC-08", "BR-G-08", "BR-O-08", "BR-AF-08", "BR-AG-08",
+  "BR-S-09", "BR-CO-10", "BR-CO-11", "BR-CO-12", "BR-CO-13", "BR-CO-14", "BR-CO-15", "BR-CO-16", "BR-CO-17",
+]
+class = "construction"
+reason = """The model computes the totals and the VAT breakdown from the lines, allowances and \
+charges it writes, and the validator re-checks the sums before the XML is written (a failure there \
+is a bug). Every invoice of the corpus is checked by both validators."""
+evidence = [
+  "src/zugferd/model.typ: totals and taxes",
+  "src/zugferd/rules/engine.typ: the consistency checks of the totals (BR-CO-13, BR-CO-15, BR-CO-17 and BR-*-08)",
+  "tools/zugferd/corpus/gen.py: the legal population, AGREE_VALID by the hard gate",
+]
+
+[[rule]]
+ids = ["BR-CL-01"]
+class = "construction"
+profiles = ["en16931", "xrechnung"]
+reason = """`document-type` takes the UNTDID 1001 codes of invoices and credit notes only, which the \
+lists of both CEN Schematron versions contain."""
+evidence = ["src/logic/document-type.typ: resolve-document-type", "tests/zugferd/document-type/test.typ"]
+
+[[rule]]
+ids = ["BR-CL-21"]
+class = "construction"
+profiles = ["en16931", "xrechnung"]
+reason = "The builder writes the item standard identifier (BT-157) with the scheme 0160 (GTIN), which both ICD lists contain."
+evidence = ["src/zugferd/build.typ: build-line-item"]
+
+[[rule]]
+ids = ["BR-DE-21"]
+class = "construction"
+reason = "The builder writes the specification identifier (BT-24) of XRechnung 3.0 for `zugferd: \"xrechnung\"`."
+evidence = [
+  "src/zugferd/profile.typ: the guideline of the profile",
+  "tests/zugferd/golden/integration/zugferd-credit-note.xml",
+]
+
+[[rule]]
+ids = ["BR-DE-25-b"]
+class = "construction"
+reason = """A direct debit (59) is written as a payment means of its own, with the debited account \
+(BT-91) only; the account of a credit transfer and the card are written in their own payment \
+means."""
+evidence = ["src/zugferd/build.typ: build-payment-means", "tools/zugferd/corpus/rules/BR-DE-24-b.typ"]
+
+[[rule]]
+ids = ["BR-DE-30"]
+class = "construction"
+reason = "`direct-debit` requires the creditor identifier (BT-90)."
+evidence = [
+  "src/components/payment-means.typ: direct-debit",
+  "tests/integration/payment-means-print/test.typ: the creditor identifier is missing",
+]
+
+[[rule]]
+ids = ["BR-IC-12"]
+class = "construction"
+reason = """An intra-community supply without `delivery-address` is delivered to the buyer's \
+address, so the deliver-to country (BT-80) is always written."""
+evidence = [
+  "src/zugferd/model.typ: _ship-to-buyer",
+  "tests/zugferd/model/test.typ: intra-community supply, deliver to the buyer's country",
+]
+
+[[rule]]
+ids = ["BR-TMP-7"]
+class = "construction"
+reason = """The builder writes every date with the format 102 as YYYYMMDD, and the guard checks each \
+one (IP-GUARD-08)."""
+evidence = ["src/zugferd/build.typ: _date", "src/zugferd/guard/write.typ"]
+
+[[rule]]
+ids = ["CII-DT-005", "CII-DT-006", "CII-DT-007"]
+class = "construction"
+reason = """The builder writes no scheme attributes on the specification identifier (BT-24), the \
+invoice number (BT-1), the line identifier (BT-126) or the seller's item identifier (BT-155); \
+Mustang's version of the rule tests the parent elements instead."""
+evidence = ["src/zugferd/build.typ"]
+
+[[rule]]
+ids = ["CII-DT-033"]
+class = "construction"
+reason = """The test holds once the invoiced quantity (BT-129) has its unit code, which the builder \
+always writes."""
+evidence = ["src/zugferd/build.typ: build-line-item"]
+
+[[rule]]
+ids = [
+  "CII-SR-469", "CII-SR-472", "CII-SR-473", "CII-SR-477", "CII-SR-478", "CII-SR-479", "CII-SR-480",
+  "CII-SR-482", "CII-SR-484", "CII-SR-487", "PEPPOL-EN16931-R053",
+]
+class = "construction"
+reason = """The builder writes these elements at most once (one entry of a dictionary each), and the \
+guard rejects an element more often than the schema allows (IP-GUARD-03)."""
+evidence = ["src/zugferd/build.typ", "src/zugferd/guard/write.typ"]
+
+[[rule]]
+ids = ["PEPPOL-EN16931-R054"]
+class = "construction"
+reason = """The builder writes one VAT total (BT-110), in the invoice currency, and no VAT accounting \
+currency (BT-6)."""
+evidence = ["src/zugferd/build.typ"]
+
+[[rule]]
+ids = ["PEPPOL-EN16931-R121"]
+class = "construction"
+reason = "`item` and `bundle` refuse a price base quantity (BT-149) of 0 or less."
+evidence = [
+  "src/logic/calc-item.typ: require-positive-base-quantity",
+  "tests/line-items/base-quantity/test.typ",
+]
+
+[[rule]]
+ids = ["PEPPOL-EN16931-R130"]
+class = "construction"
+reason = "The builder writes the price base quantity (BT-149) with the unit code of the invoiced quantity."
+evidence = ["src/zugferd/build.typ: build-line-item"]
+
+# ======================================================================
+# unreachable: the rule cannot fire on an XML invoice-pro writes
+# ======================================================================
+
+[[rule]]
+ids = ["BR-28", "BR-TMP-3", "CII-SR-119", "PEPPOL-EN16931-R044", "PEPPOL-EN16931-R046"]
+class = "unreachable"
+reason = "The builder never writes the gross price (BT-148, ram:GrossPriceProductTradePrice)."
+
+[[rule]]
+ids = ["CII-SR-440"]
+class = "unreachable"
+profiles = ["en16931", "xrechnung"]
+reason = "The builder never writes the gross price (BT-148, ram:GrossPriceProductTradePrice)."
+
+[[rule]]
+ids = ["BR-53", "PEPPOL-EN16931-R005", "PEPPOL-EN16931-R055"]
+class = "unreachable"
+reason = "The builder never writes the VAT accounting currency (BT-6, ram:TaxCurrencyCode)."
+
+[[rule]]
+ids = ["BR-CL-05"]
+class = "unreachable"
+profiles = ["en16931", "xrechnung"]
+reason = "The builder never writes the VAT accounting currency (BT-6, ram:TaxCurrencyCode)."
+
+[[rule]]
+ids = ["BR-CO-03"]
+class = "unreachable"
+reason = """The builder writes neither the VAT point date (BT-7) nor its code (BT-8); without both, \
+the test holds."""
+
+[[rule]]
+ids = ["CII-SR-462"]
+class = "unreachable"
+profiles = ["en16931", "xrechnung"]
+reason = "The builder never writes the VAT point date code (BT-8, ram:DueDateTypeCode)."
+
+[[rule]]
+ids = ["BR-54"]
+class = "unreachable"
+profiles = ["en16931", "xrechnung"]
+reason = "The builder never writes item attributes (BG-32, ram:ApplicableProductCharacteristic)."
+
+[[rule]]
+ids = ["BR-65"]
+class = "unreachable"
+profiles = ["en16931"]
+reason = "The builder never writes the item classification (BT-158, ram:DesignatedProductClassification)."
+
+[[rule]]
+ids = ["BR-CL-07"]
+class = "unreachable"
+profiles = ["en16931", "xrechnung"]
+reason = "The builder never writes the scheme of the invoiced object identifier (BT-18, ram:ReferenceTypeCode)."
+
+[[rule]]
+ids = ["BR-CL-13"]
+class = "unreachable"
+profiles = ["en16931", "xrechnung"]
+reason = "The builder never writes the item classification (BT-158, ram:ClassCode)."
+
+[[rule]]
+ids = ["BR-CO-27"]
+class = "unreachable"
+reason = "The test of CEN 1.3.12 is always true: it holds with an IBAN, a proprietary ID or neither."
+
+[[rule]]
+ids = [
+  "BR-DE-22", "BR-TMP-2", "BR-TMP-4", "BR-TMP-5",
+  "CII-SR-474", "CII-SR-475", "CII-SR-476", "PEPPOL-EN16931-R101",
+]
+class = "unreachable"
+reason = """The builder never writes additional supporting documents (BG-24) or the invoiced object \
+identifier of a line (BT-128, ram:AdditionalReferencedDocument)."""
+
+[[rule]]
+ids = [
+  "BR-DE-CVD-01", "BR-DE-CVD-02", "BR-DE-CVD-03", "BR-DE-CVD-04", "BR-DE-CVD-05",
+  "BR-DE-CVD-06-a", "BR-DE-CVD-06-b", "BR-TMP-CVD-01",
+]
+class = "unreachable"
+reason = """The rules of an XRechnung of the Clean Vehicles Directive (its own specification \
+identifier, BT-24), which invoice-pro does not write."""
+
+[[rule]]
+ids = ["BR-DEX-01", "BR-DEX-04", "BR-DEX-05", "BR-DEX-06", "BR-DEX-07", "BR-DEX-08"]
+class = "unreachable"
+reason = "Rules of the XRechnung extension (their context requires its own specification identifier, BT-24, `$isExtension`), which invoice-pro does not write."
+
+[[rule]]
+ids = ["CII-SR-464"]
+class = "unreachable"
+reason = "The builder never writes the debtor's financial institution (ram:PayerSpecifiedDebtorFinancialInstitution)."
+
+[[rule]]
+ids = ["CII-SR-465", "CII-SR-466"]
+class = "unreachable"
+reason = "The builder writes the contact point (BT-41, BT-56) as ram:PersonName only, never as ram:DepartmentName."
+
+[[rule]]
+ids = ["CII-SR-468"]
+class = "unreachable"
+reason = "The builder never writes the payment means text (BT-82, ram:Information)."
+
+[[rule]]
+ids = ["CII-SR-471"]
+class = "unreachable"
+reason = """The builder writes the rate of an allowance or charge in its ram:CategoryTradeTax, never \
+as a ram:RateApplicablePercent of the allowance or charge itself, so the count is always 0."""
+
+[[rule]]
+ids = [
+  "CII-SR-481", "CII-SR-483", "CII-SR-485", "CII-SR-486", "CII-SR-488", "CII-SR-489", "CII-SR-490",
+  "CII-SR-491", "CII-SR-492", "CII-SR-493", "CII-SR-494",
+]
+class = "unreachable"
+reason = "The builder never writes these amounts of the document totals (e.g. the rounding amount, BT-114)."
+
+[[rule]]
+ids = ["PEPPOL-EN16931-R040", "PEPPOL-EN16931-R041", "PEPPOL-EN16931-R042"]
+class = "unreachable"
+reason = """The builder writes allowances and charges with their amount, reason and VAT only, never \
+with a base amount (BT-93) or percentage (BT-94)."""
+
+# ======================================================================
+# open: not handled yet
+# ======================================================================
+
+[[rule]]
+ids = ["BR-B-01", "BR-B-02"]
+class = "open"
+reason = """invoice-pro rejects the VAT category "split payment" (B, `tax.special.transferred`) as \
+BR-CL-18, whose CEN code list contains B: the validators report BR-B-01 or BR-B-02 (and Mustang \
+FX-SCH-A-000179) instead."""
+
+[[rule]]
+ids = ["BR-O-03", "BR-O-04"]
+class = "open"
+profiles = ["basic-wl"]
+reason = """BASIC WL: a VAT identifier on an invoice not subject to VAT (O) with an allowance or \
+charge is reported as BR-O-02, which BASIC WL does not have (no lines); the validators report BR-O-03 \
+or BR-O-04."""
+
+[[rule]]
+ids = ["CII-SR-467"]
+class = "open"
+reason = """Payment means of different types: invoice-pro reports IP-PAY-03, KoSIT (CEN 1.3.16) \
+CII-SR-467."""
+
+[[rule]]
+ids = ["CII-SR-470"]
+class = "open"
+reason = """A credit transfer without account: invoice-pro reports BR-61, which neither validator \
+reports for it (the element BR-61 tests is not written); KoSIT reports CII-SR-470."""
+
+[[rule]]
+ids = ["PEPPOL-EN16931-R120"]
+class = "open"
+reason = """With `tax-mode: "inclusive"`, the net price (BT-146) is rounded, so the invoiced \
+quantity times the price may differ from the line net amount (BT-131) by more than 0.02 (e.g. 1000 x \
+9.99 incl. 19 %: 8395.00 against 8394.96). KoSIT warns; invoice-pro reports nothing."""
+
+# ======================================================================
+# without-fixture: official rule ids of src/ that no fixture shows
+# ======================================================================
+#
+# Every official rule id that a file of src/ names outside the write guard
+# (src/zugferd/guard/) has a parity fixture that shows invoice-pro report
+# it, or an entry here that says why there is none. An id used for another
+# condition than the official rule is a bug: the validators do not report it
+# for such an invoice, so no fixture can show it. Fix the id, then remove it
+# here (the gate names every entry that no file of src/ names any more).
+
+[[without-fixture]]
+ids = ["BR-48"]
+reason = """Cannot fire: every VAT constructor states a rate (0 % by default) and the model writes \
+the rate of every VAT breakdown. The registry checks it as a model defect and names the input; the \
+write guard checks the XML (FX-SCH-A-000050)."""
+
+[[without-fixture]]
+ids = ["BR-03"]
+reason = """Cannot fire: `invoice` requires `date` to be a datetime, by default the day of the \
+compilation."""
+
+[[without-fixture]]
+ids = ["BR-09", "BR-11", "BR-20", "BR-57"]
+reason = """Cannot fire: a party or delivery address without `country` gets the country of the \
+locale, so the country code is never missing."""
+
+[[without-fixture]]
+ids = ["BR-CO-04", "BR-DE-30", "PEPPOL-EN16931-R121"]
+reason = """Cannot fire: every item has a VAT category (`tax: none` is written as zero rated, with \
+IP-TAX-01), `direct-debit` requires the creditor identifier, and `item` and `bundle` refuse a price \
+base quantity of 0 or less (see the construction entries of these rules)."""
+
+[[without-fixture]]
+ids = [
+  "BR-CO-13", "BR-CO-15", "BR-CO-17",
+  "BR-S-08", "BR-Z-08", "BR-E-08", "BR-AE-08", "BR-IC-08", "BR-G-08", "BR-O-08", "BR-AF-08", "BR-AG-08",
+]
+reason = """A safety net that cannot fire: `check-consistency` re-checks the totals and the VAT \
+breakdown that the model computes from the lines, allowances and charges it writes; a failure is a \
+bug of invoice-pro, which no input shows."""
+
+[[without-fixture]]
+ids = [
+  "BR-DEC-01", "BR-DEC-05", "BR-DEC-09", "BR-DEC-10", "BR-DEC-11", "BR-DEC-12", "BR-DEC-13", "BR-DEC-14",
+  "BR-DEC-16", "BR-DEC-18", "BR-DEC-19", "BR-DEC-20", "BR-DEC-23", "BR-DEC-24", "BR-DEC-27",
+]
+reason = """Used for another condition: invoice-pro reports an amount with more than 2 decimals \
+(e.g. of a currency such as KWD) under these ids, but the builder writes the amounts rounded, so the \
+official rules cannot fail: the validators report the sums that no longer add up (e.g. BR-CO-15) or \
+nothing (MINIMUM). The guard enforces the decimals of the XML."""
+
+[[without-fixture]]
+ids = ["BR-55"]
+reason = """Used for another condition: invoice-pro reports a preceding invoice date (BT-26) without \
+its number under this id, but the builder writes the preceding invoice reference (BG-3) only with its \
+number, so the validators accept the XML (the date is lost)."""
+
+[[without-fixture]]
+ids = ["BR-61"]
+reason = """Used for another condition: invoice-pro reports a credit transfer without account \
+outside XRechnung under this id, but the builder writes no account then, which BR-61 does not test; \
+KoSIT reports CII-SR-470 (open), Mustang nothing."""
+
+[[without-fixture]]
+ids = ["BR-IC-12", "BR-CO-16"]
+reason = """Warnings for other conditions: a deliver-to country of an intra-community supply that \
+is the seller's own (the official BR-IC-12 requires a deliver-to country, which the builder always \
+writes, so the error of that name cannot fire), and a prepaid amount above the total (the official \
+BR-CO-16 is arithmetic that holds by construction)."""
+
+# ======================================================================
+# invoice-pro's own rules (IP-*): stricter than the official validators
+# ======================================================================
+#
+# level    "error", "warning" or "error or warning"
+# summary  what the rule checks
+# basis    the law or the requirement it enforces
+# tests    tests that name the rule (the rules of the guard are tested by
+#          their kind of finding)
+
+[ip."IP-PROFILE-01"]
+level = "warning"
+summary = "An input the profile cannot state is printed, but not written into the e-invoice."
+basis = "Fidelity: the e-invoice states what the invoice prints, as far as the profile can."
+tests = ["tests/zugferd/line-data/test.typ", "tests/zugferd/notes/test.typ"]
+
+[ip."IP-TAX-01"]
+level = "error"
+summary = "`tax: none` in an e-invoice would declare the items as zero rated (Z)."
+basis = "EN 16931 BT-151: every item states its VAT category, a decision the user has to make."
+tests = ["tests/zugferd/vat-categories/test.typ", "tools/zugferd/corpus/regression/tax-none.typ"]
+
+[ip."IP-TAX-02"]
+level = "error"
+summary = "A VAT exemption reason code (BT-121) of another VAT category."
+basis = "CEF VATEX code list: each code belongs to a VAT category."
+tests = ["tests/zugferd/exemption-codes/test.typ"]
+
+[ip."IP-TAX-03"]
+level = "warning"
+summary = "Items of one VAT category and rate with different exemption reason codes."
+basis = "EN 16931 BG-23: one exemption reason code per VAT group; the others are stated as text."
+tests = ["tests/zugferd/exemption-codes/test.typ"]
+
+[ip."IP-TAX-04"]
+level = "error"
+summary = "An exemption (E) with an exemption reason code but without `grounds` for the printed invoice."
+basis = "§ 14 Abs. 4 Satz 1 Nr. 8 UStG; Art. 226 No. 11 of the VAT Directive 2006/112/EC."
+tests = ["tests/zugferd/exemption-codes/test.typ"]
+
+[ip."IP-PRINT-02"]
+level = "error"
+summary = "Amounts printed in another currency than the invoice currency (BT-5)."
+basis = "Fidelity: the e-invoice states the amounts the invoice prints, in its currency (Art. 230 VAT Directive)."
+tests = ["tests/zugferd/currency/test.typ", "tools/zugferd/corpus/regression/custom-locale-currency-format-only.typ"]
+
+[ip."IP-PRINT-03"]
+level = "error"
+summary = "The printed invoice shows neither the seller's VAT identifier nor its tax number, which the XML states."
+basis = "§ 14 Abs. 4 Satz 1 Nr. 2 UStG; Art. 226 No. 3 of the VAT Directive 2006/112/EC."
+tests = ["tests/zugferd/printed/test.typ"]
+
+[ip."IP-DOC-01"]
+level = "error"
+summary = "A subject that names another kind of document than an invoice, without `document-type`."
+basis = "EN 16931 BT-3: the document type states what the document is (a commercial invoice asks for payment)."
+tests = ["tests/zugferd/document-type/test.typ", "tools/zugferd/corpus/regression/quote-subject.typ"]
+
+[ip."IP-DOC-02"]
+level = "error"
+summary = "A corrected invoice without `preceding-invoice-nr`."
+basis = "Art. 219 of the VAT Directive 2006/112/EC: a corrected invoice refers to the invoice it amends."
+tests = ["tests/zugferd/preceding-invoice/test.typ"]
+
+[ip."IP-DOC-03"]
+level = "error"
+summary = "A credit note with a negative total, which would ask the buyer to pay."
+basis = "EN 16931 BT-3 (381): a credit note states the credited amounts as positive amounts."
+tests = ["tests/zugferd/document-type/test.typ", "tools/zugferd/corpus/regression/credit-note-negative.typ"]
+
+[ip."IP-DOC-04"]
+level = "warning"
+summary = "An invoice with a negative total."
+basis = "EN 16931 BT-3: a credit note (381) is the document for a credit."
+tests = ["tests/zugferd/document-type/test.typ"]
+
+[ip."IP-PERIOD-01"]
+level = "error or warning"
+summary = "A printed service period that is not the one the XML states."
+basis = "§ 14 Abs. 4 Satz 1 Nr. 6 UStG: the date of the supply; the e-invoice states the printed one."
+tests = [
+  "tests/zugferd/service-period/test.typ",
+  "tools/zugferd/corpus/regression/service-period-printed-date-contradicts.typ",
+]
+
+[ip."IP-PERIOD-02"]
+level = "warning"
+summary = "The date of an item outside the `service-period` of the invoice (outside XRechnung)."
+basis = "Plausibility; XRechnung checks it as PEPPOL-EN16931-R110 and R111."
+tests = ["tests/zugferd/line-data/test.typ"]
+
+[ip."IP-PERIOD-03"]
+level = "error or warning"
+summary = "The printed invoice does not show the date of the supply."
+basis = "§ 14 Abs. 4 Satz 1 Nr. 6 UStG (not for a small-amount invoice, § 33 UStDV)."
+tests = ["tests/zugferd/printed/test.typ"]
+
+[ip."IP-COUNTRY-01"]
+level = "error"
+summary = "A party without `country` whose VAT identifier was issued by another country than the default."
+basis = "Fidelity: the country code (BT-40, BT-55) is the party's country, not the locale's."
+tests = ["tests/zugferd/parties/test.typ"]
+
+[ip."IP-ADDR-01"]
+level = "error"
+summary = "A city line with a number but no post code in the format of the party's country."
+basis = "Fidelity: the post code (BT-38, BT-53) would be missing and written into the city name."
+tests = ["tests/zugferd/parties/test.typ"]
+
+[ip."IP-ID-01"]
+level = "error"
+summary = "An identifier of the `id` module whose format or check digit is wrong."
+basis = "The format and check digits of the identifier schemes (ISO/IEC 6523, Leitweg-ID)."
+tests = ["tests/zugferd/identifiers/test.typ", "tools/zugferd/corpus/regression/legal-id-check-digit.typ"]
+
+[ip."IP-ID-02"]
+level = "error"
+summary = "Two values for one party identifier, of which only one can be written."
+basis = "Fidelity: EN 16931 states one identifier per scheme (BT-29, BT-46, BT-71); one value would be lost."
+tests = ["tests/zugferd/parties/test.typ"]
+
+[ip."IP-ID-03"]
+level = "error"
+summary = "An identifier given for a field it does not belong to (e.g. a Leitweg-ID as `legal-id`)."
+basis = "The identifier schemes of EN 16931 (BT-10, BT-29, BT-30, BT-46, BT-47)."
+tests = ["tests/zugferd/party-details/test.typ"]
+
+[ip."IP-KEY-01"]
+level = "warning"
+summary = "A key of a party that invoice-pro does not know: its value is not written."
+basis = "Fidelity: no input is dropped without notice."
+tests = ["tests/zugferd/parties/test.typ"]
+
+[ip."IP-KEY-02"]
+level = "error"
+summary = "A misspelled key the e-invoice reads, or another name of it (e.g. `vatId`)."
+basis = "Fidelity: its value would be missing from the e-invoice without notice."
+tests = ["tests/zugferd/parties/test.typ"]
+
+[ip."IP-VAT-226"]
+level = "error"
+summary = """An intra-community supply (K) or cross-border reverse charge (AE) without the buyer VAT \
+identifier the official rules miss, or a tax representative without address."""
+basis = "Art. 226 No. 4 and No. 15 of the VAT Directive 2006/112/EC."
+tests = ["tests/zugferd/vat-categories/test.typ", "tests/zugferd/parties/test.typ"]
+
+[ip."IP-VAT-138"]
+level = "warning"
+summary = "An intra-community supply (K) to a buyer whose VAT identifier was not issued by an EU member state."
+basis = "Art. 138 of the VAT Directive 2006/112/EC."
+tests = ["tests/zugferd/parties/test.typ"]
+
+[ip."IP-UNIT-01"]
+level = "warning"
+summary = "A unit code used verbatim that is also a common German abbreviation of another unit."
+basis = "UN/ECE Recommendation 20: e.g. STK is no code for pieces."
+tests = ["tests/zugferd/units/test.typ"]
+
+[ip."IP-DEC-01"]
+level = "error"
+summary = "A VAT rate with more than 4 decimals, which the XML cannot state exactly."
+basis = "Fidelity: EN 16931 states the rate (BT-119, BT-152) as a percentage with up to 4 decimals."
+tests = ["tests/zugferd/rates/test.typ"]
+
+[ip."IP-PAY-01"]
+level = "error"
+summary = "An IBAN with wrong check digits or format, where BR-DE-19 and BR-DE-20 do not check it."
+basis = "ISO 13616 (IBAN): the amount could not be paid or collected."
+tests = ["tests/zugferd/payment-means/test.typ"]
+
+[ip."IP-PAY-02"]
+level = "error"
+summary = "A SEPA creditor identifier (BT-90) with wrong check digits or format."
+basis = "The EPC's SEPA creditor identifier (ISO 7064 check digits)."
+tests = ["tests/zugferd/payment-means/test.typ"]
+
+[ip."IP-PAY-03"]
+level = "error"
+summary = "Two kinds of payment means that the official rules accept together."
+basis = "EN 16931 BG-16: an invoice states one payment means type (BT-81), so that the buyer does not pay twice."
+tests = ["tests/zugferd/payment-means/test.typ", "tools/zugferd/corpus/regression/payment-card-and-bank.typ"]
+
+[ip."IP-GUARD-00"]
+level = "error"
+summary = "Summarizes the guard's findings next to errors of the validator."
+basis = "The XML write guard (tools/zugferd/gen_guard.py): the schema and Schematron of the profile."
+tests = ["tests/zugferd/guard/test.typ"]
+
+[ip."IP-GUARD-01"]
+level = "error"
+summary = "An element the profile's schema does not know at its position, or text where it expects elements."
+basis = "The XSD of the profile (Factur-X 1.0.07)."
+tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
+
+[ip."IP-GUARD-02"]
+level = "error"
+summary = "An element out of the order of the schema."
+basis = "The XSD of the profile (Factur-X 1.0.07)."
+tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
+
+[ip."IP-GUARD-03"]
+level = "error"
+summary = "An element more often than the schema or the Schematron allows."
+basis = "The XSD and Schematron of the profile."
+tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
+
+[ip."IP-GUARD-04"]
+level = "error"
+summary = "A required element that is missing or has no text."
+basis = "The XSD and Schematron of the profile."
+tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
+
+[ip."IP-GUARD-05"]
+level = "error"
+summary = "An element or attribute the Factur-X Schematron of the profile marks as not used."
+basis = "The Factur-X 1.0.07 Schematron of the profile (its reports without id)."
+tests = ["tests/zugferd/guard/test.typ"]
+
+[ip."IP-GUARD-06"]
+level = "error"
+summary = "An attribute the schema does not allow, or a required one that is missing."
+basis = "The XSD of the profile (Factur-X 1.0.07)."
+tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
+
+[ip."IP-GUARD-07"]
+level = "error"
+summary = "A value outside its lexical form or a code outside its list, where no official rule says so."
+basis = "The XSD data types and the code lists of the profile."
+tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
+
+[ip."IP-GUARD-08"]
+level = "error"
+summary = "A date in the format 102 that names no day of the calendar."
+basis = "UNTDID 2379 format 102 (CCYYMMDD)."
+tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
+
+[ip."IP-GUARD-09"]
+level = "error"
+summary = "An invalid name, a missing namespace declaration, or not exactly one root element."
+basis = "XML 1.0 and Namespaces in XML: the attachment must be well-formed."
+tests = ["tests/zugferd/guard/test.typ"]

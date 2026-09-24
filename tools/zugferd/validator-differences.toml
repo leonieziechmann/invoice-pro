@@ -13,10 +13,11 @@
 # rejects a document, every rule behind the disagreement is listed here with
 # the validator that rejects it, what the other one reports and why they
 # differ. An unlisted rule fails the run (OFFICIAL_DISAGREE), and so does a
-# listed rule that no case shows any more in a run of all regression cases,
-# so that the list stays true. Every entry has a regression case that shows
-# it (tools/zugferd/corpus/regression/); a run without all of them (`--only`,
-# `--population` or single case files) does not check the list.
+# listed rule that no case shows any more in a run of all regression cases
+# and parity fixtures, so that the list stays true. Every entry has a
+# regression case (tools/zugferd/corpus/regression/) or a parity fixture
+# (tools/zugferd/corpus/rules/) that shows it; a run without all of them
+# (`--only`, `--population` or single case files) does not check the list.
 #
 #   rejected-by  the validator that reports an error: "mustang" or "kosit",
 #                or a list of both when it depends on the document (e.g. on
@@ -85,6 +86,12 @@ the two identifiers to state."""
 rejected-by = "mustang"
 other = "warning"
 reason = """The buyer has one identifier (BT-46): `ram:ID` or `ram:GlobalID`. A warning in the CEN \
+Schematron and in KoSIT, an error in Mustang (see CII-SR-449). invoice-pro reports an error."""
+
+["CII-SR-451"]
+rejected-by = "mustang"
+other = "warning"
+reason = """The payee has one identifier (BT-60): `ram:ID` or `ram:GlobalID`. A warning in the CEN \
 Schematron and in KoSIT, an error in Mustang (see CII-SR-449). invoice-pro reports an error."""
 
 # ---- Mustang rejects, KoSIT reports nothing

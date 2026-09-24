@@ -87,8 +87,9 @@ class KositReport(unittest.TestCase):
         self.assertEqual((result["status"], result["scenario"]), ("reject", "EN16931 XRechnung (CII)"))
         self.assertEqual(set(result["errors"]), {"BR-DE-15"})
         self.assertIn("muss übermittelt", result["errors"]["BR-DE-15"])
-        # Warnings are kept apart, information is left out.
+        # Warnings and information are kept apart.
         self.assertEqual(set(result["warnings"]), {"BR-DE-27"})
+        self.assertEqual(set(result["information"]), {"BR-CL-10"})
 
     def test_accepted_with_warnings(self):
         report = varl(scenario("EN16931 (CII)", step("val-xsd"), step("val-sch.1", ("warning", "BR-DE-28", "x"))),
@@ -141,9 +142,10 @@ def mustang_report(*errors, warnings=()):
             "warnings": [f"{w}: text" for w in warnings]}
 
 
-def kosit_report(*errors, warnings=(), status=None):
+def kosit_report(*errors, warnings=(), information=(), status=None):
     return {"status": status or ("reject" if errors else "accept"), "scenario": "EN16931 XRechnung (CII)",
-            "errors": {e: e for e in errors}, "warnings": {w: w for w in warnings}}
+            "errors": {e: e for e in errors}, "warnings": {w: w for w in warnings},
+            "information": {i: i for i in information}}
 
 
 def collected(mustang=None, kosit=None, ours=(), xsd_errors=()):
@@ -537,6 +539,159 @@ class Headers(unittest.TestCase):
         for case in cases:
             self.assertTrue(case["finding"], case["id"])
 
+    def test_expected_warnings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "case.typ"
+            file.write_text("// expect: AGREE_VALID\n// warns: BR-DE-TMP-32\n// warns: IP-UNIT-01\n\n#x\n",
+                            encoding="utf-8")
+            header = run.parse_header(file)
+        self.assertEqual((header["expect_rules"], header["expect_warnings"]), ([], ["BR-DE-TMP-32", "IP-UNIT-01"]))
+        self.assertEqual(run.expectation_met(header, "AGREE_VALID", [], ["IP-UNIT-01"]),
+                         (True, ["warning:BR-DE-TMP-32"]))
+        self.assertEqual(run.expectation_met(header, "AGREE_VALID", [], ["BR-DE-TMP-32", "IP-UNIT-01"]), (True, []))
+        # An error is no warning.
+        res = {"diagnostics": [{"level": "error", "rule": "BR-DE-TMP-32"}, {"level": "warning", "rule": "IP-UNIT-01"}]}
+        self.assertEqual(run.warning_rules(res), ["IP-UNIT-01"])
+
+    def test_parity_fixtures(self):
+        cases = run.load_cases([run.RULES])
+        self.assertTrue(cases)
+        for case in cases:
+            self.assertTrue(case["id"].startswith("rule-"), case["id"])
+            self.assertEqual(case["population"], "rules")
+        # Only a run of every fixture can tell that each rule classified as
+        # `fixture` has one that passed.
+        self.assertTrue(run.rules_complete(cases))
+        self.assertFalse(run.rules_complete(cases[1:]))
+        # A fixture is no regression case, and the other way round.
+        self.assertFalse(run.regression_complete(cases))
+        self.assertTrue(run.rules_complete(run.load_cases([run.RULES, run.REGRESSION])))
+        # A fixture is a case in each profile of its header; a run without
+        # one of them is not complete either.
+        several = [c for c in cases if c["file"].endswith("/BR-02.typ")]
+        self.assertEqual([c["id"] for c in several], [f"rule-BR-02@{p}" for p in run.rule_coverage.PROFILES])
+        self.assertEqual([c["inputs"] for c in several], [{"profile": p} for p in run.rule_coverage.PROFILES])
+        self.assertFalse(run.rules_complete([c for c in cases if c["id"] != "rule-BR-02@basic"]))
+
+    def test_fixture_profiles(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "BR-01.typ"
+            source = '\n#import "_base.typ": *\n#show: invoice.with(..setup, zugferd: fixture-profile("basic"))\n'
+            file.write_text("// expect: AGREE_INVALID BR-01\n// profiles: basic en16931\n" + source, encoding="utf-8")
+            # A regression case runs in the profile of its source only.
+            with self.assertRaisesRegex(common.ToolError, "only a parity fixture"):
+                run.load_cases([file])
+            with unittest.mock.patch.dict(run.FILE_CASES, {Path(tmp).resolve(): ("rule-", "rules")}):
+                cases = run.load_cases([file])
+                self.assertEqual([(c["id"], c["profile"], c["inputs"], c["population"]) for c in cases], [
+                    ("rule-BR-01@basic", "basic", {"profile": "basic"}, "rules"),
+                    ("rule-BR-01@en16931", "en16931", {"profile": "en16931"}, "rules"),
+                ])
+                file.write_text("// expect: AGREE_INVALID BR-01\n" + source, encoding="utf-8")
+                with self.assertRaisesRegex(common.ToolError, "lists the profiles it runs in"):
+                    run.load_cases([file])
+            file.write_text("// expect: AGREE_INVALID BR-01\n// profiles: full\n" + source, encoding="utf-8")
+            with self.assertRaisesRegex(common.ToolError, "`// profiles:` lists profiles of"):
+                run.load_cases([file])
+
+    def test_the_profile_goes_to_typst(self):
+        case = {"id": "rule-BR-01@basic", "file": "x.typ", "inputs": {"profile": "basic"}}
+        with tempfile.TemporaryDirectory() as tmp, \
+                unittest.mock.patch.object(common, "typst_compile", return_value=(False, "error: x", 0.1)) as compile_:
+            run.compile_case(case, tmp)
+        self.assertEqual(compile_.call_args.kwargs["inputs"], {"profile": "basic"})
+
+
+def fixture_case(name, *rules, warns=()):
+    return {"file": str(run.RULES / f"{name}.typ"), "expect_rules": list(rules), "expect_warnings": list(warns)}
+
+
+class RuleChecks(unittest.TestCase):
+    """The rule ids of every case (O-RULE) and the parity of the fixtures
+    (O-PARITY), against the rules of the validators of the profile."""
+
+    LEVELS = {
+        "xrechnung": {
+            "BR-DE-27": {"mustang": "error", "kosit": "warning"},
+            "BR-DE-TMP-32": {"kosit": "information"},
+            "BR-DE-16": {"mustang": "error", "kosit": "error"},
+            "BR-S-02": {"mustang": "error", "kosit": "error"},
+            "BR-AG-05": {"mustang": "error", "kosit": "error"},
+            "BR-02": {"mustang": "error", "kosit": "error"},
+        },
+        "basic-wl": {"BR-O-11": {"mustang": "error"}},
+    }
+
+    def parity(self, case, res, differences=None):
+        return run.fixture_parity(case, res, self.LEVELS, differences or {})
+
+    def test_both_validators_report_the_rule(self):
+        res = collected(mustang_report("BR-02"), kosit_report("BR-02"), ours=["BR-02"])
+        self.assertEqual(self.parity(fixture_case("BR-02", "BR-02"), res), [])
+        res = collected(mustang_report("BR-02"), kosit_report("BR-CO-26"), ours=["BR-02"])
+        self.assertEqual(self.parity(fixture_case("BR-02", "BR-02"), res),
+                         ["O-PARITY: KoSIT does not report BR-02 (error in its artefacts)"])
+        # The case runs without the validators: nobody reports the rule.
+        res = collected(ours=["BR-02"])
+        self.assertEqual(self.parity(fixture_case("BR-02", "BR-02"), res), ["O-PARITY: no official validator reports BR-02"])
+
+    def test_at_the_level_of_each_validator(self):
+        # KoSIT warns about BR-DE-27, Mustang reports an error.
+        res = collected(mustang_report("BR-DE-27"), kosit_report(warnings=["BR-DE-27"]), ours=["BR-DE-27"])
+        self.assertEqual(self.parity(fixture_case("BR-DE-27", "BR-DE-27"), res), [])
+        # A warning expected of invoice-pro, which KoSIT reports as information.
+        res = collected(mustang_report(), kosit_report(information=["BR-DE-TMP-32"]))
+        self.assertEqual(self.parity(fixture_case("BR-DE-TMP-32", warns=["BR-DE-TMP-32"]), res), [])
+        res = collected(mustang_report(), kosit_report())
+        self.assertEqual(self.parity(fixture_case("BR-DE-TMP-32", warns=["BR-DE-TMP-32"]), res),
+                         ["O-PARITY: KoSIT does not report BR-DE-TMP-32 (information in its artefacts)"])
+
+    def test_documented_differences_and_schema_errors(self):
+        res = collected(mustang_report("BR-AG-05"), kosit_report(), ours=["BR-AG-05"])
+        self.assertEqual(len(self.parity(fixture_case("BR-AG-05", "BR-AG-05"), res)), 1)
+        differences = {"BR-AG-05": {"rejected-by": ["mustang"], "other": ["nothing"], "reason": "r"}}
+        self.assertEqual(self.parity(fixture_case("BR-AG-05", "BR-AG-05"), res, differences), [])
+        # KoSIT runs no Schematron on a document that fails its schema.
+        kosit = dict(kosit_report("XSD"), schematron=False)
+        res = collected(mustang_report("BR-02", "XSD"), kosit, ours=["BR-02"])
+        self.assertEqual(self.parity(fixture_case("BR-02", "BR-02"), res), [])
+
+    def test_related_rules_and_counterparts(self):
+        # BR-DE-16 is reported as BR-S-02: both must come from the validators.
+        res = collected(mustang_report("BR-DE-16", "BR-S-02"), kosit_report("BR-DE-16", "BR-S-02"), ours=["BR-S-02"])
+        self.assertEqual(self.parity(fixture_case("BR-DE-16", "BR-S-02"), res), [])
+        res = collected(mustang_report("BR-DE-16"), kosit_report("BR-DE-16"), ours=["BR-S-02"])
+        self.assertEqual(len(self.parity(fixture_case("BR-DE-16", "BR-S-02"), res)), 2)
+        # invoice-pro's own rules have no official counterpart to compare.
+        res = collected(mustang_report("BR-02"), kosit_report("BR-02"), ours=["BR-02", "IP-PAY-03"])
+        self.assertEqual(self.parity(fixture_case("BR-02", "BR-02", "IP-PAY-03"), res), [])
+        # A passing counterpart has nothing to compare, a rule of another
+        # profile fails.
+        self.assertEqual(self.parity(fixture_case("BR-02--pass"), collected(mustang_report(), kosit_report())), [])
+        res = collected(mustang_report("BR-O-11"), ours=["BR-O-11"])
+        self.assertEqual(self.parity(fixture_case("BR-O-11", "BR-O-11"), res),
+                         ["O-PARITY: no official validator of the xrechnung profile has BR-O-11"])
+
+    def test_the_profile_of_the_run(self):
+        # A fixture that ignores the profile of its run (a literal `zugferd:`)
+        # would show the rule in another profile than it claims.
+        res = collected(mustang_report("BR-02"), kosit_report("BR-02"), ours=["BR-02"])
+        case = dict(fixture_case("BR-02", "BR-02"), profile="xrechnung")
+        self.assertEqual(self.parity(case, res), [])
+        self.assertEqual(self.parity(dict(case, profile="basic"), res),
+                         ["O-PARITY: the fixture ran as xrechnung, not as basic (`zugferd: fixture-profile(..)`)"])
+        # Also for a passing counterpart.
+        passing = dict(fixture_case("BR-02--pass"), profile="basic")
+        self.assertEqual(len(self.parity(passing, collected(mustang_report(), kosit_report()))), 1)
+
+    def test_foreign_rules(self):
+        res = collected(mustang_report("BR-O-03"), ours=["BR-O-02", "IP-VAT-226"])
+        res["profile"] = "basic-wl"
+        self.assertEqual(run.foreign_rule_problems(res, self.LEVELS),
+                         ["O-RULE: invoice-pro reports BR-O-02, which no official validator of the basic-wl profile has"])
+        res["profile"] = "minimum"  # no inventory of the profile: no check
+        self.assertEqual(run.foreign_rule_problems(res, self.LEVELS), [])
+
 
 # A trimmed CII document (not schema-complete): what the oracles read.
 CII = """<?xml version="1.0" encoding="UTF-8"?>
@@ -769,16 +924,20 @@ class Generator(unittest.TestCase):
     def test_document_and_payment_constraints(self):
         base = dict(gen.SIMPLE)
         # The sender of a credit note pays: no direct debit, card, payee, and
-        # bank details only of a buyer with an account.
+        # bank details only of a buyer with an account; paid already, e.g. in
+        # cash, also to a buyer without one.
         credit = dict(base, doctype="credit-note")
         self.assertTrue(gen.allowed(credit))
-        for other in ({"payment": "direct-debit", "route": "de-de"}, {"payment": "card"}, {"payment": "paid"},
+        for other in ({"payment": "direct-debit", "route": "de-de"}, {"payment": "card"},
                       {"extras": "payee"}, {"route": "de-us", "payment": "bank+days"}):
             self.assertFalse(gen.allowed(dict(credit, **other)), other)
         self.assertTrue(gen.allowed(dict(credit, route="de-us", payment="nobank+days")))
+        self.assertTrue(gen.allowed(dict(credit, payment="paid")))
+        self.assertTrue(gen.allowed(dict(credit, route="de-us", payment="paid")))
         # A self-billed invoice: at home, not in XRechnung.
         billed = dict(base, doctype="self-billed", route="de-de")
         self.assertTrue(gen.allowed(billed))
+        self.assertTrue(gen.allowed(dict(billed, payment="paid")))
         self.assertFalse(gen.allowed(dict(billed, route="de-fr")))
         self.assertFalse(gen.allowed(dict(billed, profile="xrechnung")))
         # A SEPA direct debit of the German seller from an account in the euro area.
@@ -918,6 +1077,65 @@ class Generator(unittest.TestCase):
             (out / "manifest.json").write_text("{}", encoding="utf-8")
             gen.write([], out, {})  # a generated corpus is replaced
             self.assertFalse((out / "case.typ").exists())
+
+    def test_paid_credit_note(self):
+        src, paid = gen.render("x", dict(gen.SIMPLE, doctype="credit-note", payment="paid", route="de-de"))
+        self.assertIn('#paid(method: "cash", date: datetime(year: 2026, month: 9, day: 1))', src)
+        self.assertNotIn("#bank-details", src)
+        self.assertEqual((paid["type_code"], paid["payment_means"], paid["paid"], paid["iban"]), ("381", ["10"], True, None))
+
+    def test_fiscal_representative(self):
+        # A Swiss seller supplies goods from Germany to France through its
+        # German fiscal representative (BG-11): an intra-community supply,
+        # with the VAT ID of the representative and the buyer's.
+        route = dict(gen.SIMPLE, route="ch-fr", tax="k")
+        self.assertTrue(gen.allowed(route))
+        self.assertTrue(gen.allowed(dict(route, ids="gln")))
+        for other in ({"tax": "s"}, {"tax": "g"}, {"ids": "legal"}, {"ids": "taxnr"}, {"doctype": "self-billed"},
+                      {"payment": "direct-debit"}):
+            self.assertFalse(gen.allowed(dict(route, **other)), other)
+        src, facts = gen.render("x", route)
+        self.assertIn('legal-id: id.uid-ch("CHE-123.456.788")', src)
+        self.assertIn(f"tax-representative: {gen.TAX_REPRESENTATIVE['source']}", src)
+        self.assertIn("locale: locale.de-de", src)
+        self.assertNotIn('vat-id: "CHE', src)
+        self.assertEqual((facts["seller_vat"], facts["seller_legal_id"], facts["buyer_vat"], facts["ship_to_country"],
+                          facts["currency"], facts["breakdown"]),
+                         (None, ["0183", "CHE123456788"], "FR61954506077", "FR", "EUR", [("K", "0")]))
+        self.assertEqual(facts["tax_representative"], {"name": "Fiskalvertretung Muster GmbH", "vat": "DE136695976",
+                                                       "country": "DE"})
+        # MINIMUM states no tax representative.
+        self.assertIsNone(gen.render("x", dict(route, profile="minimum"))[1]["tax_representative"])
+        # A random self-billed invoice: the sender is the buyer, who has no
+        # tax representative of the seller.
+        src, billed = gen.render("x", dict(route, doctype="self-billed"))
+        self.assertNotIn("tax-representative", src)
+        self.assertIsNone(billed["tax_representative"])
+
+    def test_exemption_codes(self):
+        f = dict(gen.SIMPLE, tax="e-code", route="de-de", lines=2)
+        self.assertTrue(gen.allowed(f))
+        self.assertFalse(gen.allowed(dict(f, route="de-fr")))  # an exemption at home
+        src, facts = gen.render("x", f)
+        self.assertEqual(src.count(f'tax.exempt(grounds: "{gen.GROUNDS["e2"]}", code: "{gen.EXEMPTION_CODE}")'), 2)
+        self.assertEqual((facts["breakdown"], facts["grounds"]), ([("E", "0")], [("E", gen.GROUNDS["e2"])] * 2))
+
+    def test_references(self):
+        src, _ = gen.render("x", dict(gen.SIMPLE, theme="din-5008-refs"))
+        self.assertIn("theme: harness(themes.DIN-5008()),", src)
+        self.assertIn("  references: (references.invoice-nr(), references.invoice-date(), references.service-time(), "
+                      "references.due-date(), references.seller-tax-nr(), references.seller-vat-id(), "
+                      "references.buyer-vat-id()),", src)
+        self.assertNotIn("references:", gen.render("x", dict(gen.SIMPLE, theme="din-5008"))[0])
+        # The printed details the law requires, left out of the references.
+        printed = {c["id"]: c for c in gen.mutations() if c["id"].startswith("mu-refs")}
+        self.assertEqual(sorted(printed), ["mu-refs-no-date-of-supply-en16931", "mu-refs-no-date-of-supply-xrechnung",
+                                           "mu-refs-no-seller-tax-id-en16931", "mu-refs-no-seller-tax-id-xrechnung"])
+        case = printed["mu-refs-no-seller-tax-id-xrechnung"]
+        self.assertEqual((case["expect"], case["expect_rules"], case["features"]["route"]),
+                         ("STRICTER", ["IP-PRINT-03"], "de-de"))
+        self.assertIn("references: (references.invoice-nr(), references.invoice-date(), references.service-time(), "
+                      "references.buyer-vat-id()),", case["source"])
 
     def test_resolved_profile(self):
         self.assertEqual(gen.resolved_profile(dict(gen.SIMPLE, profile="en16931", route="de-de")), "en16931")
