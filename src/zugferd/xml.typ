@@ -1,15 +1,11 @@
 #import "../utils/coercion.typ": to-decimal, to-ratio
-#import "../utils/text.typ": plain-text
-
-// Characters XML 1.0 does not allow in a document, not even escaped.
-#let _invalid-class = "\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x{FFFE}\\x{FFFF}"
-#let _invalid-chars = regex("[" + _invalid-class + "]")
+#import "../utils/text.typ": invalid-xml-chars, invalid-xml-class, plain-text
 
 /// The characters `xml-escape` has to change, as the body of a character
-/// class of a regex: the markup characters and the characters of
-/// `_invalid-chars`, built from the same class so that the two cannot drift
-/// apart.
-#let escaped-class = "&<>\"'" + _invalid-class
+/// class of a regex: the markup characters and the characters XML 1.0 does
+/// not allow (`invalid-xml-class` of utils/text.typ), built from the same
+/// class so that the two cannot drift apart.
+#let escaped-class = "&<>\"'" + invalid-xml-class
 
 // Most values contain none of them.
 #let _needs-escape = regex("[" + escaped-class + "]")
@@ -20,7 +16,7 @@
   // One scan instead of six replacements for the common case.
   if not value.contains(_needs-escape) { return value }
   value
-    .replace(_invalid-chars, "")
+    .replace(invalid-xml-chars, "")
     .replace("&", "&amp;")
     .replace("<", "&lt;")
     .replace(">", "&gt;")
