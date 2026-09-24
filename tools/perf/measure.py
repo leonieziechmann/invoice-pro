@@ -175,8 +175,9 @@ def measure_instructions(args, documents, names):
 # The edit of the live preview (--watch): the price of the first item, a new
 # value before every recompile.
 _PRICE = re.compile(r"price: *([0-9]+)(?:\.[0-9]+)?")
-# The line `typst watch` prints after each compile, with its time.
-_COMPILED = re.compile(r"compiled (successfully|with warnings|with errors) in ([0-9.]+) *(µs|ms|s)\b")
+# The line `typst watch` prints after a compile that succeeds, with its
+# time; after one that fails, it prints "compiled with errors" alone.
+_COMPILED = re.compile(r"compiled (?:successfully|with warnings) in ([0-9.]+) *(µs|ms|s)\b")
 _MILLISECONDS = {"µs": 0.001, "ms": 1.0, "s": 1000.0}
 
 
@@ -235,13 +236,13 @@ class Watcher:
                 continue
             if line is None:
                 raise SystemExit(f"typst watch stopped: {self.copy}")
+            if "compiled with errors" in line:
+                raise SystemExit(f"the live preview does not compile: {self.copy}")
             match = _COMPILED.search(line)
             if match is None:
                 continue
-            if match.group(1) == "with errors":
-                raise SystemExit(f"the live preview does not compile: {self.copy}")
             self.reported = time.monotonic()
-            return float(match.group(2)) * _MILLISECONDS[match.group(3)]
+            return float(match.group(1)) * _MILLISECONDS[match.group(2)]
 
     def edit(self, n):
         """Changes the price of the first item to its `n`-th new value.

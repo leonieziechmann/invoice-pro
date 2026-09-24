@@ -1,15 +1,20 @@
-"""Unit tests of the performance gate's thresholds (no Typst).
+"""Unit tests of the performance gate's thresholds and of the live preview
+of measure.py (no Typst).
 
   python3 -m unittest discover -s tools/perf -p 'test_gate.py'
 """
 
+import queue
+import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import gate  # noqa: E402
+import measure  # noqa: E402
 
 
 def row(lines, share, import_ms=5.0, serializer_ms=None, plain_einvoice_ms=0.0, lazy_loaded=()):
@@ -117,6 +122,56 @@ class Trace(unittest.TestCase):
         )
         for module in gate.LAZY_MODULES:
             self.assertTrue((gate.REPO / module).exists(), module)
+
+
+class Watch(unittest.TestCase):
+    """measure.py --watch: the reports of `typst watch` and the edits."""
+
+    def watcher(self, directory, lines=()):
+        # A watcher without its process: `compiled` reads the lines.
+        watcher = object.__new__(measure.Watcher)
+        watcher.source = "#item([A], price: 10.50)\n#item([B], price: 7)\n"
+        watcher.text = watcher.source
+        watcher.copy = str(Path(directory) / ".copy.typ")
+        watcher.reported = 0.0
+        watcher.lines = queue.Queue()
+        for line in lines:
+            watcher.lines.put(line)
+        return watcher
+
+    def test_reports_in_milliseconds(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            watcher = self.watcher(tmp, [
+                "watching doc.typ\n",
+                "[20:27:06] compiling ...\n",
+                "[20:27:06] compiled successfully in 8.47 s\n",
+                "[20:27:21] compiled with warnings in 6.22 ms\n",
+                "[20:27:22] compiled successfully in 850 µs\n",
+            ])
+            self.assertAlmostEqual(watcher.compiled(), 8470.0)
+            self.assertAlmostEqual(watcher.compiled(), 6.22)
+            self.assertAlmostEqual(watcher.compiled(), 0.85)
+
+    def test_a_failed_compile_stops_the_measurement(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            watcher = self.watcher(tmp, ["[20:46:31] compiled with errors\n"])
+            with self.assertRaises(SystemExit) as caught:
+                watcher.compiled(timeout=0.5, again=0.1)
+            self.assertIn("does not compile", str(caught.exception))
+
+    def test_every_edit_is_a_new_price_of_the_first_item(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            watcher = self.watcher(tmp)
+            prices = set()
+            for n in range(30):
+                watcher.edit(n)
+                text = Path(watcher.copy).read_text(encoding="utf-8")
+                self.assertEqual(text, watcher.text)
+                first, second = re.findall(r"price: ([0-9.]+)", text)
+                self.assertEqual(second, "7")
+                prices.add(first)
+            self.assertEqual(len(prices), 30)
+            self.assertNotIn("10.50", prices)
 
 
 if __name__ == "__main__":
