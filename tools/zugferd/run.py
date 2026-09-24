@@ -26,9 +26,11 @@ For every case:
      rule, field and a hint.
   6. Rule ids (rule_coverage.py): every error of invoice-pro names a rule the
      official validators of the case's profile have, or one of its own
-     (O-RULE); a parity fixture (corpus/rules/<RULE>.typ), a case in each
-     profile of its `// profiles:` header, is reported under its rule by
-     each validator that has the rule in the profile (O-PARITY). A run with
+     (O-RULE), and every diagnostic a rule the rule registry lists in the
+     profile (O-REGISTRY); a parity fixture (corpus/rules/<RULE>.typ), a
+     case in each profile of its `// profiles:` header, is reported under
+     its rule by each validator that has the rule in the profile
+     (O-PARITY). A run with
      every fixture checks that each rule the classification calls `fixture`
      has, in each such profile, a fixture that passed.
 
@@ -65,6 +67,7 @@ sys.path.insert(0, str(HERE))
 
 import common  # noqa: E402
 import oracles  # noqa: E402
+import registry  # noqa: E402
 import rule_coverage  # noqa: E402
 
 # The committed regression cases and parity fixtures (default paths of a run).
@@ -735,6 +738,21 @@ def foreign_rule_problems(res, levels):
     ]
 
 
+def registry_rule_problems(res, reported):
+    """The check of the tests' harness (tests/zugferd/harness.typ) in every
+    case: each diagnostic names a rule that the rule registry reports in the
+    case's profile (its `profiles` and `id-profiles`, see
+    registry.reported_in). `reported`: {profile: {rule id}}."""
+    profile = res.get("profile")
+    if profile not in reported:
+        return []
+    rules = {d.get("rule") for d in res.get("diagnostics", [])}
+    return [
+        f"O-REGISTRY: invoice-pro reports {rule}, which the rule registry does not list in the {profile} profile"
+        for rule in sorted(rules - reported[profile], key=str)
+    ]
+
+
 def rule_levels(checker, use_kosit):
     """{profile: {rule: {validator: level}}} of the official validators of
     this run, or None without the Mustang jar (the rule checks are skipped
@@ -784,6 +802,13 @@ def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass, use_kosit
 
     rows = [make_row(case, results[case["id"]], docs.get(case["id"])) for case in cases]
     metamorphic(rows, docs, {c["id"]: c for c in cases})
+    try:
+        rules_registry = registry.load()
+    except ValueError as e:
+        raise common.ToolError(f"the rule registry: {e}")
+    reported = {p: set(registry.reported_in(rules_registry, p)) for p in registry.PROFILES}
+    for case, row in zip(cases, rows):
+        row["oracle"] += registry_rule_problems(results[case["id"]], reported)
     if levels is not None:
         for case, row in zip(cases, rows):
             res = results[case["id"]]

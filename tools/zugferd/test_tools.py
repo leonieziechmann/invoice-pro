@@ -22,6 +22,7 @@ import common  # noqa: E402
 import gen  # noqa: E402
 import minimize  # noqa: E402
 import oracles  # noqa: E402
+import registry  # noqa: E402
 import run  # noqa: E402
 
 REPORT = """<validation><xml><messages>
@@ -683,6 +684,23 @@ class RuleChecks(unittest.TestCase):
         # Also for a passing counterpart.
         passing = dict(fixture_case("BR-02--pass"), profile="basic")
         self.assertEqual(len(self.parity(passing, collected(mustang_report(), kosit_report()))), 1)
+
+    def test_the_rules_of_the_registry(self):
+        # Every diagnostic, a warning too, names a rule the registry lists in
+        # the profile of the case (the check of the tests' harness).
+        reported = {"basic-wl": {"BR-O-11", "IP-VAT-226"}}
+        res = collected(ours=["BR-O-02", "IP-VAT-226"])
+        res["diagnostics"].append({"level": "warning", "rule": "BR-O-11"})
+        res["profile"] = "basic-wl"
+        self.assertEqual(run.registry_rule_problems(res, reported), [
+            "O-REGISTRY: invoice-pro reports BR-O-02, which the rule registry does not list in the basic-wl profile",
+        ])
+        res["profile"] = None  # no profile (e.g. no e-invoice): no check
+        self.assertEqual(run.registry_rule_problems(res, reported), [])
+        # The registry lists the ids of its entries per profile.
+        listed = registry.reported_in(registry.load(), "basic-wl")
+        self.assertIn("FX-SCH-A-000040", listed)
+        self.assertNotIn("BR-CL-04", listed)
 
     def test_foreign_rules(self):
         res = collected(mustang_report("BR-O-03"), ours=["BR-O-02", "IP-VAT-226"])
