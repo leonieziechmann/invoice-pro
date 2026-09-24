@@ -366,6 +366,7 @@
           payment-goal: view.payment-goal,
           bank: view.bank,
           payment-means: view.payment-means,
+          strict: ctx.at("zugferd-strict", default: false) == true,
         )
         let errors = result.diagnostics.filter(d => d.level == "error")
         // The report module loads only when there is something to report.

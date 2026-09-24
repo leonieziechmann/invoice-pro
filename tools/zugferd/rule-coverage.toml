@@ -898,3 +898,27 @@ level = "error"
 summary = "An invalid name, a missing namespace declaration, or not exactly one root element."
 basis = "XML 1.0 and Namespaces in XML: the attachment must be well-formed."
 tests = ["tests/zugferd/guard/test.typ"]
+
+[ip."IP-GUARD-10"]
+level = "error"
+summary = "The XML read back states a business term with another value than the data model of the invoice."
+basis = "The syntax binding of EN 16931 to CII (src/zugferd/guard/bindings.json): the XML states the invoice data."
+tests = ["tests/zugferd/roundtrip/test.typ", "tools/zugferd/test_roundtrip.py"]
+
+[ip."IP-GUARD-11"]
+level = "error"
+summary = "The XML leaves out a business term the data model of the invoice has, although the profile can state it."
+basis = "The syntax binding of EN 16931 to CII and the XSD and Schematron of the profile (src/zugferd/guard/bindings.json)."
+tests = ["tests/zugferd/roundtrip/test.typ", "tools/zugferd/test_roundtrip.py"]
+
+[ip."IP-GUARD-12"]
+level = "error"
+summary = "The XML states a business term the data model of the invoice does not have."
+basis = "The syntax binding of EN 16931 to CII (src/zugferd/guard/bindings.json)."
+tests = ["tests/zugferd/roundtrip/test.typ"]
+
+[ip."IP-GUARD-13"]
+level = "error"
+summary = "An element, or the entries of a repeated group (e.g. the lines), occur more or less often than the data model has."
+basis = "The syntax binding of EN 16931 to CII (src/zugferd/guard/bindings.json): one element per value."
+tests = ["tests/zugferd/roundtrip/test.typ"]

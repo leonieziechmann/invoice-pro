@@ -1614,6 +1614,58 @@
       "summary": "An invalid name, a missing namespace declaration, or not exactly one root element: the XML may not be well-formed.",
       "legal": null,
       "note": "A rule of the XML write guard (src/zugferd/guard/report.typ), which builds its messages."
+    },
+    "IP-GUARD-10": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "The XML read back states a business term with another value than the data model of the invoice.",
+      "legal": null,
+      "note": "A rule of the round trip of the XML write guard (src/zugferd/guard/roundtrip.typ, G3), whose messages src/zugferd/guard/report.typ builds."
+    },
+    "IP-GUARD-11": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "The XML leaves out a business term the data model of the invoice has, although the profile can state it.",
+      "legal": null,
+      "note": "A rule of the round trip of the XML write guard (src/zugferd/guard/roundtrip.typ, G3), whose messages src/zugferd/guard/report.typ builds."
+    },
+    "IP-GUARD-12": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "The XML states a business term the data model of the invoice does not have.",
+      "legal": null,
+      "note": "A rule of the round trip of the XML write guard (src/zugferd/guard/roundtrip.typ, G3), whose messages src/zugferd/guard/report.typ builds."
+    },
+    "IP-GUARD-13": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "An element, or the entries of a repeated group (e.g. the lines), occur more or less often than the data model has.",
+      "legal": null,
+      "note": "A rule of the round trip of the XML write guard (src/zugferd/guard/roundtrip.typ, G3), whose messages src/zugferd/guard/report.typ builds."
     }
   }
 }

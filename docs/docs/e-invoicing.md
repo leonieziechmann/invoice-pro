@@ -156,6 +156,10 @@ The guard does not change the XML: the file is the same with or without it. What
 | `IP-GUARD-07` | A value outside its lexical form (e.g. `1,50` as a decimal) or a code outside its list, where no official rule says so. |
 | `IP-GUARD-08` | A date in the format `102` that names no day of the calendar (e.g. `20260230`), where no official rule checks it.       |
 | `IP-GUARD-09` | An invalid name, a missing namespace declaration, or not exactly one root element: the XML may not be well-formed.      |
+| `IP-GUARD-10` | The XML read back states a business term with another value than the data model of the invoice.                         |
+| `IP-GUARD-11` | The XML leaves out a business term the data model of the invoice has, although the profile can state it.                |
+| `IP-GUARD-12` | The XML states a business term the data model of the invoice does not have.                                             |
+| `IP-GUARD-13` | An element, or the entries of a repeated group (e.g. the lines), occur more or less often than the data model has.      |
 
 The guard checks what the schema, the code lists and the rules of the VAT categories say about each element, not the business rules (sums, conditions between different parts of the invoice, and elements required only under such a condition, e.g. an identifier of the seller in `BR-CO-26`), which remain the validator's. It is stricter than the official validators in a few documented places: it rejects the elements the Factur-X Schematron marks as not used (Mustang ignores those reports), dates that name no day, a required element without text also where a rule only asks for the element, and any element `invoice-pro` never writes; and where a rule of the CEN Schematron may be taken over by a rule of higher priority only under a condition on values, it applies the rule anyway. Its tables follow the artefacts of the Mustang CLI 2.14.0, which `invoice-pro` pins: IPSI (`M`) at 0 % is rejected there (`BR-AG-05` tests a rate above 0), while the newer EN 16931 Schematron of KoSIT's XRechnung configuration accepts it.
 

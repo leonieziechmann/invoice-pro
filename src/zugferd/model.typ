@@ -997,11 +997,13 @@
       }
       i += 1
       if stated == _zero { continue }
-      let entry = (
-        amount: stated,
-        reason: text-or-none(modifier.at("name", default: none)),
-      )
-      if amount < _zero { allowances.push(entry) } else { charges.push(entry) }
+      // The reason as the XML states it (BR-42, BR-44).
+      let reason = text-or-none(modifier.at("name", default: none))
+      if amount < _zero {
+        allowances.push((amount: stated, reason: first-of(reason, "Discount")))
+      } else {
+        charges.push((amount: stated, reason: first-of(reason, "Surcharge")))
+      }
     }
 
     let item-id = item.at("item-id", default: none)
@@ -1144,13 +1146,15 @@
 #let payment-means-model(means, currency) = {
   let entries = ()
   for bank in means.transfers {
+    let iban = _upper-id(bank.at("iban", default: none))
     entries.push(
       _means(transfer-code(currency), "transfer", "bank-details")
         + (
-          iban: _upper-id(bank.at("iban", default: none)),
+          iban: iban,
           // Only an explicit name of `bank-details` (BT-85).
           account-name: text-or-none(bank.at("account-name", default: none)),
-          bic: _upper-id(bank.at("bic", default: none)),
+          // The institution of the account (BT-86), stated with the account.
+          bic: if iban != none { _upper-id(bank.at("bic", default: none)) },
         ),
     )
   }

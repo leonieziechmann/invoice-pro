@@ -160,6 +160,16 @@
   /// attaches the XML as usual anyway.
   /// -> "panic" | "report" | "ignore"
   zugferd-errors: "panic",
+  /// Checks the e-invoice more thoroughly: besides the standard checks, the
+  /// XML of every invoice line is read back and compared with the invoice,
+  /// and the sums of the amounts the XML states are checked with the
+  /// arithmetic of the official rules. It costs about as much as writing the
+  /// lines, so it is off by default; the standard checks already compare the
+  /// rest of the XML with the invoice. `typst compile --input
+  /// zugferd-strict=true` turns it on for every invoice of a document, e.g.
+  /// in CI.
+  /// -> bool
+  zugferd-strict: false,
 
   /// The content of the invoice, typically containing line-items and other components.
   /// -> content
@@ -300,6 +310,7 @@
     "report",
     "ignore",
   )
+  types.require(zugferd-strict, "invoice::zugferd-strict", bool)
 
   /** Input Calculations **/
   let eval-theme = theme()
@@ -496,6 +507,15 @@
     title: if zugferd != none { subject },
     // The resolved `document-type`, see `resolve-document-type`.
     document-type: if document-type != auto { document },
+    // The strict checks of the e-invoice, also turned on by
+    // `--input zugferd-strict=true`.
+    zugferd-strict: if (
+      zugferd != none
+        and (
+          zugferd-strict
+            or sys.inputs.at("zugferd-strict", default: none) == "true"
+        )
+    ) { true },
     preceding-invoice-date: preceding-invoice-date,
     // `(text: .., subject-code: ..)` each, see `normalize-notes`.
     notes: normalize-notes(notes),
