@@ -1759,6 +1759,8 @@
     currency-field: if ctx.at("currency", default: auto) == auto {
       "locale"
     } else { "currency" },
+    // The decimals the amounts of the currency are rounded to.
+    currency-decimals: currency-meta.at("decimals", default: 2),
     printed-currency: printed-currency,
     invoice: (
       number: text-or-none(_field(ctx, "invoice-nr")),

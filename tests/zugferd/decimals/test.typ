@@ -82,3 +82,37 @@
   #payment-goal(days: 14)
   #bank
 ]
+
+// --- 4. A currency with 3 decimals (e.g. KWD) names `currency` ---
+#let kwd-items = [
+  #line-items[
+    #item([A], price: 3.3333)
+    #item([B], price: 3.3333)
+    #item([C], price: 3.3333)
+  ]
+  #payment-goal(days: 14)
+  #bank
+]
+#model-test(currency: "KWD", model => {
+  assert.eq(rules(model), ("BR-DEC-23",))
+  let d = diagnostic(model, "BR-DEC-23")
+  assert.eq(d.field, "currency")
+  assert(
+    d.message.ends-with(
+      "is 3.333: the invoice currency \"KWD\" has 3 decimals.",
+    ),
+    message: d.message,
+  )
+  assert(d.hint.contains("`zugferd: none`"), message: d.hint)
+  assert(d.hint.contains("decimals: 2"), message: d.hint)
+})[#kwd-items]
+// ... which a locale with the currency and 2 decimals fits into
+#model-test(
+  locale: locale.en-de.with((
+    region: (currency: (code: "KWD", symbol: "KWD", decimals: 2)),
+  )),
+  model => {
+    assert.eq(model.currency, "KWD")
+    assert.eq(rules(model), ())
+  },
+)[#kwd-items]

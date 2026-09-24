@@ -2904,9 +2904,16 @@
   // add up (BR-CO-10, BR-S-08, ...), so they cannot be written at all.
   let excess = _excess-decimals(model)
   if excess.count > 0 {
+    // A currency with more decimals (e.g. KWD, `invoice(currency: ..)`)
+    // rounds the amounts to them; otherwise the rounding of the locale does.
+    let decimals = model.at("currency-decimals", default: 2)
+    let currency = model.at("currency", default: none)
+    let by-currency = type(decimals) == int and decimals > 2
     out.push(error(
       excess.rule,
-      "locale",
+      if by-currency { model.at("currency-field", default: "locale") } else {
+        "locale"
+      },
       "An e-invoice states amounts with 2 decimals, but "
         + if excess.count == 1 { "the " } else {
           str(excess.count) + " amounts have more, e.g. the "
@@ -2915,8 +2922,27 @@
         + if excess.place != none { " of " + excess.place }
         + " is "
         + str(excess.value)
+        + if by-currency {
+          (
+            ": the invoice currency "
+              + _quoted(currency)
+              + " has "
+              + str(decimals)
+              + " decimals"
+          )
+        }
         + ".",
-      hint: "Round money to 2 decimals in the locale, e.g. `locale.custom.normalize(money: x => calc.round(x, digits: 2))`.",
+      hint: if by-currency {
+        (
+          "EN 16931 and the Factur-X profiles state no amounts with more than 2 decimals. Create this invoice without e-invoice (`zugferd: none`), or round its amounts to 2 decimals with a locale of your own instead of `currency`, e.g. `locale: locale.en-de.with((region: (currency: (code: "
+            + _quoted(currency)
+            + ", symbol: "
+            + _quoted(currency)
+            + ", decimals: 2))))`."
+        )
+      } else {
+        "Round money to 2 decimals in the locale, e.g. `locale.custom.normalize(money: x => calc.round(x, digits: 2))`."
+      },
     ))
     // The sums below would only repeat that the rounded amounts do not add
     // up. Without excess decimals, the amounts of the model are exactly the
