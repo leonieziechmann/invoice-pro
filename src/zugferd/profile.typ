@@ -166,11 +166,6 @@
     ),
 )
 
-// Guideline ID (BT-24) of a profile.
-#let profile-urn(profile) = {
-  profiles.at(profile, default: profiles.en16931).guideline
-}
-
 /// Resolves the profile the XML is written in.
 ///
 /// An explicit profile is used as given. `auto` lists the candidates, best
