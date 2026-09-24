@@ -156,12 +156,9 @@
 
 // --- 8. A code only the newest EN 16931 list has is named as such: the
 // validation of the profile does not know it yet, in every profile ---
-#let not-yet(what, code) = (
-  "The "
-    + what
-    + " \""
-    + code
-    + "\" is not in the code list of the Factur-X validation yet: only the newest version of the EN 16931 code list has it."
+#let not-yet(subject) = (
+  subject
+    + " is not in the code list of the Factur-X validation yet: only the newest version of the EN 16931 code list has it."
 )
 #let not-yet-hint = "Use another code while the validators of the Factur-X profiles do not know it yet."
 
@@ -174,7 +171,7 @@
     m.profile = resolve-profile(id, "FR")
     assert.eq(rules(m), ("BR-CL-04",), message: id)
     let d = diagnostic(m, "BR-CL-04")
-    assert.eq(d.message, not-yet("invoice currency code (BT-5)", "XCG"))
+    assert.eq(d.message, not-yet("The invoice currency code (BT-5) \"XCG\""))
     assert.eq(d.hint, not-yet-hint)
   }
   // A code of no list at all is not.
@@ -197,7 +194,7 @@
   assert.eq(d.field, "recipient.electronic-address")
   assert.eq(
     d.message,
-    not-yet("scheme of the buyer electronic address (BT-49)", "0240"),
+    not-yet("The scheme \"0240\" of the buyer electronic address (BT-49)"),
   )
   assert.eq(d.hint, not-yet-hint)
 
@@ -207,18 +204,18 @@
   m.seller.global-id = (scheme: "0240", id: "12345678")
   assert.eq(rules(m), ("BR-CL-10",))
   let d = diagnostic(m, "BR-CL-10")
-  assert.eq(d.message, not-yet("scheme of the global identifier", "0240"))
+  assert.eq(d.message, not-yet("The scheme \"0240\" of the global identifier"))
   assert.eq(d.hint, not-yet-hint)
   let m = model
   m.buyer.legal-id = (scheme: "0240", id: "12345678")
   assert.eq(rules(m), ("BR-CL-11",))
   let d = diagnostic(m, "BR-CL-11")
   assert.eq(d.field, "recipient.legal-id")
-  assert(
-    d.message.starts-with(
-      "The scheme of the buyer legal registration identifier (BT-47) \"0240\" is not in the code list of the Factur-X validation yet",
+  assert.eq(
+    d.message,
+    not-yet(
+      "The scheme \"0240\" of the buyer legal registration identifier (BT-47)",
     ),
-    message: d.message,
   )
   assert.eq(d.hint, not-yet-hint)
 })[

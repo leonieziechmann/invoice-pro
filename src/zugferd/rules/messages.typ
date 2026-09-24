@@ -34,12 +34,11 @@
     and (" " + code + " ") in list.newer
 )
 
-// The sentence for such a code, e.g. XCG (the Caribbean guilder, 2025).
-#let _not-yet(what, code) = (
-  "The "
-    + what
-    + " "
-    + _quoted(code)
+// The sentence for such a code, e.g. XCG (the Caribbean guilder, 2025):
+// `subject` names the code, e.g. `The scheme "0240" of the global
+// identifier`.
+#let _not-yet(subject) = (
+  subject
     + " is not in the code list of the Factur-X validation yet: only the newest version of the EN 16931 code list has it."
 )
 
@@ -161,7 +160,10 @@
 )
 
 #let _global-id-scheme(f) = if _newer(lists.icd, f.scheme) {
-  (_not-yet("scheme of the global identifier", f.scheme), _not-yet-hint)
+  (
+    _not-yet("The scheme " + _quoted(f.scheme) + " of the global identifier"),
+    _not-yet-hint,
+  )
 } else {
   (
     "The scheme "
@@ -402,7 +404,10 @@
       "Invoice in another currency, or use the \"minimum\" or \"basic-wl\" profile, whose validation knows the code.",
     )
   } else if _newer(lists.currency, f.code) {
-    (_not-yet("invoice currency code (BT-5)", f.code), _not-yet-hint)
+    (
+      _not-yet("The invoice currency code (BT-5) " + _quoted(f.code)),
+      _not-yet-hint,
+    )
   } else {
     (
       "The invoice currency code (BT-5) "
@@ -806,12 +811,13 @@
   "BR-CL-11": f => if _newer(lists.icd, f.scheme) {
     (
       _not-yet(
-        "scheme of the "
+        "The scheme "
+          + _quoted(f.scheme)
+          + " of the "
           + f.term
           + " legal registration identifier ("
           + f.bt
           + ")",
-        f.scheme,
       ),
       _not-yet-hint,
     )
@@ -916,7 +922,10 @@
   "BR-62": _address-scheme,
   "BR-63": _address-scheme,
   "BR-CL-25": f => if _newer(lists.eas, f.scheme) {
-    (_not-yet("scheme of the " + f.term, f.scheme), _not-yet-hint)
+    (
+      _not-yet("The scheme " + _quoted(f.scheme) + " of the " + f.term),
+      _not-yet-hint,
+    )
   } else {
     (
       "The scheme "
@@ -1141,7 +1150,10 @@
     "State the legal reason, e.g. `tax.exempt(grounds: \"Steuerfrei nach § 4 Nr. 21 UStG\")`, and its VATEX code if you know it, e.g. `code: \"VATEX-EU-132-1G\"`.",
   ),
   "BR-CL-22": f => if _newer(lists.vatex, f.code) {
-    (_not-yet("VAT exemption reason code (BT-121)", f.code), _not-yet-hint)
+    (
+      _not-yet("The VAT exemption reason code (BT-121) " + _quoted(f.code)),
+      _not-yet-hint,
+    )
   } else {
     (
       "The VAT exemption reason code (BT-121) "
