@@ -335,9 +335,17 @@
     ),
     message: d.message,
   )
+  // The payment means codes differ: CII-SR-467 of the CEN Schematron 1.3.16
+  // in EN 16931; the validation of BASIC WL and BASIC accepts them
+  // (IP-PAY-03)
   let m = model
   m.profile = en16931
-  assert.eq(rules(m), ("IP-PAY-03",))
+  assert.eq(rules(m), ("CII-SR-467",))
+  for id in ("basic-wl", "basic") {
+    m.profile = resolve-profile(id, "FR")
+    assert.eq(rules(m), ("IP-PAY-03",))
+    assert.eq(diagnostic(m, "IP-PAY-03").field, "bank-details, direct-debit")
+  }
 })[#items #goal #debit #bank]
 #model-test(..xrechnung, model => {
   assert.eq(rules(model), ("BR-DE-24-b",))
@@ -347,15 +355,18 @@
 // details (BR-DE-25-a) next to the credit transfer
 #model-test(..xrechnung, model => {
   assert.eq(model.payment.means.map(m => m.type-code), ("58", "59"))
-  assert.eq(rules(model), ("BR-DE-25-a", "IP-PAY-03"))
-  assert.eq(diagnostic(model, "IP-PAY-03").field, "bank-details, paid")
+  assert.eq(rules(model), ("BR-DE-25-a", "CII-SR-467"))
+  assert.eq(diagnostic(model, "CII-SR-467").field, "bank-details, paid")
 })[#items #paid(method: "direct-debit") #bank]
 #model-test(..xrechnung, model => {
-  assert.eq(rules(model), ("IP-PAY-03",))
+  assert.eq(rules(model), ("CII-SR-467",))
+  let m = model
+  m.profile = resolve-profile("basic", "DE")
+  assert.eq(rules(m), ("IP-PAY-03",))
 })[#items #goal #card #bank]
 #model-test(..xrechnung, model => {
-  assert.eq(rules(model), ("IP-PAY-03",))
-  let d = diagnostic(model, "IP-PAY-03")
+  assert.eq(rules(model), ("CII-SR-467",))
+  let d = diagnostic(model, "CII-SR-467")
   assert.eq(d.field, "bank-details, paid")
   assert(d.message.contains("and cash (`paid`)"), message: d.message)
   assert(d.hint.contains("set `method` on `paid`"), message: d.hint)

@@ -1262,16 +1262,29 @@
       "summary": "XRechnung forbids the details of a direct debit (BG-19) next to a payment card (BG-18). An invoice states one payment means (BT-81): a credit transfer, a direct debit, a payment card or one other means, so that the buyer knows how to pay and does not pay twice.",
       "legal": null
     },
-    "IP-PAY-03": {
-      "covers": [],
-      "source": "IP",
-      "versions": [],
-      "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
+    "CII-SR-467": {
+      "covers": ["CII-SR-467"],
+      "source": "CII",
+      "versions": ["1.3.16"],
+      "profiles": ["en16931", "xrechnung"],
       "scope": "payment",
       "terms": ["BT-81"],
       "level": "error",
       "field": "bank-details, card-payment",
-      "summary": "Two kinds of payment means that the official rules accept together, e.g. `bank-details` next to `card-payment`: an invoice states one payment means (BT-81), so that the buyer does not pay twice.",
+      "summary": "All payment means of an invoice have the same payment means code (BT-81).",
+      "legal": null,
+      "note": "A rule of CEN 1.3.16 (KoSIT) only; BASIC WL and BASIC report two kinds of payment means as IP-PAY-03."
+    },
+    "IP-PAY-03": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["basic-wl", "basic"],
+      "scope": "payment",
+      "terms": ["BT-81"],
+      "level": "error",
+      "field": "bank-details, card-payment",
+      "summary": "Two kinds of payment means in `\"basic-wl\"` or `\"basic\"`, whose validation accepts them together, e.g. `bank-details` next to `card-payment`: an invoice states one payment means (BT-81), so that the buyer does not pay twice. The other profiles report them as `CII-SR-467` (or `BR-DE-23-b`, `BR-DE-24-b`).",
       "legal": null
     },
     "BR-DE-23-a": {

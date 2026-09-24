@@ -257,7 +257,7 @@
   )
 }
 
-// Several payment means (BR-DE-23-b, BR-DE-24-b, IP-PAY-03).
+// Several payment means (BR-DE-23-b, BR-DE-24-b, CII-SR-467, IP-PAY-03).
 #let _several-means(f) = {
   let names = f.means.map(_means-description)
   (
@@ -1149,6 +1149,7 @@
   ),
   "BR-DE-23-b": _several-means,
   "BR-DE-24-b": _several-means,
+  "CII-SR-467": _several-means,
   "IP-PAY-03": _several-means,
   "BR-DE-23-a": _transfer-account,
   "CII-SR-470": _transfer-account,

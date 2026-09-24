@@ -1252,8 +1252,12 @@
   // An invoice states one payment means code (BT-81). XRechnung forbids the
   // details of a direct debit (BG-19: the mandate reference, the creditor
   // identifier or a debited account) next to a credit transfer (BR-DE-23-b)
-  // or a payment card (BR-DE-24-b); the other combinations are conflicting
-  // instructions as well, which could make the buyer pay twice.
+  // or a payment card (BR-DE-24-b); the CEN Schematron 1.3.16 of EN 16931
+  // and XRechnung forbids payment means codes that differ (CII-SR-467),
+  // which the kinds of payment means here have (see `code-kind`). The other
+  // combinations are conflicting instructions as well, which could make the
+  // buyer pay twice, but the validation of BASIC WL and BASIC accepts them
+  // (IP-PAY-03).
   let kinds = ()
   let conflicting = ()
   let debit-details = (
@@ -1275,7 +1279,9 @@
         "BR-DE-23-b"
       } else if xrechnung and debit-details and "card" in kinds {
         "BR-DE-24-b"
-      } else { "IP-PAY-03" },
+      } else if xrechnung or profile.id == "en16931" { "CII-SR-467" } else {
+        "IP-PAY-03"
+      },
       field: fields.join(", "),
       means: conflicting,
       paid: "paid" in fields,

@@ -131,7 +131,7 @@
 
 // 6. A problem that XRechnung reports under a rule of its own is listed once:
 //    bank details next to a direct debit are two payment means (BR-DE-23-b in
-//    XRechnung, IP-PAY-03 in EN 16931)
+//    XRechnung, CII-SR-467 in EN 16931)
 #invoice(
   theme: themes.blank,
   locale: locale.de-de,
@@ -151,7 +151,7 @@
       payment-means: payment-means(data),
     )
     assert.eq(result.profile.id, "en16931")
-    assert.eq(rules(result, "error"), ("IP-PAY-03",))
+    assert.eq(rules(result, "error"), ("CII-SR-467",))
     assert.eq(rules(result, "warning"), ())
   })[
     #line-items[#item([Consulting], price: 100, tax: tax.vat(19%))]

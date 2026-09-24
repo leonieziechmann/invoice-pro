@@ -71,7 +71,7 @@ profiles = ["en16931", "xrechnung"]
 # Payment terms and payment means.
 [[rule]]
 ids = [
-  "BR-CO-25", "BR-CL-16",
+  "BR-CO-25", "BR-CL-16", "CII-SR-467",
   "BR-DE-1", "BR-DE-18", "BR-DE-19", "BR-DE-20", "BR-DE-23-a", "BR-DE-23-b", "BR-DE-24-a",
   "BR-DE-24-b", "BR-DE-25-a", "BR-DE-31", "PEPPOL-EN16931-R061",
 ]
@@ -571,12 +571,6 @@ charge is reported as BR-O-02, which BASIC WL does not have (no lines); the vali
 or BR-O-04."""
 
 [[rule]]
-ids = ["CII-SR-467"]
-class = "open"
-reason = """Payment means of different types: invoice-pro reports IP-PAY-03, KoSIT (CEN 1.3.16) \
-CII-SR-467."""
-
-[[rule]]
 ids = ["PEPPOL-EN16931-R120"]
 class = "open"
 reason = """With `tax-mode: "inclusive"`, the net price (BT-146) is rounded, so the invoiced \
@@ -826,9 +820,11 @@ tests = ["tests/zugferd/payment-means/test.typ"]
 
 [ip."IP-PAY-03"]
 level = "error"
-summary = "Two kinds of payment means that the official rules accept together."
-basis = "EN 16931 BG-16: an invoice states one payment means type (BT-81), so that the buyer does not pay twice."
-tests = ["tests/zugferd/payment-means/test.typ", "tools/zugferd/corpus/regression/payment-card-and-bank.typ"]
+summary = "Two kinds of payment means in BASIC WL and BASIC, whose validation accepts them together."
+basis = """EN 16931 BG-16: an invoice states one payment means type (BT-81), so that the buyer does not \
+pay twice; the CEN Schematron 1.3.16 checks it as CII-SR-467, which the validation of these profiles \
+does not apply."""
+tests = ["tests/zugferd/payment-means/test.typ", "tools/zugferd/corpus/regression/payment-card-and-bank-basic.typ"]
 
 [ip."IP-PAY-04"]
 level = "error"
