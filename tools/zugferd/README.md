@@ -10,7 +10,7 @@ How to run them, how to read their results and how to update golden files and kn
 | `corpus/regression/`     | Committed regression cases, each with an `// expect:` header.                                                                                             |
 | `corpus/rules/`          | Parity fixtures: the smallest invoice that breaks one official rule, in each profile of its header; the validators of the profile must report the rule.   |
 | `harness.typ`            | Theme wrapper that attaches invoice-pro's diagnostics to the PDF as JSON, so that one compilation yields the XML and the verdict.                         |
-| `run.py`                 | The runner: Typst, XSD, Mustang in one JVM, KoSIT in one batch, classification, oracles, known issues, gates.                                             |
+| `run.py`                 | The runner: Typst (in the strict mode of the write guard), XSD, Mustang in one JVM, KoSIT in one batch, classification, oracles, known issues, gates.     |
 | `kosit.py`               | Validates the EN 16931 and XRechnung documents of `scripts/validate-all-zugferd` with KoSIT in one JVM.                                                   |
 | `xmp.py`                 | The Factur-X PDF check (`scripts/zugferd-xmp`): an expected failure until Typst can write custom XMP metadata.                                            |
 | `upstream.py`            | Compares the pinned Mustang, KoSIT, XRechnung configuration and Typst with their latest releases (weekly workflow).                                       |

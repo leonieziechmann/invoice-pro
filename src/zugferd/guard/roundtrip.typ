@@ -32,11 +32,12 @@
 // than the model has values for it, or another number of entries of a
 // repeated group.
 //
-// The standard mode compares the header and counts the lines; the strict
-// mode (`zugferd-strict`, which CI uses) compares every line as well: that
-// takes about 1.6 million instructions (0.4 ms) per line, twenty times the
-// budget of a check per line (tools/perf/README.md). One call walks the
-// document with a stack, without a call per element.
+// The standard mode compares the header and counts the lines, about 13
+// million instructions (3 ms) per invoice; the strict mode (`zugferd-strict`,
+// which CI uses) compares every line as well, which with its arithmetic takes
+// about 1.7 million instructions (0.4 ms) per line, twenty times the budget
+// of a check per line (tools/perf/README.md). One call walks the document
+// with a stack, without a call per element.
 
 #let _table = json("bindings.json")
 
