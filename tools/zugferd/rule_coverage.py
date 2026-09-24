@@ -799,7 +799,9 @@ def _check_fixture_file(f, decisions):
     problems = []
     for profile in f.profiles:
         d = decisions[profile].get(f.rule)
-        if d is None:
+        if f.rule.startswith("IP-"):
+            pass  # a case of invoice-pro's own rule: no official rule to compare
+        elif d is None:
             problems.append(f"FIXTURE {f.name}: runs in {profile}, whose validators do not have {f.rule}")
         elif d.cls == "fixture":
             if f.rule not in f.rules and not (d.entry and set(f.rules) & set(d.entry.reported_as)):

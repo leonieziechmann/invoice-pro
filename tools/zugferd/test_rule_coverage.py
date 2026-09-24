@@ -310,6 +310,8 @@ class Classification(unittest.TestCase):
         # A rule the header names must be one of the profile as well.
         _, problems = self.classes(entries, [fixture("BR-61", "BR-61", "BR-97")], unclassified=False)
         self.assertEqual(problems, ["FIXTURE BR-61.typ: names BR-97, which the validators of en16931 do not have"])
+        # A case of invoice-pro's own rule has no official rule to compare.
+        self.assertEqual(self.classes(entries, [fixture("IP-PAY-03")], unclassified=False)[1], [])
 
     def test_explain(self):
         decisions, _ = rc.classify(self.inv, [entry(["BR-27"], "construction", evidence=["src/x.typ"])], [])
