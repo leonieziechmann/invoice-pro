@@ -911,18 +911,32 @@ def report(inventory, decisions, summary, problems, ip):
 
 
 def explain(decisions, only=None):
+    """Every rule id (or those of `only`) with its class per profile and the
+    assertions of all profiles; for the rules of `only` also their context
+    and test."""
     lines = []
     rules = sorted({r for p in PROFILES for r in decisions[p]})
+    for rule in sorted(set(only or ()) - set(rules)):
+        lines.append(f"{rule}: no artefact of any profile has this rule id")
     for rule in rules:
         if only and rule not in only:
             continue
         per = [(p, decisions[p][rule]) for p in PROFILES if rule in decisions[p]]
         lines.append(f"{rule}")
         for profile, d in per:
-            lines.append(f"  {profile:9s} {d.cls:12s} ({d.source}) {d.reason[:140]}")
-        for a in per[-1][1].assertions:
-            guard = f" guard: {'/'.join(a.dispositions)}" if a.dispositions else ""
-            lines.append(f"    {a.validator} {a.name} {a.id} ({a.level}){guard}: {a.text[:120]}")
+            lines.append(f"  {profile:9s} {d.cls:12s} ({d.source}) {normalize(d.reason)[:140]}")
+        seen = set()
+        for _, d in per:
+            for a in d.assertions:
+                key = (a.validator, a.artefact, a.id, a.context, a.test)
+                if key in seen:
+                    continue
+                seen.add(key)
+                guard = f" guard: {'/'.join(a.dispositions)}" if a.dispositions else ""
+                lines.append(f"    {a.validator} {a.name} {a.id} ({a.level}){guard}: {a.text[:120]}")
+                if only:
+                    lines.append(f"      context: {a.context}")
+                    lines.append(f"      test: {a.test}")
     return "\n".join(lines)
 
 

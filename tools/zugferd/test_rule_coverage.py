@@ -290,6 +290,18 @@ class Classification(unittest.TestCase):
         self.assertEqual(len(problems), 1)
         self.assertIn("a rule no validator of any profile has", problems[0])
 
+    def test_explain(self):
+        decisions, _ = rc.classify(self.inv, [entry(["BR-27"], "construction", evidence=["src/x.typ"])], {})
+        text = rc.explain(decisions)
+        self.assertIn("BR-27\n  basic     construction (entry) r\n  en16931   construction (entry) r\n", text)
+        self.assertNotIn("context:", text)
+        # One rule, with the context and test of its assertions (of all
+        # profiles, each once), and an id no artefact has.
+        text = rc.explain(decisions, {"BR-27", "BR-99"}).splitlines()
+        self.assertEqual(text[0], "BR-99: no artefact of any profile has this rule id")
+        self.assertEqual(text[4:], ["    mustang CEN EN 16931 Schematron 1.3.12 BR-27 (error) guard: business: [BR-27] text",
+                                    "      context: //BR-27", "      test: test(BR-27)"])
+
     def test_summary_and_open_rules(self):
         decisions, _ = rc.classify(self.inv, [entry(["BR-27", "BR-61"], "open"),
                                               entry(["BR-20"], "compiled", profiles=["en16931"], index=1)], {})
