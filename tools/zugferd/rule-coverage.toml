@@ -351,12 +351,16 @@ ids = [
   "BR-S-09", "BR-CO-10", "BR-CO-11", "BR-CO-12", "BR-CO-13", "BR-CO-14", "BR-CO-15", "BR-CO-16", "BR-CO-17",
 ]
 class = "construction"
-reason = """The model computes the totals and the VAT breakdown from the lines, allowances and \
-charges it writes, and the validator re-checks the sums before the XML is written (a failure there \
-is a bug). Every invoice of the corpus is checked by both validators."""
+reason = """The model takes the totals and the VAT breakdown the invoice prints and adds up the \
+sums of the lines, allowances and charges it writes (BT-106 to BT-108); the rules check that these \
+add up to the printed amounts before the XML is written (IP-PRINT-01, IP-CALC-02, BR-CO-17 and \
+BR-*-08, a failure there is a bug), and `zugferd-strict` checks the sums of these rules on the XML. \
+Every invoice of the corpus is checked by both validators."""
 evidence = [
   "src/zugferd/model.typ: totals and taxes",
   "src/zugferd/rules/engine.typ: the consistency checks of the totals (IP-PRINT-01, BR-CO-17 and BR-*-08)",
+  "src/zugferd/rules/equivalence-detail.typ: the printed amounts of every VAT group (IP-CALC-02)",
+  "src/zugferd/guard/strict.typ: BR-CO-10 to BR-CO-17 and BR-*-08 on the XML (`zugferd-strict`)",
   "tools/zugferd/corpus/gen.py: the legal population, AGREE_VALID by the hard gate",
 ]
 
