@@ -11,7 +11,9 @@ Populations
                seeded random sample, restricted by `allowed()` to legal,
                complete real-world invoices -> AGREE_VALID, all oracles green
   mutation     a legal invoice with one required input removed ->
-               AGREE_INVALID and invoice-pro names the rule
+               AGREE_INVALID and invoice-pro names the rule, or, for a
+               detail the law requires on the printed invoice (custom
+               references of the DIN 5008 letter), STRICTER and its own rule
   metamorphic  twins that must agree on amounts: bundle quantity 1 vs 2,
                reversed line order, items split into two lines, another
                profile, another currency
@@ -44,8 +46,12 @@ import common  # noqa: E402
 
 DIMS = {
     "profile": ["minimum", "basic-wl", "basic", "en16931", "xrechnung", "auto"],
-    "route": ["de-de", "de-fr", "de-at", "de-us", "de-ch", "at-de", "fr-fr", "ch-ch"],
-    "tax": ["s", "s2", "s-e", "s-z", "e2", "ae", "k", "g", "o", "smallbiz"],
+    # "ch-fr": a Swiss seller, identified by its legal registration
+    # identifier, supplies goods from Germany to France through its German
+    # fiscal representative (BG-11), which holds its VAT registration.
+    "route": ["de-de", "de-fr", "de-at", "de-us", "de-ch", "at-de", "fr-fr", "ch-ch", "ch-fr"],
+    # "e-code": exempt items with the VATEX code of the exemption (BT-121).
+    "tax": ["s", "s2", "s-e", "s-z", "e2", "e-code", "ae", "k", "g", "o", "smallbiz"],
     "mode": ["exclusive", "inclusive"],
     "mods": ["none", "item-pct", "item-abs", "doc-pct", "doc-abs-disc", "doc-abs-sur", "bundle2-pct", "free-ship"],
     "amounts": ["plain", "fractional", "large", "credit-line"],
@@ -56,7 +62,9 @@ DIMS = {
     # "period": the service period of the invoice (`service-period`).
     "delivery": ["none", "addr", "dates-all", "dates-mixed", "period"],
     "lines": [1, 3, 8],
-    "theme": ["blank", "din-5008"],
+    # "din-5008-refs": the DIN 5008 letter with references of its own, which
+    # print what the law requires (IP-PRINT-03, IP-PERIOD-03).
+    "theme": ["blank", "din-5008", "din-5008-refs"],
     # Document type (BT-3): 380, 381, 384, 389.
     "doctype": ["invoice", "credit-note", "corrected", "self-billed"],
     # Invoice notes (BT-21/22), note and country of origin of an item
@@ -225,6 +233,23 @@ GROUNDS = {
     "o": "Nicht im Inland steuerbare Leistung",
 }
 CATEGORY = {"ae": "AE", "k": "K", "g": "G", "o": "O"}
+# The VATEX code of the exemption of the "e-code" items (BT-121), medical care
+# (Art. 132(1)(c) of the VAT Directive, § 4 Nr. 14 UStG).
+EXEMPTION_CODE = "VATEX-EU-132-1C"
+# The German fiscal representative of the Swiss seller of route "ch-fr"
+# (§ 22a UStG), which holds its VAT registration (BT-63).
+TAX_REPRESENTATIVE = dict(
+    name="Fiskalvertretung Muster GmbH",
+    source='(name: "Fiskalvertretung Muster GmbH", address: "Steuerweg 3", '
+    'city: (name: "Frankfurt am Main", post-code: "60311"), country: country.de, vat-id: "DE136695976")',
+    vat="DE136695976",
+    country="DE",
+)
+# The references of the "din-5008-refs" theme: everything the law requires
+# on the printed invoice, i.e. the date of the supply (service-time) and the
+# seller's tax number or VAT identifier.
+REFERENCES = ("invoice-nr", "invoice-date", "service-time", "due-date", "seller-tax-nr", "seller-vat-id",
+              "buyer-vat-id")
 # Identifiers of the "id" and "gln" variants of the `ids` dimension.
 SELLER_ID = "SUP-70025"
 SELLER_GLN = "4000001123452"
@@ -294,15 +319,20 @@ def allowed(f):
         # Reverse charge: cross-border within the EU or domestic (section 13b UStG).
         if tax == "ae" and route not in ("de-de", "de-fr", "de-at", "at-de"):
             return False
-        # Intra-community supply: between two different EU member states.
-        if tax == "k" and not (s in EU and b in EU and s != b):
+        # Intra-community supply: between two different EU member states (for
+        # route "ch-fr", from Germany, where the fiscal representative holds
+        # the seller's VAT registration).
+        if tax == "k" and not (route == "ch-fr" or (s in EU and b in EU and s != b)):
+            return False
+        # The fiscal representative of route "ch-fr" supplies goods to France.
+        if route == "ch-fr" and tax != "k":
             return False
         # Export and non-taxable supplies: to a buyer outside the EU.
         if tax in ("g", "o") and (b not in ("us", "ch") or s == "ch"):
             return False
         if tax == "smallbiz" and route not in ("de-de", "fr-fr", "ch-ch"):
             return False
-        if tax in ("e2", "s-z") and s != b:
+        if tax in ("e2", "e-code", "s-z") and s != b:
             return False
     if ids and tax:
         # K, G and AE need the seller VAT ID; O (and the small business
@@ -315,6 +345,11 @@ def allowed(f):
         # VAT IDs, which K and G need.
         if tax in ("k", "g") and ids == "legal":
             return False
+    # The Swiss seller of route "ch-fr" states the legal registration
+    # identifier and its fiscal representative, not a VAT ID or tax number of
+    # its own; the buyer of the intra-community supply states its VAT ID.
+    if route == "ch-fr" and ids and ids not in ("vat", "id", "gln"):
+        return False
     # A reverse charge identifies the buyer by its legal registration
     # identifier instead of its VAT ID (BR-AE-02) only at home (e.g. section
     # 13b UStG); across borders the law requires the VAT ID (IP-VAT-226).
@@ -328,12 +363,13 @@ def allowed(f):
     if prof == "xrechnung" and pay == "nobank+days":
         return False
     # The sender of a credit note or a self-billed invoice pays the amount:
-    # no direct debit, card payment or paid invoice, the account is the
-    # recipient's (which the US buyer has none of), and no payee.
+    # by credit transfer to the recipient's account (which the US buyer has
+    # none of), or paid already (e.g. in cash); no direct debit, card payment
+    # or payee.
     if doc in ("credit-note", "self-billed"):
-        if pay in ("direct-debit", "card", "paid") or extras == "payee":
+        if pay in ("direct-debit", "card") or extras == "payee":
             return False
-        if b == "us" and pay and pay != "nobank+days":
+        if b == "us" and pay and pay not in ("nobank+days", "paid"):
             return False
     # The own date of a credit note is not the date of the supply, so it
     # states one only with dates; an intra-community supply needs it
@@ -346,7 +382,7 @@ def allowed(f):
     if doc == "self-billed":
         if route and route not in ("de-de", "fr-fr", "ch-ch"):
             return False
-        if tax and tax not in ("s", "s2", "s-e", "s-z", "e2"):
+        if tax and tax not in ("s", "s2", "s-e", "s-z", "e2", "e-code"):
             return False
         if prof in ("xrechnung", "auto") or ids in ("taxnr", "legal") or g("delivery") == "addr":
             return False
@@ -466,6 +502,9 @@ def _items(f, seller, opts):
             ground = GROUNDS["e1"] if k % 2 == 0 else GROUNDS["e2"]
             t = f'tax.exempt(grounds: "{ground}")'
             grounds.append(("E", ground))
+        if tax == "e-code":
+            t = f'tax.exempt(grounds: "{GROUNDS["e2"]}", code: "{EXEMPTION_CODE}")'
+            grounds.append(("E", GROUNDS["e2"]))
         if tax in CATEGORY:
             t = f'tax.{CONSTRUCTOR[tax]}(grounds: "{GROUNDS[tax]}")'
             grounds.append((CATEGORY[tax], GROUNDS[tax]))
@@ -530,6 +569,7 @@ def _breakdown(f, seller, mutation):
         "s-e": [("S", std), ("E", "0")] if several else [("E", "0")],
         "s-z": [("S", std), ("Z", "0")] if several else [("Z", "0")],
         "e2": [("E", "0")],
+        "e-code": [("E", "0")],
         "ae": [("AE", "0")],
         "k": [("K", "0")],
         "g": [("G", "0")],
@@ -593,6 +633,13 @@ def render(cid, f, mutation=None, opts=None):
     opts = opts or {}
     s_code, b_code = parties(f)
     seller, buyer = dict(SELLER[s_code]), dict(BUYER[b_code])
+    # The Swiss seller of route "ch-fr" invoices through its German VAT
+    # registration: in euro, with its legal registration identifier and its
+    # fiscal representative instead of a VAT ID (BT-31) of its own. (The
+    # sender of a self-billed invoice, a random case only, is the buyer.)
+    represented = f["route"] == "ch-fr" and f["doctype"] != "self-billed"
+    if represented:
+        seller.update(locale="de-de", currency="EUR")
     locale = opts.get("locale", seller["locale"])
     currency = "USD" if f["currency"] == "usd" else opts.get("currency", seller["currency"])
     ids, doc, extras = f["ids"], f["doctype"], f["extras"]
@@ -609,7 +656,7 @@ def render(cid, f, mutation=None, opts=None):
     ]
     if mutation != "no-seller-contact":
         sender.append(f"contact: {seller['contact']}")
-    if ids in ("vat", "vat+taxnr", "id", "gln") and mutation != "no-seller-vat":
+    if ids in ("vat", "vat+taxnr", "id", "gln") and mutation != "no-seller-vat" and not represented:
         sender.append(f'vat-id: {opts.get("seller_vat", chr(34) + seller["vat"] + chr(34))}')
     if ids in ("taxnr", "vat+taxnr", "legal"):
         sender.append(f'tax-nr: "{seller["taxnr"]}"')
@@ -617,8 +664,10 @@ def render(cid, f, mutation=None, opts=None):
         sender.append(f'id: "{SELLER_ID}"')
     if ids == "gln":
         sender.append(f'global-id: (scheme: "0088", id: "{SELLER_GLN}")')
-    if ids == "legal":
+    if ids == "legal" or represented:
         sender.append(f"legal-id: {seller['legal']}")
+    if represented:
+        sender.append(f"tax-representative: {TAX_REPRESENTATIVE['source']}")
     recipient = [
         f'address: "{buyer["address"]}"',
         f'city: {opts.get("buyer_city", buyer["city"])}',
@@ -662,6 +711,11 @@ def render(cid, f, mutation=None, opts=None):
         header.append(f"  payee: {PAYEE['source']},")
     if f["currency"] == "usd":
         header.append('  currency: "USD",')
+    # The DIN 5008 letter prints the references the case gives, or the
+    # default ones of the theme.
+    refs = opts.get("references", REFERENCES if f["theme"] == "din-5008-refs" else None)
+    if refs is not None:
+        header.append("  references: (" + ", ".join(f"references.{ref}()" for ref in refs) + "),")
     lines, names, grounds, doc_mods, item_mods, item_data = _items(f, seller, opts)
     if mutation == "e-no-grounds":
         lines = [line.replace(f'tax.exempt(grounds: "{GROUNDS["e1"]}")', "tax.exempt()") for line in lines]
@@ -669,7 +723,7 @@ def render(cid, f, mutation=None, opts=None):
     if mutation == "no-lines":
         lines, names, grounds, doc_mods, item_mods = [], [], [], [], []
         item_data = {"item_notes": [], "item_origins": []}
-    theme = "themes.DIN-5008()" if f["theme"] == "din-5008" else "themes.blank"
+    theme = "themes.DIN-5008()" if f["theme"].startswith("din-5008") else "themes.blank"
     profile = "auto" if f["profile"] == "auto" else f'"{f["profile"]}"'
     invoice_nr = opts.get("invoice_nr", f'"{cid}"')
     src = [
@@ -731,10 +785,15 @@ def render(cid, f, mutation=None, opts=None):
         # Every identifier reaches its business term (BT-29/30/31/32, BT-46/47/48).
         "seller_vat": seller["vat"]
         if ids in ("vat", "vat+taxnr", "id", "gln") and not without_vat_ids and mutation != "no-seller-vat"
+        and not represented
         else None,
         "seller_tax_nr": seller["taxnr"] if ids in ("taxnr", "vat+taxnr", "legal") else None,
         "seller_ids": {"id": [["", SELLER_ID]], "gln": [["0088", SELLER_GLN]]}.get(ids),
-        "seller_legal_id": seller["legal_fact"] if ids == "legal" else None,
+        "seller_legal_id": seller["legal_fact"] if ids == "legal" or represented else None,
+        # The seller tax representative (BG-11), from BASIC WL on.
+        "tax_representative": {key: TAX_REPRESENTATIVE[key] for key in ("name", "vat", "country")}
+        if represented and resolved_profile(f) != "minimum"
+        else None,
         "buyer_vat": buyer["vat"]
         if buyer["vat"] and ids != "legal" and not without_vat_ids and mutation != "no-buyer-vat"
         else None,
@@ -791,6 +850,16 @@ MUTATIONS = [
     ("no-seller-contact", ["xrechnung"], {}, ["BR-DE-2"]),
     ("no-bank", ["xrechnung"], {"payment": "bank+days"}, ["BR-DE-1"]),
     ("no-buyer-email", ["xrechnung"], {"route": "de-us"}, ["PEPPOL-EN16931-R010"]),
+]
+
+# A detail the law requires on the printed invoice left out of the references
+# of the DIN 5008 letter -> STRICTER, and invoice-pro names its own rule.
+# (id, profiles, references, expected rules)
+PRINTED = [
+    ("refs-no-seller-tax-id", ["en16931", "xrechnung"],
+     ("invoice-nr", "invoice-date", "service-time", "buyer-vat-id"), ["IP-PRINT-03"]),
+    ("refs-no-date-of-supply", ["en16931", "xrechnung"],
+     ("invoice-nr", "invoice-date", "seller-tax-nr", "seller-vat-id"), ["IP-PERIOD-03"]),
 ]
 
 # Unusual but valid input forms: (id, feature overrides, opts). The expected
@@ -905,6 +974,12 @@ def mutations():
                 f["route"] = "de-de"
             suffix = "-" + overrides["tax"] if "tax" in overrides and name == "no-buyer-vat" else ""
             cases.append(_case(f"mu-{name}{suffix}-{prof}", "mutation", f, "AGREE_INVALID", rules, name))
+    for name, profiles, refs, rules in PRINTED:
+        for prof in profiles:
+            f = dict(SIMPLE, lines=3, theme="din-5008-refs", profile=prof)
+            if prof == "xrechnung":
+                f["route"] = "de-de"
+            cases.append(_case(f"mu-{name}-{prof}", "mutation", f, "STRICTER", rules, opts={"references": refs}))
     return cases
 
 

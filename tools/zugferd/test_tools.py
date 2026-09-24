@@ -878,16 +878,20 @@ class Generator(unittest.TestCase):
     def test_document_and_payment_constraints(self):
         base = dict(gen.SIMPLE)
         # The sender of a credit note pays: no direct debit, card, payee, and
-        # bank details only of a buyer with an account.
+        # bank details only of a buyer with an account; paid already, e.g. in
+        # cash, also to a buyer without one.
         credit = dict(base, doctype="credit-note")
         self.assertTrue(gen.allowed(credit))
-        for other in ({"payment": "direct-debit", "route": "de-de"}, {"payment": "card"}, {"payment": "paid"},
+        for other in ({"payment": "direct-debit", "route": "de-de"}, {"payment": "card"},
                       {"extras": "payee"}, {"route": "de-us", "payment": "bank+days"}):
             self.assertFalse(gen.allowed(dict(credit, **other)), other)
         self.assertTrue(gen.allowed(dict(credit, route="de-us", payment="nobank+days")))
+        self.assertTrue(gen.allowed(dict(credit, payment="paid")))
+        self.assertTrue(gen.allowed(dict(credit, route="de-us", payment="paid")))
         # A self-billed invoice: at home, not in XRechnung.
         billed = dict(base, doctype="self-billed", route="de-de")
         self.assertTrue(gen.allowed(billed))
+        self.assertTrue(gen.allowed(dict(billed, payment="paid")))
         self.assertFalse(gen.allowed(dict(billed, route="de-fr")))
         self.assertFalse(gen.allowed(dict(billed, profile="xrechnung")))
         # A SEPA direct debit of the German seller from an account in the euro area.
@@ -1027,6 +1031,65 @@ class Generator(unittest.TestCase):
             (out / "manifest.json").write_text("{}", encoding="utf-8")
             gen.write([], out, {})  # a generated corpus is replaced
             self.assertFalse((out / "case.typ").exists())
+
+    def test_paid_credit_note(self):
+        src, paid = gen.render("x", dict(gen.SIMPLE, doctype="credit-note", payment="paid", route="de-de"))
+        self.assertIn('#paid(method: "cash", date: datetime(year: 2026, month: 9, day: 1))', src)
+        self.assertNotIn("#bank-details", src)
+        self.assertEqual((paid["type_code"], paid["payment_means"], paid["paid"], paid["iban"]), ("381", ["10"], True, None))
+
+    def test_fiscal_representative(self):
+        # A Swiss seller supplies goods from Germany to France through its
+        # German fiscal representative (BG-11): an intra-community supply,
+        # with the VAT ID of the representative and the buyer's.
+        route = dict(gen.SIMPLE, route="ch-fr", tax="k")
+        self.assertTrue(gen.allowed(route))
+        self.assertTrue(gen.allowed(dict(route, ids="gln")))
+        for other in ({"tax": "s"}, {"tax": "g"}, {"ids": "legal"}, {"ids": "taxnr"}, {"doctype": "self-billed"},
+                      {"payment": "direct-debit"}):
+            self.assertFalse(gen.allowed(dict(route, **other)), other)
+        src, facts = gen.render("x", route)
+        self.assertIn('legal-id: id.uid-ch("CHE-123.456.788")', src)
+        self.assertIn(f"tax-representative: {gen.TAX_REPRESENTATIVE['source']}", src)
+        self.assertIn("locale: locale.de-de", src)
+        self.assertNotIn('vat-id: "CHE', src)
+        self.assertEqual((facts["seller_vat"], facts["seller_legal_id"], facts["buyer_vat"], facts["ship_to_country"],
+                          facts["currency"], facts["breakdown"]),
+                         (None, ["0183", "CHE123456788"], "FR61954506077", "FR", "EUR", [("K", "0")]))
+        self.assertEqual(facts["tax_representative"], {"name": "Fiskalvertretung Muster GmbH", "vat": "DE136695976",
+                                                       "country": "DE"})
+        # MINIMUM states no tax representative.
+        self.assertIsNone(gen.render("x", dict(route, profile="minimum"))[1]["tax_representative"])
+        # A random self-billed invoice: the sender is the buyer, who has no
+        # tax representative of the seller.
+        src, billed = gen.render("x", dict(route, doctype="self-billed"))
+        self.assertNotIn("tax-representative", src)
+        self.assertIsNone(billed["tax_representative"])
+
+    def test_exemption_codes(self):
+        f = dict(gen.SIMPLE, tax="e-code", route="de-de", lines=2)
+        self.assertTrue(gen.allowed(f))
+        self.assertFalse(gen.allowed(dict(f, route="de-fr")))  # an exemption at home
+        src, facts = gen.render("x", f)
+        self.assertEqual(src.count(f'tax.exempt(grounds: "{gen.GROUNDS["e2"]}", code: "{gen.EXEMPTION_CODE}")'), 2)
+        self.assertEqual((facts["breakdown"], facts["grounds"]), ([("E", "0")], [("E", gen.GROUNDS["e2"])] * 2))
+
+    def test_references(self):
+        src, _ = gen.render("x", dict(gen.SIMPLE, theme="din-5008-refs"))
+        self.assertIn("theme: harness(themes.DIN-5008()),", src)
+        self.assertIn("  references: (references.invoice-nr(), references.invoice-date(), references.service-time(), "
+                      "references.due-date(), references.seller-tax-nr(), references.seller-vat-id(), "
+                      "references.buyer-vat-id()),", src)
+        self.assertNotIn("references:", gen.render("x", dict(gen.SIMPLE, theme="din-5008"))[0])
+        # The printed details the law requires, left out of the references.
+        printed = {c["id"]: c for c in gen.mutations() if c["id"].startswith("mu-refs")}
+        self.assertEqual(sorted(printed), ["mu-refs-no-date-of-supply-en16931", "mu-refs-no-date-of-supply-xrechnung",
+                                           "mu-refs-no-seller-tax-id-en16931", "mu-refs-no-seller-tax-id-xrechnung"])
+        case = printed["mu-refs-no-seller-tax-id-xrechnung"]
+        self.assertEqual((case["expect"], case["expect_rules"], case["features"]["route"]),
+                         ("STRICTER", ["IP-PRINT-03"], "de-de"))
+        self.assertIn("references: (references.invoice-nr(), references.invoice-date(), references.service-time(), "
+                      "references.buyer-vat-id()),", case["source"])
 
     def test_resolved_profile(self):
         self.assertEqual(gen.resolved_profile(dict(gen.SIMPLE, profile="en16931", route="de-de")), "en16931")
