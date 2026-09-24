@@ -132,6 +132,13 @@
   #items()
   Steuernummer: #info.sender.tax-nr
 ]
+// In the address lines of the sender, which the letter prints
+#report-test(
+  references: signs + (references.service-time(),),
+  sender: seller
+    + (tax-nr: none, address: [Street 1 \ USt-IdNr. DE 123 456 789]),
+  (rules, _) => assert.eq(rules, ()),
+)[#items()]
 // A footer of the theme may show it: not known
 #report-test(
   theme: themes.DIN-5008(font: "libertinus serif", footer: [Seller GmbH]),
@@ -299,4 +306,4 @@
 )[#items()]
 
 // Every report above was shown and checked.
-#context assert.eq(query(<report-checked>).len(), 27)
+#context assert.eq(query(<report-checked>).len(), 28)

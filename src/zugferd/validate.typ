@@ -559,7 +559,7 @@
             " (" + _quoted(stated) + " in the e-invoice, " + term + ")"
           }
           + ", which German law requires on the invoice, also when it is the date of the invoice (§ 14 Abs. 4 Satz 1 Nr. 6 UStG).",
-        hint: "Print it with `references.service-time()`, which the default `references` and every preset include, and set `service-period` if the supply was not on the date of the invoice.",
+        hint: "Print it with `references.service-time()`, which the default `references` and every preset include, and set `service-period` if the supply was not on the date of the invoice. A sentence such as \"Leistungsdatum entspricht Rechnungsdatum\" is not recognized: print the date.",
       ))
     } else if profile.settlement and stated != none and differs {
       out.push(warning(
@@ -1612,7 +1612,7 @@
         + ", but the printed invoice shows "
         + if stated.len() > 1 { "neither" } else { "it nowhere" }
         + ". The printed invoice and the e-invoice must state the same details, and the law requires the seller's tax number or VAT identifier on every invoice but a small-amount invoice (§ 14 Abs. 4 Satz 1 Nr. 2 UStG, § 33 UStDV; Art. 226 No. 3 of the VAT Directive).",
-      hint: "Print it with the reference signs: keep `references: auto`, use a preset such as `references.preset-b2b()`, or add `references.seller-vat-id()` or `references.seller-tax-nr()` to your references. The `extra` details of the sender and the text of the invoice work as well.",
+      hint: "Print it with the reference signs: keep `references: auto`, use a preset such as `references.preset-b2b()`, or add `references.seller-vat-id()` or `references.seller-tax-nr()` to your references. The address and the `extra` details of the sender and the text of the invoice count as well. A page header or footer of your own (`set page(..)`) cannot be read: give such details as the `footer` of the theme, e.g. `themes.DIN-5008(footer: ..)`, whose text is not checked.",
     ))
   }
 

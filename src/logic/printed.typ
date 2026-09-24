@@ -13,7 +13,9 @@
 
 /// What the root context knows about the printed invoice while it builds the
 /// e-invoice: whether the theme prints the reference signs (`known`), the
-/// printed references, the `extra` details of the parties the theme prints,
+/// printed references, the name and address lines of the sender and the
+/// recipient (which every invoice prints, and which may carry e.g. the
+/// sender's VAT ID), the `extra` details of the parties the theme prints,
 /// whether the theme prints content of its own on every page (e.g. a footer),
 /// and the drawn body, whose text is searched only when needed.
 ///
@@ -21,9 +23,16 @@
 #let printed-record(theme, references, sender, recipient, body) = {
   let prints = theme.at("prints", default: (:))
   let party-extra = prints.at("party-extra", default: false)
+  let lines = ()
+  for party in (sender, recipient) {
+    for key in ("name", "address", "city") {
+      lines.push(party.at(key, default: none))
+    }
+  }
   (
     known: prints.at("references", default: false) == true,
     references: references,
+    lines: lines,
     extra: if party-extra {
       (sender.at("extra", default: ()), recipient.at("extra", default: ()))
     } else { () },
@@ -51,8 +60,8 @@
 }
 
 // Whether the printed reference signs (except those titled one of
-// `except`), the `extra` details of the parties or the text of the invoice
-// show one of `wanted` (compact texts).
+// `except`), the name and address lines or the `extra` details of the
+// parties or the text of the invoice show one of `wanted` (compact texts).
 #let _search(printed, wanted, except: ()) = {
   for reference in printed.at("references", default: ()) {
     if type(reference) != array or reference.len() != 2 { continue }
@@ -60,6 +69,9 @@
       continue
     }
     if _shows(reference.last(), wanted) { return true }
+  }
+  for line in printed.at("lines", default: ()) {
+    if _shows(line, wanted) { return true }
   }
   for extra in printed.at("extra", default: ()) {
     let values = if type(extra) == dictionary { extra.values() } else if (
