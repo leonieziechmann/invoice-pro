@@ -68,11 +68,13 @@ artefact has (stale), on a fixture entry without a fixture in each of its
 profiles, on an entry the guard makes redundant, on an IP rule of the
 source without an entry (or an entry without source or tests), on an
 official rule id of the source without a fixture or a [[without-fixture]]
-entry, and when the table in docs/docs/e-invoicing.md differs from the
-numbers (`--update-docs` writes it). The `open` rules are the work list
-(OPEN_WORK_LIST), which can only become shorter: a rule open beyond it
-fails, like a new rule id without a class, and so does one of the list
-that is no longer open. run.py checks that every fixture passes in every
+entry, on an id the rule registry reports or covers in a profile whose
+validators do not have it (`registry_problems`, the backward check of the
+registry's `id-profiles`), and when the table in docs/docs/e-invoicing.md
+differs from the numbers (`--update-docs` writes it). The `open` rules are
+the work list (OPEN_WORK_LIST), which can only become shorter: a rule open
+beyond it fails, like a new rule id without a class, and so does one of the
+list that is no longer open. run.py checks that every fixture passes in every
 profile it claims (`fixture_results`) and, in every case of the corpus,
 that invoice-pro names no rule the validators of the profile do not have
 (`foreign_rules`).
@@ -97,6 +99,7 @@ sys.path.insert(0, str(HERE))
 
 import common  # noqa: E402
 import gen_guard  # noqa: E402
+import registry  # noqa: E402
 
 REPO = common.REPO
 TOML = HERE / "rule-coverage.toml"
@@ -890,6 +893,35 @@ def official_rules_in_source(root=REPO / "src", guard=GUARD_DIR):
     return dict(found)
 
 
+def registry_problems(rules_registry, inventory):
+    """The backward check of the rule registry (src/zugferd/rules/
+    registry.json): every official id an entry reports in a profile (see
+    registry.reported_in and `id-profiles`) is a rule of the validators of
+    that profile, and so is every official rule it covers there (see
+    registry.covering), unless the inventory counts it under a rule the
+    entry covers (a Factur-X alias such as FX-SCH-A-000011 of BR-02).
+    invoice-pro's own rules (IP-*) are left out."""
+    problems = []
+    for profile in PROFILES:
+        rules = inventory.rules.get(profile, {})
+        wrong = set()
+        for rule, keys in sorted(registry.reported_in(rules_registry, profile).items()):
+            if rule.startswith("IP-") or rule in rules:
+                continue
+            wrong.add(rule)
+            problems.append(f"REGISTRY {rule} in {profile}: {', '.join(keys)} reports it, but no validator "
+                            "of the profile has it (`profiles`, `id-profiles`)")
+        for rule, keys in sorted(registry.covering(rules_registry, profile).items()):
+            if rule.startswith("IP-") or rule in rules or rule in wrong:
+                continue
+            owners = {ref for ref, assertions in rules.items() if any(a.id == rule for a in assertions)}
+            for key in keys:
+                if not owners & set(rules_registry["rules"][key]["covers"]):
+                    problems.append(f"REGISTRY {rule} in {profile}: {key} covers it, but no validator of the "
+                                    "profile has it, nor under a rule the entry covers (`covers`, `id-profiles`)")
+    return problems
+
+
 def check_without_fixture(without, source, decisions):
     """Problems of the official rule ids the source names (see
     official_rules_in_source): each is a rule of a profile and has a fixture
@@ -1193,6 +1225,10 @@ def main(argv=None):
         problems += found
         problems += check_ip(ip, ip_rules_in_source())
         problems += check_without_fixture(without, official_rules_in_source(), decisions)
+        try:
+            problems += registry_problems(registry.load(), inventory)
+        except ValueError as e:
+            problems.append(f"REGISTRY: {e} (see `python3 tools/zugferd/registry.py --check`)")
         problems += check_open(decisions)
         summary = summarize(decisions)
         if args.update_docs:

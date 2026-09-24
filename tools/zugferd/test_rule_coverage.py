@@ -499,6 +499,61 @@ class Fixtures(unittest.TestCase):
         self.assertEqual(rc.foreign_rules(dict(res, profile=None), levels), [])
 
 
+class RegistryIds(unittest.TestCase):
+    """The backward check of the rule registry: the ids it reports or covers
+    in a profile are rules of the validators of that profile."""
+
+    @staticmethod
+    def registry(**entries):
+        base = {"covers": [], "profiles": ["basic-wl", "en16931"]}
+        return {"rules": {key: {**base, **entry} for key, entry in entries.items()}}
+
+    def test_the_ids_of_each_profile(self):
+        inv = inventory(
+            basic_wl={
+                "BR-O-11": [assertion("BR-O-11", rule_id="FX-SCH-A-000152")],
+                "FX-SCH-A-000040": [assertion("FX-SCH-A-000040")],
+            },
+            en16931={
+                "BR-CL-04": [assertion("BR-CL-04")],
+                "BR-O-02": [assertion("BR-O-02")],
+                "BR-O-11": [assertion("BR-O-11"), assertion("BR-O-11", rule_id="FX-SCH-A-000152")],
+            },
+        )
+        # BR-O-02 is no rule of BASIC WL, where the entry reports it.
+        wrong = self.registry(**{"BR-O-02": {"covers": ["BR-O-02"]}})
+        self.assertEqual(rc.registry_problems(wrong, inv), [
+            "REGISTRY BR-O-02 in basic-wl: BR-O-02 reports it, but no validator of the profile has it "
+            "(`profiles`, `id-profiles`)",
+        ])
+        # ... which `id-profiles` fixes; the Factur-X id of the currency code
+        # list counts in BASIC WL, and a Factur-X alias under the rule it
+        # implements; invoice-pro's own rules are left out.
+        right = self.registry(**{
+            "BR-O-02": {"covers": ["BR-O-02"], "id-profiles": {"BR-O-02": ["en16931"]}},
+            "BR-CL-04": {
+                "ids": ["BR-CL-04", "FX-SCH-A-000040"],
+                "covers": ["BR-CL-04", "FX-SCH-A-000040"],
+                "id-profiles": {"BR-CL-04": ["en16931"], "FX-SCH-A-000040": ["basic-wl"]},
+            },
+            "BR-O-11": {"covers": ["BR-O-11", "FX-SCH-A-000152"]},
+            "IP-TAX-05": {},
+        })
+        self.assertEqual(rc.registry_problems(right, inv), [])
+        # An official rule an entry covers where no validator has it, or
+        # under a rule the entry does not cover.
+        covered = self.registry(**{
+            "BR-CL-04": {
+                "covers": ["BR-CL-04", "FX-SCH-A-000152"],
+                "id-profiles": {"BR-CL-04": ["en16931"], "FX-SCH-A-000152": ["en16931"]},
+            },
+        })
+        self.assertEqual(rc.registry_problems(covered, inv), [
+            "REGISTRY FX-SCH-A-000152 in en16931: BR-CL-04 covers it, but no validator of the profile has "
+            "it, nor under a rule the entry covers (`covers`, `id-profiles`)",
+        ])
+
+
 class OwnRules(unittest.TestCase):
     def test_source(self):
         found = rc.ip_rules_in_source()
