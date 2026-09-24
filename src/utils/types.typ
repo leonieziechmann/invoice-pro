@@ -7,6 +7,12 @@
 /// is only built when the check fails: rendering the pattern and the value
 /// costs more than the check itself.
 #let require(value, value-name, ..types) = {
+  // Most values are of one of the types or one of the literals (e.g.
+  // `none`), which a comparison tells without the matcher. (A dictionary
+  // may be a pattern, which only the matcher reads.)
+  let options = types.pos()
+  let kind = type(value)
+  if kind in options or kind != dictionary and value in options { return }
   let pattern = _matcher.choice(..types)
   if not _matcher.match(value, pattern) {
     assert(

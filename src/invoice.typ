@@ -222,7 +222,7 @@
     (preceding-invoice-date, "invoice::preceding-invoice-date"),
     (due-date, "invoice::due-date"),
   ) {
-    types.require-day(value, name)
+    if value != none { types.require-day(value, name) }
   }
   if (
     type(service-period) == array

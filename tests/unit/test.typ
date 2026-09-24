@@ -1336,6 +1336,25 @@
     catch(() => types.require("x", "unit::mode", "inclusive", "exclusive")),
     "assertion failed: variable `unit::mode`(\"x\") must be of \"inclusive\" | \"exclusive\"",
   )
+  // A value of a listed type or a listed literal passes at once; any other
+  // value is matched against the patterns, also a pattern given as a value
+  types.require(none, "unit::value", none, int)
+  types.require("exclusive", "unit::mode", "inclusive", "exclusive")
+  let day = datetime(year: 2026, month: 9, day: 1)
+  types.require((day, day), "unit::date", none, types.date-like)
+  types.require((name: "Muster"), "unit::party", (name: str))
+  assert.ne(
+    catch(() => types.require((name: 1), "unit::party", (name: str))),
+    none,
+  )
+  assert.ne(
+    catch(() => types.require((day, 1), "unit::date", types.date-like)),
+    none,
+  )
+  assert.ne(
+    catch(() => types.require(types.date-like, "unit::date", types.date-like)),
+    none,
+  )
 
   // ISO 7064 MOD 97-10 by code point: digits and letters A to Z
   assert.eq(mod97("123456"), calc.rem(123456, 97))

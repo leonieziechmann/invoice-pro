@@ -1,7 +1,6 @@
 #import "payment-reference.typ": bank-signal, resolve-payment-reference
 #import "service-period.typ": format-service-period, service-period-of
 #import "../utils/helper.typ": first-given
-#import "../utils/types.typ": require-day
 
 // An identifier given as a dictionary, e.g. a typed identifier of the `id`
 // module (`id.leitweg(..)`), is printed as its identifier.
@@ -49,7 +48,10 @@
 }
 
 #let invoice-date(label: auto, value: auto) = {
-  require-day(value, "references.invoice-date::value")
+  if value != auto {
+    import "../utils/types.typ": require-day
+    require-day(value, "references.invoice-date::value")
+  }
   ctx => {
     let title = if label == auto {
       ctx.locale.strings.reference.invoice-date
@@ -82,7 +84,10 @@
 #let service-period-text-label = label("invoice-pro:service-period-text")
 
 #let service-time(label: auto, value: auto) = {
-  require-day(value, "references.service-time::value")
+  if value != auto {
+    import "../utils/types.typ": require-day
+    require-day(value, "references.service-time::value")
+  }
   ctx => {
     let title = if label == auto {
       ctx.locale.strings.reference.service-time
@@ -289,7 +294,10 @@
 }
 
 #let order-date(label: auto, value: auto) = {
-  require-day(value, "references.order-date::value")
+  if value != auto {
+    import "../utils/types.typ": require-day
+    require-day(value, "references.order-date::value")
+  }
   ctx => {
     let title = if label == auto {
       ctx.locale.strings.reference.order-date
@@ -421,7 +429,10 @@
 }
 
 #let preceding-invoice-date(label: auto, value: auto) = {
-  require-day(value, "references.preceding-invoice-date::value")
+  if value != auto {
+    import "../utils/types.typ": require-day
+    require-day(value, "references.preceding-invoice-date::value")
+  }
   ctx => {
     let title = if label == auto {
       ctx.locale.strings.reference.preceding-invoice-date
@@ -435,7 +446,10 @@
 }
 
 #let due-date(label: auto, value: auto) = {
-  require-day(value, "references.due-date::value")
+  if value != auto {
+    import "../utils/types.typ": require-day
+    require-day(value, "references.due-date::value")
+  }
   ctx => {
     let title = if label == auto {
       ctx.locale.strings.reference.due-date
