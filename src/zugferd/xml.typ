@@ -57,8 +57,12 @@
 // Format a monetary amount (exactly 2 decimals, as required by BR-DEC-*).
 #let fmt-amount = fmt-number
 
-// Format a unit price, which may carry more decimals than an amount (BT-146).
-#let fmt-price = fmt-number.with(max-digits: 6)
+// Format a unit price (BT-146, BT-148), which keeps every decimal: the price
+// the invoice prints (with the fine decimals of its locale), or the net price
+// of a gross price, which has 6 decimals or more, 13 for a quantity of
+// billions (see logic/net-amounts.typ). 28 is the most a decimal has, so
+// nothing is rounded here.
+#let fmt-price = fmt-number.with(max-digits: 28)
 
 // Format a quantity (BT-129, BT-149) without losing its decimals.
 #let fmt-quantity = fmt-number.with(max-digits: 6)

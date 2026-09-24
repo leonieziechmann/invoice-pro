@@ -89,9 +89,9 @@
   assert.eq(fmt-amount(decimal("-0.001")), "0.00")
   assert.eq(fmt-amount(none), "0.00")
 
-  // Prices and quantities keep their decimals
+  // Prices keep every decimal, quantities up to 6
   assert.eq(fmt-price(decimal("0.1234")), "0.1234")
-  assert.eq(fmt-price(decimal("16.7983193277")), "16.798319")
+  assert.eq(fmt-price(decimal("16.7983193277")), "16.7983193277")
   assert.eq(fmt-price(100), "100.00")
   assert.eq(fmt-quantity(decimal("0.125")), "0.125")
   assert.eq(fmt-quantity(decimal("-2")), "-2.00")

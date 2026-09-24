@@ -5,7 +5,7 @@
 // schema of the selected profile does not know is left out.
 
 #import "xml.typ": (
-  dict-to-xml, fmt-amount, fmt-date, fmt-number, fmt-quantity, fmt-rate,
+  dict-to-xml, fmt-amount, fmt-date, fmt-price, fmt-quantity, fmt-rate,
 )
 #import "model.typ": (
   determine-delivery-dates, first-of, profile-terms, text-or-none,
@@ -13,13 +13,6 @@
 
 #let _zero = decimal("0")
 #let _one = decimal("1")
-
-// A unit price (BT-146) keeps every decimal of the model: the price the
-// invoice prints (with the fine decimals of its locale), or the net price of
-// a gross price, which has 6 decimals or more, 13 for a quantity of
-// billions (see logic/net-amounts.typ). 28 is the most a decimal has, so
-// nothing is rounded here.
-#let _fmt-price = fmt-number.with(max-digits: 28)
 
 #let _date(date) = (
   "udt:DateTimeString": (
@@ -356,7 +349,7 @@
   }
 
   // BT-146 is the price of BT-149 units, e.g. a price per 100 pieces.
-  let price = ("ram:ChargeAmount": _fmt-price(line.price))
+  let price = ("ram:ChargeAmount": fmt-price(line.price))
   if line.base-quantity != _one {
     price.insert("ram:BasisQuantity", (
       "@unitCode": line.unit-code,
