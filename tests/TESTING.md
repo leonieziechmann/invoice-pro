@@ -754,8 +754,8 @@ Some official rule ids are named in `src/` although no invoice can show invoice-
 
 ```toml
 [[without-fixture]]
-ids = ["BR-55"]
-reason = "Used for another condition: a preceding invoice date without its number, which the builder does not write."
+ids = ["BR-09", "BR-11", "BR-20", "BR-57"]
+reason = "Cannot fire: a party or delivery address without `country` gets the country of the locale."
 ```
 
 A **parity fixture** `tools/zugferd/corpus/rules/<ID>.typ` is the smallest invoice that breaks one rule. It imports `_base.typ` (the parties and the harness setup of the regression cases), states what invoice-pro must report in its header, like a regression case, and lists the profiles it shows the rule in:

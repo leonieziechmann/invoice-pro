@@ -631,12 +631,6 @@ official rules cannot fail: the validators report the sums that no longer add up
 nothing (MINIMUM). The guard enforces the decimals of the XML."""
 
 [[without-fixture]]
-ids = ["BR-55"]
-reason = """Used for another condition: invoice-pro reports a preceding invoice date (BT-26) without \
-its number under this id, but the builder writes the preceding invoice reference (BG-3) only with its \
-number, so the validators accept the XML (the date is lost)."""
-
-[[without-fixture]]
 ids = ["BR-IC-12", "BR-CO-16"]
 reason = """Warnings for other conditions: a deliver-to country of an intra-community supply that \
 is the seller's own (the official BR-IC-12 requires a deliver-to country, which the builder always \
@@ -728,6 +722,13 @@ level = "warning"
 summary = "An invoice with a negative total."
 basis = "EN 16931 BT-3: a credit note (381) is the document for a credit."
 tests = ["tests/zugferd/document-type/test.typ"]
+
+[ip."IP-DOC-05"]
+level = "error"
+summary = "A preceding invoice date (BT-26) without the number of the preceding invoice (BT-25)."
+basis = """Fidelity: the builder writes the preceding invoice reference (BG-3) with its number only, as \
+BR-55 requires, so the printed date would be missing from the e-invoice."""
+tests = ["tests/zugferd/preceding-invoice/test.typ"]
 
 [ip."IP-PERIOD-01"]
 level = "error or warning"

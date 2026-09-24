@@ -106,16 +106,16 @@
       "summary": "XRechnung allows the document types 326, 380, 381, 384, 389, 875, 876 and 877 (BT-3). XRechnung only warns, but validators such as Mustang reject the invoice, so it is an error.",
       "legal": null
     },
-    "BR-55": {
-      "covers": ["BR-55", "FX-SCH-A-000182"],
-      "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+    "IP-DOC-05": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "document",
       "terms": ["BT-25", "BT-26"],
       "level": "error",
       "field": "preceding-invoice-nr",
-      "summary": "A preceding invoice reference (BG-3) has the number of the preceding invoice (BT-25).",
+      "summary": "A `preceding-invoice-date` without `preceding-invoice-nr`: the e-invoice states a preceding invoice (BG-3) by its number (BT-25), so its date (BT-26) would be lost.",
       "legal": null
     },
     "BR-DE-26": {

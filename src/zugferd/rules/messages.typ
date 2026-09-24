@@ -476,8 +476,8 @@
       )
     }
   },
-  "BR-55": f => (
-    "The date of the preceding invoice (BT-26) is given, but not its number (BT-25), which a preceding invoice reference must have.",
+  "IP-DOC-05": f => (
+    "The date of the preceding invoice (BT-26) is given, but not its number (BT-25): the e-invoice states a preceding invoice by its number, so the date would be lost.",
     "Set `preceding-invoice-nr` on the invoice.",
   ),
   "BR-DE-26": _uncorrected,

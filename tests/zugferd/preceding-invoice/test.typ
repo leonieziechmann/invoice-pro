@@ -1,6 +1,6 @@
 // The preceding invoice reference (BG-3): its number (BT-25) and date
-// (BT-26), a date without number (BR-55), and the corrected invoice, which
-// must name the invoice it replaces (BR-DE-26 in XRechnung, IP-DOC-02).
+// (BT-26), a date without number (IP-DOC-05), and the corrected invoice,
+// which must name the invoice it replaces (BR-DE-26 in XRechnung, IP-DOC-02).
 
 #import "/src/lib.typ": *
 #import "/src/utils/text.typ": plain-text
@@ -55,13 +55,19 @@
   #bank
 ]
 
-// --- 2. A date without number cannot be written (BR-55) ---
+// --- 2. A date without number cannot be written: the date would be lost,
+// while BR-55 (the number of a written reference) cannot fail (IP-DOC-05) ---
 #model-test(preceding-invoice-date: preceding-date, model => {
-  assert.eq(rules(model), ("BR-55",))
-  let d = diagnostic(model, "BR-55")
+  assert.eq(rules(model), ("IP-DOC-05",))
+  let d = diagnostic(model, "IP-DOC-05")
   assert.eq(d.field, "preceding-invoice-nr")
   assert.eq(d.hint, "Set `preceding-invoice-nr` on the invoice.")
   assert.eq(xml-elements(model, "ram:InvoiceReferencedDocument"), ())
+  for id in ("basic-wl", "basic", "xrechnung") {
+    let m = model
+    m.profile = resolve-profile(id, "DE")
+    assert("IP-DOC-05" in rules(m), message: id)
+  }
 })[
   #line-items[#item([Consulting], price: 1000)]
   #payment-goal(days: 14)

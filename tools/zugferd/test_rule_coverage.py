@@ -531,10 +531,10 @@ class OwnRules(unittest.TestCase):
 class WithoutFixture(unittest.TestCase):
     def test_source(self):
         found = rc.official_rules_in_source()
-        self.assertIn(rc.REPO / "src" / "zugferd" / "rules" / "engine.typ", found["BR-55"])
+        self.assertIn(rc.REPO / "src" / "zugferd" / "rules" / "engine.typ", found["BR-02"])
         # The registry names the official ids its rules cover, but not their
         # Factur-X aliases, which the inventory counts under the rule itself.
-        self.assertIn(rc.REPO / "src" / "zugferd" / "rules" / "registry.json", found["BR-55"])
+        self.assertIn(rc.REPO / "src" / "zugferd" / "rules" / "registry.json", found["BR-02"])
         self.assertFalse(any(rule.startswith("FX-SCH-") for rule in found))
         # The guard's tables name the rules it compiles: they do not count.
         self.assertNotIn("BR-01", found)
