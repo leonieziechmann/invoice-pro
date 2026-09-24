@@ -48,13 +48,15 @@
   "XBB XBC XBD XCD XDR XOF XPD XPF XPT XSU XTS XUA XXX YER ZAR ZMW ZWL",
 ))
 
-/// Currency codes of `currencies` that the BR-CL-04 list of the EN 16931
-/// Schematron (EN16931-CII-validation.xslt) does not contain yet: it still
-/// lists the codes they replaced (MRO, STD, VEF). Mustang and the KoSIT
-/// validator apply that list to BASIC, EN 16931 and XRechnung invoices in
-/// addition to the Factur-X one, so an invoice in these currencies cannot be
-/// valid there.
-#let cen-rejected-currencies = _to-set(("MRU STN UYW VES",))
+/// Currency codes of `currencies` that a BR-CL-04 list of the EN 16931
+/// Schematron (EN16931-CII-validation.xslt) does not contain. Its version
+/// 1.3.12 in Mustang lacks MRU, STN, UYW and VES (it still lists the codes
+/// they replaced, MRO, STD and VEF); its version 1.3.16 in the KoSIT
+/// validator has withdrawn ANG, BGN, CUC, HRK and ZWL and lacks STN as well.
+/// The validators apply that list to BASIC, EN 16931 and XRechnung invoices
+/// in addition to the Factur-X one, so an invoice in these currencies cannot
+/// be valid there.
+#let cen-rejected-currencies = _to-set(("ANG BGN CUC HRK MRU STN UYW VES ZWL",))
 
 /// UN/ECE Recommendation 20 and 21 unit codes (BT-130, BT-150; BR-CL-23)
 #let units = _to-set((
@@ -177,11 +179,16 @@
 ))
 
 /// CEF Electronic Address Scheme codes (BT-34, BT-49; BR-CL-25)
+///
+/// The codes that the Factur-X 1.0.07 list and the BR-CL-25 lists of the
+/// EN 16931 Schematron in Mustang (1.3.12) and in the KoSIT validator
+/// (1.3.16) all contain. "9901" is left out on purpose: the EAS code list
+/// has withdrawn it, and the Schematron 1.3.16 rejects it.
 #let eas = _to-set((
   "0002 0007 0009 0037 0060 0088 0096 0097 0106 0130 0135 0142 0147 0151 0170",
   "0183 0184 0188 0190 0191 0192 0193 0194 0195 0196 0198 0199 0200 0201 0202",
   "0203 0204 0205 0208 0209 0210 0211 0212 0213 0215 0216 0217 0218 0221 0225",
-  "0230 9901 9910 9913 9914 9915 9918 9919 9920 9922 9923 9924 9925 9926 9927",
+  "0230 9910 9913 9914 9915 9918 9919 9920 9922 9923 9924 9925 9926 9927",
   "9928 9929 9930 9931 9932 9933 9934 9935 9936 9937 9938 9939 9940 9941 9942",
   "9943 9944 9945 9946 9947 9948 9949 9950 9951 9952 9953 9957 9959 AN AQ AS",
   "AU EM",

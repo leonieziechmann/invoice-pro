@@ -582,7 +582,7 @@ When the corpus fails:
 
 #### Validator Differences
 
-Mustang and KoSIT do not always agree: they bundle different versions of the CEN Schematron (1.3.12 in Mustang, 1.3.16 in KoSIT), Mustang adds the Factur-X Schematron, and some XRechnung rules are warnings in KoSIT but errors in Mustang. When only one of them rejects a document, every rule behind the disagreement must be listed in `tools/zugferd/validator-differences.toml` with the validator that rejects it (`rejected-by`), what the other one reports (`other`: `"warning"` or `"nothing"`) and why they differ and what invoice-pro does (`reason`):
+Mustang and KoSIT do not always agree: they bundle different versions of the CEN Schematron (1.3.12 in Mustang, 1.3.16 in KoSIT) with different code lists, Mustang adds the Factur-X Schematron and its code lists, and some XRechnung rules are warnings in KoSIT but errors in Mustang. When only one of them rejects a document, every rule behind the disagreement must be listed in `tools/zugferd/validator-differences.toml` with the validator that rejects it (`rejected-by`), what the other one reports (`other`: `"warning"` or `"nothing"`) and why they differ and what invoice-pro does (`reason`):
 
 ```toml
 ["BR-DE-27"]
@@ -591,6 +591,7 @@ other = "warning"
 reason = """The phone number of the seller contact (BT-42) has at least three digits. ..."""
 ```
 
+- `rejected-by` and `other` may be a list of both values when it depends on the document: a currency code, for example, may be newer than the code list of Mustang (only Mustang rejects it) or withdrawn from the code list of KoSIT (only KoSIT rejects it).
 - An undocumented disagreement fails the run with the signature `OFFICIAL_DISAGREE only-<validator>=<rules>`. `known-issues.toml` cannot excuse it: it is no bug of invoice-pro, but a difference of the official validators to understand and document.
 - A listed rule that no case shows any more in a run of all regression cases fails the run (`STALE`), so that the list stays true, e.g. after a validator update resolved the difference. Every entry has a regression case that shows it; a run without all of them (with `--only`, `--population` or single case files) does not check the list.
 - The report lists the documented disagreements with their cases. Where one validator only warns and invoice-pro reports an error, invoice-pro is stricter than that validator, e.g. for `BR-DE-27` and `BR-DE-28` (a maintainer decision). An invoice that invoice-pro accepts although one of the validators rejects it is a `FALSE_NEGATIVE`.

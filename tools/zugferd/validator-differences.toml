@@ -18,7 +18,9 @@
 # it (tools/zugferd/corpus/regression/); a run without all of them (`--only`,
 # `--population` or single case files) does not check the list.
 #
-#   rejected-by  the validator that reports an error: "mustang" or "kosit"
+#   rejected-by  the validator that reports an error: "mustang" or "kosit",
+#                or a list of both when it depends on the document (e.g. on
+#                a code that only the code list of one of them has)
 #   other        what the other validator reports: "warning" or "nothing",
 #                or a list of both when it depends on the document
 #   reason       why they differ, and what invoice-pro does
@@ -93,26 +95,14 @@ other = "nothing"
 reason = """The rate of an IPSI line (category M): CEN Schematron 1.3.12 in Mustang requires a rate \
 above zero, CEN 1.3.16 in KoSIT accepts zero as well. invoice-pro reports an error, like Mustang."""
 
-["BR-CL-03"]
-rejected-by = "mustang"
-other = "nothing"
-reason = """The currency of an amount (currencyID). The code lists of CEN Schematron 1.3.12 in \
-Mustang lack the current bolivar (VES), those of CEN 1.3.16 in KoSIT have it. invoice-pro follows \
-Mustang: an e-invoice of the EN 16931 profiles in VES is an error (see BR-CL-04)."""
-
-["BR-CL-04"]
-rejected-by = "mustang"
-other = "nothing"
-reason = """The invoice currency (BT-5): the same difference of the code lists as BR-CL-03. \
-invoice-pro reports an error."""
-
 ["BR-CO-25"]
 rejected-by = "mustang"
 other = "nothing"
 reason = """An amount due needs a payment due date (BT-9) or payment terms (BT-20). The CII \
 Schematron of CEN 1.3.16 in KoSIT no longer checks BR-CO-25 \
-(https://github.com/ConnectingEurope/eInvoicing-EN16931/issues/477); the Factur-X 1.0.07 \
-Schematron in Mustang does (FX-SCH-A-000155). invoice-pro follows Factur-X and reports an error."""
+(https://github.com/ConnectingEurope/eInvoicing-EN16931/issues/477); CEN 1.3.12 and the Factur-X \
+1.0.07 Schematron in Mustang still do (the latter as FX-SCH-A-000155, whose message names \
+BR-CO-25). invoice-pro follows Factur-X and reports an error."""
 
 # ---- KoSIT rejects, Mustang reports nothing
 
@@ -129,3 +119,35 @@ other = "nothing"
 reason = """A credit transfer names the account by its IBAN or a proprietary ID (BT-84). The rule is \
 newer than CEN Schematron 1.3.12 in Mustang, whose CII variant of BR-61 tests the debited account \
 instead; KoSIT (CEN 1.3.16) reports an error. invoice-pro reports BR-61."""
+
+# ---- Code lists: the lists of the validators differ, so either one may
+# ---- reject a code that the other one accepts without a message
+#
+# Mustang checks the codes with the lists of CEN Schematron 1.3.12 and of
+# Factur-X 1.0.07, KoSIT with those of CEN Schematron 1.3.16. The newer lists
+# have codes the older ones lack, and have withdrawn codes the older ones
+# still have. invoice-pro accepts only the codes that every list the
+# validation of a profile applies contains (src/zugferd/codelists.typ), and
+# reports an error for any other.
+
+["BR-CL-03"]
+rejected-by = ["mustang", "kosit"]
+other = "nothing"
+reason = """The currency of an amount (currencyID) is in the ISO 4217 list of the EN 16931 \
+Schematron. CEN 1.3.12 in Mustang lacks newer codes such as the current bolivar (VES), which CEN \
+1.3.16 in KoSIT has; CEN 1.3.16 has withdrawn codes such as the Bulgarian lev (BGN, the euro since \
+2026) and the Croatian kuna (HRK), which CEN 1.3.12 still has. invoice-pro reports both kinds in \
+the profiles based on EN 16931 as BR-CL-04 (`cen-rejected-currencies`)."""
+
+["BR-CL-04"]
+rejected-by = ["mustang", "kosit"]
+other = "nothing"
+reason = """The invoice currency (BT-5): the same difference of the code lists as BR-CL-03. \
+invoice-pro reports an error."""
+
+["BR-CL-25"]
+rejected-by = ["mustang", "kosit"]
+other = "nothing"
+reason = """The scheme of an electronic address (BT-34, BT-49) is in the EAS code list. CEN 1.3.16 \
+in KoSIT has newer schemes (e.g. 0240) that CEN 1.3.12 and Factur-X 1.0.07 in Mustang lack, and it \
+has withdrawn 9901, which they still have. invoice-pro reports both kinds as an error."""

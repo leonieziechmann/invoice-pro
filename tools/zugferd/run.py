@@ -397,15 +397,21 @@ def match_known(row, entries):
 
 def load_differences(path):
     """{rule: entry} of validator-differences.toml: the rules on which Mustang
-    and KoSIT are known to disagree, with the validator that rejects and why."""
+    and KoSIT are known to disagree, with the validator that rejects and why.
+    `rejected-by` and `other` become lists: which validator rejects a rule,
+    and what the other one reports, may depend on the document (e.g. on the
+    code of a code list that only one of them has)."""
     if not path or not Path(path).exists():
         return {}
     data = tomllib.loads(Path(path).read_text(encoding="utf-8"))
     for rule, entry in data.items():
         if not isinstance(entry, dict):
             raise common.ToolError(f"{path}: [{rule}] must be a table")
-        if entry.get("rejected-by") not in VALIDATORS:
-            raise common.ToolError(f"{path}: [{rule}] needs `rejected-by = \"mustang\"` or `\"kosit\"`")
+        rejected = entry.get("rejected-by")
+        rejected = rejected if isinstance(rejected, list) else [rejected]
+        if not rejected or any(name not in VALIDATORS for name in rejected):
+            raise common.ToolError(f"{path}: [{rule}] needs `rejected-by = \"mustang\"` or `\"kosit\"` (or a list of both)")
+        entry["rejected-by"] = rejected
         # What the other validator reports: one level, or a list of them.
         other = entry.get("other")
         others = other if isinstance(other, list) else [other]
@@ -421,7 +427,7 @@ def documented(rule, rejected_by, other, differences):
     """Whether validator-differences.toml documents this disagreement: the
     rule, the validator that rejects it and what the other one reports."""
     entry = differences.get(rule)
-    return bool(entry) and entry["rejected-by"] == rejected_by and other in entry["other"]
+    return bool(entry) and rejected_by in entry["rejected-by"] and other in entry["other"]
 
 
 def disagreement(official):

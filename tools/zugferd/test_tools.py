@@ -185,7 +185,7 @@ class OfficialVerdict(unittest.TestCase):
         self.assertIsNone(collected(mustang_report("BR-CO-25", "BR-S-08"), kosit_report("BR-S-08"))["official"]["disagreement"])
 
     def test_undocumented_disagreements_fail(self):
-        differences = {"BR-DE-27": {"rejected-by": "mustang", "other": ["warning"], "reason": "r"}}
+        differences = {"BR-DE-27": {"rejected-by": ["mustang"], "other": ["warning"], "reason": "r"}}
 
         def case_row(cid, mustang, kosit, ours=()):
             case = {"id": cid, "population": "regression", "expect": "AGREE_INVALID", "file": "x.typ"}
@@ -210,8 +210,8 @@ class OfficialVerdict(unittest.TestCase):
 
     def test_documented_differences_must_occur(self):
         differences = {
-            "BR-DE-27": {"rejected-by": "mustang", "other": ["warning"], "reason": "r"},
-            "BR-CO-25": {"rejected-by": "mustang", "other": ["nothing"], "reason": "r"},
+            "BR-DE-27": {"rejected-by": ["mustang"], "other": ["warning"], "reason": "r"},
+            "BR-CO-25": {"rejected-by": ["mustang"], "other": ["nothing"], "reason": "r"},
         }
         case = {"id": "rg-a", "population": "regression", "expect": "AGREE_INVALID", "file": "x.typ"}
         rows = [run.make_row(case, collected(mustang_report("BR-DE-27"), kosit_report(warnings=["BR-DE-27"]),
@@ -241,16 +241,33 @@ class OfficialVerdict(unittest.TestCase):
     def test_differences_file(self):
         differences = run.load_differences(HERE / "validator-differences.toml")
         for rule, entry in differences.items():
-            self.assertIn(entry["rejected-by"], run.VALIDATORS, rule)
+            self.assertTrue(entry["rejected-by"] and set(entry["rejected-by"]) <= set(run.VALIDATORS), rule)
         # KoSIT reports nothing for a domain with umlauts and warns about an
         # address without a domain name (BR-DE-28); Mustang rejects both.
         self.assertTrue(run.documented("BR-DE-28", "mustang", "nothing", differences))
         self.assertTrue(run.documented("BR-DE-28", "mustang", "warning", differences))
+        # The code lists differ both ways: a code only the newer lists of
+        # KoSIT have, and one they have withdrawn.
+        for rule in ("BR-CL-03", "BR-CL-04", "BR-CL-25"):
+            for validator in run.VALIDATORS:
+                self.assertTrue(run.documented(rule, validator, "nothing", differences), (rule, validator))
         with tempfile.TemporaryDirectory() as tmp:
             bad = Path(tmp) / "differences.toml"
             bad.write_text('[BR-DE-27]\nrejected-by = "kosit"\nother = "error"\nreason = "r"\n', encoding="utf-8")
             with self.assertRaisesRegex(common.ToolError, "other"):
                 run.load_differences(bad)
+            bad.write_text('[BR-DE-27]\nrejected-by = ["kosit", "xsd"]\nother = "nothing"\nreason = "r"\n',
+                           encoding="utf-8")
+            with self.assertRaisesRegex(common.ToolError, "rejected-by"):
+                run.load_differences(bad)
+            # Which validator rejects may depend on the document as well.
+            both = Path(tmp) / "both.toml"
+            both.write_text('[BR-CL-04]\nrejected-by = ["mustang", "kosit"]\nother = "nothing"\nreason = "r"\n',
+                            encoding="utf-8")
+            entries = run.load_differences(both)
+            self.assertTrue(run.documented("BR-CL-04", "kosit", "nothing", entries))
+            self.assertTrue(run.documented("BR-CL-04", "mustang", "nothing", entries))
+            self.assertFalse(run.documented("BR-CL-04", "kosit", "warning", entries))
             # What the other validator reports may depend on the document.
             good = Path(tmp) / "good.toml"
             good.write_text('[BR-DE-28]\nrejected-by = "mustang"\nother = ["warning", "nothing"]\nreason = "r"\n',
@@ -261,7 +278,7 @@ class OfficialVerdict(unittest.TestCase):
             self.assertFalse(run.documented("BR-DE-28", "kosit", "nothing", entries))
             self.assertFalse(run.documented("BR-DE-17", "mustang", "warning", entries))
         # Only the documented level of the other validator counts.
-        entries = {"BR-DE-27": {"rejected-by": "mustang", "other": ["warning"], "reason": "r"}}
+        entries = {"BR-DE-27": {"rejected-by": ["mustang"], "other": ["warning"], "reason": "r"}}
         self.assertFalse(run.documented("BR-DE-27", "mustang", "nothing", entries))
 
 

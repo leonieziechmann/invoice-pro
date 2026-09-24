@@ -316,7 +316,7 @@ Both the `sender` and `recipient` dictionaries must include:
       // or: electronic-address: "invoices@example.com"
     )
     ```
-    An address without identifier, such as `""` (e.g. an empty field of imported data), `auto` or a dictionary without `id`, counts as not given: the address is derived as described above. An address without scheme must be an email address; any other identifier needs its scheme, otherwise the e-invoice stops (BR-62 for the sender, BR-63 for the recipient).
+    An address without identifier, such as `""` (e.g. an empty field of imported data), `auto` or a dictionary without `id`, counts as not given: the address is derived as described above. An address without scheme must be an email address; any other identifier needs its scheme, otherwise the e-invoice stops (BR-62 for the sender, BR-63 for the recipient). The scheme must be in the EAS code list of every official validator (BR-CL-25): a scheme the list has withdrawn, such as `9901`, stops the e-invoice, and so does one that only its newest version has, such as `0240`.
 
 ### 2. Standardized Unit Codes
 
@@ -728,7 +728,7 @@ The invoice currency (BT-5) is the currency of the locale (`EUR`, or `CHF` for t
 )
 ```
 
-The EPC-QR code of the [bank details](./api-reference/components.md#bank-details) transfers euros only, so it is shown for invoices in euro only, and a credit transfer in another currency is written as a credit transfer (BT-81 `30`) instead of a SEPA credit transfer (`58`). An e-invoice whose printed amounts show another currency than the one it states stops with `IP-PRINT-02`, e.g. with a currency formatter of a custom locale that prints "zł" while the locale states `EUR`. The profiles based on EN 16931 accept only the currencies of its code list (`BR-CL-04`).
+The EPC-QR code of the [bank details](./api-reference/components.md#bank-details) transfers euros only, so it is shown for invoices in euro only, and a credit transfer in another currency is written as a credit transfer (BT-81 `30`) instead of a SEPA credit transfer (`58`). An e-invoice whose printed amounts show another currency than the one it states stops with `IP-PRINT-02`, e.g. with a currency formatter of a custom locale that prints "zł" while the locale states `EUR`. The profiles based on EN 16931 accept only the currencies of its code list (`BR-CL-04`) in the versions of both official validators: neither a code that is newer than the list of one of them (e.g. `VES`), nor one that the current list has withdrawn (e.g. `BGN` and `HRK`, replaced by the euro).
 
 **VAT in the national currency (BT-6, BT-111).** Within the EU, an invoice in another currency must also state the VAT amount in the national currency of the member state where the supply is taxed (Art. 230 VAT Directive), e.g. in euro for a supply taxed in Germany. `invoice-pro` does not support the VAT accounting currency (BT-6) and the VAT total in it (BT-111) yet: state the VAT amount in the national currency and the exchange rate in a note (`notes`), which is printed and written into the e-invoice (BT-22).
 
