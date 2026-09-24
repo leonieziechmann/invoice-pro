@@ -24,6 +24,9 @@ XML the guard writes differs from the mutant) is left out and counted.
 
 The proof criteria, each must hold for every mutant:
 
+  C0  the serializer's fast path and its checked writer return the same XML
+      and findings (src/zugferd/guard/write.typ and rare.typ): the fast path
+      takes no mutant in which the checked writer finds a problem;
   C1  the guard accepts no mutant that the XSD rejects;
   C2  the guard blocks no structural mutant the official validators accept,
       except by its documented stricter checks: an element the builder never
@@ -555,6 +558,9 @@ def main(argv=None):
         stats = collections.Counter()
         for m in mutants:
             g = guard[m["id"]]
+            if g.get("representable") and not g["agree"]:
+                failures["C0"].append({"id": m["id"], "detail": m["detail"], "findings": g["findings"][:5],
+                                       "mustang": []})
             if not g.get("representable") or canonical(g["xml"].encode()) != canonical(Path(m["file"]).read_bytes()):
                 skipped["written differently by the guard's tree"] += 1
                 continue
@@ -644,7 +650,7 @@ def main(argv=None):
         if failures:
             print("\n✘ the write guard fails the mutation test (see above)", file=sys.stderr)
             return 1
-        print("✔ the write guard passes the mutation test (C1 to C5)", file=sys.stderr)
+        print("✔ the write guard passes the mutation test (C0 to C5)", file=sys.stderr)
         return 0
     except (common.ToolError, gen_guard.GenError) as e:
         print(f"error: {e}", file=sys.stderr)

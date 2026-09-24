@@ -2,8 +2,9 @@
 // the XML of each case with Typst's XML parser, turns it back into the
 // element tree the builder writes (see src/zugferd/guard/write.typ) and
 // serializes the tree with the guard. The result is the metadata
-// <guard-results>, for `typst query`: per case its id, the XML written and
-// the findings as (kind, rule, path).
+// <guard-results>, for `typst query`: per case its id, the XML written, the
+// findings as (kind, rule, path), and whether the serializer and its
+// checked writer (src/zugferd/guard/rare.typ) return the same.
 //
 //   typst query --root . --input cases=/build/.../cases.json \
 //     tools/zugferd/mutate.typ "<guard-results>" --field value --one
@@ -17,6 +18,7 @@
 
 #import "/src/zugferd/xml.typ": dict-to-xml
 #import "/src/zugferd/guard/write.typ": namespaces
+#import "/src/zugferd/guard/rare.typ": write as checked
 
 #let _xsi = "http://www.w3.org/2001/XMLSchema-instance"
 
@@ -76,6 +78,9 @@
   (
     id: case.id,
     representable: true,
+    // The serializer takes its fast path only for a tree in which the
+    // checked writer finds nothing, and writes the same XML (criterion C0).
+    agree: written == checked(tree, case.profile),
     xml: written.xml,
     findings: written.findings.map(f => (f.kind, f.rule, f.path.join("/"))),
   )

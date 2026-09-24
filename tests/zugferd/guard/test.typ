@@ -9,7 +9,9 @@
 #import "/src/zugferd/xml.typ": dict-to-xml
 #import "/src/zugferd/guard/write.typ": (
   _raw, malformed-kinds, namespaces, root-tag, valid-base64, valid-date-102,
+  write,
 )
+#import "/src/zugferd/guard/rare.typ": write as checked-write
 #import "/src/zugferd/guard/report.typ": (
   field-of, guard-diagnostics, merge, report-hint, summary-rule,
 )
@@ -61,9 +63,12 @@
 )
 
 // What the guard finds in a tree: (kind, rule, path) of each finding. The XML
-// is always the one the unchecked writer writes.
+// is always the one the unchecked writer writes, and the serializer's fast
+// path takes a tree only when the checked writer finds nothing in it: both
+// writers return the same.
 #let check(model, tree) = {
   let written = dict-to-xml(tree, model.profile.id)
+  assert.eq(written, checked-write(tree, model.profile.id))
   let unchecked = ""
   for (tag, body) in tree { unchecked += _raw(tag, body) }
   assert.eq(written.xml, unchecked)
@@ -94,9 +99,14 @@
 #let guard-test(test, ..args) = model-test(test, ..args, items)
 
 // --- 1. Valid invoices of every profile: nothing found, the same XML ---
+// The fast path of the serializer writes them in one pass, as the checked
+// writer does.
 #let valid(model) = {
-  let written = dict-to-xml(build-tree(model), model.profile.id)
+  let tree = build-tree(model)
+  let written = dict-to-xml(tree, model.profile.id)
   assert.eq(written.findings, ())
+  assert.eq(write(tree, model.profile.id, fallback: false), written)
+  assert.eq(checked-write(tree, model.profile.id), written)
   assert.eq(xml-declaration + written.xml, build-xml(model))
   // G4: Typst's XML parser reads it as one CrossIndustryInvoice.
   let roots = xml(bytes(build-xml(model))).filter(n => type(n) == dictionary)
@@ -594,15 +604,27 @@
 #guard-test(zugferd: "en16931", model => {
   let tree = build-tree(model)
   let name = seller("ram:Name")
-  let written = dict-to-xml(
-    put(tree, name, "A & B <c> \"d\" 'e'\u{0}"),
-    "en16931",
-  )
+  let escaped = put(tree, name, "A & B <c> \"d\" 'e'\u{0}")
+  let written = dict-to-xml(escaped, "en16931")
   assert.eq(written.findings, ())
   assert(
     written.xml.contains(
       "<ram:Name>A &amp; B &lt;c&gt; &quot;d&quot; &apos;e&apos;</ram:Name>",
     ),
+  )
+  assert.eq(write(escaped, "en16931", fallback: false), written)
+  assert.eq(checked-write(escaped, "en16931"), written)
+  // Values the builder does not write, such as content, go to the checked
+  // writer, which writes their plain text.
+  let content = put(tree, name, [A *bold* name])
+  assert.eq(write(content, "en16931", fallback: false), none)
+  assert.eq(check(model, content), ())
+  assert(
+    dict-to-xml(content, "en16931")
+      .xml
+      .contains(
+        "<ram:Name>A bold name</ram:Name>",
+      ),
   )
 })
 
