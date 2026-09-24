@@ -815,7 +815,7 @@ def summarize(decisions):
 
 
 def markdown_table(summary):
-    header = ["Profile", "Rule ids", "Reported (fixture)", "Enforced by the guard", "By construction",
+    header = ["Profile", "Rule ids", "Reported under its id", "Enforced by the guard", "Excluded by construction",
               "Cannot occur", "Open"]
     rows = [header, [":--"] + ["--:"] * (len(header) - 1)]
     for profile in PROFILES:
@@ -834,31 +834,50 @@ def markdown_table(summary):
     return "\n".join(lines)
 
 
+def open_rules(decisions):
+    """{rule id: [profiles]} of the rules classified as open."""
+    out = collections.defaultdict(list)
+    for profile in PROFILES:
+        for rule, d in decisions[profile].items():
+            if d.cls == "open":
+                out[rule].append(profile)
+    return dict(sorted(out.items()))
+
+
+def docs_block(decisions, summary):
+    """The generated part of the documentation: the table of the classes per
+    profile and the open rules."""
+    opened = open_rules(decisions)
+    listed = ", ".join(f"`{rule}` ({', '.join(PROFILE_NAMES[p] for p in profiles)})"
+                       for rule, profiles in opened.items())
+    return markdown_table(summary) + "\n\nOpen: " + (listed or "none") + "."
+
+
 def docs_table(text):
-    """The generated table in the documentation, or None without markers."""
+    """The generated part of the documentation, or None without markers."""
     start, end = text.find(DOCS_BEGIN), text.find(DOCS_END)
     if start < 0 or end < start:
         return None
     return text[start + len(DOCS_BEGIN):end].strip()
 
 
-def check_docs(summary, path=DOCS):
+def check_docs(decisions, summary, path=DOCS):
     text = Path(path).read_text(encoding="utf-8")
     table = docs_table(text)
     if table is None:
         return [f"DOCS {Path(path).relative_to(REPO)}: the markers of the rule-coverage table are missing"]
-    if table != markdown_table(summary):
+    if table != docs_block(decisions, summary):
         return [f"DOCS {Path(path).relative_to(REPO)}: the rule-coverage table differs from the classification; "
                 "run `python3 tools/zugferd/rule_coverage.py --update-docs`"]
     return []
 
 
-def update_docs(summary, path=DOCS):
+def update_docs(decisions, summary, path=DOCS):
     text = Path(path).read_text(encoding="utf-8")
     start, end = text.find(DOCS_BEGIN), text.find(DOCS_END)
     if start < 0 or end < start:
         raise CoverageError(f"{path}: the markers of the rule-coverage table are missing")
-    new = text[:start + len(DOCS_BEGIN)] + "\n\n" + markdown_table(summary) + "\n\n" + text[end:]
+    new = text[:start + len(DOCS_BEGIN)] + "\n\n" + docs_block(decisions, summary) + "\n\n" + text[end:]
     Path(path).write_text(new, encoding="utf-8")
 
 
@@ -875,14 +894,11 @@ def report(inventory, decisions, summary, problems, ip):
         reports = sum(inventory.reports[profile].values())
         note = f"  (+{reports} not-used reports without id)" if reports else ""
         lines.append(f"  {PROFILE_NAMES[profile]:{width}s} {c['total']:4d} ids: {shown}{extra}{note}")
-    opened = sorted({(d.rule, p) for p in PROFILES for d in decisions[p].values() if d.cls == "open"})
+    opened = open_rules(decisions)
     if opened:
-        by_rule = collections.defaultdict(list)
-        for rule, profile in opened:
-            by_rule[rule].append(profile)
-        lines.append(f"open ({len(by_rule)} rule ids; the target is none):")
-        for rule, profiles in sorted(by_rule.items()):
-            reason = decisions[profiles[0]][rule].reason
+        lines.append(f"open ({len(opened)} rule ids; the target is none):")
+        for rule, profiles in opened.items():
+            reason = normalize(decisions[profiles[0]][rule].reason)
             lines.append(f"  {rule} ({', '.join(profiles)}): {reason[:160]}")
     lines.append(f"invoice-pro's own rules: {len(ip)} (IP-*)")
     if problems:
@@ -952,9 +968,9 @@ def main(argv=None):
         problems += check_ip(ip, ip_rules_in_source())
         summary = summarize(decisions)
         if args.update_docs:
-            update_docs(summary)
+            update_docs(decisions, summary)
         else:
-            problems += check_docs(summary)
+            problems += check_docs(decisions, summary)
     except common.ToolError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
