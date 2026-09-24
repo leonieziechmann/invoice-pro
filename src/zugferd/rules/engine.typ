@@ -1195,22 +1195,18 @@
       }
     }
 
-    // The split payment of Italy (B) is left to BR-CL-18 in XRechnung, whose
-    // code list has it, as invoice-pro does not check its rules (BR-B-01,
-    // BR-B-02).
-    let found = if category == "B" and model.profile.xrechnung {
-      (key: "BR-CL-18", id: "BR-CL-18", field: field, fx-only: false)
-    } else {
-      code-finding(
-        "vat-category",
-        category,
-        model.profile,
-        "BR-CL-18",
-        "FX-SCH-A-000179",
-        (field: field),
-        "VAT category code (BT-118)",
-      )
-    }
+    // The split payment of Italy (B) is no category of Factur-X
+    // (FX-SCH-A-000179); XRechnung accepts it (see `split-payment` of
+    // rare.typ for its rules).
+    let found = code-finding(
+      "vat-category",
+      category,
+      model.profile,
+      "BR-CL-18",
+      "FX-SCH-A-000179",
+      (field: field),
+      "VAT category code (BT-118)",
+    )
     if found != none {
       out.push(found + (category: category))
       continue
@@ -1219,9 +1215,14 @@
 
     // The rate of the lines (BR-x-05), allowances (BR-x-06) and charges
     // (BR-x-07) of the group. In BASIC WL, a group of lines only is left to
-    // the rules of the VAT breakdown (BR-x-09).
+    // the rules of the VAT breakdown (BR-x-09). The split payment (B) has no
+    // rules of its rate.
     let rate-rule = offset(tax.key)
-    if rate-rule != none { rate-rule = category-rule(category, 5 + rate-rule) }
+    if rate-rule != none {
+      rate-rule = if category in _category-rules {
+        category-rule(category, 5 + rate-rule)
+      }
+    }
     if category in ("S", "L", "M") and tax.rate <= _zero and rate-rule != none {
       out.push((
         key: "vat-rate-positive",
@@ -1338,6 +1339,12 @@
       if category != "O" { others.push(category) }
     }
     out.push((key: "BR-O-11", field: "tax", others: others))
+  }
+  // The split payment of Italy (B), which only XRechnung accepts; the
+  // validation of BASIC and EN 16931 checks its rules as well.
+  if "B" in categories and model.profile.en16931 {
+    import "rare.typ": split-payment
+    out += split-payment(model, categories)
   }
   out
 }

@@ -89,6 +89,13 @@ profiles = ["en16931"]
 ids = ["BR-CL-18", "BR-CL-22", "BR-E-10", "BR-O-02", "BR-O-09", "BR-O-11", "BR-IC-11", "BR-AG-05"]
 class = "fixture"
 
+# The split payment of Italy (B), which the code lists of EN 16931 have: only
+# XRechnung accepts the category, BASIC and EN 16931 reject it as
+# FX-SCH-A-000179 as well (the code list of Factur-X lacks it).
+[[rule]]
+ids = ["BR-B-01", "BR-B-02"]
+class = "fixture"
+
 # An invoice without a VAT breakdown: in BASIC WL, one without items; with
 # lines, invoice-pro reports the missing line instead (BR-16, see the
 # construction below).
@@ -583,13 +590,6 @@ with a base amount (BT-93) or percentage (BT-94)."""
 # ======================================================================
 # open: not handled yet
 # ======================================================================
-
-[[rule]]
-ids = ["BR-B-01", "BR-B-02"]
-class = "open"
-reason = """invoice-pro rejects the VAT category "split payment" (B, `tax.special.transferred`) as \
-BR-CL-18, whose CEN code list contains B: the validators report BR-B-01 or BR-B-02 (and Mustang \
-FX-SCH-A-000179) instead."""
 
 [[rule]]
 ids = ["PEPPOL-EN16931-R120"]

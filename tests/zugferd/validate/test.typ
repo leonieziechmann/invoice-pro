@@ -193,7 +193,25 @@
     model
   }
   assert.eq(rules(with-tax(base, tax("AA", rate: "0.07"))), ("BR-CL-18",))
-  assert.eq(rules(with-tax(base, tax("B", rate: "0.22"))), ("BR-CL-18",))
+  // The split payment of Italy (B): a domestic Italian invoice (BR-B-01)
+  // without standard rated items (BR-B-02)
+  let split = with-tax(base, tax("B", rate: "0.22"))
+  assert.eq(rules(split), ("BR-B-01",))
+  let d = checked(split).first()
+  assert.eq(d.field, "sender.country")
+  assert.eq(
+    d.message,
+    "The split payment (B) is for domestic Italian invoices, but the seller country code (BT-40) is \"DE\".",
+  )
+  let italian = split
+  italian.seller.address.country = "IT"
+  italian.buyer.address.country = "IT"
+  assert.eq(rules(italian), ())
+  // (a standard rated VAT group next to it, whatever else it breaks)
+  italian.taxes.push(tax("S", rate: "0.22"))
+  let d = checked(italian).find(d => d.rule == "BR-B-02")
+  assert.ne(d, none, message: repr(rules(italian)))
+  assert.eq(d.field, "tax")
   assert.eq(rules(with-tax(base, tax("S"))), ("BR-S-05",))
   assert.eq(rules(with-tax(base, tax("L"))), ("BR-AF-05",))
   assert.eq(rules(with-tax(base, tax("E", rate: "0.19", reason: "x"))), (

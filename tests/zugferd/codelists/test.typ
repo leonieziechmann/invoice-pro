@@ -340,17 +340,19 @@
   assert.eq(code-rules(m), ())
 
   // The split payment of Italy (B) is no category of Factur-X; XRechnung
-  // accepts the code, but invoice-pro does not check its rules there.
+  // accepts the code. Its rules apply in every profile based on EN 16931
+  // (BR-B-01: a German seller).
   let m = model
   m.taxes.at(0).category = "B"
   m.lines.at(0).category = "B"
-  assert.eq(rules(m), ("FX-SCH-A-000179",))
+  assert.eq(rules(m), ("BR-B-01", "FX-SCH-A-000179"))
   assert.eq(
     diagnostic(m, "FX-SCH-A-000179").message,
     "The VAT category \"B\" is not in the code list of the Factur-X validation, although the code list of EN 16931 has it.",
   )
   m.profile = resolve-profile("xrechnung", "DE")
-  assert.eq(code-rules(m), ("BR-CL-18",))
+  assert.eq(code-rules(m), ())
+  assert("BR-B-01" in rules(m), message: repr(rules(m)))
 })[
   #line-items[#item([Consulting], price: 1000)]
   #payment-goal(days: 14)

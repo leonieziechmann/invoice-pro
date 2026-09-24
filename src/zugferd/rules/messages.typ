@@ -1168,6 +1168,18 @@
       "Use a code of the CEF VATEX list, e.g. \"VATEX-EU-132-1A\" for an exemption of Art. 132 (1) (a) of the VAT Directive, or leave out `code`: the grounds are stated as text (BT-120).",
     )
   },
+  "BR-B-01": f => (
+    "The split payment (B) is for domestic Italian invoices, but the "
+      + f.term
+      + " is "
+      + _quoted(f.country)
+      + ".",
+    "Use split payment (`tax.special.transferred(..)`) only between parties in Italy, and `tax.vat(..)` otherwise.",
+  ),
+  "BR-B-02": f => (
+    "An invoice with split payment (B) cannot have standard rated (S) items, allowances or charges.",
+    "Invoice the standard rated items in an invoice of their own.",
+  ),
   "IP-TAX-02": f => {
     let taxed = f.category in ("S", "Z", "L", "M")
     (

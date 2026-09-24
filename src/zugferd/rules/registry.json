@@ -1087,7 +1087,7 @@
       "terms": ["BT-118", "BT-151"],
       "level": "error",
       "field": "tax <category> <rate>",
-      "summary": "The VAT category code is one EN 16931 allows: S, Z, E, AE, K, G, O, L or M. The split payment of Italy (B), which the code list of EN 16931 has as well, is FX-SCH-A-000179 in the Factur-X profiles and BR-CL-18 in XRechnung, whose rules of it invoice-pro does not check (BR-B-01, BR-B-02).",
+      "summary": "The VAT category code is one EN 16931 allows: S, Z, E, AE, K, G, O, L or M, or the split payment of Italy (B, see BR-B-01 and BR-B-02), which only XRechnung accepts: the Factur-X profiles reject it as FX-SCH-A-000179, as the code list of Factur-X lacks it.",
       "legal": null
     },
     "vat-rate-positive": {
@@ -1292,6 +1292,30 @@
       "level": "error",
       "field": "tax",
       "summary": "Items not subject to VAT (O) are not combined with other VAT categories on one invoice.",
+      "legal": null
+    },
+    "BR-B-01": {
+      "covers": ["BR-B-01", "FX-SCH-A-000263"],
+      "source": "EN16931",
+      "versions": ["1.3.12", "1.3.16"],
+      "profiles": ["basic", "en16931", "xrechnung"],
+      "scope": "tax",
+      "terms": ["BT-40", "BT-55", "BT-69", "BT-80", "BT-118"],
+      "level": "error",
+      "field": "recipient.country",
+      "summary": "An invoice with the split payment of Italy (B) is a domestic Italian invoice: every address it states is in Italy. Only XRechnung accepts the category; BASIC and EN 16931 reject it as FX-SCH-A-000179 as well.",
+      "legal": null
+    },
+    "BR-B-02": {
+      "covers": ["BR-B-02", "FX-SCH-A-000264"],
+      "source": "EN16931",
+      "versions": ["1.3.12", "1.3.16"],
+      "profiles": ["basic", "en16931", "xrechnung"],
+      "scope": "tax",
+      "terms": ["BT-118"],
+      "level": "error",
+      "field": "tax",
+      "summary": "An invoice with the split payment of Italy (B) has no standard rated (S) items, allowances or charges.",
       "legal": null
     },
     "BR-DE-18": {

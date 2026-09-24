@@ -175,11 +175,11 @@ The tests of `invoice-pro` account for every rule of the official validators, pr
 | :-------- | -------: | ----------------------: | --------------------: | -----------------------: | -----------: | ---: |
 | MINIMUM   |       46 |                       9 |                    37 |                        0 |            0 |    0 |
 | BASIC WL  |      196 |                      65 |                   110 |                       14 |            7 |    0 |
-| BASIC     |      851 |                      75 |                   710 |                       41 |           23 |    2 |
-| EN 16931  |      905 |                      79 |                   730 |                       54 |           40 |    2 |
-| XRechnung |      885 |                     107 |                   646 |                       62 |           67 |    3 |
+| BASIC     |      851 |                      77 |                   710 |                       41 |           23 |    0 |
+| EN 16931  |      905 |                      81 |                   730 |                       54 |           40 |    0 |
+| XRechnung |      885 |                     109 |                   646 |                       62 |           67 |    1 |
 
-Open: `BR-B-01` (BASIC, EN 16931, XRechnung), `BR-B-02` (BASIC, EN 16931, XRechnung), `PEPPOL-EN16931-R120` (XRechnung).
+Open: `PEPPOL-EN16931-R120` (XRechnung).
 
 [//]: # "end of the rule-coverage table"
 
@@ -482,7 +482,7 @@ Every tax rate must be mapped to a valid **UNTDID 5305** category code. Use the 
 - Outside Scope: `tax.outside-scope()` (maps to category **O**). An invoice not subject to VAT carries no VAT identifiers, so the seller is identified by `tax-nr`, `id` or `legal-id`. Items of category `O` cannot be mixed with other categories on one invoice.
 - Small Business: `tax-exempt-small-biz: true` uses the small business scheme of the locale's region, category **E** in Germany, Austria, France and Spain and **O** in Italy and Switzerland (see [Small Business Exemption](#small-business-exemption)).
 
-EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `M`. The special constructors in `tax.special` that map to other categories (e.g. `lower-rate`, the margin schemes or split payment `B`) cannot be used for e-invoices. Items under a margin scheme are written as exempt with the note the law requires, e.g. `tax.exempt(grounds: "Margin scheme - second-hand goods")` (in Germany "Gebrauchtgegenstände/Sonderregelung"). `tax.special.ceuta-melilla(..)` (`M`) needs a rate above 0%, and items not subject to VAT (`O`) have none.
+EN 16931 only knows the categories `S`, `Z`, `E`, `AE`, `K`, `G`, `O`, `L` and `M`, and the split payment of Italy (`B`, `tax.special.transferred(..)`), which only `"xrechnung"` accepts: the code list of Factur-X lacks it (`FX-SCH-A-000179`), and it is for a domestic Italian invoice, all of whose addresses are in Italy (`BR-B-01`), without standard rated items (`BR-B-02`). The other special constructors in `tax.special` that map to other categories (e.g. `lower-rate` or the margin schemes) cannot be used for e-invoices. Earlier versions rejected the split payment in XRechnung as `BR-CL-18`. Items under a margin scheme are written as exempt with the note the law requires, e.g. `tax.exempt(grounds: "Margin scheme - second-hand goods")` (in Germany "Gebrauchtgegenstände/Sonderregelung"). `tax.special.ceuta-melilla(..)` (`M`) needs a rate above 0%, and items not subject to VAT (`O`) have none.
 
 Where EN 16931 requires an exemption reason (`AE`, `K`, `G`, `O`) and the items give no `grounds` of their own, the note of the invoice language (`tax-exemption` in the [language schema](./api-reference/locale/base.md#tax-exemption), e.g. "Steuerfreie innergemeinschaftliche Lieferung" for `tax.intra-community()` in German) is printed below the line items and written as exemption reason, so the invoice and the XML state the same note. With `tax-exempt-small-biz: true`, the small business note of the invoice is the exemption reason. For the taxed categories (`S`, `Z`, `L`, `M`), `grounds` are printed on the invoice but left out of the XML, which does not allow them there. If the items of one category have different `grounds`, each of them is printed, and the XML joins them with `; ` into the one exemption reason (BT-120) of the category.
 

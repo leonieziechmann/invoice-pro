@@ -3,7 +3,8 @@
 // dates and origins of items, exemption reason codes, a direct debit or a
 // payment card, the subject codes of notes, a printed invoice that does not
 // show the date of the supply, the buyer of an intra-community supply or a
-// reverse charge, and what MINIMUM cannot state of the payment. engine.typ
+// reverse charge, the split payment of Italy, and what MINIMUM cannot state
+// of the payment. engine.typ
 // loads this module when an invoice needs one of them. See engine.typ for
 // the findings and the registry.
 
@@ -441,6 +442,45 @@
       creditor-id: creditor-id,
     ),
   )
+}
+
+/// BR-B-01, BR-B-02: the split payment of Italy (B), whose code the code
+/// lists of EN 16931 have (only XRechnung applies them alone, see
+/// `code-rule` of engine.typ; the validation of BASIC and EN 16931 checks
+/// these rules next to the code list of Factur-X, which lacks it): a
+/// domestic Italian invoice, every address of which is in Italy (BR-B-01,
+/// which tests every country code of the XML), without standard rated (S)
+/// items, allowances or charges (BR-B-02).
+///
+/// -> array
+#let split-payment(model, categories) = {
+  let out = ()
+  for (party, field, term) in (
+    (model.seller, "sender", "seller country code (BT-40)"),
+    (model.buyer, "recipient", "buyer country code (BT-55)"),
+    (
+      model.at("tax-representative", default: none),
+      "sender.tax-representative",
+      "tax representative country code (BT-69)",
+    ),
+    (model.ship-to, "delivery-address", "deliver-to country code (BT-80)"),
+  ) {
+    if party == none { continue }
+    let country = party.address.country
+    if country != none and country != "IT" {
+      out.push((
+        key: "BR-B-01",
+        field: field + ".country",
+        term: term,
+        country: country,
+      ))
+      break
+    }
+  }
+  if "S" in categories {
+    out.push((key: "BR-B-02", field: "tax"))
+  }
+  out
 }
 
 /// BR-CL-08: the subject code of a note (BT-21) is a code of UNTDID 4451,

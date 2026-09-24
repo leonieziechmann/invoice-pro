@@ -146,8 +146,6 @@ NEEDS = {
 # become shorter. A rule open beyond it fails the gate (NEW OPEN), and one
 # that is no longer open must leave it (OPEN), like the known issues.
 OPEN_WORK_LIST = {
-    "BR-B-01": ("basic", "en16931", "xrechnung"),
-    "BR-B-02": ("basic", "en16931", "xrechnung"),
     "PEPPOL-EN16931-R120": ("xrechnung",),
 }
 
