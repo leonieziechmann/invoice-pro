@@ -998,23 +998,20 @@
     "The item name (BT-153) has no text.",
     "Give the item a name that contains text.",
   ),
-  "BR-CL-23": f => if f.at("text", default: none) != none {
-    (
-      "The unit "
-        + _quoted(f.text)
-        + " has no UN/ECE Recommendation 20 code (BT-130) invoice-pro knows.",
-      "Use a unit from the `unit` module, e.g. `unit.hour` or `unit.square-metre`, or give its code: `(display: "
-        + _quoted(f.text)
-        + ", code: \"..\")`, e.g. \"C62\" for a number of units.",
-    )
-  } else {
-    (
-      "The unit code (BT-130) "
-        + _quoted(f.code)
-        + " is not a UN/ECE Recommendation 20 code.",
-      "Use a unit from the `unit` module, e.g. `unit.hour`, or a dictionary such as `(display: \"Std.\", code: \"HUR\")`.",
-    )
-  },
+  "BR-CL-23": f => (
+    "The unit code (BT-130) "
+      + _quoted(f.code)
+      + " is not a UN/ECE Recommendation 20 code.",
+    "Use a unit from the `unit` module, e.g. `unit.hour`, or a dictionary such as `(display: \"Std.\", code: \"HUR\")`.",
+  ),
+  "IP-UNIT-02": f => (
+    "The unit "
+      + _quoted(f.text)
+      + " has no UN/ECE Recommendation 20 code (BT-130) invoice-pro knows.",
+    "Use a unit from the `unit` module, e.g. `unit.hour` or `unit.square-metre`, or give its code: `(display: "
+      + _quoted(f.text)
+      + ", code: \"..\")`, e.g. \"C62\" for a number of units.",
+  ),
   "IP-UNIT-01": f => {
     let issue = f.issue
     (

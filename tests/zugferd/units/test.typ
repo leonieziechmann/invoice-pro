@@ -97,16 +97,17 @@
   assert.eq(resolve-unit("STK").issue.kind, "ambiguous")
 }
 
-// --- 2. A unit text without a known code is an error (BR-CL-23), a code
-// that is a common abbreviation too is a warning ---
+// --- 2. A unit text without a known code is an error (IP-UNIT-02: the XML
+// would state "one", C62, which the validators accept), a code that is a
+// common abbreviation too is a warning ---
 #model-test(model => {
   assert.eq(xml-elements(model, "ram:BilledQuantity"), (
     "<ram:BilledQuantity unitCode=\"MTK\">12.00</ram:BilledQuantity>",
     "<ram:BilledQuantity unitCode=\"C62\">3.00</ram:BilledQuantity>",
     "<ram:BilledQuantity unitCode=\"STK\">5.00</ram:BilledQuantity>",
   ))
-  assert.eq(rules(model), ("BR-CL-23",))
-  let d = diagnostic(model, "BR-CL-23")
+  assert.eq(rules(model), ("IP-UNIT-02",))
+  let d = diagnostic(model, "IP-UNIT-02")
   assert.eq(d.field, "item 2 (Hotel)")
   assert.eq(
     d.message,

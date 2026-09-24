@@ -1034,10 +1034,11 @@
     if not known {
       out.push((key: "BR-CL-23", field: line-field(line), code: code))
     } else if unit-issue != none and unit-issue.kind == "unknown" {
-      // The unit is written as a code, and a text invoice-pro does not know
-      // has none: writing "one" (C62) for it would be a guess.
+      // IP-UNIT-02: the unit is written as a code, and a text invoice-pro
+      // does not know has none: writing "one" (C62) for it, which the
+      // validators accept, would be a guess.
       out.push((
-        key: "BR-CL-23",
+        key: "IP-UNIT-02",
         field: line-field(line),
         text: unit-issue.text,
       ))

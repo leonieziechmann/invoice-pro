@@ -835,6 +835,13 @@ summary = "A unit code used verbatim that is also a common German abbreviation o
 basis = "UN/ECE Recommendation 20: e.g. STK is no code for pieces."
 tests = ["tests/zugferd/units/test.typ"]
 
+[ip."IP-UNIT-02"]
+level = "error"
+summary = "A unit given as text that invoice-pro does not know, which the XML would state as one (C62)."
+basis = """Fidelity: the unit code (BT-130, UN/ECE Recommendation 20) states what the quantity counts; \
+"one" for a text such as "Nacht" would be a guess, which the validators accept."""
+tests = ["tests/zugferd/units/test.typ", "tools/zugferd/corpus/regression/unit-text-unknown.typ"]
+
 [ip."IP-DEC-01"]
 level = "error"
 summary = "A VAT rate with more than 4 decimals, which the XML cannot state exactly."

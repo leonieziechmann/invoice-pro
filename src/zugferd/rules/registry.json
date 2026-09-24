@@ -936,7 +936,7 @@
       "terms": ["BT-130"],
       "level": "error",
       "field": "item <id> (<name>)",
-      "summary": "The unit code of an invoice line (BT-130) is a UN/ECE Recommendation 20 code, and a unit given as text is one invoice-pro knows: it never writes \"one\" (C62) for a text it does not know.",
+      "summary": "The unit code of an invoice line (BT-130) is a UN/ECE Recommendation 20 code.",
       "legal": null
     },
     "IP-UNIT-01": {
@@ -949,6 +949,18 @@
       "level": "warning",
       "field": "item <id> (<name>)",
       "summary": "A unit code used verbatim that is also a common German abbreviation of another unit (`STK`, `PAL`, `FL`, `GL`, `KT`).",
+      "legal": null
+    },
+    "IP-UNIT-02": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["basic", "en16931", "xrechnung"],
+      "scope": "line",
+      "terms": ["BT-130"],
+      "level": "error",
+      "field": "item <id> (<name>)",
+      "summary": "A unit given as text that invoice-pro does not know (e.g. \"Nacht\"): the e-invoice would state it as \"one\" (`C62`), a guess the validators accept. Give the unit with its code, e.g. `(display: \"Nacht\", code: \"C62\")`.",
       "legal": null
     },
     "BR-CO-04": {
