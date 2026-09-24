@@ -25,7 +25,7 @@ How to run them, how to read their results and how to update golden files and kn
 | `java/MustangBatch.java` | Validates many files with Mustang in a single JVM; compiled against the Mustang jar on first use.                                                         |
 | `gen_guard.py`           | Generates the tables of the XML write guard (`src/zugferd/guard/`) from the pinned artefacts in the Mustang jar; `--check` is the drift test.             |
 | `mutate.py`              | Mutation test of the write guard: mutants of the golden XML against the guard, the XSD and Mustang (and KoSIT with `--kosit`).                            |
-| `mutate.typ`             | Runs the guard on the mutants: reads each with Typst's XML parser and serializes its element tree with the guard.                                         |
+| `mutate.typ`             | Runs the guard on the mutants: reads each with Typst's XML parser, serializes its element tree with the guard and with its checked writer, and compares.  |
 | `common.py`              | Shared helpers: Typst, PDF attachments and text, XSD, Mustang, KoSIT.                                                                                     |
 | `test_*.py`              | Unit tests of the tools themselves (`python3 -m unittest discover -s tools/zugferd`); `scripts/zugferd-corpus` runs them first.                           |
 

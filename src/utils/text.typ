@@ -12,7 +12,12 @@
 ///
 /// -> regex
 #let invalid-xml-chars = regex("[" + invalid-xml-class + "]")
-#let _whitespace = regex("\\s+")
+/// A pattern of the texts `plain-text` returns as they are: printable ASCII
+/// words with single spaces between them, as most names, numbers and
+/// identifiers are. A string it matches needs no conversion.
+///
+/// -> regex
+#let plain-ascii = regex("^[!-~]+(?: [!-~]+)*$")
 // Typst sets a hyphen in front of a digit as minus sign (U+2212) after an
 // expression or styled text, e.g. in `[#{2026}-001]`. The hyphens U+2010 and
 // U+2011 look the same. In plain text, e.g. an identifier, all of them are
@@ -40,6 +45,7 @@
   "\u{22C5}",
 )
 #let _space = [ ].func()
+#let _sequence = [*a* b].func()
 
 // Scripts of math as Unicode superscripts and subscripts, e.g. "m²".
 #let _superscripts = (
@@ -200,15 +206,41 @@
 ///
 /// -> str
 #let plain-text(it, keep-newlines: false) = {
-  let text = (
-    _collect-text(it, if keep-newlines { "\n" } else { " " })
-      .replace(invalid-xml-chars, "")
-      .replace(_hyphens, "-")
-  )
-  if not keep-newlines { return text.replace(_whitespace, " ").trim() }
+  // The common values without the recursion of `_collect-text`, whose text
+  // they have: a string, a single text (e.g. `[Consulting]`), or a sequence
+  // of texts and spaces (e.g. `[Travel & more]`).
+  let collected = none
+  if type(it) == str { collected = it } else if type(it) == content {
+    let func = it.func()
+    if func == text { collected = it.text } else if func == _sequence {
+      collected = ""
+      for child in it.children {
+        let kind = child.func()
+        if kind == text { collected += child.text } else if kind == _space {
+          collected += " "
+        } else {
+          collected = none
+          break
+        }
+      }
+    }
+  }
+  // Printable ASCII words with single spaces: there is nothing to remove,
+  // replace or collapse.
+  if collected != none and plain-ascii in collected { return collected }
+  if collected == none {
+    collected = _collect-text(it, if keep-newlines { "\n" } else { " " })
+  }
+  let result = collected.replace(invalid-xml-chars, "").replace(_hyphens, "-")
+  // `split()` splits at runs of whitespace and drops them at both ends: the
+  // words joined by single spaces are the text with its whitespace collapsed
+  // and trimmed. (No pattern: the class `\s` of all Unicode whitespace takes
+  // more than a third of a millisecond to compile, and this module is loaded
+  // for every invoice.)
+  if not keep-newlines { return result.split().join(" ", default: "") }
   let lines = ()
-  for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n") {
-    lines.push(line.replace(_whitespace, " ").trim())
+  for line in result.replace("\r\n", "\n").replace("\r", "\n").split("\n") {
+    lines.push(line.split().join(" ", default: ""))
   }
   lines.join("\n").trim("\n")
 }

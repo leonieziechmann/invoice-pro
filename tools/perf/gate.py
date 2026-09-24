@@ -20,10 +20,15 @@ Thresholds (concept 6.5)
           nightly: time of process-zugferd (the e-invoice time without the
           module import) at 1000 lines / at 300 lines > 4 (linearity);
           --plain-limit-ms: a plain invoice spends more than this in
-          e-invoice code (the modules must only load when `zugferd` is set)
-  YELLOW  share > 15 % at 5 lines (blocks a release, not a PR; --yellow-fails
-          turns it red); component budgets: module import > 12 ms,
-          serializer > 0.5 ms per line
+          e-invoice code (the modules must only load when `zugferd` is set);
+          an e-invoice loads a module or data that only some invoices need
+          (LAZY_MODULES, LAZY_CALLS): the benchmark invoices are valid and
+          need none of them, so lazy loading cannot regress unnoticed
+  YELLOW  share > 15 % at 5 lines (informational: the maintainer accepts it
+          as long as the live preview stays comfortable, which
+          `measure.py --watch` measures; --yellow-fails turns it red);
+          component budgets: module import > 12 ms, serializer > 0.5 ms per
+          line
 
 Exit status: 1 when a threshold is red, 0 otherwise.
 
@@ -55,6 +60,26 @@ LINEARITY_MAX = 4.0
 IMPORT_BUDGET_MS = 12.0
 SERIALIZER_BUDGET_MS_PER_LINE = 0.5
 EINVOICE_PREFIX = "/src/zugferd/"
+
+# What the e-invoice path loads only for the invoices that need it (see
+# "Keeping the e-invoice path cheap" in tools/perf/README.md): the modules,
+# imported in the function that needs them, and functions whose first call
+# reads a data file. A valid invoice without warnings, like the benchmark
+# invoices, needs none of them.
+LAZY_MODULES = (
+    "src/zugferd/rare.typ",  # a fallback of `zugferd: auto`, a self-billed invoice
+    "src/zugferd/guard/rare.typ",  # the checked writer, for a document with findings
+    "src/zugferd/guard/report.typ",  # the diagnostics of the write guard
+    "src/zugferd/keys.typ",  # unknown keys of the parties
+    "src/zugferd/units.typ",  # units given as text
+    "src/zugferd/report.typ",  # the report of the diagnostics
+    "src/zugferd/rules/rare.typ",  # checks of inputs most invoices do not give
+    "src/zugferd/rules/messages.typ",  # the messages of failed checks
+    "src/zugferd/rules/xrechnung-messages.typ",
+)
+LAZY_CALLS = (
+    ("src/zugferd/rules/engine.typ", "rule-registry"),  # reads registry.json
+)
 
 # ---------------------------------------------------------------- benchmark and trace aggregation
 
@@ -157,6 +182,22 @@ def function_key(relative_file, name):
     return None
 
 
+def lazy_loads(inclusive):
+    """What of LAZY_MODULES and LAZY_CALLS a compile loaded, by the keys of
+    its trace (`inclusive` of `aggregate`): the evaluation of a module
+    (`eval /src/..typ:<line>`) and the calls of a function."""
+    modules = set()
+    for key in inclusive:
+        if key.startswith("eval "):
+            modules.add(key[len("eval "):].rsplit(":", 1)[0].lstrip("/"))
+    found = [m for m in LAZY_MODULES if m in modules]
+    for relative_file, name in LAZY_CALLS:
+        key = function_key(relative_file, name)
+        if key is not None and key in inclusive:
+            found.append(f"{relative_file} ({name})")
+    return found
+
+
 # ---------------------------------------------------------------- measuring
 
 
@@ -193,6 +234,7 @@ def measure(sizes, runs, typst, out_dir):
                     "import": result["einvoice_import"] / 1000,
                     "process": (result["einvoice"] - result["einvoice_import"]) / 1000,
                     "serializer": found / 1000 if found is not None else None,
+                    "lazy": lazy_loads(result["inclusive"]),
                 }
             )
     rows = []
@@ -212,6 +254,8 @@ def measure(sizes, runs, typst, out_dir):
             "process_ms": med(zf, "process"),
             "serializer_ms": med(zf, "serializer"),
             "plain_einvoice_ms": med(plain, "einvoice"),
+            # The lazily loaded modules any run of the zf compile loaded.
+            "lazy_loaded": sorted({m for sample in zf for m in sample["lazy"]}),
         }
         row["share_pct"] = 100 * row["einvoice_ms"] / row["plain_total_ms"]
         row["total_diff_pct"] = 100 * (row["zf_total_ms"] / row["plain_total_ms"] - 1)
@@ -241,6 +285,11 @@ def verdict(rows, plain_limit_ms, yellow_fails):
                 f"{n} lines: serializer {row['serializer_ms'] / n:.2f} ms per line exceeds its budget of "
                 f"{SERIALIZER_BUDGET_MS_PER_LINE:g} ms"
             )
+        if row.get("lazy_loaded"):
+            red.append(
+                f"{n} lines: the e-invoice loads {', '.join(row['lazy_loaded'])}, which a valid invoice "
+                "must not need: see LAZY_MODULES in tools/perf/gate.py"
+            )
         if plain_limit_ms is not None and row["plain_einvoice_ms"] > plain_limit_ms:
             red.append(
                 f"{n} lines: the plain invoice spends {row['plain_einvoice_ms']:.1f} ms in e-invoice code "
@@ -260,10 +309,18 @@ def verdict(rows, plain_limit_ms, yellow_fails):
 def notes(rows):
     """Measurements the gate could not take (so that no budget is skipped
     silently)."""
+    out = []
     if any(row["serializer_ms"] is None for row in rows):
-        return ["the serializer (`dict-to-xml` in src/zugferd/xml.typ) was not found in the trace: "
-                "its budget per line is not checked; update `function_key` in tools/perf/gate.py"]
-    return []
+        out.append("the serializer (`dict-to-xml` in src/zugferd/xml.typ) was not found in the trace: "
+                   "its budget per line is not checked; update `function_key` in tools/perf/gate.py")
+    for relative_file, name in LAZY_CALLS:
+        if function_key(relative_file, name) is None:
+            out.append(f"`{name}` was not found in {relative_file}: whether it is called is not checked; "
+                       "update LAZY_CALLS in tools/perf/gate.py")
+    for relative_file in LAZY_MODULES:
+        if not (REPO / relative_file).exists():
+            out.append(f"{relative_file} does not exist: update LAZY_MODULES in tools/perf/gate.py")
+    return out
 
 
 def table(rows):

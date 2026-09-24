@@ -24,6 +24,9 @@ XML the guard writes differs from the mutant) is left out and counted.
 
 The proof criteria, each must hold for every mutant:
 
+  C0  the serializer's fast path and its checked writer return the same XML
+      and findings (src/zugferd/guard/write.typ and rare.typ): the fast path
+      takes no mutant in which the checked writer finds a problem;
   C1  the guard accepts no mutant that the XSD rejects;
   C2  the guard blocks no structural mutant the official validators accept,
       except by its documented stricter checks: an element the builder never
@@ -409,17 +412,12 @@ def compiled_rules(jar, profiles, kosit):
 
 def all_codes(jar):
     """Every code of every list of the tables, sorted: candidates for code
-    mutants that some list knows. The codes are the literals of the calls
-    that build the lists (`_codes(..)`, `_derive(..)` in lists.typ)."""
-    text = (common.REPO / "src" / "zugferd" / "guard" / "lists.typ").read_text(encoding="utf-8")
+    mutants that some list knows (the lines of codes in lists.json)."""
+    data = json.loads((common.REPO / "src" / "zugferd" / "guard" / "lists.json").read_text(encoding="utf-8"))
     codes = set()
-    for call in re.finditer(r"= _(?:codes|derive)\(", text):
-        depth, end = 1, call.end()
-        while depth:
-            depth += {"(": 1, ")": -1}.get(text[end], 0)
-            end += 1
-        for literal in re.findall(r'"([^"\n]*)"', text[call.end():end]):
-            codes.update(c for c in literal.split() if re.fullmatch(r"[A-Za-z0-9.-]+", c))
+    for lines in data["lists"].values():
+        for line in lines:
+            codes.update(c for c in line.split() if re.fullmatch(r"[A-Za-z0-9.-]+", c))
     return sorted(codes)
 
 
@@ -557,6 +555,9 @@ def main(argv=None):
         stats = collections.Counter()
         for m in mutants:
             g = guard[m["id"]]
+            if g.get("representable") and not g["agree"]:
+                failures["C0"].append({"id": m["id"], "detail": m["detail"], "findings": g["findings"][:5],
+                                       "mustang": []})
             if not g.get("representable") or canonical(g["xml"].encode()) != canonical(Path(m["file"]).read_bytes()):
                 skipped["written differently by the guard's tree"] += 1
                 continue
@@ -655,7 +656,7 @@ def main(argv=None):
         if failures:
             print("\n✘ the write guard fails the mutation test (see above)", file=sys.stderr)
             return 1
-        print("✔ the write guard passes the mutation test (C1 to C5)", file=sys.stderr)
+        print("✔ the write guard passes the mutation test (C0 to C5)", file=sys.stderr)
         return 0
     except (common.ToolError, gen_guard.GenError) as e:
         print(f"error: {e}", file=sys.stderr)

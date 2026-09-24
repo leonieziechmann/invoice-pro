@@ -402,12 +402,11 @@ class Output(unittest.TestCase):
         with self.assertRaises(g.GenError):
             g.emit_action(("N", ("L", "s", (), ref, None, None, None)), None, Names)
 
-    def test_chunks_and_wrap(self):
+    def test_chunks(self):
         codes = [f"C{i:03}" for i in range(40)]
         lines = g.chunks(codes)
         self.assertTrue(all(len(line) <= 72 for line in lines))
         self.assertEqual(" ".join(lines).split(" "), codes)
-        self.assertEqual(g.wrap("#let x = (", ["1", "2"], ")", 0), "#let x = (1, 2)")
 
     def test_fast_classes(self):
         optional = (("currencyID", None, None, None),)
@@ -569,50 +568,73 @@ class NewestSchematron(unittest.TestCase):
 
 
 class ListsOutput(unittest.TestCase):
-    """lists.typ: lists derived from the list written before that takes the
-    fewest characters, and the lists of the validator."""
+    """lists.json: every code list in lines of its sorted codes, the tables
+    of the VAT category rules, and the lists of the validator."""
 
-    def test_derived_from_the_best_list(self):
+    def test_layout(self):
         country = frozenset(f"C{i:02}" for i in range(60))
+        checks = (("r", 0, "BR-AE-05"),)
 
         class Names:
             names = {
                 country: "country",
                 country - {"C01"}: "country-2",
-                country | {"EL"}: "vat-prefix",
-                frozenset({"urn:" + "x" * 70}): "guideline",
-                frozenset({"urn:" + "y" * 70}): "guideline-2",
+                frozenset({"urn:" + "x" * 90}): "guideline",
             }
+            vat = {(("AE", checks), ("O", (("r", None, "BR-O-05"),))): "vat-line"}
+
+        validator = {
+            "country": {"every": "country-2", "factur-x": "country"},
+            "icd": {"every": "country", "newer": [f"02{i:02}" for i in range(31, 49)]},
+            # Any other set of codes of an entry (e.g. codes a newer list has
+            # withdrawn) takes lines as well.
+            "eas": {"every": "country", "withdrawn": [f"99{i:02}" for i in range(20)]},
+        }
+        text = g.emit_lists(Names(), validator)
+        data = json.loads(text)
+        self.assertEqual(data["generated"], g.LISTS_NOTICE)
+        # Lines of at most 75 characters, the codes sorted; one code longer
+        # than a line stays whole.
+        self.assertEqual(" ".join(data["lists"]["country"]).split(" "), sorted(country))
+        self.assertTrue(all(len(line) <= 75 for line in data["lists"]["country"]))
+        self.assertNotIn("C01", " ".join(data["lists"]["country-2"]).split(" "))
+        self.assertEqual(data["lists"]["guideline"], ["urn:" + "x" * 90])
+        self.assertEqual(data["vat-rules"], {"vat-line": {"AE": [["r", 0, "BR-AE-05"]], "O": [["r", None, "BR-O-05"]]}})
+        self.assertEqual(data["validator"]["country"], {"every": "country-2", "factur-x": "country"})
+        self.assertEqual(data["validator"]["icd"]["newer"], [
+            "0231 0232 0233 0234 0235 0236 0237 0238 0239 0240 0241 0242 0243 0244 0245",
+            "0246 0247 0248",
+        ])
+        self.assertEqual(data["validator"]["eas"], {"every": "country", "withdrawn": [
+            "9900 9901 9902 9903 9904 9905 9906 9907 9908 9909 9910 9911 9912 9913 9914",
+            "9915 9916 9917 9918 9919",
+        ]})
+        # A list takes lines of its own, so that a change of a code reads as
+        # a diff of its line.
+        self.assertIn('"country":[\n"C00 C01 ', text)
+        # The drift test knows it as a file of the generator.
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "lists.json"
+            path.write_text(text, encoding="utf-8")
+            self.assertTrue(g.is_generated(path))
+
+    def test_codes_with_whitespace_are_refused(self):
+        class Names:
+            names = {frozenset({"A B"}): "bad"}
             vat = {}
 
-        text = g.emit_lists(Names())
-        self.assertIn('#let country-2 = _derive(country, remove: ("C01",))', text)
-        self.assertIn('#let vat-prefix = _derive(country, add: ("EL",))', text)
-        # A list of one long code: written, not derived.
-        self.assertIn("#let guideline-2 = _codes(\n  \"urn:" + "y" * 70 + "\",\n)", text)
+        with self.assertRaises(g.GenError):
+            g.emit_lists(Names())
 
-    def test_validator_layout(self):
-        text = g.emit_validator({
-            "currency": {"every": "currency-3", "factur-x": "currency", "newer": ["CNH", "XCG"]},
-            "eas": {"every": "eas-3", "xrechnung": "eas", "withdrawn": ["9901"]},
-            "icd": {"every": "icd", "xrechnung": "icd", "newer": [f"02{i:02}" for i in range(31, 49)]},
-            "unit": {"every": "unit"},
-        })
-        self.assertEqual(text, (
-            "#let validator = (\n"
-            '  currency: (every: currency-3, factur-x: currency, newer: _codes("CNH XCG")),\n'
-            '  eas: (every: eas-3, xrechnung: eas, withdrawn: _codes("9901")),\n'
-            "  icd: (\n"
-            "    every: icd,\n"
-            "    xrechnung: icd,\n"
-            "    newer: _codes(\n"
-            '      "0231 0232 0233 0234 0235 0236 0237 0238 0239 0240 0241 0242 0243 0244",\n'
-            '      "0245 0246 0247 0248",\n'
-            "    ),\n"
-            "  ),\n"
-            "  unit: (every: unit),\n"
-            ")"
-        ))
+        class Valid:
+            names = {frozenset({"A"}): "good"}
+            vat = {}
+
+        # The codes of a validator entry as well: lists.typ joins them with
+        # spaces.
+        with self.assertRaises(g.GenError):
+            g.emit_lists(Valid(), {"good": {"every": "good", "newer": ["B C"]}})
+        g.emit_lists(Valid(), {"good": {"every": "good", "newer": ["B"]}})
 
 
 class ValidatorLists(unittest.TestCase):
@@ -777,7 +799,7 @@ class Tables(unittest.TestCase):
             for name in g.OUTPUT_FILES:
                 (Path(committed) / name).write_bytes((self.fresh / name).read_bytes())
             self.assertEqual(g.compare(self.fresh, committed), [])
-            lists = Path(committed) / "lists.typ"
+            lists = Path(committed) / "lists.json"
             lists.write_text(lists.read_text(encoding="utf-8").replace(" DE ", " "), encoding="utf-8")
             (Path(committed) / "old.typ").write_text(g.HEADER, encoding="utf-8")
             (Path(committed) / "old.json").write_text(
@@ -785,7 +807,7 @@ class Tables(unittest.TestCase):
             )
             diffs = g.compare(self.fresh, committed)
             self.assertEqual(len(diffs), 2)
-            self.assertIn("committed/lists.typ", diffs[0])
+            self.assertIn("committed/lists.json", diffs[0])
             self.assertIn("no longer writes: old.json, old.typ", diffs[1])
 
     def test_deterministic_and_small(self):
@@ -812,24 +834,21 @@ class Tables(unittest.TestCase):
         # the currencies and the scheme the CEN Schematron 1.3.16 withdrew
         # are missing from `every`, which the profiles based on EN 16931
         # apply, and the codes only it has are `newer`.
-        text = (self.fresh / "lists.typ").read_text(encoding="utf-8")
-        validator = text[text.index("#let validator = ("):]
-        self.assertIn('newer: _codes("CNH VED XCG ZWG")', validator)
-        currency = validator[validator.index("currency: ("):].split("\n  ),", 1)[0]
-        every = currency.split("every: ")[1].split(",")[0]
-        derived = text[text.index(f"#let {every} = _derive("):].split("\n)", 1)[0]
+        data = json.loads((self.fresh / "lists.json").read_text(encoding="utf-8"))
+        validator = data["validator"]
+        self.assertEqual(validator["currency"]["newer"], ["CNH VED XCG ZWG"])
+        every = set(" ".join(data["lists"][validator["currency"]["every"]]).split(" "))
+        factur_x = set(" ".join(data["lists"][validator["currency"]["factur-x"]]).split(" "))
         for code in ("ANG", "BGN", "CUC", "HRK", "MRU", "STN", "UYW", "VES", "ZWL"):
-            self.assertIn(f'"{code}"', derived.split("remove:")[1])
-        self.assertIn("0231 0232", validator)
+            self.assertNotIn(code, every)
+            self.assertIn(code, factur_x)
+        self.assertIn("0231 0232", " ".join(validator["icd"]["newer"]))
         # The withdrawn codes, which the validator names as such, and the
         # lists of XRechnung, which lack no code of both CEN lists (e.g. the
         # scheme 0219, which the Factur-X list lacks).
-        self.assertIn('withdrawn: _codes("ANG BGN CUC HRK MRO VEF ZWL")', currency)
-        eas = validator[validator.index("eas: ("):].split("\n  ),", 1)[0]
-        self.assertIn('withdrawn: _codes("9901")', eas)
-        xrechnung = eas.split("xrechnung: ")[1].split(",")[0]
-        codes = text[text.index(f"#let {xrechnung} = _codes("):].split("\n)", 1)[0]
-        self.assertIn("0219", codes)
+        self.assertEqual(validator["currency"]["withdrawn"], ["ANG BGN CUC HRK MRO VEF ZWL"])
+        self.assertEqual(validator["eas"]["withdrawn"], ["9901"])
+        self.assertIn("0219", " ".join(data["lists"][validator["eas"]["xrechnung"]]).split(" "))
         disposition = {
             (p, r["id"]): d
             for p, info in self.stats["profiles"].items()

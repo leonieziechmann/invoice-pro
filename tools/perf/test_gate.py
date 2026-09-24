@@ -1,20 +1,26 @@
-"""Unit tests of the performance gate's thresholds (no Typst).
+"""Unit tests of the performance gate's thresholds and of the live preview
+of measure.py (no Typst).
 
   python3 -m unittest discover -s tools/perf -p 'test_gate.py'
 """
 
+import queue
+import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import gate  # noqa: E402
+import measure  # noqa: E402
 
 
-def row(lines, share, import_ms=5.0, serializer_ms=None, plain_einvoice_ms=0.0):
+def row(lines, share, import_ms=5.0, serializer_ms=None, plain_einvoice_ms=0.0, lazy_loaded=()):
     plain = 100.0 * lines
     return {
+        "lazy_loaded": list(lazy_loaded),
         "lines": lines,
         "plain_total_ms": plain,
         "zf_total_ms": plain * (1 + share / 100),
@@ -63,6 +69,12 @@ class Thresholds(unittest.TestCase):
         red, _ = gate.verdict(rows, None, False)
         self.assertTrue(any("1000 / 300" in m for m in red))
 
+    def test_lazy_loading(self):
+        red, _ = gate.verdict([row(5, 10.0, lazy_loaded=["src/zugferd/guard/rare.typ"])], None, False)
+        self.assertEqual(len(red), 1)
+        self.assertIn("src/zugferd/guard/rare.typ", red[0])
+        self.assertEqual(gate.verdict([row(5, 10.0)], None, False), ([], []))
+
     def test_missing_measurements_are_noted(self):
         self.assertEqual(gate.notes([row(50, 10.0, serializer_ms=20.0)]), [])
         self.assertEqual(len(gate.notes([row(50, 10.0)])), 1)
@@ -94,6 +106,72 @@ class Trace(unittest.TestCase):
         self.assertEqual(result["total"], 100)
         self.assertEqual(result["einvoice"], 40)  # 10 import + 30 call
         self.assertEqual(result["einvoice_import"], 10)
+        self.assertEqual(gate.lazy_loads(result["inclusive"]), [])
+
+    def test_lazy_loads_are_found_by_module_and_by_call(self):
+        registry = gate.function_key(*gate.LAZY_CALLS[0])
+        self.assertIsNotNone(registry, "LAZY_CALLS names a function that does not exist")
+        inclusive = {
+            "eval /src/zugferd/zugferd.typ:1": 5.0,
+            "eval /src/zugferd/guard/rare.typ:1": 1.0,
+            registry: 1.0,
+        }
+        self.assertEqual(
+            gate.lazy_loads(inclusive),
+            ["src/zugferd/guard/rare.typ", f"{gate.LAZY_CALLS[0][0]} ({gate.LAZY_CALLS[0][1]})"],
+        )
+        for module in gate.LAZY_MODULES:
+            self.assertTrue((gate.REPO / module).exists(), module)
+
+
+class Watch(unittest.TestCase):
+    """measure.py --watch: the reports of `typst watch` and the edits."""
+
+    def watcher(self, directory, lines=()):
+        # A watcher without its process: `compiled` reads the lines.
+        watcher = object.__new__(measure.Watcher)
+        watcher.source = "#item([A], price: 10.50)\n#item([B], price: 7)\n"
+        watcher.text = watcher.source
+        watcher.copy = str(Path(directory) / ".copy.typ")
+        watcher.reported = 0.0
+        watcher.lines = queue.Queue()
+        for line in lines:
+            watcher.lines.put(line)
+        return watcher
+
+    def test_reports_in_milliseconds(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            watcher = self.watcher(tmp, [
+                "watching doc.typ\n",
+                "[20:27:06] compiling ...\n",
+                "[20:27:06] compiled successfully in 8.47 s\n",
+                "[20:27:21] compiled with warnings in 6.22 ms\n",
+                "[20:27:22] compiled successfully in 850 µs\n",
+            ])
+            self.assertAlmostEqual(watcher.compiled(), 8470.0)
+            self.assertAlmostEqual(watcher.compiled(), 6.22)
+            self.assertAlmostEqual(watcher.compiled(), 0.85)
+
+    def test_a_failed_compile_stops_the_measurement(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            watcher = self.watcher(tmp, ["[20:46:31] compiled with errors\n"])
+            with self.assertRaises(SystemExit) as caught:
+                watcher.compiled(timeout=0.5, again=0.1)
+            self.assertIn("does not compile", str(caught.exception))
+
+    def test_every_edit_is_a_new_price_of_the_first_item(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            watcher = self.watcher(tmp)
+            prices = set()
+            for n in range(30):
+                watcher.edit(n)
+                text = Path(watcher.copy).read_text(encoding="utf-8")
+                self.assertEqual(text, watcher.text)
+                first, second = re.findall(r"price: ([0-9.]+)", text)
+                self.assertEqual(second, "7")
+                prices.add(first)
+            self.assertEqual(len(prices), 30)
+            self.assertNotIn("10.50", prices)
 
 
 if __name__ == "__main__":

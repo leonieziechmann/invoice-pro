@@ -7,6 +7,7 @@
 #import "/src/lib.typ": *
 #import "/src/themes/base-theme/bank-details.typ": render-bank-details
 #import "/src/utils/iban.typ": format-iban, iban-valid, normalize-iban
+#import "/src/utils/text.typ": plain-text
 #import "/tests/integration/payment-reference/harness.typ": find-all, plain
 
 // --- 1. IBAN helpers ---
@@ -16,6 +17,22 @@
     "DE89370400440532013000",
   )
   assert.eq(normalize-iban(none), "")
+  // Every whitespace character goes, as with the class `\s`.
+  let reference(value) = upper(plain-text(value).replace(regex("\\s"), ""))
+  for value in (
+    "de89\u{00A0}3704\t0044\n0532\u{2003}0130\u{3000}00",
+    "DE89\u{2028}3704\u{2029}0044\u{0085}0532\r\n0130 00",
+    [de89 3704 #linebreak() 0044 #h(1em) 0532 0130 00],
+    "  DE89370400440532013000  ",
+    "",
+    " ",
+  ) {
+    assert.eq(normalize-iban(value), reference(value), message: repr(value))
+  }
+  assert.eq(
+    normalize-iban("de89\u{00A0}3704\t0044\n0532\u{2003}0130\u{3000}00"),
+    "DE89370400440532013000",
+  )
   assert(iban-valid("DE89370400440532013000"))
   assert(iban-valid("NO9386011117947"))
   assert(not iban-valid("DE00370400440532013000"), message: "check digits")
