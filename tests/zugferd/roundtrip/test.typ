@@ -266,6 +266,33 @@
       ),
     ),
   )
+  // The element of a wrapper (the date of the invoice in
+  // ram:IssueDateTime): twice, and missing next to another element.
+  let issued = (doc, "rsm:ExchangedDocument", "ram:IssueDateTime")
+  let date = get(tree, issued + ("udt:DateTimeString",))
+  assert.eq(
+    trip(model, tree: put(tree, issued + ("udt:DateTimeString",), (
+      date,
+      date,
+    ))),
+    (
+      (
+        "count",
+        "BT-2",
+        "CrossIndustryInvoice/ExchangedDocument/IssueDateTime/DateTimeString",
+      ),
+    ),
+  )
+  assert.eq(
+    trip(model, tree: put(tree, issued, ("udt:DateTime": "2026-09-01"))),
+    (
+      (
+        "dropped",
+        "BT-2",
+        "CrossIndustryInvoice/ExchangedDocument/IssueDateTime/DateTimeString",
+      ),
+    ),
+  )
 })[#items]
 
 // --- 4. The strict mode: every line ---
