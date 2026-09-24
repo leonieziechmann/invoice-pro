@@ -1,7 +1,9 @@
 // An e-invoice states amounts with 2 decimals (BR-DEC-*). A locale that
 // rounds money more finely makes amounts the XML can only state rounded, and
-// rounded they no longer add up (BR-CO-10, BR-S-08): that is an error naming
-// the first such amount, instead of an invalid XML.
+// rounded they would be other amounts than the printed ones, which no longer
+// add up (BR-CO-10, BR-S-08): that is an error naming the first such amount
+// (IP-DEC-02; the builder writes the rounded amounts, so the BR-DEC-* rules
+// themselves cannot fail), instead of an invalid XML.
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/profile.typ": resolve-profile
@@ -15,8 +17,8 @@
 // with a total of 10.00 ---
 #model-test(locale: money(3), model => {
   assert.eq(model.lines.map(l => l.net), (decimal("3.333"),) * 3)
-  assert.eq(rules(model), ("BR-DEC-23",))
-  let d = diagnostic(model, "BR-DEC-23")
+  assert.eq(rules(model), ("IP-DEC-02",))
+  let d = diagnostic(model, "IP-DEC-02")
   assert.eq(d.field, "locale")
   assert.eq(
     d.message,
@@ -26,9 +28,9 @@
   // MINIMUM states the totals only
   let m = model
   m.profile = resolve-profile("minimum", "FR")
-  assert.eq(rules(m), ("BR-DEC-12",))
+  assert.eq(rules(m), ("IP-DEC-02",))
   assert(
-    diagnostic(m, "BR-DEC-12")
+    diagnostic(m, "IP-DEC-02")
       .message
       .ends-with(
         "the total without VAT (BT-109) is 9.999.",
@@ -62,18 +64,22 @@
   assert.eq(rules(model), ())
   let m = model
   m.allowance-charges.at(0).amount += decimal("0.001")
-  assert.eq(rules(m), ("BR-DEC-01",))
+  assert.eq(rules(m), ("IP-DEC-02",))
   assert.eq(
-    diagnostic(m, "BR-DEC-01").message,
+    diagnostic(m, "IP-DEC-02").message,
     "An e-invoice states amounts with 2 decimals, but the document level allowance (BT-92) is 10.001.",
   )
   let m = model
   m.lines.at(0).charges.at(0).amount += decimal("0.001")
-  assert.eq(rules(m), ("BR-DEC-27",))
+  assert.eq(rules(m), ("IP-DEC-02",))
+  let message = diagnostic(m, "IP-DEC-02").message
+  assert(message.contains("the line charge (BT-141)"), message: message)
   let m = model
   m.totals.prepaid = decimal("12.345")
   m.totals.due = m.totals.gross - m.totals.prepaid
-  assert.eq(rules(m), ("BR-DEC-16",))
+  assert.eq(rules(m), ("IP-DEC-02",))
+  let message = diagnostic(m, "IP-DEC-02").message
+  assert(message.contains("the prepaid amount (BT-113)"), message: message)
 })[
   #line-items[
     #item([A], price: 100, modifier: surcharge([Express], amount: 5))
@@ -94,8 +100,8 @@
   #bank
 ]
 #model-test(currency: "KWD", model => {
-  assert.eq(rules(model), ("BR-DEC-23",))
-  let d = diagnostic(model, "BR-DEC-23")
+  assert.eq(rules(model), ("IP-DEC-02",))
+  let d = diagnostic(model, "IP-DEC-02")
   assert.eq(d.field, "currency")
   assert(
     d.message.ends-with(

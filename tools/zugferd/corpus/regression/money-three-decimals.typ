@@ -3,8 +3,8 @@
 //
 // A locale that rounds money to three decimals: the line amounts (two
 // decimals in the XML) no longer add up to the totals (BR-CO-10, BR-S-08),
-// and nothing was reported. invoice-pro must stop, whichever rule it names
-// (the decimals, BR-DEC-*, or its own IP-DEC-01).
+// and nothing was reported. invoice-pro must stop: it names its own
+// IP-DEC-02, the amounts the XML cannot state (BR-DEC-*).
 
 #import "_base.typ": *
 

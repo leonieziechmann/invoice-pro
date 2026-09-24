@@ -1385,17 +1385,17 @@
 
 // --- Consistency ----------------------------------------------------------
 
-// Whether an amount has more than the 2 decimals the XML states (BR-DEC-*).
+// Whether an amount has more than the 2 decimals the XML states.
 #let _cents-exceeded(amount) = calc.round(amount, digits: 2) != amount
 
 // The first amount the XML cannot state because it has more than 2 decimals,
-// in the order of the XML, and how many there are: (count: .., rule: ..,
-// term: .., place: .., value: ..). Only the amounts the profile writes count.
+// in the order of the XML, and how many there are: (count: .., term: ..,
+// place: .., value: ..). Only the amounts the profile writes count.
 #let _excess-decimals(model) = {
   let found = (count: 0)
-  let note(found, rule, term, place, value) = {
+  let note(found, term, place, value) = {
     if found.count == 0 {
-      found += (rule: rule, term: term, place: place, value: value)
+      found += (term: term, place: place, value: value)
     }
     found.count += 1
     found
@@ -1406,7 +1406,6 @@
       if _cents-exceeded(line.net) {
         found = note(
           found,
-          "BR-DEC-23",
           "line net amount (BT-131)",
           line-field(line),
           line.net,
@@ -1416,7 +1415,6 @@
         if _cents-exceeded(entry.amount) {
           found = note(
             found,
-            "BR-DEC-24",
             "line allowance (BT-136)",
             line-field(line),
             entry.amount,
@@ -1427,7 +1425,6 @@
         if _cents-exceeded(entry.amount) {
           found = note(
             found,
-            "BR-DEC-27",
             "line charge (BT-141)",
             line-field(line),
             entry.amount,
@@ -1441,36 +1438,38 @@
   if profile.settlement {
     for entry in model.allowance-charges {
       amounts.push(if entry.charge {
-        ("BR-DEC-05", "document level charge (BT-99)", entry.amount)
+        ("document level charge (BT-99)", entry.amount)
       } else {
-        ("BR-DEC-01", "document level allowance (BT-92)", entry.amount)
+        ("document level allowance (BT-92)", entry.amount)
       })
     }
     for tax in model.taxes {
-      amounts.push(("BR-DEC-19", "VAT taxable amount (BT-116)", tax.basis))
-      amounts.push(("BR-DEC-20", "VAT amount (BT-117)", tax.amount))
+      amounts.push(("VAT taxable amount (BT-116)", tax.basis))
+      amounts.push(("VAT amount (BT-117)", tax.amount))
     }
     amounts += (
-      ("BR-DEC-09", "sum of the line net amounts (BT-106)", totals.line),
-      ("BR-DEC-10", "sum of the allowances (BT-107)", totals.allowance),
-      ("BR-DEC-11", "sum of the charges (BT-108)", totals.charge),
-      ("BR-DEC-16", "prepaid amount (BT-113)", totals.prepaid),
+      ("sum of the line net amounts (BT-106)", totals.line),
+      ("sum of the allowances (BT-107)", totals.allowance),
+      ("sum of the charges (BT-108)", totals.charge),
+      ("prepaid amount (BT-113)", totals.prepaid),
     )
   }
   amounts += (
-    ("BR-DEC-12", "total without VAT (BT-109)", totals.net),
-    ("BR-DEC-13", "total VAT amount (BT-110)", totals.tax),
-    ("BR-DEC-14", "total with VAT (BT-112)", totals.gross),
-    ("BR-DEC-18", "amount due (BT-115)", totals.due),
+    ("total without VAT (BT-109)", totals.net),
+    ("total VAT amount (BT-110)", totals.tax),
+    ("total with VAT (BT-112)", totals.gross),
+    ("amount due (BT-115)", totals.due),
   )
-  for (rule, term, value) in amounts {
+  for (term, value) in amounts {
     if _cents-exceeded(value) {
-      found = note(found, rule, term, none, value)
+      found = note(found, term, none, value)
     }
   }
   found
 }
 
+// The rules of the VAT categories that compare the taxable amount of a VAT
+// group (BT-116) with its lines, allowances and charges.
 #let _basis-rules = (
   S: "BR-S-08",
   Z: "BR-Z-08",
@@ -1484,13 +1483,17 @@
 )
 
 // The XML must state what the invoice prints and add up in itself. A failure
-// here is a bug in invoice-pro, not in the invoice data.
+// here is a bug in invoice-pro, not in the invoice data, except for amounts
+// with more decimals than the XML states (IP-DEC-02).
 #let _consistency(model) = {
   let out = ()
 
-  // BR-DEC-*: the XML states amounts with 2 decimals. Rounded there, amounts
-  // with more (from a locale that rounds money more finely) would no longer
-  // add up (BR-CO-10, BR-S-08, ...), so they cannot be written at all.
+  // IP-DEC-02: the XML states amounts with 2 decimals, which the write guard
+  // enforces (the BR-DEC-* rules). The builder writes them rounded, so an
+  // amount with more (of a currency such as KWD, or of a locale that rounds
+  // money more finely) would be stated as another amount than the invoice
+  // prints, and the amounts would no longer add up (BR-CO-10, BR-S-08, ...):
+  // they cannot be written at all.
   let excess = _excess-decimals(model)
   if excess.count > 0 {
     // A currency with more decimals (e.g. KWD, `invoice(currency: ..)`)
@@ -1498,8 +1501,7 @@
     let decimals = model.at("currency-decimals", default: 2)
     let by-currency = type(decimals) == int and decimals > 2
     out.push((
-      key: "decimals",
-      id: excess.rule,
+      key: "IP-DEC-02",
       field: if by-currency {
         model.at("currency-field", default: "locale")
       } else { "locale" },
@@ -1514,25 +1516,38 @@
     return out
   }
 
+  // IP-PRINT-01: the XML states the totals the invoice prints (BT-109,
+  // BT-112), and its VAT breakdown (BT-116) adds up to them. (BR-CO-13 and
+  // BR-CO-15, the sums of the totals in the XML, hold: the model computes
+  // them so.)
   let totals = model.totals
   let printed = model.printed-totals
-  if totals.net != printed.net or totals.gross != printed.gross {
-    out.push((
-      key: "BR-CO-15",
-      field: "line-items",
-      totals: totals,
-      printed: printed,
-    ))
+  for (term, stated, shown) in (
+    ("total without VAT (BT-109)", totals.net, printed.net),
+    ("total with VAT (BT-112)", totals.gross, printed.gross),
+  ) {
+    if stated != shown {
+      out.push((
+        key: "IP-PRINT-01",
+        field: "line-items",
+        term: term,
+        stated: stated,
+        printed: shown,
+        rate: none,
+      ))
+    }
   }
   if model.profile.settlement {
     let basis = _zero
     for tax in model.taxes { basis += tax.basis }
-    if basis != totals.net {
+    if basis != printed.net {
       out.push((
-        key: "BR-CO-13",
+        key: "IP-PRINT-01",
         field: "line-items",
-        basis: basis,
-        net: totals.net,
+        term: "sum of the VAT taxable amounts (BT-116)",
+        stated: basis,
+        printed: printed.net,
+        rate: none,
       ))
     }
     // BR-CO-17: the VAT amount is the taxable amount times the rate the XML
@@ -1570,16 +1585,17 @@
         sums.insert(e.key, sums.at(e.key, default: _zero) + amount)
       }
     }
+    // BR-x-08 of each VAT category that has such a rule (e.g. not the split
+    // payment, B).
     for tax in model.taxes {
-      let amount = if type(tax.key) == str {
-        sums.at(tax.key, default: _zero)
-      } else { _zero }
+      if type(tax.key) != str or type(tax.category) != str { continue }
+      let rule = _basis-rules.at(tax.category, default: none)
+      if rule == none { continue }
+      let amount = sums.at(tax.key, default: _zero)
       if amount != tax.basis {
         out.push((
           key: "vat-basis",
-          id: if tax.category == none { "BR-CO-13" } else {
-            _basis-rules.at(tax.category, default: "BR-CO-13")
-          },
+          id: rule,
           field: tax-field(tax),
           amount: amount,
           basis: tax.basis,

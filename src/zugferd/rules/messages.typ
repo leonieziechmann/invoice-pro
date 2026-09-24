@@ -1195,7 +1195,7 @@
   ),
 
   // Consistency
-  "decimals": f => {
+  "IP-DEC-02": f => {
     let excess = f.excess
     (
       "An e-invoice states amounts with 2 decimals, but "
@@ -1229,26 +1229,20 @@
       },
     )
   },
-  "BR-CO-15": f => (
-    "The totals of the XML ("
-      + str(f.totals.net)
-      + " net, "
-      + str(f.totals.gross)
-      + " gross) differ from the printed totals ("
-      + str(f.printed.net)
-      + " net, "
-      + str(f.printed.gross)
-      + " gross).",
-    _bug-hint,
-  ),
-  "BR-CO-13": f => (
-    "The VAT breakdown ("
-      + str(f.basis)
-      + ") does not add up to the total without VAT ("
-      + str(f.net)
-      + ").",
-    _bug-hint,
-  ),
+  // The e-invoice states what the invoice prints.
+  "IP-PRINT-01": f => {
+    let shown(value) = if value == none { "(none)" } else { str(value) }
+    (
+      "The e-invoice states the "
+        + f.term
+        + " "
+        + shown(f.stated)
+        + ", but the invoice prints "
+        + shown(f.printed)
+        + ".",
+      _bug-hint,
+    )
+  },
   "BR-CO-17": f => (
     "The VAT amount "
       + str(f.amount)

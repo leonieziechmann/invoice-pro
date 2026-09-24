@@ -326,7 +326,7 @@ charges it writes, and the validator re-checks the sums before the XML is writte
 is a bug). Every invoice of the corpus is checked by both validators."""
 evidence = [
   "src/zugferd/model.typ: totals and taxes",
-  "src/zugferd/rules/engine.typ: the consistency checks of the totals (BR-CO-13, BR-CO-15, BR-CO-17 and BR-*-08)",
+  "src/zugferd/rules/engine.typ: the consistency checks of the totals (IP-PRINT-01, BR-CO-17 and BR-*-08)",
   "tools/zugferd/corpus/gen.py: the legal population, AGREE_VALID by the hard gate",
 ]
 
@@ -613,22 +613,12 @@ base quantity of 0 or less (see the construction entries of these rules)."""
 
 [[without-fixture]]
 ids = [
-  "BR-CO-13", "BR-CO-15", "BR-CO-17",
+  "BR-CO-17",
   "BR-S-08", "BR-Z-08", "BR-E-08", "BR-AE-08", "BR-IC-08", "BR-G-08", "BR-O-08", "BR-AF-08", "BR-AG-08",
 ]
-reason = """A safety net that cannot fire: `check-consistency` re-checks the totals and the VAT \
+reason = """A safety net that cannot fire: the consistency checks of engine.typ re-check the VAT \
 breakdown that the model computes from the lines, allowances and charges it writes; a failure is a \
 bug of invoice-pro, which no input shows."""
-
-[[without-fixture]]
-ids = [
-  "BR-DEC-01", "BR-DEC-05", "BR-DEC-09", "BR-DEC-10", "BR-DEC-11", "BR-DEC-12", "BR-DEC-13", "BR-DEC-14",
-  "BR-DEC-16", "BR-DEC-18", "BR-DEC-19", "BR-DEC-20", "BR-DEC-23", "BR-DEC-24", "BR-DEC-27",
-]
-reason = """Used for another condition: invoice-pro reports an amount with more than 2 decimals \
-(e.g. of a currency such as KWD) under these ids, but the builder writes the amounts rounded, so the \
-official rules cannot fail: the validators report the sums that no longer add up (e.g. BR-CO-15) or \
-nothing (MINIMUM). The guard enforces the decimals of the XML."""
 
 [[without-fixture]]
 ids = ["BR-IC-12"]
@@ -685,6 +675,12 @@ tests = [
   "tests/zugferd/party-details/test.typ",
   "tools/zugferd/corpus/regression/tax-representative-outside-scope-basic-wl.typ",
 ]
+
+[ip."IP-PRINT-01"]
+level = "error"
+summary = "A total the XML states differs from the printed one, or its VAT breakdown does not add up to it."
+basis = "Fidelity: the XML of a hybrid invoice states the invoice its PDF shows; a failure is a bug of invoice-pro."
+tests = ["tests/zugferd/validate/test.typ"]
 
 [ip."IP-PRINT-02"]
 level = "error"
@@ -817,6 +813,13 @@ level = "error"
 summary = "A VAT rate with more than 4 decimals, which the XML cannot state exactly."
 basis = "Fidelity: EN 16931 states the rate (BT-119, BT-152) as a percentage with up to 4 decimals."
 tests = ["tests/zugferd/rates/test.typ"]
+
+[ip."IP-DEC-02"]
+level = "error"
+summary = "An amount with more than 2 decimals, which the XML cannot state."
+basis = """Fidelity: EN 16931 states amounts with 2 decimals (BR-DEC-*); the builder would write rounded \
+amounts that are not the printed ones and no longer add up."""
+tests = ["tests/zugferd/decimals/test.typ", "tools/zugferd/corpus/regression/money-three-decimals.typ"]
 
 [ip."IP-PAY-01"]
 level = "error"
