@@ -95,9 +95,11 @@
   },
 )[#line-items[#item([A], price: 1000)]]
 
-// --- 4. Without a category there is no note to state ---
+// --- 4. The exemption reason is the note the VAT group prints: the model
+// states no note of its own, and none for a taxed category ---
 #{
-  let strings = (tax-exemption: (outside-scope: "Nicht steuerbar"))
-  assert.eq(exemption-reason("O", none, strings: strings), "Nicht steuerbar")
-  assert.eq(exemption-reason(none, none, strings: strings), none)
+  assert.eq(exemption-reason("O", "Nicht steuerbar"), "Nicht steuerbar")
+  assert.eq(exemption-reason("O", [Nicht *steuerbar*]), "Nicht steuerbar")
+  assert.eq(exemption-reason("O", none), none)
+  assert.eq(exemption-reason("S", "Nicht steuerbar"), none)
 }

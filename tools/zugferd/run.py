@@ -10,7 +10,8 @@ corpus/regression and corpus/rules.
 
 For every case:
   1. Typst, once: `zugferd-errors: "report"` with the harness theme
-     (harness.typ), which attaches invoice-pro's diagnostics as JSON. The
+     (harness.typ), which attaches invoice-pro's diagnostics as JSON, in the
+     strict mode of the write guard (`--input zugferd-strict=true`). The
      e-invoice XML, the diagnostics and the PDF text are read from the PDF.
   2. XSD of the profile (lxml; the Factur-X XSDs come from the Mustang jar).
   3. Mustang 2.14 (EN 16931, Factur-X and XRechnung Schematron) in a single
@@ -262,11 +263,22 @@ def _file_cases(file):
 
 # ---------------------------------------------------------------- stage 1: Typst
 
+# The strict mode of the write guard (`zugferd-strict`, see
+# docs/docs/e-invoicing.md): every line of the XML is read back and compared
+# with the data model, and the arithmetic of the written amounts is checked
+# (BR-CO-10 to BR-CO-17, BR-S-08 and the like), which invoices outside CI
+# skip for speed.
+STRICT_INPUTS = {"zugferd-strict": "true"}
+
+
 
 def compile_case(case, out_dir, timestamp=common.DEFAULT_TIMESTAMP):
-    """Runs in a worker process: compile, then read XML, diagnostics, text."""
+    """Runs in a worker process: compile, then read XML, diagnostics, text.
+    Every case compiles in the strict mode of the write guard (see
+    STRICT_INPUTS)."""
     pdf = Path(out_dir) / f"{case['id']}.pdf"
-    ok, stderr, seconds = common.typst_compile(case["file"], pdf, inputs=case.get("inputs"), timestamp=timestamp)
+    inputs = {**STRICT_INPUTS, **(case.get("inputs") or {})}
+    ok, stderr, seconds = common.typst_compile(case["file"], pdf, inputs=inputs, timestamp=timestamp)
     res = {"id": case["id"], "t_compile": round(seconds, 3)}
     if not ok:
         res["crash"] = stderr.strip()[:4000]

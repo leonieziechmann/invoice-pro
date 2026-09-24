@@ -1436,6 +1436,55 @@
       "summary": "The net amounts of the lines and the allowances and charges of a VAT group add up to its taxable amount (BT-116, BR-S-08 and the like). A failure is a bug of invoice-pro.",
       "legal": null
     },
+    "IP-PRINT-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "scope": "printed",
+      "terms": ["BT-92", "BT-99", "BT-106", "BT-109", "BT-110", "BT-112", "BT-113", "BT-115", "BT-116", "BT-117", "BT-118", "BT-119", "BT-129", "BT-131", "BT-136", "BT-141", "BT-146", "BT-149"],
+      "level": "error",
+      "field": "item <id> (<name>), discount (<name>), surcharge (<name>), tax <category> <rate> or line-items",
+      "summary": "An amount or quantity of the XML differs from the printed one: of a line, an allowance or charge, a VAT group or a total; with gross prices, a net amount plus VAT differs from the printed gross amount by more than the rounding allows. A failure is a bug of invoice-pro.",
+      "legal": "§ 14 Abs. 4 Satz 1 Nr. 5, 7 and 8 UStG; Art. 226 No. 6 and 8 to 10 of the VAT Directive 2006/112/EC; the XML of a hybrid invoice (ZUGFeRD, Factur-X) states the invoice its PDF shows"
+    },
+    "IP-CALC-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "scope": "allowance-charge",
+      "terms": ["BT-92", "BT-99"],
+      "level": "error",
+      "field": "discount (<name>) or surcharge (<name>)",
+      "summary": "The parts of an allowance or charge per VAT category (BG-20, BG-21) do not add up to its printed amount. A failure is a bug of invoice-pro.",
+      "legal": "§ 14 Abs. 4 Satz 1 Nr. 7 UStG; Art. 226 No. 8 of the VAT Directive 2006/112/EC (the taxable amount per rate, with its reductions)"
+    },
+    "IP-CALC-02": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "scope": "tax",
+      "terms": ["BT-116", "BT-117", "BT-131", "BT-92", "BT-99"],
+      "level": "error",
+      "field": "tax <category> <rate>",
+      "summary": "The printed lines, allowances and charges of a VAT category do not add up to its printed taxable amount (with gross prices: its gross total). A failure is a bug of invoice-pro.",
+      "legal": "§ 14 Abs. 4 Satz 1 Nr. 7 and 8 UStG; Art. 226 No. 8 and 10 of the VAT Directive 2006/112/EC"
+    },
+    "PEPPOL-EN16931-R120": {
+      "covers": ["PEPPOL-EN16931-R120"],
+      "source": "PEPPOL",
+      "versions": ["3.0", "3.0.2"],
+      "profiles": ["xrechnung"],
+      "scope": "line",
+      "terms": ["BT-129", "BT-131", "BT-136", "BT-141", "BT-146", "BT-149"],
+      "level": "warning",
+      "field": "item <id> (<name>)",
+      "summary": "The line net amount (BT-131) is the invoiced quantity (BT-129) times the net price (BT-146) per price base quantity (BT-149) plus the line's charges (BT-141) minus its allowances (BT-136), within 0.02 (0.5 for HUF).",
+      "legal": null,
+      "note": "KoSIT reports the rule as a warning; Mustang 2.14 does not check it. The net prices of gross prices keep enough decimals for it (logic/net-amounts.typ); a line total rounded more coarsely than its price, e.g. in a currency without decimals or with a money rounding of the locale to 0.05, can break it."
+    },
     "IP-GUARD-00": {
       "covers": [],
       "source": "IP",
@@ -1565,6 +1614,58 @@
       "summary": "An invalid name, a missing namespace declaration, or not exactly one root element: the XML may not be well-formed.",
       "legal": null,
       "note": "A rule of the XML write guard (src/zugferd/guard/report.typ), which builds its messages."
+    },
+    "IP-GUARD-10": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "The XML read back states a business term with another value than the data model of the invoice.",
+      "legal": null,
+      "note": "A rule of the round trip of the XML write guard (src/zugferd/guard/roundtrip.typ, G3), whose messages src/zugferd/guard/report.typ builds."
+    },
+    "IP-GUARD-11": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "The XML leaves out a business term the data model of the invoice has, although the profile can state it.",
+      "legal": null,
+      "note": "A rule of the round trip of the XML write guard (src/zugferd/guard/roundtrip.typ, G3), whose messages src/zugferd/guard/report.typ builds."
+    },
+    "IP-GUARD-12": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "The XML states a business term the data model of the invoice does not have.",
+      "legal": null,
+      "note": "A rule of the round trip of the XML write guard (src/zugferd/guard/roundtrip.typ, G3), whose messages src/zugferd/guard/report.typ builds."
+    },
+    "IP-GUARD-13": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "An element, or the entries of a repeated group (e.g. the lines), occur more or less often than the data model has.",
+      "legal": null,
+      "note": "A rule of the round trip of the XML write guard (src/zugferd/guard/roundtrip.typ, G3), whose messages src/zugferd/guard/report.typ builds."
     }
   }
 }

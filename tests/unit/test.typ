@@ -328,12 +328,39 @@
     ("10.00", "5.00").sorted(),
   )
 
-  // 5. Gross amounts (tax-mode "inclusive") are converted to net per category.
+  // 5. With gross amounts (tax-mode "inclusive"), the parts are stated with
+  //    the net amounts of logic/net-amounts.typ, which add up to the taxable
+  //    amount of each category.
+  import "/src/logic/net-amounts.typ": net-amounts
+  let nets = net-amounts(
+    (),
+    (
+      "19-S": (basis: decimal("-8.40")),
+      "7-S": (basis: decimal("-4.67")),
+    ),
+    discounts,
+  )
   assert.eq(
-    document-allowance-charges(discounts, (), inclusive: true).map(e => {
+    document-allowance-charges(discounts, (), nets: nets.modifiers).map(e => {
       e.amount
     }),
     (decimal("8.40"), decimal("4.67")),
+  )
+  // No net amount of an allowance or charge turns to 0, which the XML would
+  // leave out: the unit the rounded amounts exceed goes to another one. A
+  // line may turn to 0 (`nonzero: false`), as it was rounded furthest up.
+  import "/src/logic/net-amounts.typ": allocate
+  assert.eq(allocate((decimal("0.006"), decimal("5")), decimal("5")), (
+    decimal("0.01"),
+    decimal("4.99"),
+  ))
+  assert.eq(
+    allocate(
+      (decimal("0.006"), decimal("5")),
+      decimal("5"),
+      nonzero: (false, true),
+    ),
+    (decimal("0.00"), decimal("5.00")),
   )
 
   // 6. build-line-item embeds line-level SpecifiedTradeAllowanceCharge between

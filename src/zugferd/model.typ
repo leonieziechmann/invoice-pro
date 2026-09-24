@@ -1,14 +1,22 @@
 // Normalizes the computed invoice into the data model of the e-invoice.
 //
-// Everything the XML contains is derived here exactly once: plain texts,
-// identifiers, net amounts and totals. The validator checks this model and the
-// builder serializes it, so both always agree on what ends up in the XML.
+// The model is a projection of what the invoice computed and prints: the
+// quantities, prices and amounts of its lines, the allowances and charges,
+// the VAT groups and the totals are read from the computed invoice (the
+// line items' `item-data`), never computed a second time. The only amounts
+// the printed invoice does not state are the net amounts of an invoice with
+// gross prices, which logic/net-amounts.typ derives from the printed ones;
+// the sums of the lines, allowances and charges (BT-106 to BT-108) are
+// added up here. The texts and identifiers are made plain once. The
+// validator checks this model, the builder serializes it, and the XML is
+// compared with it once more after it is written (guard/roundtrip.typ), so
+// all three agree on what ends up in the XML.
 
 #import "../utils/text.typ": plain-text
-#import "codelists.typ"
+#import "guard/lists.typ": validator as lists
 #import "profile.typ": resolve-profile
 #import "../utils/coercion.typ": to-decimal, to-ratio
-#import "../data/tax.typ": default-grounds, to-tax-key
+#import "../data/tax.typ": to-tax-key
 #import "../logic/payment-reference.typ": resolve-payment-reference
 #import "../logic/document-type.typ": resolve-document-type
 #import "../logic/service-period.typ": format-service-period, service-period-of
@@ -25,6 +33,16 @@
 #import "xml.typ": fmt-number
 
 #let _zero = decimal("0")
+#let _one = decimal("1")
+
+// Whether `code` is in a code list of guard/lists.typ, a string of codes
+// each between two spaces (see `in-list` of rules/engine.typ).
+#let _in-list(list, code) = (
+  type(code) == str
+    and code != ""
+    and not code.contains(" ")
+    and (" " + code + " ") in list
+)
 
 // The first value that is set, or `none`: the same fallbacks as the printed
 // invoice takes (see `first-given`).
@@ -35,9 +53,16 @@
 // test is cheaper than `plain-text`, which runs three replacements.
 #let _plain-ascii = regex("^[!-~]+(?: [!-~]+)*$")
 
-// The plain text of a value, or `none` if it has no visible text.
+// The plain text of a value, or `none` if it has no visible text. A text
+// element of such a string, e.g. the name `[Consulting]` of an item, is
+// its string as well.
 #let text-or-none(value) = {
   if type(value) == str and _plain-ascii in value { return value }
+  if (
+    type(value) == content
+      and value.func() == text
+      and _plain-ascii in value.text
+  ) { return value.text }
   let result = plain-text(value)
   if result == "" { none } else { result }
 }
@@ -93,13 +118,6 @@
   if result == "" { none } else { result }
 }
 
-// A loop rather than `fold`, which would call a closure per value.
-#let _sum(values) = {
-  let total = _zero
-  for value in values { total += value }
-  total
-}
-
 // The value of the key `key` of a party or the root context, `none` for the
 // placeholder the root context fills a missing value with for the visual
 // invoice, e.g. "#invoice-nr" or "#sender.city-name". Called with the value
@@ -127,8 +145,9 @@
 
 // Electronic address schemes (EAS) for national VAT identification numbers,
 // keyed by the VAT ID prefix (Greece uses "EL"). Only schemes of the EAS code
-// list the validators accept (`codelists.eas`); Denmark and Sweden, for
-// example, have none, so their parties fall back to the email address.
+// list every validator accepts (`eas.every` of guard/lists.typ); Denmark and
+// Sweden, for example, have none, so their parties fall back to the email
+// address.
 #let vat-eas-codes = (
   AT: "9914",
   BE: "9925",
@@ -181,7 +200,7 @@
   let code = if prefix == "EL" { "GR" } else if prefix == "XI" { "GB" } else {
     prefix
   }
-  if code != none and code in codelists.countries { code } else { none }
+  if _in-list(lists.country.every, code) { code } else { none }
 }
 
 // Contact details of a party, from `contact` or the flat `contact-name`,
@@ -502,12 +521,18 @@
   text-or-none(_unset(value, key))
 }
 
+// The postal address of a party (BG-5, BG-8, BG-12, BG-15). EN 16931 has
+// three address lines (BT-35, BT-36, BT-162): any further lines are joined
+// into the third one, as the XML states them.
 #let _address-model(party) = {
   let raw-lines = party.at("address-lines", default: ())
   let lines = ()
   for line in if type(raw-lines) == array { raw-lines } else { (raw-lines,) } {
     let text = if line != none { text-or-none(line) }
     if text != none { lines.push(text) }
+  }
+  if lines.len() > 3 {
+    lines = lines.slice(0, 2) + (lines.slice(2).join(", "),)
   }
   (
     lines: lines,
@@ -770,12 +795,14 @@
     if type(reference) != array or reference.len() != 2 { continue }
     let (title, value) = reference
     let mark = if type(value) == content { value.at("label", default: none) }
-    let titled = (
-      label != none
-        and type(title) in (str, content)
-        and text-or-none(title) == label
-    )
-    if mark in (service-period-label, service-period-text-label) or titled {
+    if (
+      mark in (service-period-label, service-period-text-label)
+        or (
+          label != none
+            and type(title) in (str, content)
+            and text-or-none(title) == label
+        )
+    ) {
       if type(value) not in (str, content) { return none }
       let text = text-or-none(value)
       if text == none { return none }
@@ -872,32 +899,30 @@
   }
 }
 
-/// The exemption reason (BT-120) of a VAT category: the plain text of its
-/// grounds. The VAT groups of the line items state the note of the language
-/// for the categories that need a reason (AE, K, G, O) when their items give
-/// no grounds, and print it (see `calculate-taxes`); without any, it is taken
-/// from `strings` the same way.
+/// The exemption reason (BT-120) of a VAT category: the plain text of the
+/// grounds the invoice prints for it. The VAT groups of the line items state
+/// the note of the language for the categories that need a reason (AE, K, G,
+/// O) when their items give no grounds, and print it (see
+/// `calculate-taxes`), so the grounds of a group are the only source. A
+/// taxed category (S, Z, L, M) states none.
 ///
 /// -> str | none
-#let exemption-reason(category, grounds, strings: (:)) = {
+#let exemption-reason(category, grounds) = {
   if category in _taxed-categories { return none }
-  let reason = text-or-none(grounds)
-  if reason != none { reason } else {
-    text-or-none(default-grounds(category, strings))
-  }
+  text-or-none(grounds)
 }
 
-// The key of the VAT group a tax belongs to, as used by `group-by-tax`.
+// The key of the VAT group a tax belongs to, as used by `group-by-tax`: its
+// rate as a decimal and its category (see `to-tax-key`).
 #let _tax-key(tax) = {
   if type(tax) != dictionary or "rate" not in tax or "category" not in tax {
     return none
   }
-  to-tax-key((rate: to-ratio(tax.rate), category: tax.category))
-}
-
-// Net amount of a (possibly gross) amount, rounded to 2 decimals.
-#let _net(amount, rate, inclusive) = {
-  if inclusive { calc.round(amount / (1 + rate), digits: 2) } else { amount }
+  let rate = tax.rate
+  if type(rate) == decimal and type(tax.category) == str {
+    return str(rate) + "-" + tax.category
+  }
+  to-tax-key((rate: to-ratio(rate), category: tax.category))
 }
 
 // The invoice line period (BG-26) of an item: its date as a period of one
@@ -915,163 +940,185 @@
   none
 }
 
-// An invoice line (BG-25) with net amounts.
-// With gross prices, `round-price` rounds the net price as the invoice
-// rounds unit prices (the `money-fine` rounding of the locale). `unit` is the
-// unit of the item as `resolve-unit` resolves it, resolved here when `auto`.
-//
-// It runs once per line, so it calls other functions only where there is
-// something to convert: the numbers of a computed item are decimals already,
-// and most of its texts are not given (each call of a function costs a few
-// microseconds).
-#let line-model(
-  item,
-  index,
-  inclusive: false,
-  round-price: price => calc.round(price, digits: 4),
-  unit: auto,
-) = {
-  let tax = item.at("tax", default: (:))
-  if type(tax) != dictionary { tax = (:) }
-  let rate = to-ratio(tax.at("rate", default: 0))
-
-  let quantity = item.at("quantity", default: 1)
-  if type(quantity) != decimal { quantity = to-decimal(quantity) }
-  let base-quantity = item.at("base-quantity", default: 1)
-  if type(base-quantity) != decimal {
-    base-quantity = to-decimal(base-quantity)
-  }
-  let price = item.at("price", default: 0)
-  if type(price) != decimal { price = to-decimal(price) }
-  let net = item.at("total", default: 0)
-  if type(net) != decimal { net = to-decimal(net) }
-  if inclusive {
-    net = _net(net, rate, inclusive)
-    price = round-price(price / (1 + rate))
-  }
-  // BR-27: the item net price must not be negative, the quantity carries the
-  // sign of a credited line instead.
-  if price < _zero {
-    price = -price
-    quantity = -quantity
-  }
-
-  let allowances = ()
-  let charges = ()
-  for modifier in (
-    item.at("discounts", default: ()) + item.at("surcharge", default: ())
-  ) {
-    let amount = to-decimal(modifier.at("absolute", default: 0))
-    let entry = (
-      amount: _net(calc.abs(amount), rate, inclusive),
-      reason: text-or-none(modifier.at("name", default: none)),
-    )
-    if entry.amount == _zero { continue }
-    if amount < _zero { allowances.push(entry) } else { charges.push(entry) }
-  }
-
-  let item-id = item.at("item-id", default: none)
-  if type(item-id) == str { item-id = (seller: item-id) }
-  if type(item-id) != dictionary { item-id = (:) }
-
-  if unit == auto { unit = resolve-unit(item.at("unit", default: none)) }
-
-  // The texts of the item, most of them not given.
-  // The position, e.g. "3" or "2.1".
-  let pos = item.at("pos", default: none)
-  let id = if type(pos) == str and _plain-ascii in pos { pos } else if (
-    pos != none
-  ) { text-or-none(pos) }
-  let description = item.at("description", default: none)
-  let standard-id = item-id.at("standard", default: none)
-  let seller-id = item-id.at("seller", default: none)
-  let buyer-id = item-id.at("buyer", default: none)
-  let note = item.at("note", default: none)
-  if note != none { note = plain-text(note, keep-newlines: true) }
-  let date = item.at("date", default: none)
-
-  (
-    index: index,
-    id: if id != none { id } else { str(index + 1) },
-    name: text-or-none(item.at("name", default: none)),
-    description: if description != none { text-or-none(description) },
-    standard-id: if standard-id != none { compact(standard-id) },
-    seller-id: if seller-id != none { text-or-none(seller-id) },
-    buyer-id: if buyer-id != none { text-or-none(buyer-id) },
-    quantity: quantity,
-    base-quantity: base-quantity,
-    unit-code: unit.code,
-    // A unit text without a known code, or a code that most likely means
-    // something else (see `resolve-unit`).
-    unit-issue: unit.issue,
-    price: price,
-    net: net,
-    key: _tax-key(tax),
-    category: text-or-none(tax.at("category", default: none)),
-    rate: rate,
-    // No tax was set for the item (`tax: none`), see `tax.implicit-zero`.
-    implicit: tax.at("implicit", default: false),
-    allowances: allowances,
-    charges: charges,
-    // BT-127: the note of the item, with its line breaks.
-    note: if note == "" { none } else { note },
-    // BG-26: the date or period of the item as `(start, end)`.
-    period: if date != none { _line-period(date) },
-    // BT-159: the country of origin, an ISO 3166-1 code.
-    origin: item.at("origin", default: none),
-  )
+// A decimal of the computed invoice: its numbers are decimals already, so a
+// conversion runs only for a hand-built one.
+#let _decimal(value) = if type(value) == decimal { value } else {
+  to-decimal(value)
 }
 
-// The document level allowances (BG-20) and charges (BG-21): every global
-// modifier is split into one entry per VAT category it applies to (BR-53).
-#let document-allowance-charges(discounts, surcharges, inclusive: false) = {
+/// The invoice lines (BG-25) of the computed items `items` (`item-data.items`
+/// of the line items), in their order: a projection of what each item prints.
+/// With net prices, the quantity (BT-129), the price (BT-146) and its base
+/// quantity (BT-149), the net amount (BT-131) and the amounts of the item's
+/// own allowances and charges (BT-136, BT-141) are those of the item. With
+/// gross prices, `nets` holds the net amounts of every item (see
+/// logic/net-amounts.typ), which replace the printed gross amounts.
+///
+/// BR-27: a negative price is stated as a positive price of a negative
+/// quantity, which keeps the line's amount.
+///
+/// It runs once per invoice and visits the items in a loop, calling
+/// functions only where there is something to convert: a call per line
+/// would hash the item (with its content) every time.
+///
+/// -> array
+#let line-models(items, nets: none) = {
+  let lines = ()
+  let index = 0
+  for item in items {
+    let tax = item.at("tax", default: (:))
+    if type(tax) != dictionary { tax = (:) }
+    let rate = tax.at("rate", default: _zero)
+    if type(rate) != decimal { rate = to-ratio(rate) }
+    let category = tax.at("category", default: none)
+    if type(category) != str or _plain-ascii not in category {
+      category = text-or-none(category)
+    }
+
+    let quantity = _decimal(item.at("quantity", default: _one))
+    let base-quantity = _decimal(item.at("base-quantity", default: _one))
+    let price = _decimal(item.at("price", default: _zero))
+    let net = _decimal(item.at("total", default: _zero))
+    // The allowances and charges of the item, as it prints them: discounts
+    // are negative, surcharges positive.
+    let modifiers = (
+      item.at("discounts", default: ()) + item.at("surcharge", default: ())
+    )
+    let adjustments = none
+    if nets != none {
+      let line = nets.at(index)
+      net = line.net
+      price = if price < _zero { -line.price } else { line.price }
+      adjustments = line.adjustments
+    }
+    if price < _zero {
+      price = -price
+      quantity = -quantity
+    }
+
+    let allowances = ()
+    let charges = ()
+    let i = 0
+    for modifier in modifiers {
+      let amount = _decimal(modifier.at("absolute", default: _zero))
+      let stated = if adjustments == none { calc.abs(amount) } else {
+        adjustments.at(i)
+      }
+      i += 1
+      if stated == _zero { continue }
+      // The reason as the XML states it (BR-42, BR-44).
+      let reason = text-or-none(modifier.at("name", default: none))
+      if amount < _zero {
+        allowances.push((amount: stated, reason: first-of(reason, "Discount")))
+      } else {
+        charges.push((amount: stated, reason: first-of(reason, "Surcharge")))
+      }
+    }
+
+    let item-id = item.at("item-id", default: none)
+    if type(item-id) == str { item-id = (seller: item-id) }
+    if type(item-id) != dictionary { item-id = (:) }
+    let unit = resolve-unit(item.at("unit", default: none))
+
+    // The texts of the item, most of them not given.
+    // The position, e.g. "3" or "2.1".
+    let pos = item.at("pos", default: none)
+    let id = if type(pos) == str and _plain-ascii in pos { pos } else if (
+      pos != none
+    ) { text-or-none(pos) }
+    let description = item.at("description", default: none)
+    let standard-id = item-id.at("standard", default: none)
+    let seller-id = item-id.at("seller", default: none)
+    let buyer-id = item-id.at("buyer", default: none)
+    let note = item.at("note", default: none)
+    if note != none { note = plain-text(note, keep-newlines: true) }
+    let date = item.at("date", default: none)
+
+    lines.push((
+      index: index,
+      id: if id != none { id } else { str(index + 1) },
+      name: text-or-none(item.at("name", default: none)),
+      description: if description != none { text-or-none(description) },
+      standard-id: if standard-id != none { compact(standard-id) },
+      seller-id: if seller-id != none { text-or-none(seller-id) },
+      buyer-id: if buyer-id != none { text-or-none(buyer-id) },
+      quantity: quantity,
+      base-quantity: base-quantity,
+      unit-code: unit.code,
+      // A unit text without a known code, or a code that most likely means
+      // something else (see `resolve-unit`).
+      unit-issue: unit.issue,
+      price: price,
+      net: net,
+      key: _tax-key(tax),
+      category: category,
+      rate: rate,
+      // No tax was set for the item (`tax: none`), see `tax.implicit-zero`.
+      implicit: tax.at("implicit", default: false),
+      allowances: allowances,
+      charges: charges,
+      // BT-127: the note of the item, with its line breaks.
+      note: if note == "" { none } else { note },
+      // BG-26: the date or period of the item as `(start, end)`.
+      period: if date != none { _line-period(date) },
+      // BT-159: the country of origin, an ISO 3166-1 code.
+      origin: item.at("origin", default: none),
+    ))
+    index += 1
+  }
+  lines
+}
+
+/// The invoice line (BG-25) of one computed item, see `line-models`.
+///
+/// -> dictionary
+#let line-model(item, index) = {
+  let line = line-models((item,)).first()
+  line.index = index
+  if item.at("pos", default: none) == none { line.id = str(index + 1) }
+  line
+}
+
+/// The document level allowances (BG-20) and charges (BG-21): every
+/// allowance or charge of the invoice is stated once per VAT group it
+/// applies to (BR-53), with the amount the invoice computed for that group
+/// (`split`); with gross prices, `nets` holds the net amount of each part
+/// (see logic/net-amounts.typ). A part of 0 is left out. The reason is the
+/// name of the allowance or charge, or "Discount" or "Surcharge" as the XML
+/// states it without one (BR-33, BR-38).
+///
+/// -> array
+#let document-allowance-charges(discounts, surcharges, nets: none) = {
   let entries = ()
+  let m = 0
   for modifier in discounts + surcharges {
     let reason = text-or-none(modifier.at("name", default: none))
+    let parts = if nets != none { nets.at(m) }
+    m += 1
     for (key, part) in modifier.at("split", default: (:)).pairs() {
-      let amount = to-decimal(part.at("absolute", default: 0))
-      let tax = part.at("tax", default: (:))
-      let rate = to-ratio(tax.at("rate", default: 0))
-      let net = _net(calc.abs(amount), rate, inclusive)
+      let amount = _decimal(part.at("absolute", default: _zero))
+      let net = if parts == none { calc.abs(amount) } else {
+        calc.abs(parts.at(key))
+      }
       if net == _zero { continue }
+      let tax = part.at("tax", default: (:))
+      let rate = tax.at("rate", default: _zero)
+      let charge = amount > _zero
       entries.push((
-        charge: amount > _zero,
+        charge: charge,
         amount: net,
-        reason: reason,
+        reason: if reason != none { reason } else if charge {
+          "Surcharge"
+        } else {
+          "Discount"
+        },
         key: key,
         category: text-or-none(tax.at("category", default: none)),
-        rate: rate,
+        rate: if type(rate) == decimal { rate } else { to-ratio(rate) },
       ))
     }
   }
   entries
-}
-
-// With gross prices, every line and allowance is converted to net on its own.
-// The rounding differences are moved onto the largest line of each VAT
-// category, so the lines add up to the printed taxable amount (BR-S-08, ...).
-#let _balance-lines(lines, allowance-charges, taxes) = {
-  let lines = lines
-  for (key, tax) in taxes.pairs() {
-    let indices = lines
-      .enumerate()
-      .filter(((_, line)) => line.key == key)
-      .map(((i, _)) => i)
-    if indices.len() == 0 { continue }
-    let entries = allowance-charges.filter(entry => entry.key == key)
-    let expected = to-decimal(tax.at("basis", default: 0))
-    let actual = (
-      _sum(indices.map(i => lines.at(i).net))
-        + _sum(entries.map(e => if e.charge { e.amount } else { -e.amount }))
-    )
-    let difference = expected - actual
-    let tolerance = decimal("0.01") * (indices.len() + entries.len() + 1)
-    if difference != _zero and calc.abs(difference) <= tolerance {
-      let largest = indices.sorted(key: i => calc.abs(lines.at(i).net)).last()
-      lines.at(largest).net += difference
-    }
-  }
-  lines
 }
 
 // --- Payment -------------------------------------------------------------------
@@ -1108,13 +1155,15 @@
 #let payment-means-model(means, currency) = {
   let entries = ()
   for bank in means.transfers {
+    let iban = _upper-id(bank.at("iban", default: none))
     entries.push(
       _means(transfer-code(currency), "transfer", "bank-details")
         + (
-          iban: _upper-id(bank.at("iban", default: none)),
+          iban: iban,
           // Only an explicit name of `bank-details` (BT-85).
           account-name: text-or-none(bank.at("account-name", default: none)),
-          bic: _upper-id(bank.at("bic", default: none)),
+          // The institution of the account (BT-86), stated with the account.
+          bic: if iban != none { _upper-id(bank.at("bic", default: none)) },
         ),
     )
   }
@@ -1191,7 +1240,9 @@
 ///
 /// `payment-means` are the payment means of the invoice as the root context
 /// resolves them (see `logic/payment-means.typ`); without them, the bank
-/// details `bank` are its only payment means.
+/// details `bank` are its only payment means. `nets` are the net amounts of
+/// an invoice with gross prices (`net-amounts` of logic/net-amounts.typ),
+/// derived from `item-data` when `auto`.
 ///
 /// -> dictionary
 #let build-model(
@@ -1200,6 +1251,7 @@
   payment-goal: none,
   bank: none,
   payment-means: none,
+  nets: auto,
 ) = {
   let sender = ctx.at("sender", default: (:))
   let recipient = ctx.at("recipient", default: (:))
@@ -1230,24 +1282,24 @@
     default: ctx.at("tax-mode", default: "exclusive"),
   )
   let inclusive = tax-mode == "inclusive"
-  // Net prices of gross prices are rounded like every unit price of the
-  // invoice: with the fine money rounding of the locale, so a locale that
-  // keeps 6 decimals keeps them in the XML as well.
-  let round-price = (
-    ctx
-      .at("locale", default: (:))
-      .at("normalize", default: (:))
-      .at("money-fine", default: none)
-  )
-  if type(round-price) != function {
-    let digits = (
-      ctx
-        .at("locale", default: (:))
-        .at("currency", default: (:))
-        .at("decimals-fine", default: 4)
+  let locale = ctx.at("locale", default: (:))
+  let currency-meta = locale.at("currency", default: (:))
+  // With gross prices, the net amounts the XML states, derived once from the
+  // printed gross amounts (logic/net-amounts.typ): loaded only for such an
+  // invoice.
+  if inclusive and nets == auto {
+    import "../logic/net-amounts.typ": net-amounts
+    let discounts = item-data.at("discounts", default: ())
+    let surcharges = item-data.at("surcharges", default: ())
+    nets = net-amounts(
+      items,
+      taxes,
+      discounts + surcharges,
+      digits: currency-meta.at("decimals", default: 2),
+      fine: currency-meta.at("decimals-fine", default: 4),
     )
-    round-price = price => calc.round(price, digits: digits)
   }
+  if not inclusive or nets == auto { nets = none }
 
   // BR-O-02: an invoice not subject to VAT carries no VAT identifiers. MINIMUM
   // has no VAT breakdown; there the seller VAT ID is needed for BR-CO-26.
@@ -1290,24 +1342,15 @@
     _ship-to-buyer(buyer.address)
   } else { none }
 
-  let lines = ()
-  for (i, item) in items.enumerate() {
-    lines.push(line-model(
-      item,
-      i,
-      inclusive: inclusive,
-      round-price: round-price,
-      unit: resolve-unit(item.at("unit", default: none)),
-    ))
-  }
+  let lines = line-models(
+    items,
+    nets: if nets != none { nets.lines },
+  )
   let allowance-charges = document-allowance-charges(
     item-data.at("discounts", default: ()),
     item-data.at("surcharges", default: ()),
-    inclusive: inclusive,
+    nets: if nets != none { nets.modifiers },
   )
-  if inclusive {
-    lines = _balance-lines(lines, allowance-charges, taxes)
-  }
 
   let breakdown = taxes
     .pairs()
@@ -1320,11 +1363,7 @@
         rate: to-ratio(tax.at("rate", default: 0)),
         basis: to-decimal(tax.at("basis", default: 0)),
         amount: to-decimal(tax.at("absolute", default: 0)),
-        reason: exemption-reason(
-          category,
-          tax.at("grounds", default: none),
-          strings: ctx.at("locale", default: (:)).at("strings", default: (:)),
-        ),
+        reason: exemption-reason(category, tax.at("grounds", default: none)),
         // BT-121, and the codes the items give (for the validator).
         code: exemption-code(category, codes),
         codes: codes,
@@ -1343,10 +1382,12 @@
       allowance-total += entry.amount
     }
   }
-  let net-total = line-total - allowance-total + charge-total
+  // The totals the invoice prints (BT-109, BT-112 and the prepayments of
+  // BT-113); the VAT total (BT-110) is the sum of the printed VAT amounts.
+  let net-total = _decimal(item-data.at("net-total", default: _zero))
+  let gross-total = _decimal(item-data.at("gross-total", default: _zero))
   let tax-total = _zero
   for tax in breakdown { tax-total += tax.amount }
-  let gross-total = net-total + tax-total
   let means = if payment-means != none { payment-means } else {
     resolve-payment-means(
       if bank != none { (bank,) } else { () },
@@ -1358,11 +1399,9 @@
   // An invoice that is paid already (`paid`) has the total as paid amount
   // (BT-113), prepayments included, so nothing is due (BT-115).
   let prepaid-total = if means.paid != none { gross-total } else {
-    to-decimal(item-data.at("prepaid-total", default: 0))
+    _decimal(item-data.at("prepaid-total", default: _zero))
   }
 
-  let locale = ctx.at("locale", default: (:))
-  let currency-meta = locale.at("currency", default: (:))
   let currency = currency-code(locale)
   // How the invoice prints an amount (`format.currency`) and a unit price
   // (`format.currency-fine`), to check that it prints the currency the XML
@@ -1538,6 +1577,9 @@
     lines: lines,
     allowance-charges: allowance-charges,
     taxes: breakdown,
+    // BT-106 to BT-108 add up the lines, allowances and charges of the XML;
+    // the other totals are those the invoice prints (see
+    // rules/equivalence.typ, which checks that they agree).
     totals: (
       line: line-total,
       allowance: allowance-total,
@@ -1546,13 +1588,16 @@
       tax: tax-total,
       gross: gross-total,
       prepaid: prepaid-total,
-      due: gross-total - prepaid-total,
+      due: if means.paid != none { _zero } else {
+        _decimal(item-data.at(
+          "due-total",
+          default: gross-total - prepaid-total,
+        ))
+      },
     ),
-    // The totals printed on the invoice, to verify the XML against them.
-    printed-totals: (
-      net: to-decimal(item-data.at("net-total", default: 0)),
-      gross: to-decimal(item-data.at("gross-total", default: 0)),
-    ),
+    // The totals printed on the invoice (the totals of the XML are read from
+    // them).
+    printed-totals: (net: net-total, gross: gross-total),
     payment: (
       reference: text-or-none(resolve-payment-reference(ctx, bank: bank)),
       // BG-16: the payment means and their details.

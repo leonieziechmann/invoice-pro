@@ -96,11 +96,15 @@ Codes (currencies, countries, units, schemes of identifiers and electronic addre
 
 Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice-pro` checks some rules of its own, whose ids start with `IP-`. Here it is stricter than the official validators: they accept the XML, but a value the invoice states would be lost or wrong, or the law requires more than the profile checks.
 
+The printed invoice and its XML are one invoice, so every e-invoice is also checked to state exactly what the invoice prints: the quantity, price and net amount of every line with its allowances and charges, every allowance and charge of the document, the taxable amount, rate and VAT amount of every VAT category, and the totals (`IP-PRINT-01`); and the printed amounts add up, per VAT category and for every allowance or charge split over several categories (`IP-CALC-01`, `IP-CALC-02`). With gross prices (`tax-mode: "inclusive"`), a net amount plus VAT must give the printed gross amount within the rounding described in [Gross Prices](#4-gross-prices). These checks cannot fail on account of the invoice data: a failure is a bug of `invoice-pro`, and the message asks to report it.
+
 [//]: # "Generated from src/zugferd/rules/registry.json by tools/zugferd/registry.py --write-docs; edit the registry instead."
 
 | Rule            | Level   | Checks                                                                                                                                                                                                                                                                             |
 | :-------------- | :------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `IP-ADDR-01`    | error   | A city line with a number of three or more digits, but no post code in the format of the party's country (e.g. "1012 Amsterdam" instead of "1012 AB Amsterdam"): the post code would be missing, and the number would be written into the city name.                               |
+| `IP-CALC-01`    | error   | The parts of an allowance or charge per VAT category (BG-20, BG-21) do not add up to its printed amount. A failure is a bug of invoice-pro.                                                                                                                                        |
+| `IP-CALC-02`    | error   | The printed lines, allowances and charges of a VAT category do not add up to its printed taxable amount (with gross prices: its gross total). A failure is a bug of invoice-pro.                                                                                                   |
 | `IP-COUNTRY-01` | error   | A party without `country` whose VAT identifier was issued by another country: the country of the locale would be written (e.g. "DE" for the Austrian VAT ID "ATU12345678"). Set `country` on the party, also for a foreign VAT registration.                                       |
 | `IP-DEC-01`     | error   | A VAT rate with more than 4 decimals, which the XML cannot state exactly (and which could collide with another VAT group).                                                                                                                                                         |
 | `IP-DOC-01`     | error   | A subject that names another kind of document than an invoice (e.g. "Gutschrift", "Angebot", "Credit note", "Devis") without `document-type`: the e-invoice would state a commercial invoice that asks the buyer to pay. See [Document Type](#9-document-type-bt-3).               |
@@ -118,6 +122,7 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | `IP-PERIOD-01`  | error   | A printed service period that is not the one the XML states: another date, or a text of its own where the XML states the invoice date. A text of its own besides dated items or a `service-period` is a warning. See [Service Period](#10-service-period-bt-72--bg-14).            |
 | `IP-PERIOD-02`  | warning | The date of an item outside the `service-period` of the invoice. XRechnung checks it for an invoicing period (BG-14) as `PEPPOL-EN16931-R110` and `R111`. See [Item Notes, Periods and Country of Origin](#12-item-notes-periods-and-country-of-origin).                           |
 | `IP-PERIOD-03`  | error   | The printed invoice does not show the date of the supply, which German law requires on every invoice but a small-amount invoice; for a seller elsewhere a warning where it is not the invoice date. See [Printed Details](#printed-details).                                       |
+| `IP-PRINT-01`   | error   | An amount or quantity of the XML differs from the printed one: of a line, an allowance or charge, a VAT group or a total; with gross prices, a net amount plus VAT differs from the printed gross amount by more than the rounding allows. A failure is a bug of invoice-pro.      |
 | `IP-PRINT-02`   | error   | Amounts printed in another currency than the invoice currency (BT-5), e.g. a custom locale that prints "zł" while the XML states EUR.                                                                                                                                              |
 | `IP-PRINT-03`   | error   | The XML states the seller's VAT identifier (BT-31) or tax number (BT-32), one of which the law requires on the invoice, but the printed invoice shows neither. See [Printed Details](#printed-details).                                                                            |
 | `IP-PROFILE-01` | warning | An input the profile cannot state, e.g. the buyer trading name (BT-45) in `"basic"`, or `notes`, a `payee` or the method of `paid` in `"minimum"`: the invoice may print it, but it is not written into the e-invoice. The hint names the lowest profile that states it.           |
@@ -135,6 +140,7 @@ The validator checks the invoice data; a second check, the write guard, checks t
 
 - **Structure (G1):** every element is known to the profile's schema at its position and not marked as not used there by the Factur-X Schematron; the elements are in schema order and number (`maxOccurs` and the counts of the Schematron); every element the schema or a rule of the Schematron without a condition on values requires is there with its text (an element without text counts as missing), e.g. for `"xrechnung"` the city and post code of the addresses, the contact of the seller, the buyer reference and the rate of each VAT breakdown; every required attribute is there, and no other attribute.
 - **Values (G2):** decimals, indicators and dates have their lexical form, and dates in the format `102` name a day of the calendar; amounts have at most the decimals the `BR-DEC-*` rules allow; every code is in the code list of its position. Where several validators apply, the code must be in the list of each of them, e.g. a country code in the list of the Factur-X Schematron and in the one of EN 16931. Every tax element (the VAT of a line, of an allowance or charge, and each VAT breakdown) has what its VAT category requires: a rate above 0 for `S`, `L` and `M`, the rate 0 for `Z`, `E`, `AE`, `K` and `G`, and none for `O` (`BR-S-05` and the like); a VAT breakdown has a rate unless its category is `O` (`BR-48`), the VAT amount 0 for `Z`, `E`, `AE`, `K`, `G` and `O`, an exemption reason for `E`, `AE`, `K`, `G` and `O`, and none for `S`, `Z`, `L` and `M` (`BR-E-09`, `BR-E-10` and the like).
+- **Round trip (G3):** the XML as Typst's parser reads it back states exactly what the invoice data states, through a table of its own that maps every element to its business term (independent of the code that writes the XML): no value differs, none is left out that the profile can state, none is added, and every repeated group (notes, payment means, VAT breakdown, allowances and charges, lines) has as many entries as the invoice. Amounts, quantities and rates are compared as numbers (`19.00` is 19 %), dates in the format `102`. This covers the header of the document (the document, the parties, references, delivery, payment, VAT breakdown, allowances and charges, and the totals) and the number of lines; the [strict mode](#the-strict-mode) compares every line as well. The round trip runs when G1 and G2 found nothing, so that every element and value it reads has its form; a finding of G1 or G2 is an error in any case.
 - **Well-formed (G4):** Typst's XML parser reads the bytes that are attached as one `CrossIndustryInvoice` document.
 
 The guard does not change the XML: the file is the same with or without it. What it finds is added to the diagnostics, as errors, and `zugferd-errors` treats them like the validator's. A problem the validator reports already (the same rule or the same input) is not listed twice. Since the validator checks every input before, a finding of the guard is a bug of `invoice-pro`: if the guard finds something the validator does not, each finding is listed with the hint to report it; if the validator reports errors, the guard's other findings are one entry, as they may follow from those errors. A finding names the official rule of the check where there is one (e.g. `BR-CL-14` for a country code), and otherwise a rule of the guard:
@@ -153,8 +159,29 @@ The guard does not change the XML: the file is the same with or without it. What
 | `IP-GUARD-07` | A value outside its lexical form (e.g. `1,50` as a decimal) or a code outside its list, where no official rule says so. |
 | `IP-GUARD-08` | A date in the format `102` that names no day of the calendar (e.g. `20260230`), where no official rule checks it.       |
 | `IP-GUARD-09` | An invalid name, a missing namespace declaration, or not exactly one root element: the XML may not be well-formed.      |
+| `IP-GUARD-10` | The XML read back states a business term with another value than the data model of the invoice.                         |
+| `IP-GUARD-11` | The XML leaves out a business term the data model of the invoice has, although the profile can state it.                |
+| `IP-GUARD-12` | The XML states a business term the data model of the invoice does not have.                                             |
+| `IP-GUARD-13` | An element, or the entries of a repeated group (e.g. the lines), occur more or less often than the data model has.      |
 
 The guard checks what the schema, the code lists and the rules of the VAT categories say about each element, not the business rules (sums, conditions between different parts of the invoice, and elements required only under such a condition, e.g. an identifier of the seller in `BR-CO-26`), which remain the validator's. It is stricter than the official validators in a few documented places: it rejects the elements the Factur-X Schematron marks as not used (Mustang ignores those reports), dates that name no day, a required element without text also where a rule only asks for the element, and any element `invoice-pro` never writes; and where a rule of the CEN Schematron may be taken over by a rule of higher priority only under a condition on values, it applies the rule anyway. Its tables follow the artefacts of the Mustang CLI 2.14.0, which `invoice-pro` pins: IPSI (`M`) at 0 % is rejected there (`BR-AG-05` tests a rate above 0), while the newer EN 16931 Schematron of KoSIT's XRechnung configuration accepts it.
+
+### The Strict Mode
+
+With `zugferd-strict: true` on the invoice, or `--input zugferd-strict=true` for every invoice of a compilation (`typst compile --input zugferd-strict=true invoice.typ`), the write guard checks more:
+
+- the round trip (G3) of every invoice line: the name, identifiers, note, quantity, unit, price, VAT category and rate, period, allowances and charges and the net amount of each line in the XML are those of the invoice;
+- the arithmetic of the amounts the XML states, computed from the XML alone, with the tolerances of the official rules: the sums of the lines, allowances and charges and the totals (`BR-CO-10` to `BR-CO-16`), the VAT amount of each VAT category from its taxable amount and rate, within 1 (`BR-CO-17`), and the taxable amount of each VAT category from its lines, allowances and charges (`BR-S-08` and the like: exactly for `S`, `O`, `L` and `M`, within 1 for `Z`, `E`, `AE`, `K` and `G`). A finding names the official rule the XML breaks.
+
+The standard checks already cover the header, and the invoice data behind the lines is checked before the XML is written, so the strict mode is a second opinion on the written lines. It takes about 0.4 ms per line, about as much as writing the line, so it is off by default. The conformance corpus of `invoice-pro` compiles every e-invoice in the strict mode, and so does `scripts/validate-zugferd`, which validates the e-invoices of its tests; turn it on in your own CI as well.
+
+```typst
+#show: invoice.with(
+  zugferd: "en16931",
+  zugferd-strict: true, // compare every line of the XML, and check its sums
+  // ...
+)
+```
 
 ### Coverage of the Official Rules
 
@@ -168,9 +195,9 @@ The tests of `invoice-pro` account for every rule of the official validators, pr
 | BASIC WL  |      196 |                      56 |                   117 |                       14 |            7 |    2 |
 | BASIC     |      851 |                      72 |                   713 |                       41 |           23 |    2 |
 | EN 16931  |      905 |                      73 |                   734 |                       54 |           40 |    4 |
-| XRechnung |      885 |                     105 |                   646 |                       62 |           67 |    5 |
+| XRechnung |      885 |                     106 |                   646 |                       62 |           67 |    4 |
 
-Open: `BR-B-01` (BASIC, EN 16931, XRechnung), `BR-B-02` (BASIC, EN 16931, XRechnung), `BR-O-03` (BASIC WL), `BR-O-04` (BASIC WL), `CII-SR-467` (EN 16931, XRechnung), `CII-SR-470` (EN 16931, XRechnung), `PEPPOL-EN16931-R120` (XRechnung).
+Open: `BR-B-01` (BASIC, EN 16931, XRechnung), `BR-B-02` (BASIC, EN 16931, XRechnung), `BR-O-03` (BASIC WL), `BR-O-04` (BASIC WL), `CII-SR-467` (EN 16931, XRechnung), `CII-SR-470` (EN 16931, XRechnung).
 
 [//]: # "end of the rule-coverage table"
 
@@ -524,7 +551,9 @@ To state another note or category, override the scheme of the region, e.g. `loca
 
 ### 4. Gross Prices
 
-With `tax-mode: "inclusive"`, the invoice prints gross prices, while the XML states net amounts as EN 16931 requires. The net unit prices are rounded with the fine precision of the locale (`normalize.money-fine`), like every unit price. Every line and allowance is converted on its own, and rounding differences of a cent are assigned to the largest line of the VAT category, so the XML adds up exactly to the net and gross totals printed on the invoice.
+With `tax-mode: "inclusive"`, the invoice prints gross prices, while the XML states net amounts as EN 16931 requires. They are derived from what the invoice prints: the net amounts of the lines and of the allowances and charges of each VAT category are its printed gross amounts divided by 1 plus the rate, rounded to the currency so that they add up exactly to the taxable amount the invoice prints for the category (the cents the rounding lacks or exceeds go to the amounts that were rounded furthest the other way, so each differs from its exact net amount by less than a cent; a line of one cent may state 0.00 that way, an allowance or charge never does). The net unit price (BT-146) keeps at least 6 decimals, more for a large quantity (3 more than the integer digits of the quantity), so that the quantity times the price gives the net amount of the line within 0.02, as XRechnung requires (`PEPPOL-EN16931-R120`): for 1000 screws at 9.99 € including 19 % VAT, the XML states the net price 8.394958 and the net amount 8394.96. Earlier versions rounded the net price to the fine precision of the locale (4 decimals: 8.3950, which is 0.04 off).
+
+In XRechnung, the same rule applies to net prices: a line total that is rounded more coarsely than its price can break it, e.g. 100.40 yen for a currency without decimals, or 1 × 0.325 € printed as 0.35 € with a `money` rounding of the locale to 0.05. `invoice-pro` checks every line and reports that as a warning, as KoSIT does.
 
 ### 5. Payment Terms and Instructions
 

@@ -152,7 +152,6 @@ OPEN_WORK_LIST = {
     "BR-O-04": ("basic-wl",),
     "CII-SR-467": ("en16931", "xrechnung"),
     "CII-SR-470": ("en16931", "xrechnung"),
-    "PEPPOL-EN16931-R120": ("xrechnung",),
 }
 
 # The artefacts of KoSIT's XRechnung configuration 2026-08-31 the inventory

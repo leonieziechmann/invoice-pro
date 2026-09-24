@@ -41,6 +41,11 @@
   namespace: "IP-GUARD-09",
   root: "IP-GUARD-09",
   well-formed: "IP-GUARD-09",
+  // G3, the round trip of the XML against the data model (roundtrip.typ).
+  differs: "IP-GUARD-10",
+  dropped: "IP-GUARD-11",
+  extra: "IP-GUARD-12",
+  count: "IP-GUARD-13",
 )
 
 /// The rule of the diagnostic that summarizes further findings.
@@ -342,7 +347,105 @@
     }
   } else if kind == "well-formed" {
     "Typst's XML parser does not read the XML as one CrossIndustryInvoice document."
+  } else if kind in ("differs", "dropped", "extra", "count") {
+    // G3: the XML against the data model (roundtrip.typ).
+    let what = (
+      element
+        + if f.at("term", default: none) != none { " (" + f.term + ")" }
+        + where
+    )
+    if kind == "differs" {
+      (
+        "The XML states "
+          + what
+          + " as "
+          + _quoted(f.stated)
+          + ", the invoice data as "
+          + _quoted(f.expected)
+          + "."
+      )
+    } else if kind == "dropped" {
+      (
+        "The XML leaves out "
+          + what
+          + ", "
+          + _quoted(f.expected)
+          + " in the invoice data, which the profile "
+          + profile
+          + " can state."
+      )
+    } else if kind == "extra" {
+      (
+        "The XML states "
+          + what
+          + " as "
+          + _quoted(f.stated)
+          + ", which the invoice data does not have."
+      )
+    } else {
+      (
+        "The XML states "
+          + what
+          + " "
+          + str(f.stated)
+          + " times, the invoice data has "
+          + str(f.expected)
+          + "."
+      )
+    }
+  } else if kind == "arithmetic" {
+    // The strict mode: the amounts of the XML do not add up (strict.typ).
+    f.text
   } else { "The XML guard found a problem (" + kind + ")." }
+}
+
+// G3, the round trip (roundtrip.typ), names the elements of a path by
+// their local names, an entry of a repeated group as `(name, number)`, and
+// gives the values of the model as they are (`k`: their kind).
+#let _round-trip-kinds = ("differs", "dropped", "extra", "count")
+#let _prefixes = (
+  CrossIndustryInvoice: "rsm:",
+  ExchangedDocumentContext: "rsm:",
+  ExchangedDocument: "rsm:",
+  SupplyChainTradeTransaction: "rsm:",
+  DateTimeString: "udt:",
+  Indicator: "udt:",
+)
+
+// A value of the model as the XML would state it.
+#let _shown(value, kind) = {
+  if value == none or type(value) == str { return value }
+  if type(value) == datetime and value.year() != none {
+    return value.display("[year][month][day]")
+  }
+  if type(value) in (int, float, decimal) {
+    return str(if kind in ("p", "po") { value * 100 } else { value })
+  }
+  repr(value)
+}
+
+// A finding of the round trip with the path the guard writes, e.g.
+// "ram:ApplicableTradeTax[2]", and its values as texts.
+#let _round-trip(f) = {
+  let steps = ()
+  for step in f.path {
+    let (name, n) = if type(step) == array { step } else { (step, none) }
+    let prefix = if name.starts-with("@") { "" } else if (
+      // The date of a referenced document is qualified data (qdt).
+      name == "DateTimeString"
+        and steps.last(default: "") == "ram:FormattedIssueDateTime"
+    ) { "qdt:" } else { _prefixes.at(name, default: "ram:") }
+    steps.push(prefix + name + if n != none { "[" + str(n) + "]" } else { "" })
+  }
+  let kind = f.at("k", default: none)
+  (
+    f
+      + (
+        path: steps,
+        stated: _shown(f.stated, none),
+        expected: _shown(f.expected, kind),
+      )
+  )
 }
 
 /// The findings of the guard as diagnostics (level, rule, source, field,
@@ -352,6 +455,7 @@
 #let guard-diagnostics(findings, lines, profile-name) = {
   let out = ()
   for f in findings {
+    if f.kind in _round-trip-kinds { f = _round-trip(f) }
     let rule = if f.rule != none { f.rule } else {
       _rules.at(f.kind, default: "IP-GUARD-01")
     }

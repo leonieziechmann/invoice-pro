@@ -4,7 +4,7 @@
 // loads this module only for the first unit given as text (Typst parses a
 // module when it is first imported).
 
-#import "codelists.typ"
+#import "guard/lists.typ": validator as lists
 #import "../data/unit.typ": unit-db
 #import "../locale/lang/lang.typ" as languages
 
@@ -138,7 +138,9 @@
   // A unit written exactly as a code; case-sensitive, so that "min" is not
   // looked up as the code "MIN" but as an abbreviation (which gives the
   // same).
-  if text in codelists.units {
+  if (
+    not text.contains(" ") and (" " + text + " ") in lists.unit.every
+  ) {
     let ambiguous = _ambiguous-unit-codes.at(text, default: none)
     return (
       code: text,

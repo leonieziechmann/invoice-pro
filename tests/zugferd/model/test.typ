@@ -4,7 +4,7 @@
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/model.typ": (
-  build-model, get-electronic-address, map-unit-code,
+  build-model, get-electronic-address, map-unit-code, text-or-none,
 )
 #import "/src/zugferd/profile.typ": resolve-profile, switch-profile
 #import "/tests/data-test.typ": data-test, loom
@@ -68,7 +68,9 @@
     decimal("11.21"),
     decimal("7.56"),
   ))
-  assert.eq(lines.first().price, decimal("16.7983"))
+  // The net price of 19.99 incl. 19 % VAT keeps 6 decimals, so that the
+  // quantity times the price is the line's amount (PEPPOL-EN16931-R120).
+  assert.eq(lines.first().price, decimal("16.798319"))
   assert.eq(lines.at(2).allowances.map(a => a.amount), (decimal("0.84"),))
   assert.eq(
     model.allowance-charges.map(e => (e.category, e.rate, e.amount)),
@@ -334,4 +336,20 @@
     (switched.id, switched.name, switched.xrechnung, switched.automatic),
     ("en16931", "EN 16931 (COMFORT)", false, true),
   )
+}
+
+// --- 10. Plain texts ---
+#{
+  // A plain ASCII text, as a string or a text element, is taken as it is.
+  assert.eq(text-or-none("Consulting"), "Consulting")
+  assert.eq(text-or-none([Consulting]), "Consulting")
+  assert.eq(text-or-none(text("Two words")), "Two words")
+  // Anything else goes through `plain-text`: other characters, markup,
+  // spaces at the ends, and nothing visible.
+  assert.eq(text-or-none([Beratung München]), "Beratung München")
+  assert.eq(text-or-none([*Seller* GmbH]), "Seller GmbH")
+  assert.eq(text-or-none([2026#sym.minus;001]), "2026-001")
+  assert.eq(text-or-none(text(" Padded ")), "Padded")
+  assert.eq(text-or-none([]), none)
+  assert.eq(text-or-none(none), none)
 }

@@ -577,6 +577,22 @@ def _breakdown(f, seller, mutation):
     }[f["tax"]]
 
 
+def _exemption_codes(f, mutation):
+    """The exemption reason codes (BT-121) of the VAT breakdown by category:
+    the VATEX code the "e-code" items give, and the code of the category for
+    AE, K, G and O; None when the categories depend on the locale (small
+    business scheme)."""
+    if f["tax"] == "smallbiz" or mutation == "no-lines":
+        return None
+    return {
+        "e-code": {"E": EXEMPTION_CODE},
+        "ae": {"AE": "VATEX-EU-AE"},
+        "k": {"K": "VATEX-EU-IC"},
+        "g": {"G": "VATEX-EU-G"},
+        "o": {"O": "VATEX-EU-O"},
+    }.get(f["tax"], {})
+
+
 def _due_date(f, mutation):
     """The payment due date (BT-9): 14 days after the invoice date, or the
     `due-date`; none when the amount is due at once or paid already."""
@@ -814,6 +830,7 @@ def render(cid, f, mutation=None, opts=None):
         "item_modifiers": item_mods,
         "period": period,
         "breakdown": _breakdown(f, seller, mutation),
+        "exemption_codes": _exemption_codes(f, mutation),
         "due_date": _due_date(f, mutation),
         "iban": account[1] if account and mutation != "no-bank" else None,
         **_payment_facts(f, currency, account, buyer, mutation),

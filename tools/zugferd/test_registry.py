@@ -181,7 +181,7 @@ class Sources(unittest.TestCase):
         self.assertIsNotNone(r.RULE_ID.match("PEPPOL-EN16931-R020"))
 
     def test_the_guard_rules(self):
-        self.assertEqual(r.guard_ids(), {f"IP-GUARD-{n:02d}" for n in range(10)})
+        self.assertEqual(r.guard_ids(), {f"IP-GUARD-{n:02d}" for n in range(14)})
 
 
 class Docs(unittest.TestCase):
