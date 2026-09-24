@@ -35,6 +35,9 @@ Facts (all optional; an absent fact is not checked):
   seller_country, buyer_country, ship_to_country  BT-40/55/80    O-BT40/55/80
   breakdown                [[category, rate], ..] of BG-23       O-BG23
   grounds                  [[category, text], ..] in BT-120      O-BT120
+  exemption_codes          {category: code} of the VAT breakdowns with an
+                           exemption reason code (BT-121); the others have
+                           none                                  O-BT121
   doc_modifiers, item_modifiers  [{name, charge, percent|amount}]  O-BG20/21, O-BG27/28
   tax_mode                 "inclusive": amounts of modifiers are gross
   period                   [start, end] of BG-14 (YYYYMMDD)      O-BG14
@@ -58,15 +61,18 @@ Facts (all optional; an absent fact is not checked):
   skip_oracles             oracle ids not to check for this case
 
 Independent of the facts, the PDF text must contain the grand total and the
-amount due (O-PDF-BT112, O-PDF-BT115) and every exemption reason of the XML
-(O-PDF-BT120).
+amount due (O-PDF-BT112, O-PDF-BT115), with the decimals of the currency
+(ISO 4217), and every exemption reason of the XML (O-PDF-BT120); with net
+prices (`tax_mode` not "inclusive"), also the net amount of the first line
+(O-PDF-BT131) when it has no allowances or charges of its own and is not the
+part of a bundle split by VAT group.
 
 `check_diagnostics` checks invoice-pro's own messages in every case: each
 error names its rule, the input field, what is wrong and a hint (O-DIAG).
 """
 
 import re
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from common import NS, dec, xtext, xtext1
 
@@ -88,6 +94,13 @@ CENT = Decimal("0.01")
 # (decimal sign, group sign) of printed amounts, tried in turn when the case
 # does not state the format of its locale.
 NUMBER_FORMATS = [(",", "."), (".", ","), (".", "'"), (",", "\u00a0"), (",", " ")]
+# The decimals (minor units) of the ISO 4217 currencies that do not have
+# two: the invoice prints its amounts with them.
+MINOR_UNITS = {
+    "BHD": 3, "BIF": 0, "CLF": 4, "CLP": 0, "DJF": 0, "GNF": 0, "IQD": 3, "ISK": 0, "JOD": 3,
+    "JPY": 0, "KMF": 0, "KRW": 0, "KWD": 3, "LYD": 3, "OMR": 3, "PYG": 0, "RWF": 0, "TND": 3,
+    "UGX": 0, "UYI": 0, "UYW": 4, "VND": 0, "VUV": 0, "XAF": 0, "XOF": 0, "XPF": 0,
+}
 
 
 def _find(el, path):
@@ -102,17 +115,18 @@ def _nows(text):
     return re.sub(r"[\s\u00a0\u202f\u2009\u00ad]+", "", text)
 
 
-def format_amount(value, number_format):
-    """1234.5 -> '1.234,50' for (',', '.'), without sign."""
+def format_amount(value, number_format, digits=2):
+    """1234.5 -> '1.234,50' for (',', '.'), without sign, with `digits`
+    decimals (none for 0: '1.235')."""
     decimal_sign, group_sign = number_format
-    q = abs(Decimal(value)).quantize(CENT)
-    whole, frac = f"{q:.2f}".split(".")
+    q = abs(Decimal(value)).quantize(Decimal(1).scaleb(-digits), rounding=ROUND_HALF_UP)
+    whole, _, frac = f"{q:f}".partition(".")
     groups = []
     while len(whole) > 3:
         groups.insert(0, whole[-3:])
         whole = whole[:-3]
     groups.insert(0, whole)
-    return group_sign.join(groups) + decimal_sign + frac
+    return group_sign.join(groups) + (decimal_sign + frac if frac else "")
 
 
 def _split_bracket(name):
@@ -422,6 +436,14 @@ def check(facts, doc, pdf_text, profile):
             check_("O-BT84", got == [facts["iban"]], f"{got} != {facts['iban']!r}")
         _check_payment(check_, facts, doc, profile)
         _check_references(check_, facts, doc)
+        # The exemption reason code (BT-121) of each VAT category.
+        if facts.get("exemption_codes") is not None:
+            codes = {}
+            for tax in doc.xpath(SETTLEMENT + "/ram:ApplicableTradeTax", namespaces=NS):
+                code = _find(tax, "ram:ExemptionReasonCode")
+                if code is not None:
+                    codes[_find(tax, "ram:CategoryCode")] = code
+            check_("O-BT121", codes == facts["exemption_codes"], f"{codes} != {facts['exemption_codes']}")
 
     if profile in WITH_LINES:
         lines = doc.xpath(LINES, namespaces=NS)
@@ -446,14 +468,21 @@ def check(facts, doc, pdf_text, profile):
         _check_modifiers(check_, "O-BG27/28", facts.get("item_modifiers", []), line_ac, facts.get("tax_mode") == "inclusive")
         _check_line_details(check_, facts, lines, profile)
 
-    # The printed PDF states the amounts of the XML.
+    # The printed PDF states the amounts of the XML, with the decimals of the
+    # currency.
     if pdf_text is not None:
         text = _nows(pdf_text)
         formats = [tuple(facts["number_format"])] if facts.get("number_format") else NUMBER_FORMATS
-        for bt, path in (("BT112", SUMMATION + "/ram:GrandTotalAmount"), ("BT115", SUMMATION + "/ram:DuePayableAmount")):
-            value = xtext1(doc, path)
+        digits = MINOR_UNITS.get(xtext1(doc, SETTLEMENT + "/ram:InvoiceCurrencyCode"), 2)
+        amounts = [
+            ("BT112", xtext1(doc, SUMMATION + "/ram:GrandTotalAmount")),
+            ("BT115", xtext1(doc, SUMMATION + "/ram:DuePayableAmount")),
+        ]
+        if profile in WITH_LINES and facts.get("tax_mode") != "inclusive":
+            amounts.append(("BT131", _first_line_net(doc)))
+        for bt, value in amounts:
             if value is not None and dec(value) is not None:
-                printed = [format_amount(value, f) for f in formats]
+                printed = [format_amount(value, f, digits) for f in formats]
                 check_(
                     "O-PDF-" + bt,
                     any(_nows(p) in text for p in printed),
@@ -464,6 +493,25 @@ def check(facts, doc, pdf_text, profile):
                 for part in reason.split("; "):
                     check_("O-PDF-BT120", _nows(part) in text, f"exemption reason {part!r} is not printed")
     return problems
+
+
+def _first_line_net(doc):
+    """The net amount (BT-131) of the first line, which a line with net
+    prices prints as its total, or None: for no line, a line with
+    allowances or charges of its own (the invoice prints them apart) or the
+    part of a bundle split by VAT group (the invoice prints the bundle)."""
+    lines = doc.xpath(LINES, namespaces=NS)
+    if not lines:
+        return None
+    line = lines[0]
+    if line.xpath("ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeAllowanceCharge", namespaces=NS):
+        return None
+    if _split_bracket(_find(line, "ram:SpecifiedTradeProduct/ram:Name") or "")[1] is not None:
+        return None
+    return _find(
+        line,
+        "ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount",
+    )
 
 
 def check_diagnostics(diagnostics):

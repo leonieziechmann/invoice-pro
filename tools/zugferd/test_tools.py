@@ -880,9 +880,65 @@ class Oracles(unittest.TestCase):
         problems = oracles.check({}, self.doc, "nothing printed", "en16931")
         self.assertEqual(sorted(p.split(":")[0] for p in problems), ["O-PDF-BT112", "O-PDF-BT115", "O-PDF-BT120"])
 
+    def test_printed_amounts_in_the_decimals_of_the_currency(self):
+        # The yen has no decimals: 1234.50 in the XML is printed as 1.235.
+        cii = CII.replace("<ram:InvoiceCurrencyCode>EUR", "<ram:InvoiceCurrencyCode>JPY")
+        doc = common.parse_xml(cii.encode("utf-8"))
+        printed = "Gesamtbetrag: 1.235 ¥ Steuerfrei nach § 4 Nr. 21 UStG"
+        self.assertEqual(oracles.check({}, doc, printed, "en16931"), [])
+        problems = oracles.check({}, self.doc, printed, "en16931")
+        self.assertEqual(sorted(p.split(":")[0] for p in problems), ["O-PDF-BT112", "O-PDF-BT115"])
+
+    def test_printed_net_amount_of_the_first_line(self):
+        # A first line of its own (not the part of a bundle) with its net
+        # amount: printed as its total with net prices.
+        cii = CII.replace(
+            "<ram:SpecifiedTradeProduct><ram:Name>Paket (19% S)</ram:Name></ram:SpecifiedTradeProduct>",
+            "<ram:SpecifiedTradeProduct><ram:Name>Paket</ram:Name></ram:SpecifiedTradeProduct>",
+        ).replace(
+            "<ram:RateApplicablePercent>19.00</ram:RateApplicablePercent></ram:ApplicableTradeTax>\n"
+            "      </ram:SpecifiedLineTradeSettlement>",
+            "<ram:RateApplicablePercent>19.00</ram:RateApplicablePercent></ram:ApplicableTradeTax>\n"
+            "        <ram:SpecifiedTradeSettlementLineMonetarySummation><ram:LineTotalAmount>987.60"
+            "</ram:LineTotalAmount></ram:SpecifiedTradeSettlementLineMonetarySummation>\n"
+            "      </ram:SpecifiedLineTradeSettlement>",
+            1,
+        )
+        doc = common.parse_xml(cii.encode("utf-8"))
+        printed = "Paket 987,60 € Gesamtbetrag: 1.234,50 € Steuerfrei nach § 4 Nr. 21 UStG"
+        self.assertEqual(oracles.check({}, doc, printed, "en16931"), [])
+        without = printed.replace("987,60", "")
+        self.assertEqual([p.split(":")[0] for p in oracles.check({}, doc, without, "en16931")], ["O-PDF-BT131"])
+        # With gross prices the invoice prints the gross amount; BASIC WL has
+        # no lines; the part of a bundle is not printed as a line.
+        self.assertEqual(oracles.check({"tax_mode": "inclusive"}, doc, without, "en16931"), [])
+        self.assertEqual(oracles.check({}, doc, without, "basic-wl"), [])
+        self.assertEqual(oracles.check({}, self.doc, "Gesamtbetrag: 1.234,50 € Steuerfrei nach § 4 Nr. 21 UStG", "en16931"), [])
+
+    def test_exemption_reason_codes(self):
+        cii = CII.replace(
+            "<ram:ExemptionReason>Steuerfrei nach § 4 Nr. 21 UStG</ram:ExemptionReason>",
+            "<ram:ExemptionReason>Steuerfrei nach § 4 Nr. 21 UStG</ram:ExemptionReason>"
+            "<ram:ExemptionReasonCode>VATEX-EU-132-1C</ram:ExemptionReasonCode>",
+        )
+        doc = common.parse_xml(cii.encode("utf-8"))
+        self.assertEqual(oracles.check({"exemption_codes": {"E": "VATEX-EU-132-1C"}}, doc, None, "en16931"), [])
+        # Another code, a code the XML leaves out, and one it states without
+        # the fact.
+        for facts, xml in (
+            ({"exemption_codes": {"E": "VATEX-EU-132-1B"}}, doc),
+            ({"exemption_codes": {"E": "VATEX-EU-132-1C"}}, self.doc),
+            ({"exemption_codes": {}}, doc),
+        ):
+            self.assertEqual([p.split(":")[0] for p in oracles.check(facts, xml, None, "en16931")], ["O-BT121"])
+        # MINIMUM has no VAT breakdown.
+        self.assertEqual(oracles.check({"exemption_codes": {}}, doc, None, "minimum"), [])
+
     def test_helpers(self):
         self.assertEqual(oracles.format_amount("1234567.5", (",", ".")), "1.234.567,50")
         self.assertEqual(oracles.format_amount("-5", (".", "'")), "5.00")
+        self.assertEqual(oracles.format_amount("1234.5", (",", "."), 0), "1.235")
+        self.assertEqual(oracles.format_amount("12.5", (",", "."), 3), "12,500")
         self.assertEqual(oracles._split_bracket("Paket (5,5% S)"), ("Paket", common.dec("5.5")))
         self.assertTrue(oracles._names_match(["Paket (19% S)", "Paket (7% S)", "B"], [common.dec(19), common.dec(7), None], ["Paket", "B"]))
         self.assertFalse(oracles._names_match(["Paket (6% S)"], [common.dec("5.5")], ["Paket"]))

@@ -1,5 +1,6 @@
 // expect: AGREE_VALID
 // profiles: xrechnung
+// facts: {"tax_mode": "inclusive"}
 //
 // Gross prices: 1000 screws at 9.99 including 19 % VAT. The net price keeps
 // enough decimals (8.394958) that the quantity times it is the line's net
