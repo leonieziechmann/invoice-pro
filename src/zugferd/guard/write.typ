@@ -555,7 +555,8 @@
 
 // The rules of the VAT category of a tax element (`body`, the child `step`
 // of `tag`): the `checks` of its `category` (see lists.typ) on its rate
-// ("r"), its VAT amount ("a") and its exemption reason ("e").
+// ("r": above 0, 0, none, or "any" rate), its VAT amount ("a") and its
+// exemption reason ("e").
 #let _category-checks(tag, step, body, category, checks) = {
   let found = ()
   for (check, expected, rule) in checks {
@@ -572,9 +573,9 @@
       let value = body.at(element, default: none)
       (
         element,
-        if expected == none { not _present(value) } else {
-          _compares(value, expected)
-        },
+        if expected == none { not _present(value) } else if expected == "any" {
+          _present(value)
+        } else { _compares(value, expected) },
       )
     }
     if not ok {

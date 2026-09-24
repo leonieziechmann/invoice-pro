@@ -242,6 +242,33 @@
     "0.00",
   )
   assert.eq(check(model, exempt), ())
+  // A VAT breakdown has a rate unless it is not subject to VAT (BR-48).
+  let rate = breakdown + ("ram:RateApplicablePercent",)
+  assert.eq(check(model, drop(exempt, rate)), (
+    ("category", "BR-48", path(..rate)),
+  ))
+  let outside = put(
+    put(exempt, breakdown + ("ram:CategoryCode",), "O"),
+    breakdown + ("ram:ExemptionReason",),
+    "Not subject to VAT",
+  )
+  assert.eq(check(model, outside), ())
+  assert.eq(check(model, drop(outside, rate)), ())
+})
+
+// BASIC WL has the rule in the Factur-X Schematron only (FX-SCH-A-000050,
+// which names BR-48).
+#guard-test(zugferd: "basic-wl", model => {
+  let tree = build-tree(model)
+  let rate = tx(
+    "ram:ApplicableHeaderTradeSettlement",
+    "ram:ApplicableTradeTax",
+    0,
+    "ram:RateApplicablePercent",
+  )
+  assert.eq(check(model, drop(tree, rate)), (
+    ("category", "BR-48", path(..rate)),
+  ))
 })
 
 // Document level allowances and charges state the rate of their category.
@@ -493,6 +520,7 @@
   )
   assert.eq(check(model, drop(tree, rate)), (
     ("min", "BR-DE-14", path(..rate)),
+    ("category", "BR-48", path(..rate)),
   ))
 })
 

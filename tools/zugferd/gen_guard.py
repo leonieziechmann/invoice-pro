@@ -957,12 +957,20 @@ _T_NO_RATE = re.compile(r"^not ?\((\.\./)?ram:RateApplicablePercent\)$")
 _T_ZERO_AMOUNT = re.compile(r"^(\.\./)?ram:CalculatedAmount ?= ?0$")
 _T_PRESENT = re.compile(r"^(\.\./)?(ram:\w+)$")
 _T_ABSENT = re.compile(r"^not ?\((\.\./)?(ram:\w+)\)$")
+# A rate for every VAT category but one, on a tax element without a condition
+# on its category: `(ram:RateApplicablePercent) or (ram:CategoryCode = 'O')`
+# (BR-48); the CEN Schematron restricts both sides to VAT.
+_VAT_ONLY = r"(\.\[upper-case\(ram:TypeCode\) ?= ?'VAT'\]/)?"
+_T_RATE_UNLESS = re.compile(
+    rf"^\({_VAT_ONLY}ram:RateApplicablePercent\) or \({_VAT_ONLY}ram:CategoryCode ?= ?'(\w+)'\)$"
+)
 
 
 def category_check(test):
     """The check of a test of a VAT category rule, as (check, value,
     children of the tax element, from its category code): the rate ("r",
-    value 1: above 0, 0: zero, None: absent), the VAT amount ("a", 0: zero)
+    value 1: above 0, 0: zero, None: absent; "any", a rate of any value, comes
+    from `resolve_rate_unless`), the VAT amount ("a", 0: zero)
     or the exemption reason ("e", True: `ram:ExemptionReason` or
     `ram:ExemptionReasonCode` is required, False: both are forbidden). None
     for any other test.
@@ -1023,6 +1031,7 @@ class Compiler:
         self.deferred = []  # path constraints resolved after the direct ones
         self.xref_lists = []  # (rule, currency element, list) of the VAT total
         self.vat_types = []  # (rule, tax element) of the category rules for VAT only
+        self.rate_unless = []  # (rule, tax element, category) of a rate every other category needs
         self.empty_leaf = None  # the rule that forbids empty leaves, if any
         self.variants = self._variant_values()
         self.root = unfold(schema, self.variants)
@@ -1114,9 +1123,27 @@ class Compiler:
         for r in self.rules:
             self.compile_rule(r)
         self.resolve_deferred()
+        self.resolve_rate_unless()
         self.check_xref_lists()
         self.check_vat_types()
         return self
+
+    def resolve_rate_unless(self):
+        """A rate for every VAT category but one (BR-48): the check "any"
+        (a rate is there) in the table of every category the code lists of
+        the tax element's category code know, once all lists are compiled.
+        A code no list knows fails its code list anyway."""
+        for r, tax, excluded in self.rate_unless:
+            codes = set()
+            for leaf in tax.child_positions("ram:CategoryCode"):
+                for code_list in leaf.lists:
+                    codes |= code_list.codes
+            if not codes:
+                raise GenError(f"no code list of the VAT category at {tax.path()}: {r.label()}")
+            for code in sorted(codes - {excluded}):
+                entry = ("r", "any", r.ref)
+                if entry not in tax.categories.setdefault(code, []):
+                    tax.categories[code].append(entry)
 
     def check_vat_types(self):
         """A rule of a VAT category that applies to VAT only
@@ -1274,6 +1301,17 @@ class Compiler:
         for pos, conds in matched:
             (conditional if conds else plain).append((pos, conds))
         rule = r.ref
+        m = _T_RATE_UNLESS.match(test)
+        if m:
+            if m.group(1) != m.group(2):
+                raise GenError(f"a restriction to VAT of one side only: {r.label()}")
+            for pos, conds in matched:
+                if pos.tag not in TAX_ELEMENTS or conds:
+                    raise GenError(f"a rate rule of VAT categories at {pos.path()}: {r.label()}")
+                if m.group(1):
+                    self.vat_types.append((r, pos))
+                self.rate_unless.append((r, pos, m.group(3)))
+            return f"VAT categories other than {m.group(3)}: a rate"
         m = _T_DATE_102.match(test)
         if m:
             for pos, conds in matched:
@@ -1952,6 +1990,9 @@ def category_table(pos):
             by_check[check].setdefault(value, []).append(rule)
         entries = []
         for check in sorted(by_check):
+            # A rate above 0 or of 0 is a rate: it takes the place of "any".
+            if "any" in by_check[check] and {0, 1} & set(by_check[check]):
+                del by_check[check]["any"]
             if len(by_check[check]) != 1:
                 raise GenError(f"contradicting rules of the VAT category {code} at {pos.path()}: {dict(by_check)}")
             [(value, rules)] = by_check[check].items()
@@ -2433,8 +2474,8 @@ def emit_lists(names):
             "// The rules of the VAT categories on the tax of a line (BG-30), a VAT",
             "// breakdown (BG-23), an allowance and a charge: per category code, the",
             '// checks (check, value, rule) of the rate ("r": 1 above 0, 0 zero, none',
-            '// absent), the VAT amount ("a": 0) and the exemption reason ("e": true',
-            "// required, false forbidden); see src/zugferd/guard/write.typ.",
+            '// absent, "any" there), the VAT amount ("a": 0) and the exemption reason',
+            '// ("e": true required, false forbidden); see src/zugferd/guard/write.typ.',
             "",
         ]
         for table, name in sorted(names.vat.items(), key=lambda kv: kv[1]):

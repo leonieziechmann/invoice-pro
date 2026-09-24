@@ -288,6 +288,35 @@ class RuleCompiler(unittest.TestCase):
             ["compiled"] * 5 + ["business"],
         )
 
+    def test_a_rate_unless_one_category(self):
+        """BR-48 (and the Factur-X rule that names it): a rate for every
+        category the code lists of the category code know, but the one it
+        names; a rate above 0 of a category takes the place of any rate."""
+        fx = rule(TAX, "(ram:RateApplicablePercent) or (ram:CategoryCode = 'O')", rid="FX-SCH-A-000050",
+                  source="FX")
+        fx.text = "[BR-48]-Each VAT breakdown (BG-23) shall have a VAT category rate (BT-119)"
+        c = compiled([
+            rule(TAX + "/ram:CategoryCode", "contains(' S Z O ', concat(' ', normalize-space(.), ' '))",
+                 rid="BR-CL-18"),
+            rule(TAX + "/ram:TypeCode", "contains(' VAT ', concat(' ', normalize-space(.), ' '))", rid="BR-T-CL"),
+            rule(TAX, "(.[upper-case(ram:TypeCode) = 'VAT']/ram:RateApplicablePercent) or "
+                      "(.[upper-case(ram:TypeCode) = 'VAT']/ram:CategoryCode = 'O')", rid="BR-48"),
+            fx,
+            rule(TAX + "[ram:CategoryCode = 'S']", "ram:RateApplicablePercent > 0", rid="BR-S-05"),
+        ], schema(TAX_DOCUMENT))
+        tax = position(c, TAX)
+        self.assertEqual(g.category_table(tax), (
+            ("S", (("r", 1, "BR-S-05"),)),
+            ("Z", (("r", "any", "BR-48"),)),
+        ))
+        self.assertEqual({d for _, d, _ in c.dispositions}, {"compiled"})
+        with self.assertRaises(g.GenError):
+            compiled([rule(TAX, "(.[upper-case(ram:TypeCode) = 'VAT']/ram:RateApplicablePercent) or "
+                                "(ram:CategoryCode = 'O')", rid="BR-48")], schema(TAX_DOCUMENT))
+        with self.assertRaises(g.GenError):
+            compiled([rule(DOC, "(ram:RateApplicablePercent) or (ram:CategoryCode = 'O')", rid="BR-48")],
+                     schema(TAX_DOCUMENT))
+
     def test_rules_of_the_vat_categories_that_fail(self):
         tax_schema = schema(TAX_DOCUMENT)
         # A test from the tax element that names its parent's children.

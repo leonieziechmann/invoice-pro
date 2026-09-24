@@ -187,7 +187,7 @@
   "udt:DateTimeString": (none, 0, 1, 1, 46),
 )),
 ("s", ("format": ("FX-SCH-A-000021", none, ("date-format", "FX-SCH-A-000022", none, false))), none, none, none, "IP-GUARD-08"),
-(n: 3, z: (r: (("count", ("ram:InvoiceCurrencyCode",), "FX-SCH-A-000042"), ("count", ("ram:TaxCurrencyCode",), "FX-SCH-A-000192"), ("other", ("ram:InvoiceCurrencyCode", "ram:TaxCurrencyCode"), "IP-GUARD-05")), t: ("ram:ApplicableTradeTax": "vat-breakdown")), c: (
+(n: 3, z: (r: (("count", ("ram:InvoiceCurrencyCode",), "FX-SCH-A-000042"), ("count", ("ram:TaxCurrencyCode",), "FX-SCH-A-000192"), ("other", ("ram:InvoiceCurrencyCode", "ram:TaxCurrencyCode"), "IP-GUARD-05")), t: ("ram:ApplicableTradeTax": "vat-breakdown-2")), c: (
   "ram:CreditorReferenceID": ("s", 0, 0, 1, 3),
   "ram:PaymentReference": ("s", 1, 0, 1, 11),
   "ram:InvoiceCurrencyCode": (currency, 3, 1, 1, 48, "BR-05"),

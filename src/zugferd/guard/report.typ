@@ -290,10 +290,10 @@
       (
         subject
           + if f.expected == none { " has no " + what } else if (
-            f.expected == 0
-          ) { " requires the " + what + " 0" } else {
-            " requires a " + what + " above 0"
-          }
+            f.expected == "any"
+          ) { " requires a " + what } else if f.expected == 0 {
+            " requires the " + what + " 0"
+          } else { " requires a " + what + " above 0" }
           + "; "
           + element
           + where

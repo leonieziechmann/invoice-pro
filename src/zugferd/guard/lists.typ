@@ -319,8 +319,8 @@
 // The rules of the VAT categories on the tax of a line (BG-30), a VAT
 // breakdown (BG-23), an allowance and a charge: per category code, the
 // checks (check, value, rule) of the rate ("r": 1 above 0, 0 zero, none
-// absent), the VAT amount ("a": 0) and the exemption reason ("e": true
-// required, false forbidden); see src/zugferd/guard/write.typ.
+// absent, "any" there), the VAT amount ("a": 0) and the exemption reason
+// ("e": true required, false forbidden); see src/zugferd/guard/write.typ.
 
 #let vat-allowance = (
   "AE": (("r", 0, "BR-AE-06"),),
@@ -335,15 +335,28 @@
 )
 
 #let vat-breakdown = (
-  "AE": (("a", 0, "BR-AE-09"), ("e", true, "BR-AE-10")),
-  "E": (("a", 0, "BR-E-09"), ("e", true, "BR-E-10")),
-  "G": (("a", 0, "BR-G-09"), ("e", true, "BR-G-10")),
-  "K": (("a", 0, "BR-IC-09"), ("e", true, "BR-IC-10")),
-  "L": (("e", false, "BR-AF-10"),),
-  "M": (("e", false, "BR-AG-10"),),
+  "AE": (("a", 0, "BR-AE-09"), ("e", true, "BR-AE-10"), ("r", "any", "BR-48")),
+  "B": (("r", "any", "BR-48"),),
+  "E": (("a", 0, "BR-E-09"), ("e", true, "BR-E-10"), ("r", "any", "BR-48")),
+  "G": (("a", 0, "BR-G-09"), ("e", true, "BR-G-10"), ("r", "any", "BR-48")),
+  "K": (("a", 0, "BR-IC-09"), ("e", true, "BR-IC-10"), ("r", "any", "BR-48")),
+  "L": (("e", false, "BR-AF-10"), ("r", "any", "BR-48")),
+  "M": (("e", false, "BR-AG-10"), ("r", "any", "BR-48")),
   "O": (("a", 0, "BR-O-09"), ("e", true, "BR-O-10")),
-  "S": (("e", false, "BR-S-10"),),
-  "Z": (("a", 0, "BR-Z-09"), ("e", false, "BR-Z-10")),
+  "S": (("e", false, "BR-S-10"), ("r", "any", "BR-48")),
+  "Z": (("a", 0, "BR-Z-09"), ("e", false, "BR-Z-10"), ("r", "any", "BR-48")),
+)
+
+#let vat-breakdown-2 = (
+  "AE": (("a", 0, "BR-AE-09"), ("e", true, "BR-AE-10"), ("r", "any", "BR-48")),
+  "E": (("a", 0, "BR-E-09"), ("e", true, "BR-E-10"), ("r", "any", "BR-48")),
+  "G": (("a", 0, "BR-G-09"), ("e", true, "BR-G-10"), ("r", "any", "BR-48")),
+  "K": (("a", 0, "BR-IC-09"), ("e", true, "BR-IC-10"), ("r", "any", "BR-48")),
+  "L": (("e", false, "BR-AF-10"), ("r", "any", "BR-48")),
+  "M": (("e", false, "BR-AG-10"), ("r", "any", "BR-48")),
+  "O": (("a", 0, "BR-O-09"), ("e", true, "BR-O-10")),
+  "S": (("e", false, "BR-S-10"), ("r", "any", "BR-48")),
+  "Z": (("a", 0, "BR-Z-09"), ("e", false, "BR-Z-10"), ("r", "any", "BR-48")),
 )
 
 #let vat-charge = (
@@ -402,6 +415,7 @@
 #let vat-rules = (
   "vat-allowance": vat-allowance,
   "vat-breakdown": vat-breakdown,
+  "vat-breakdown-2": vat-breakdown-2,
   "vat-charge": vat-charge,
   "vat-line": vat-line,
 )
