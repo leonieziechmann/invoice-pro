@@ -349,19 +349,18 @@ def representable(root):
 # ---------------------------------------------------------------- oracles
 
 
-def compiled_rules(jar, profiles):
+def compiled_rules(jar, profiles, kosit):
     """From the generator's compiled rules, per profile: the rules of every
     code list the official validators apply at each position ({(path, "."
     or "@name"): {rule: source}}), the list of the newest CEN Schematron
     there ({(path, what): CodeList}), the rules of the VAT categories (a set of
     the ids Mustang reports), and the rules that require an element ({path:
     set of rules}: its minimum, the minimum of a variant, one of several
-    alternatives, a count over a path)."""
+    alternatives, a count over a path). `kosit` is the KoSIT configuration
+    (gen_guard.KositConfig) whose CEN code lists the tables apply."""
     j = gen_guard.Jar(jar)
     schemas = gen_guard.load_schemas(j)
-    newest = gen_guard.load_cen_code_lists(
-        gen_guard.KositConfig(os.environ.get("KOSIT_CONFIG")), gen_guard.load_rules(j, gen_guard.CEN_XSLT, "CEN")
-    )
+    newest = gen_guard.load_cen_code_lists(kosit, gen_guard.load_rules(j, gen_guard.CEN_XSLT, "CEN"))
     lists, newest_codes, categories, presence = {}, {}, {}, {}
     for profile in profiles:
         compiler = gen_guard.load_profile(j, profile, schemas, newest)
@@ -484,6 +483,9 @@ def main(argv=None):
     started = time.monotonic()
     try:
         jar = common.mustang_jar()
+        # The tables apply the code lists of the KoSIT configuration (C3):
+        # without it, stop before the mutants are compiled and validated.
+        kosit_config = gen_guard.KositConfig(os.environ.get("KOSIT_CONFIG"))
         out = Path(args.out or common.REPO / "build" / "zugferd" / "mutate").resolve()
         common.require_under_root(out)
         (out / "mutants").mkdir(parents=True, exist_ok=True)
@@ -546,7 +548,7 @@ def main(argv=None):
             mustang.close()
         kosit = run_kosit([m["file"] for m in mutants if m["class"] == "code"], out) if args.kosit else {}
         rules, newest_codes, category_rules, presence_rules = compiled_rules(
-            jar, sorted({m["profile"] for m in mutants})
+            jar, sorted({m["profile"] for m in mutants}), kosit_config
         )
 
         failures = collections.defaultdict(list)
@@ -644,7 +646,7 @@ def main(argv=None):
             return 1
         print("✔ the write guard passes the mutation test (C1 to C5)", file=sys.stderr)
         return 0
-    except common.ToolError as e:
+    except (common.ToolError, gen_guard.GenError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
 
