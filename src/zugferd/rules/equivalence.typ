@@ -9,10 +9,15 @@
 // detailed check loads only when a value differs, or for the invoices that
 // need it anyway: with gross prices (the net amounts are derived from the
 // printed gross ones), with allowances or charges (of a line, or of the
-// document, split per VAT group), and an XRechnung in a currency without
-// cents (whose lines PEPPOL-EN16931-R120 checks).
+// document, split per VAT group), and an XRechnung with a line whose total
+// misses its quantity times its price by more than PEPPOL-EN16931-R120
+// allows (a total rounded more coarsely than the price, e.g. to whole yen
+// or with a custom `money` rounding to 0.05).
 
 #let _zero = decimal("0")
+#let _one = decimal("1")
+#let _slack = decimal("0.02")
+#let _slack-huf = decimal("0.5")
 
 /// The findings of the invariants for the data model `model` of the
 /// computed invoice `item-data` (the line items' data), whose totals the
@@ -24,7 +29,6 @@
   let items = item-data.at("items", default: ())
   let taxes = item-data.at("taxes", default: (:))
   let lines = model.lines
-  let digits = model.at("currency-decimals", default: 2)
   let same = (
     model.tax-mode != "inclusive"
       and item-data.at("discounts", default: ()) == ()
@@ -32,12 +36,12 @@
       and model.allowance-charges == ()
       and lines.len() == items.len()
       and model.taxes.len() == taxes.len()
-      and not (
-        model.profile.at("xrechnung", default: false)
-          and type(digits) == int
-          and digits < 2
-      )
   )
+  // The slack of PEPPOL-EN16931-R120 in XRechnung (see
+  // equivalence-detail.typ).
+  let slack = if model.profile.at("xrechnung", default: false) {
+    if model.currency == "HUF" { _slack-huf } else { _slack }
+  }
   // Each line states its item, and the lines add up per VAT group (or all
   // of them, with one group).
   let sums = (:)
@@ -70,6 +74,17 @@
       ) {
         same = false
         break
+      }
+      if slack != none {
+        // Without a division for the common base quantity 1.
+        let off = line.net - line.quantity * line.price
+        if line.base-quantity != _one {
+          off = line.net - line.quantity * line.price / line.base-quantity
+        }
+        if off > slack or off < -slack {
+          same = false
+          break
+        }
       }
       total += item.total
       if not single and line.key != none and line.key in sums {

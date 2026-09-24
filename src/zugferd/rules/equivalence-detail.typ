@@ -31,8 +31,8 @@
 //
 // equivalence.typ loads this module only for an invoice that needs it: one
 // whose values differ from the printed ones at first sight, one with gross
-// prices or with allowances or charges, and an XRechnung whose lines need
-// PEPPOL-EN16931-R120 checked.
+// prices or with allowances or charges, and an XRechnung with a line that
+// PEPPOL-EN16931-R120 reports.
 
 #import "engine.typ": line-field, tax-field
 #import "../model.typ": text-or-none
@@ -231,12 +231,10 @@
   let single = sums.len() == 1
   let total = _zero
   let limit = if inclusive and single { tolerance.values().first() }
-  // PEPPOL-EN16931-R120 holds for a line with net prices and without
-  // allowances and charges whose values are those of its item, if the
-  // currency has cents: its amount is its price times its quantity, rounded
-  // to cents (logic/calc-item.typ), so at most 0.005 off. Any other line is
-  // checked.
-  let r120 = slack != none and (inclusive or unit > decimal("0.01"))
+  // PEPPOL-EN16931-R120 is checked on every line of an XRechnung: a line
+  // total is its price times its quantity rounded with the `money` rounding
+  // of the locale (logic/calc-item.typ), which can round more coarsely than
+  // the slack allows, e.g. to whole yen or to 0.05.
   for (line, item) in lines.zip(items) {
     let net = item.total
     total += net
@@ -295,7 +293,7 @@
           )
       )
     }
-    if not detailed and r120 {
+    if not detailed and slack != none {
       let off = line.net - line.quantity * line.price / line.base-quantity
       detailed = off > slack or off < -slack
     }

@@ -1483,7 +1483,7 @@
       "field": "item <id> (<name>)",
       "summary": "The line net amount (BT-131) is the invoiced quantity (BT-129) times the net price (BT-146) per price base quantity (BT-149) plus the line's charges (BT-141) minus its allowances (BT-136), within 0.02 (0.5 for HUF).",
       "legal": null,
-      "note": "KoSIT reports the rule as a warning; Mustang 2.14 does not check it. The net prices of gross prices keep enough decimals for it (logic/net-amounts.typ); a line total rounded more coarsely than its price, e.g. in a currency without decimals, can break it."
+      "note": "KoSIT reports the rule as a warning; Mustang 2.14 does not check it. The net prices of gross prices keep enough decimals for it (logic/net-amounts.typ); a line total rounded more coarsely than its price, e.g. in a currency without decimals or with a money rounding of the locale to 0.05, can break it."
     },
     "IP-GUARD-00": {
       "covers": [],

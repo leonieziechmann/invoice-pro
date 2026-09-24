@@ -309,6 +309,30 @@
   },
 )[#yen]
 
+// A line total rounded more coarsely than the currency, by a `money`
+// rounding of the locale to 0.05: 1 x 0.325 is printed as 0.35, 0.025 off.
+#invariant-test(
+  zugferd: "xrechnung",
+  locale: locale.de-de.with(locale.custom.normalize(
+    money: x => calc.round(x * 20) / 20,
+  )),
+  (model, item-data, printed, _) => {
+    let f = findings(model, item-data, printed)
+    assert.eq(f.map(f => (f.key, f.field)), (
+      ("PEPPOL-EN16931-R120", "item 1 (Kabel)"),
+    ))
+    assert.eq(f.first().net, decimal("0.35"))
+    assert.eq(f.first().expected, decimal("0.325"))
+  },
+)[
+  #line-items[
+    #item([Kabel], price: decimal("0.325"), quantity: 1)
+    #item([Buch], price: 19.99, quantity: 3, tax: tax.vat(7%))
+  ]
+  #payment-goal(days: 14)
+  #bank
+]
+
 // Whole yen keep it; so does a line with an allowance of its own in cents.
 #invariant-test(
   zugferd: "xrechnung",
