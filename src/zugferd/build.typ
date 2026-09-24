@@ -6,13 +6,13 @@
 
 #import "xml.typ": (
   dict-to-xml, fmt-amount, fmt-date, fmt-price, fmt-quantity, fmt-rate,
-  xml-escape,
 )
 #import "model.typ": (
-  build-model, determine-delivery-dates, first-of, get-electronic-address,
-  map-unit-code, profile-terms, text-or-none,
+  determine-delivery-dates, first-of, profile-terms, text-or-none,
 )
-#import "profile.typ": profile-urn, profiles
+
+#let _zero = decimal("0")
+#let _one = decimal("1")
 
 #let _date(date) = (
   "udt:DateTimeString": (
@@ -350,7 +350,7 @@
 
   // BT-146 is the price of BT-149 units, e.g. a price per 100 pieces.
   let price = ("ram:ChargeAmount": fmt-price(line.price))
-  if line.base-quantity != decimal("1") {
+  if line.base-quantity != _one {
     price.insert("ram:BasisQuantity", (
       "@unitCode": line.unit-code,
       "": fmt-quantity(line.base-quantity),
@@ -503,10 +503,10 @@
   let summation = (:)
   if include-breakdown {
     summation.insert("ram:LineTotalAmount", fmt-amount(totals.line))
-    if totals.charge != decimal("0") {
+    if totals.charge != _zero {
       summation.insert("ram:ChargeTotalAmount", fmt-amount(totals.charge))
     }
-    if totals.allowance != decimal("0") {
+    if totals.allowance != _zero {
       summation.insert("ram:AllowanceTotalAmount", fmt-amount(totals.allowance))
     }
   }
@@ -516,7 +516,7 @@
     "": fmt-amount(totals.tax),
   ))
   summation.insert("ram:GrandTotalAmount", fmt-amount(totals.gross))
-  if include-breakdown and totals.prepaid != decimal("0") {
+  if include-breakdown and totals.prepaid != _zero {
     summation.insert("ram:TotalPrepaidAmount", fmt-amount(totals.prepaid))
   }
   summation.insert("ram:DuePayableAmount", fmt-amount(totals.due))
@@ -665,10 +665,10 @@
 
   let transaction = (:)
   if profile.lines and model.lines != () {
-    transaction.insert(
-      "ram:IncludedSupplyChainTradeLineItem",
-      model.lines.map(line => build-line-item(line, profile)),
-    )
+    // A loop rather than `map`, which would call a closure per line.
+    let items = ()
+    for line in model.lines { items.push(build-line-item(line, profile)) }
+    transaction.insert("ram:IncludedSupplyChainTradeLineItem", items)
   }
   transaction.insert("ram:ApplicableHeaderTradeAgreement", header-agreement)
   transaction.insert("ram:ApplicableHeaderTradeDelivery", header-delivery)
@@ -701,33 +701,3 @@
 #let build-xml(model) = (
   xml-declaration + dict-to-xml(build-tree(model), model.profile.id).xml
 )
-
-/// Generates a ZUGFeRD 2.x / Factur-X 1.0 CrossIndustryInvoice XML document
-/// from the fully-computed invoice context, without validating it.
-///
-/// The XML is returned as `bytes` suitable for embedding via `pdf.attach()`.
-///
-/// -> bytes
-#let build-zugferd-xml(
-  ctx,
-  item-data,
-  payment-goal,
-  bank: auto,
-  payment-means: auto,
-) = {
-  let global = ctx.at("global", default: (:))
-  let bank = if bank == auto { global.at("bank", default: none) } else {
-    bank
-  }
-  let payment-means = if payment-means == auto {
-    global.at("payment-means", default: none)
-  } else { payment-means }
-  let model = build-model(
-    ctx,
-    item-data,
-    payment-goal: payment-goal,
-    bank: bank,
-    payment-means: payment-means,
-  )
-  bytes(build-xml(model))
-}

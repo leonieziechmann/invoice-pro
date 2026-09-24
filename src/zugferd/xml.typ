@@ -7,14 +7,17 @@
 /// class so that the two cannot drift apart.
 #let escaped-class = "&<>\"'" + invalid-xml-class
 
-// Most values contain none of them.
-#let _needs-escape = regex("[" + escaped-class + "]")
+// Most values contain none of them. Compiled on first use (a call without
+// arguments is memoized): the serializer writes the common texts without
+// calling `xml-escape` (see guard/write.typ), so a valid e-invoice mostly
+// does not need it.
+#let _needs-escape() = regex("[" + escaped-class + "]")
 
 // Escape a value for safe embedding in XML text/attribute content.
 #let xml-escape(s) = {
   let value = if type(s) == str { s } else { plain-text(s) }
   // One scan instead of six replacements for the common case.
-  if not value.contains(_needs-escape) { return value }
+  if not value.contains(_needs-escape()) { return value }
   value
     .replace(invalid-xml-chars, "")
     .replace("&", "&amp;")
@@ -24,13 +27,18 @@
     .replace("'", "&apos;")
 }
 
+#let _zero = decimal("0")
+
 /// Formats a number for the XML: `.` as decimal separator, an ASCII minus sign,
 /// no thousands separators, rounded to `max-digits` and padded to `min-digits`
 /// decimals.
 ///
 /// -> str
 #let fmt-number(value, min-digits: 2, max-digits: 2) = {
-  let number = if value == none or value == auto { decimal("0") } else {
+  // The amounts of the model are decimals already.
+  let number = if type(value) == decimal { value } else if (
+    value == none or value == auto
+  ) { _zero } else {
     to-decimal(value)
   }
   let rounded = calc.round(number, digits: max-digits)
@@ -40,17 +48,20 @@
     fraction += "0" * (min-digits - fraction.len())
   }
   let result = if fraction == "" { whole } else { whole + "." + fraction }
-  if rounded < decimal("0") { "-" + result } else { result }
+  if rounded < _zero { "-" + result } else { result }
 }
 
+// The formats below are `fmt-number` with other arguments rather than
+// functions that call it, which would add a call per number.
+
 // Format a monetary amount (exactly 2 decimals, as required by BR-DEC-*).
-#let fmt-amount(d) = fmt-number(d)
+#let fmt-amount = fmt-number
 
 // Format a unit price, which may carry more decimals than an amount (BT-146).
-#let fmt-price(d) = fmt-number(d, max-digits: 6)
+#let fmt-price = fmt-number.with(max-digits: 6)
 
 // Format a quantity (BT-129, BT-149) without losing its decimals.
-#let fmt-quantity(d) = fmt-number(d, max-digits: 6)
+#let fmt-quantity = fmt-number.with(max-digits: 6)
 
 /// The decimals of a VAT rate in percent the XML states (BT-96, BT-103,
 /// BT-119, BT-152). EN 16931 does not limit them; 4 state every real rate
