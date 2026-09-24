@@ -758,6 +758,13 @@ summary = "A city line with a number but no post code in the format of the party
 basis = "Fidelity: the post code (BT-38, BT-53) would be missing and written into the city name."
 tests = ["tests/zugferd/parties/test.typ"]
 
+[ip."IP-EADDR-01"]
+level = "warning"
+summary = "An EN 16931 invoice without the electronic address of the seller (BT-34) or the buyer (BT-49)."
+basis = """Peppol BIS Billing 3.0 PEPPOL-EN16931-R020 and R010, which XRechnung applies: a delivery over \
+Peppol needs both addresses; EN 16931 leaves them optional, and its validation checks neither."""
+tests = ["tests/zugferd/validate/test.typ", "tests/issues/issue-29/test.typ"]
+
 [ip."IP-ID-01"]
 level = "error"
 summary = "An identifier of the `id` module whose format or check digit is wrong."

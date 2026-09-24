@@ -357,7 +357,7 @@
     message: dispatch.message,
   )
   m.seller.electronic-address = none
-  let address = diagnostic(m, "PEPPOL-EN16931-R020")
+  let address = diagnostic(m, "IP-EADDR-01")
   assert(
     address.hint.contains("not the one of its tax representative"),
     message: address.hint,

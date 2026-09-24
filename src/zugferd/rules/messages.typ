@@ -179,7 +179,7 @@
     + ".",
 )
 
-// A missing electronic address (PEPPOL-EN16931-R020, R010).
+// A missing electronic address (PEPPOL-EN16931-R020, R010, IP-EADDR-01).
 #let _electronic-address(f) = {
   // Name only the inputs that can still provide the address.
   let vat-id = f.vat-id
@@ -882,6 +882,14 @@
   "CII-SR-451": _single-identifier,
   "PEPPOL-EN16931-R020": _electronic-address,
   "PEPPOL-EN16931-R010": _electronic-address,
+  "IP-EADDR-01": f => {
+    let (message, hint) = _electronic-address(f)
+    (
+      message.trim(".", at: end)
+        + ": EN 16931 leaves it optional, but a delivery over Peppol requires it, as XRechnung does.",
+      hint,
+    )
+  },
   "BR-62": _address-scheme,
   "BR-63": _address-scheme,
   "BR-CL-25": f => if _newer(lists.eas, f.scheme) {

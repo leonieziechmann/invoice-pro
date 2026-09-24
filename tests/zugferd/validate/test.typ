@@ -82,7 +82,9 @@
   m.seller.id = "123/456/78901"
   assert.eq(rules(m), ("BR-CO-26",))
 
-  // Electronic addresses: required by XRechnung, recommended by EN 16931
+  // Electronic addresses: required by XRechnung (the Peppol rules), which
+  // EN 16931 leaves optional and does not check: a warning of invoice-pro's
+  // own there (IP-EADDR-01)
   let m = base
   m.seller.electronic-address = none
   m.buyer.electronic-address = none
@@ -90,9 +92,12 @@
   m.profile = resolve-profile("en16931", "FR")
   m.invoice.buyer-reference = none
   assert.eq(rules(m), ())
+  assert.eq(rules(m, level: "warning"), ("IP-EADDR-01", "IP-EADDR-01"))
+  let found = checked(m)
+  assert.eq(found.map(d => d.field).sorted(), ("recipient", "sender"))
   assert.eq(
-    rules(m, level: "warning"),
-    ("PEPPOL-EN16931-R010", "PEPPOL-EN16931-R020"),
+    found.find(d => d.field == "sender").message,
+    "The seller electronic address (BT-34) is missing: EN 16931 leaves it optional, but a delivery over Peppol requires it, as XRechnung does.",
   )
   m.profile = resolve-profile("basic", "FR")
   assert.eq(rules(m, level: "warning"), ())
@@ -344,17 +349,22 @@
     category: "E",
   )
   assert.eq(diagnostics((rate,)).first().rule, "BR-E-05")
-  let address = (
-    key: "PEPPOL-EN16931-R020",
+  let period = (
+    key: "IP-PERIOD-01",
     level: "warning",
-    field: "sender",
-    term: "seller electronic address (BT-34)",
-    vat-id: none,
-    represented: false,
-    reference: none,
+    field: "references",
+    printed: "June 2026",
+    stated: "01.06.2026 - 30.06.2026",
+    source: none,
+    term: "BG-14",
+    contradicts: false,
+    document: none,
   )
-  assert.eq(diagnostics((address,)).first().level, "warning")
-  assert.eq(diagnostics((address + (level: "error"),)).first().level, "error")
+  assert.eq(diagnostics((period,)).first().level, "warning")
+  assert.eq(
+    diagnostics((period + (level: "error", contradicts: true),)).first().level,
+    "error",
+  )
   // Anything else stops the compilation: every diagnostic is in the registry.
   let fails(finding, expected) = {
     let message = catch(() => diagnostics((finding,)))
@@ -374,6 +384,19 @@
   fails(
     missing + (level: "warning"),
     "invoice-pro: the rule registry has no warning BR-02 for the entry BR-02",
+  )
+  // XRechnung requires the electronic addresses: a warning is IP-EADDR-01
+  fails(
+    (
+      key: "PEPPOL-EN16931-R020",
+      level: "warning",
+      field: "sender",
+      term: "seller electronic address (BT-34)",
+      vat-id: none,
+      represented: false,
+      reference: none,
+    ),
+    "invoice-pro: the rule registry has no warning PEPPOL-EN16931-R020 for the entry PEPPOL-EN16931-R020",
   )
 }
 

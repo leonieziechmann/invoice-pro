@@ -855,14 +855,19 @@
   }
 
   if profile.addresses {
-    // Required by XRechnung, recommended for EN 16931 (Peppol).
-    let required = if profile.xrechnung { "error" } else if (
-      profile.id == "en16931"
-    ) { "warning" } else { none }
+    // Required by XRechnung, which checks them with the Peppol rules
+    // PEPPOL-EN16931-R020 and R010. EN 16931 leaves them optional, and its
+    // validation checks neither: a warning of invoice-pro's own there
+    // (IP-EADDR-01), as a delivery over Peppol needs them.
+    let (required, seller-rule, buyer-rule) = if profile.xrechnung {
+      ("error", "PEPPOL-EN16931-R020", "PEPPOL-EN16931-R010")
+    } else if profile.id == "en16931" {
+      ("warning", "IP-EADDR-01", "IP-EADDR-01")
+    } else { (none, none, none) }
     out += _electronic-address(
       seller,
       required,
-      ("PEPPOL-EN16931-R020", "BR-62"),
+      (seller-rule, "BR-62"),
       "sender",
       "seller electronic address (BT-34)",
       represented: represented,
@@ -870,7 +875,7 @@
     out += _electronic-address(
       buyer,
       required,
-      ("PEPPOL-EN16931-R010", "BR-63"),
+      (buyer-rule, "BR-63"),
       "recipient",
       "buyer electronic address (BT-49)",
       reference: model.invoice.at("buyer-reference", default: none),
