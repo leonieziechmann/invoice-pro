@@ -7,6 +7,7 @@ With the Mustang CLI jar 2.14.0 ($MUSTANG_JAR), the Factur-X aliases that
 `covers` names are also checked against the Schematrons of the jar.
 """
 
+import json
 import os
 import sys
 import tempfile
@@ -104,6 +105,24 @@ class Entries(unittest.TestCase):
             path.write_text('{"format": 1, "sources": {}, "rules": {}}', encoding="utf-8")
             with self.assertRaises(ValueError):
                 r.load(path)
+
+    def test_the_layout_of_the_registry(self):
+        loaded = r.load()
+        self.assertEqual(r.layout_problems(loaded), [])
+        self.assertEqual(json.loads(r.dump(loaded)), loaded)
+        self.assertEqual(
+            r.dump(registry(**{"BR-02": entry(covers=["BR-02"])})).split("\n")[11:15],
+            [
+                '    "BR-02": {',
+                '      "covers": ["BR-02"],',
+                '      "source": "EN16931",',
+                '      "versions": ["1.3.12", "1.3.16"],',
+            ],
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "registry.json"
+            path.write_text(json.dumps(loaded, indent=2), encoding="utf-8")
+            self.assertEqual(len(r.layout_problems(loaded, path)), 1)
 
     def test_reported_and_covering(self):
         rules = {

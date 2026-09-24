@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The rule registry of invoice-pro's e-invoice validation, for the tools.
 
-  registry.py [--check] [--write-docs] [--jar PATH]
+  registry.py [--check] [--format] [--write-docs] [--jar PATH]
 
 The registry, src/zugferd/rules/registry.json, is the one source of the
 metadata of every rule whose diagnostics invoice-pro reports: the checks of
@@ -13,6 +13,8 @@ fastest); the tools read it here:
 
   load()              the registry, checked (`problems`): {"format": 1,
                       "sources": {source: artefact}, "rules": {key: entry}}
+  dump(registry)      the text of registry.json: one line per field of an
+                      entry, a list on one line
   reported(registry)  the ids the rules report: {id: [key, ..]}
   covering(registry, profile)
                       the official rules the checks implement in a profile:
@@ -40,10 +42,12 @@ An entry (see src/zugferd/rules/engine.typ for its meaning):
 
 --check reports every problem: of the entries, of the keys that have no
 message or no check (a key the rule modules do not name) and of the rule
-ids the rule modules name that the registry does not know; tables of the
-documentation that differ from the generated ones; with the Mustang jar
-($MUSTANG_JAR or --jar), `covers` that lacks a Factur-X alias of a rule it
-covers or names one of another rule. --write-docs rewrites the tables.
+ids the rule modules name that the registry does not know; a registry.json
+that is not in the layout of `dump`; tables of the documentation that
+differ from the generated ones; with the Mustang jar ($MUSTANG_JAR or
+--jar), `covers` that lacks a Factur-X alias of a rule it covers or names
+one of another rule. --format rewrites registry.json in the layout of
+`dump`, --write-docs the tables of the documentation.
 """
 
 import argparse
@@ -85,6 +89,40 @@ def load(path=REGISTRY):
     if found:
         raise ValueError(f"{path}:\n  " + "\n  ".join(found))
     return registry
+
+
+def dump(registry):
+    """The text of registry.json: the entries in their order, one line per
+    field, a list on one line (so that a change of a rule is a change of
+    its lines)."""
+
+    def value(v):
+        return json.dumps(v, ensure_ascii=False)
+
+    def members(items, indent):
+        items = list(items)
+        return [
+            f"{indent}{json.dumps(key)}: {value(v)}" + ("," if i < len(items) - 1 else "")
+            for i, (key, v) in enumerate(items)
+        ]
+
+    lines = ["{", f'  "format": {value(registry["format"])},', '  "sources": {']
+    lines += members(registry["sources"].items(), "    ")
+    lines += ["  },", '  "rules": {']
+    rules = list(registry["rules"].items())
+    for i, (key, entry) in enumerate(rules):
+        lines.append(f"    {json.dumps(key)}: {{")
+        lines += members(entry.items(), "      ")
+        lines.append("    }" + ("," if i < len(rules) - 1 else ""))
+    lines += ["  }", "}"]
+    return "\n".join(lines) + "\n"
+
+
+def layout_problems(registry, path=REGISTRY):
+    """registry.json, if it is not in the layout of `dump`."""
+    if Path(path).read_text(encoding="utf-8") == dump(registry):
+        return []
+    return [f"{_shown(path)}: not in the layout of `dump` (run `python3 tools/zugferd/registry.py --format`)"]
 
 
 def levels(entry):
@@ -360,6 +398,7 @@ def alias_problems(registry, aliases):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--check", action="store_true", help="check the registry, the rule modules and the documentation")
+    ap.add_argument("--format", action="store_true", help="rewrite registry.json in the layout of `dump`")
     ap.add_argument("--write-docs", action="store_true", help="rewrite the tables of the documentation")
     ap.add_argument("--jar", default=os.environ.get("MUSTANG_JAR"), help="Mustang-CLI-2.14.0.jar, for the aliases")
     args = ap.parse_args(argv)
@@ -368,9 +407,11 @@ def main(argv=None):
     except ValueError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
+    if args.format:
+        REGISTRY.write_text(dump(registry), encoding="utf-8")
     if args.write_docs:
         write_docs(registry)
-    found = source_problems(registry) + docs_problems(registry)
+    found = layout_problems(registry) + source_problems(registry) + docs_problems(registry)
     if args.check and args.jar:
         found += alias_problems(registry, fx_aliases(args.jar))
     if found:

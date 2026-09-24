@@ -671,11 +671,12 @@ registry.covering(rules, "en16931")      # {official id: [key, ..]}: the officia
 ```
 
 ```bash
-python3 tools/zugferd/registry.py --check        # entries, messages, checks, tables of the documentation; with $MUSTANG_JAR the Factur-X aliases
+python3 tools/zugferd/registry.py --check        # entries, messages, checks, layout, tables of the documentation; with $MUSTANG_JAR the Factur-X aliases
+python3 tools/zugferd/registry.py --format       # rewrite registry.json in its layout: one line per field, a list on one line
 python3 tools/zugferd/registry.py --write-docs   # regenerate the tables of the rules in docs/docs/e-invoicing.md
 ```
 
-`tools/zugferd/test_registry.py` (run by `zugferd-corpus`) checks that the entries are valid, that every entry has a message and a check and every rule id of the checks an entry, that the tables of the documentation are the generated ones and, with `$MUSTANG_JAR`, that `covers` names exactly the Factur-X aliases of the rules it covers. `tests/zugferd/validate/test.typ` checks the Typst side: the messages are those of the entries, and a finding outside the registry stops the compilation.
+`tools/zugferd/test_registry.py` (run by `zugferd-corpus`) checks that the entries are valid and in the layout of `--format`, that every entry has a message and a check and every rule id of the checks an entry, that the tables of the documentation are the generated ones and, with `$MUSTANG_JAR`, that `covers` names exactly the Factur-X aliases of the rules it covers. `tests/zugferd/validate/test.typ` checks the Typst side: the messages are those of the entries, and a finding outside the registry stops the compilation.
 
 A new rule is a check that records a finding (`engine.typ`, or `rare.typ` for inputs most invoices do not give, `xrechnung.typ` for XRechnung), its message (`messages.typ`) and its entry (`registry.json`); then `registry.py --check`, `--write-docs` for a rule of invoice-pro, and a case in `tests/zugferd/`.
 
