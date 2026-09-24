@@ -355,11 +355,15 @@
     let rule = if f.rule != none { f.rule } else {
       _rules.at(f.kind, default: "IP-GUARD-01")
     }
+    // The currency code of an amount (BT-110) is the invoice currency.
+    let currency = (
+      f.kind == "code" and f.at("name", default: none) == "currencyID"
+    )
     out.push((
       level: "error",
       rule: rule,
       source: "guard",
-      field: field-of(f.path, lines),
+      field: if currency { "currency" } else { field-of(f.path, lines) },
       message: _message(f, profile-name),
       hint: report-hint,
       path: "/" + f.path.join("/"),

@@ -635,6 +635,29 @@
   assert.eq(merge((error,), diagnostics.slice(0, 1)), (error,))
   let other = (level: "error", rule: "BR-XX", field: "recipient.country")
   assert.eq(merge((other,), diagnostics.slice(0, 1)), (other,))
+  // The currency of the VAT total is the invoice currency: a finding on it
+  // merges with the validator's diagnostic of `currency`.
+  let total = guard-diagnostics(
+    (
+      (
+        kind: "code",
+        rule: "BR-CL-03",
+        path: tx(
+          "ram:ApplicableHeaderTradeSettlement",
+          "ram:SpecifiedTradeSettlementHeaderMonetarySummation",
+          "ram:TaxTotalAmount",
+        ),
+        value: "ABC",
+        name: "currencyID",
+        list: "currency-2",
+      ),
+    ),
+    lines,
+    "EN 16931 (COMFORT)",
+  )
+  assert.eq(total.map(d => d.field), ("currency",))
+  let currency = (level: "error", rule: "BR-CL-04", field: "currency")
+  assert.eq(merge((currency,), total), (currency,))
   // With errors of the validator, the others are one diagnostic.
   let merged = merge((error,), diagnostics)
   assert.eq(merged.len(), 2)
