@@ -8,7 +8,7 @@
 #import "/src/zugferd/build.typ": build-tree, build-xml, xml-declaration
 #import "/src/zugferd/xml.typ": dict-to-xml
 #import "/src/zugferd/guard/write.typ": (
-  _raw, malformed-kinds, namespaces, root-tag, valid-date-102,
+  _raw, malformed-kinds, namespaces, root-tag, valid-base64, valid-date-102,
 )
 #import "/src/zugferd/guard/report.typ": (
   field-of, guard-diagnostics, merge, report-hint, summary-rule,
@@ -352,6 +352,20 @@
   assert(not valid-date-102("2026010"))
   assert(not valid-date-102("+2026010"))
   assert(not valid-date-102(20260101))
+
+  // xs:base64Binary: groups of four, the padding only at the end, and bits
+  // the padding leaves over set to zero; the XSD collapses whitespace.
+  assert(valid-base64(""))
+  assert(valid-base64("QUJD"))
+  assert(valid-base64("QUI="))
+  assert(valid-base64("QQ=="))
+  assert(valid-base64(" QUJD\n RA== "))
+  assert(valid-base64("QU  JD"))
+  assert(not valid-base64("QUJ"))
+  assert(not valid-base64("QUJ="))
+  assert(not valid-base64("QR=="))
+  assert(not valid-base64("Q==="))
+  assert(not valid-base64("QQ==QUJD"))
 }
 
 // --- 4. G1: structure ---

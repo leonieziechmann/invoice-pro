@@ -93,13 +93,30 @@
 // without arguments is memoized): base64 data, and the names of elements and
 // attributes the tables do not know. An element name has one of the
 // prefixes the root declares; an attribute name none, or `xml` or `xmlns`.
+// Base64 data is the lexical space of xs:base64Binary after the XSD
+// collapses its whitespace: groups of four characters with single spaces
+// between them, and a last group that ends with its padding.
 #let _rare-patterns() = (
-  base64: regex("^[A-Za-z0-9+/=\\s]*$"),
+  whitespace: regex("[ \\t\\n\\r]+"),
+  base64: regex(
+    "^(?:(?:[A-Za-z0-9+/] ?){4})*(?:(?:[A-Za-z0-9+/] ?){3}[A-Za-z0-9+/]"
+      + "|(?:[A-Za-z0-9+/] ?){2}[AEIMQUYcgkosw048] ?="
+      + "|[A-Za-z0-9+/] ?[AQgw] ?= ?=)?$",
+  ),
   element: regex("^(?:rsm|ram|udt|qdt):[A-Za-z_][A-Za-z0-9._-]*$"),
   attribute: regex(
     "^(?:(?:xml|xmlns):)?[A-Za-z_][A-Za-z0-9._-]*$",
   ),
 )
+
+/// Whether `text` is base64 data (xs:base64Binary).
+///
+/// -> bool
+#let valid-base64(text) = {
+  let patterns = _rare-patterns()
+  let collapsed = text.replace(patterns.whitespace, " ").trim(" ")
+  collapsed.match(patterns.base64) != none
+}
 
 // Days per month of a format 102 date; 29 February is checked separately.
 #let _days = (31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
@@ -306,7 +323,7 @@
       value: text,
       expected: "an indicator",
     ))
-  } else if kind == "x" and text.match(_rare-patterns().base64) == none {
+  } else if kind == "x" and not valid-base64(text) {
     found.push(_finding(
       "lexical",
       none,
