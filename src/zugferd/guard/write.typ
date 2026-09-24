@@ -654,8 +654,10 @@
   let empty = tables.empty
   if data == none { data = (:) }
   if type(data) != dictionary {
-    panic(
-      "dict-to-xml expects a dictionary of the root element, got " + repr(data),
+    // No element tree: its text, and no root element.
+    return (
+      xml: xml-escape(data),
+      findings: (_finding("root", none, (root-tag,), missing: true),),
     )
   }
 

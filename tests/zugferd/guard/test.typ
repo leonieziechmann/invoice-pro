@@ -475,6 +475,13 @@
   let found = check(model, tree + ("rsm:Other": "x"))
   assert.eq(found, (("root", none, "rsm:Other"),))
   assert.eq(check(model, (:)), (("root", none, root-tag),))
+  // Not even a tree: its text, and no root element (the guard never
+  // panics on what it is given).
+  let written = dict-to-xml("a < b", "en16931")
+  assert.eq(written.xml, "a &lt; b")
+  assert.eq(written.findings.map(f => (f.kind, f.path)), (
+    ("root", (root-tag,)),
+  ))
   assert(("name", "namespace", "root").all(k => k in malformed-kinds))
 })
 
