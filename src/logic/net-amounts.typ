@@ -60,7 +60,7 @@
 /// to the nearest unit (`10^-digits`), and the units the rounded amounts
 /// lack or exceed go to the amounts whose rounding moved them furthest the
 /// other way, one each (in turn, if there are more units than amounts). No
-/// amount changes its sign. The amounts keep their order.
+/// amount turns to 0 or changes its sign. The amounts keep their order.
 ///
 /// -> array
 #let allocate(exact, total, digits: 2) = {
@@ -77,12 +77,12 @@
   let step = if difference > _zero { unit } else { -unit }
   // The amounts that were rounded furthest against the direction of the
   // difference first (`sorted` keeps the order of equal ones), but none
-  // that one unit more would turn to the other sign.
+  // that one unit more would turn to 0 or the other sign.
   let order = ()
   for i in range(exact.len()).sorted(key: i => (
     (rounded.at(i) - exact.at(i)) * step
   )) {
-    if (rounded.at(i) + step) * exact.at(i) >= _zero { order.push(i) }
+    if (rounded.at(i) + step) * exact.at(i) > _zero { order.push(i) }
   }
   if order == () { order = range(exact.len()) }
   let count = calc.floor(calc.abs(difference) / unit)

@@ -346,6 +346,13 @@
     }),
     (decimal("8.40"), decimal("4.67")),
   )
+  // No net amount turns to 0, which the XML would leave out: the unit the
+  // rounded amounts exceed goes to another one.
+  import "/src/logic/net-amounts.typ": allocate
+  assert.eq(allocate((decimal("0.006"), decimal("5")), decimal("5")), (
+    decimal("0.01"),
+    decimal("4.99"),
+  ))
 
   // 6. build-line-item embeds line-level SpecifiedTradeAllowanceCharge between
   //    ApplicableTradeTax and the monetary summation, only when non-empty.
