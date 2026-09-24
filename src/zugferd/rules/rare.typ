@@ -3,19 +3,204 @@
 // dates and origins of items, exemption reason codes, a direct debit or a
 // payment card, the subject codes of notes, a printed invoice that does not
 // show the date of the supply, the buyer of an intra-community supply or a
-// reverse charge, the split payment of Italy, and what MINIMUM cannot state
-// of the payment. engine.typ
+// reverse charge, the split payment of Italy, what MINIMUM cannot state of
+// the payment, and a code that not every validation accepts. engine.typ
 // loads this module when an invoice needs one of them. See engine.typ for
 // the findings and the registry.
 
 #import "engine.typ": (
-  code-finding, country, country-of-vat-id, global-id, identifiers, legal-id,
-  line-field, not-carried, post-code, single-identifier, vat-id-prefix-check,
+  country, country-of-vat-id, global-id, identifiers, in-list, legal-id,
+  line-field, lists, not-carried, post-code, single-identifier,
+  vat-id-prefix-check,
 )
 #import "../model.typ": vat-id-country, vat-id-prefix
 #import "../../utils/iban.typ": iban-valid
 #import "../../utils/creditor-id.typ": creditor-id-valid
 #import "../../logic/service-period.typ": supply-dated
+
+/// The rule that a code of the code list `name` of `lists` breaks in a
+/// profile, or `none` where the validation of the profile accepts it:
+/// `cen`, the code list rule of the CEN Schematron, where a CEN list of the
+/// validation lacks the code; `fx`, the one of the Factur-X Schematron,
+/// where only the Factur-X list lacks it (e.g. the scheme 0219, which
+/// XRechnung accepts); and IP-CODE-01 for a code the newest CEN list has
+/// withdrawn, which no validator of BASIC, MINIMUM and BASIC WL rejects,
+/// but a receiver that applies the current list does (e.g. the scheme
+/// 9901). MINIMUM and BASIC WL accept the Factur-X list of a name with
+/// `factur-x` as it is, e.g. the currency BGN. Each list of a profile holds
+/// the codes of `every` (tools/zugferd/gen_guard.py checks it), which is
+/// the list of XRechnung, too, unless it has one (`xrechnung`).
+///
+/// -> none | str
+#let _code-rule(name, code, profile, cen, fx) = {
+  let entry = lists.at(name)
+  if in-list(entry.every, code) { return none }
+  let xrechnung = entry.at("xrechnung", default: entry.every)
+  if profile.xrechnung {
+    return if in-list(xrechnung, code) { none } else { cen }
+  }
+  let own = entry.at("factur-x", default: none)
+  let withdrawn = entry.at("withdrawn", default: "")
+  if not profile.en16931 {
+    if own != none { return if in-list(own, code) { none } else { fx } }
+    // `every` is the Factur-X list without the withdrawn codes.
+    return if in-list(withdrawn, code) { "IP-CODE-01" } else { fx }
+  }
+  // Both CEN lists have it: only the Factur-X list lacks it.
+  if in-list(xrechnung, code) { return fx }
+  // Only CEN 1.3.16 lacks it, which KoSIT applies to EN 16931 but not to
+  // BASIC.
+  if profile.id == "basic" and in-list(withdrawn, code) {
+    return if own == none or in-list(own, code) { "IP-CODE-01" } else { fx }
+  }
+  cen
+}
+
+/// The finding of a code of the code list `name` that the validation of
+/// the profile rejects (see `_code-rule`), as an array: none where it
+/// accepts the code. `finding` is the field and the values of the message
+/// of `cen`, the code list rule of the CEN Schematron, whose entry reports
+/// `fx`, the one of the Factur-X Schematron, as well (`id`, with `fx-only`
+/// where only the Factur-X list lacks the code). A withdrawn code is
+/// IP-CODE-01, whose message names it by `term` (`scheme`: the code is the
+/// scheme of the term).
+///
+/// -> array
+#let code-finding(
+  name,
+  code,
+  profile,
+  cen,
+  fx,
+  finding,
+  term,
+  scheme: false,
+) = {
+  let rule = _code-rule(name, code, profile, cen, fx)
+  if rule == none { return () }
+  if rule == "IP-CODE-01" {
+    return (
+      (
+        key: rule,
+        field: finding.field,
+        code: code,
+        term: term,
+        scheme: scheme,
+        list: name,
+        profile: profile.name,
+      ),
+    )
+  }
+  let fx-only = (
+    rule == fx and in-list(lists.at(name).at("xrechnung", default: ""), code)
+  )
+  (finding + (key: cen, id: rule, fx-only: fx-only),)
+}
+
+// The code list checks of engine.typ, for a code that not every validation
+// accepts (see `code-finding`).
+
+/// BR-CL-04: the invoice currency (BT-5). A currency of the Factur-X list
+/// that a CEN list lacks names the profile, whose validation cannot accept
+/// it.
+///
+/// -> array
+#let currency-code(code, field, profile) = code-finding(
+  "currency",
+  code,
+  profile,
+  "BR-CL-04",
+  "FX-SCH-A-000040",
+  (
+    field: field,
+    code: code,
+    profile: if in-list(lists.currency.factur-x, code) { profile.name },
+  ),
+  "invoice currency code (BT-5)",
+)
+
+/// BR-CL-14: the country code of an address.
+///
+/// -> array
+#let country-code(code, field, term, profile) = code-finding(
+  "country",
+  code,
+  profile,
+  "BR-CL-14",
+  "FX-SCH-A-000036",
+  (field: field, term: term, code: code),
+  term,
+)
+
+/// BR-CL-25: the scheme of an electronic address.
+///
+/// -> array
+#let address-scheme(scheme, field, term, profile) = code-finding(
+  "eas",
+  scheme,
+  profile,
+  "BR-CL-25",
+  "FX-SCH-A-000031",
+  (field: field + ".electronic-address", term: term, scheme: scheme),
+  term,
+  scheme: true,
+)
+
+/// BR-CL-10, BR-CL-26 (`rule`): the scheme of a global identifier.
+///
+/// -> array
+#let global-id-scheme(scheme, rule, field, profile) = code-finding(
+  "icd",
+  scheme,
+  profile,
+  rule,
+  "FX-SCH-A-000031",
+  (field: field, scheme: scheme),
+  "global identifier",
+  scheme: true,
+)
+
+/// BR-CL-11: the scheme of a legal registration identifier.
+///
+/// -> array
+#let legal-id-scheme(scheme, field, term, bt, profile) = code-finding(
+  "icd",
+  scheme,
+  profile,
+  "BR-CL-11",
+  "FX-SCH-A-000031",
+  (field: field + ".legal-id", term: term, bt: bt, scheme: scheme),
+  term + " legal registration identifier (" + bt + ")",
+  scheme: true,
+)
+
+/// BR-CL-18: a VAT category code. The split payment of Italy (B) is no
+/// category of Factur-X (FX-SCH-A-000179); XRechnung accepts it (see
+/// `split-payment`).
+///
+/// -> array
+#let category-code(category, field, profile) = code-finding(
+  "vat-category",
+  category,
+  profile,
+  "BR-CL-18",
+  "FX-SCH-A-000179",
+  (field: field, category: category),
+  "VAT category code (BT-118)",
+)
+
+/// BR-CL-16: a payment means code.
+///
+/// -> array
+#let means-code(code, profile) = code-finding(
+  "payment-means",
+  code,
+  profile,
+  "BR-CL-16",
+  "FX-SCH-A-000023",
+  (field: "paid.method", code: code),
+  "payment means code (BT-81)",
+)
 
 /// IP-KEY-01, IP-KEY-02: keys of a party dictionary that the party does not
 /// know (see `input-keys` of the model). A misspelled key the e-invoice
@@ -273,7 +458,7 @@
     if origin == none { continue }
     origins += 1
     if profile.item-origin {
-      let found = code-finding(
+      out += code-finding(
         "country",
         origin,
         profile,
@@ -282,7 +467,6 @@
         (field: line-field(line), code: origin),
         "country of origin (BT-159)",
       )
-      if found != none { out.push(found) }
     }
   }
   if origins > 0 and not profile.item-origin {
@@ -326,8 +510,8 @@
       (field: field, code: code),
       "VAT exemption reason code (BT-121)",
     )
-    if found != none {
-      out.push(found)
+    if found != () {
+      out += found
       continue
     }
     let fits = _code-categories.at(code, default: "E")
@@ -447,7 +631,7 @@
 
 /// BR-B-01, BR-B-02: the split payment of Italy (B), whose code the code
 /// lists of EN 16931 have (only XRechnung applies them alone, see
-/// `code-rule` of engine.typ; the validation of BASIC and EN 16931 checks
+/// `category-code`; the validation of BASIC and EN 16931 checks
 /// these rules next to the code list of Factur-X, which lacks it): a
 /// domestic Italian invoice, every address of which is in Italy (BR-B-01,
 /// which tests every country code of the XML), without standard rated (S)

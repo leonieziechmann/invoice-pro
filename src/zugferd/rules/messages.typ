@@ -38,7 +38,7 @@
 #let _not-yet-hint = "Use another code while the validators of the Factur-X profiles do not know it yet."
 
 // A code that only the code list of the Factur-X validation lacks (`fx-only`
-// of a finding, see `code-rule` of engine.typ), which the validation of
+// of a finding, see `code-finding` of rare.typ), which the validation of
 // XRechnung accepts: `subject` names the code, e.g. `The scheme "0219" of
 // the buyer electronic address (BT-49)`.
 #let _factur-x-only(subject, hint) = (
@@ -1069,8 +1069,8 @@
       + " has no VAT category rate (BT-119), which every VAT breakdown but one not subject to VAT (O) has.",
     _bug-hint,
   ),
-  // A code the newest EN 16931 code list has withdrawn (see `code-rule` of
-  // engine.typ).
+  // A code the newest EN 16931 code list has withdrawn (see `code-finding`
+  // of rare.typ).
   "IP-CODE-01": f => (
     (
       if f.scheme {

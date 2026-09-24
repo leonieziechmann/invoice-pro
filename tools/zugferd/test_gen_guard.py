@@ -621,16 +621,18 @@ class ValidatorLists(unittest.TestCase):
 
     PATH = "rsm:X/ram:Code"
 
-    def lists(self, fx, cen, newest, factur_x=False):
+    def lists(self, fx, cen, newest, factur_x=False, every_only=False, own=None):
+        """`own`: the Factur-X list of MINIMUM and BASIC WL, if not `fx`."""
         fx, cen, newest = frozenset(fx), frozenset(cen), frozenset(newest)
         lists = {
             "fx": g.CodeList(fx, "FX-1", "FX"),
+            "own": g.CodeList(fx if own is None else frozenset(own), "FX-1", "FX"),
             "cen": g.CodeList(cen, "BR-CL-1", "CEN"),
             "newest": g.CodeList(newest, "BR-CL-1", "CEN", newest=True),
         }
         applied = {
-            "minimum": ["fx"],
-            "basic-wl": ["fx"],
+            "minimum": ["own"],
+            "basic-wl": ["own"],
             "basic": ["fx", "cen", "newest"],
             "en16931": ["fx", "cen", "newest"],
             "xrechnung": ["cen", "newest"],
@@ -659,12 +661,13 @@ class ValidatorLists(unittest.TestCase):
             def name(self, codes):
                 return self.names[codes]
 
-        saved = g.VALIDATOR_LISTS
+        saved = g.VALIDATOR_LISTS, g.VALIDATOR_EVERY_ONLY
         g.VALIDATOR_LISTS = {"x": (path, None, factur_x)}
+        g.VALIDATOR_EVERY_ONLY = ("x",) if every_only else ()
         try:
             return g.validator_lists(compilers, Names())["x"]
         finally:
-            g.VALIDATOR_LISTS = saved
+            g.VALIDATOR_LISTS, g.VALIDATOR_EVERY_ONLY = saved
 
     def test_the_lists_of_each_validation(self):
         # A and B everywhere, C in both CEN lists (XRechnung only), W
@@ -679,6 +682,10 @@ class ValidatorLists(unittest.TestCase):
         # MINIMUM and BASIC WL may accept the Factur-X list as it is.
         entry = self.lists(fx="ABWX", cen="ABCW", newest="ABCN", factur_x=True)
         self.assertEqual(entry["factur-x"], "list-ABWX")
+        # The list of XRechnung is stated only where it is not `every`.
+        entry = self.lists(fx="ABW", cen="ABW", newest="AB")
+        self.assertEqual(entry, {"every": "list-AB", "withdrawn": ["W"]})
+        self.assertEqual(self.lists(fx="AB", cen="AB", newest="AB", every_only=True), {"every": "list-AB"})
 
     def test_lists_the_validator_cannot_use(self):
         # Without `factur-x`, MINIMUM and BASIC WL accept `every`: a code of
@@ -690,6 +697,16 @@ class ValidatorLists(unittest.TestCase):
         with self.assertRaises(g.GenError) as caught:
             self.lists(fx="AB", cen="ABCW", newest="ABCN")
         self.assertIn("withdrawn codes that the Factur-X list lacks", str(caught.exception))
+        # A code of the list of XRechnung beyond `every`, where the validator
+        # checks `every` in every profile (the unit codes).
+        with self.assertRaises(g.GenError) as caught:
+            self.lists(fx="ABW", cen="ABCW", newest="ABCN", every_only=True)
+        self.assertIn("the list of XRechnung is not `every`", str(caught.exception))
+        # The validator accepts a code of `every` in every profile without a
+        # look at the list of the profile: each holds them.
+        with self.assertRaises(g.GenError) as caught:
+            self.lists(fx="ABX", cen="ABX", newest="ABX", factur_x=True, own="AB")
+        self.assertIn("lacks codes of `every`", str(caught.exception))
 
 
 JAR = os.environ.get("MUSTANG_JAR")

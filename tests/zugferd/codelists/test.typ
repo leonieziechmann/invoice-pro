@@ -81,7 +81,10 @@
     if "newer" not in entry { continue }
     for code in codes(entry.newer) {
       assert(not in-list(entry.every, code), message: name + ": " + code)
-      assert(not in-list(entry.xrechnung, code), message: name + ": " + code)
+      assert(
+        not in-list(entry.at("xrechnung", default: entry.every), code),
+        message: name + ": " + code,
+      )
       if "factur-x" in entry {
         assert(not in-list(entry.factur-x, code), message: name + ": " + code)
       }
@@ -92,7 +95,10 @@
     if "withdrawn" not in entry { continue }
     for code in codes(entry.withdrawn) {
       assert(not in-list(entry.every, code), message: name + ": " + code)
-      assert(not in-list(entry.xrechnung, code), message: name + ": " + code)
+      assert(
+        not in-list(entry.at("xrechnung", default: entry.every), code),
+        message: name + ": " + code,
+      )
     }
   }
   assert.eq(codes(lists.currency.newer), ("CNH", "VED", "XCG", "ZWG"))

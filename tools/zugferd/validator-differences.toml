@@ -140,8 +140,8 @@ XRechnung, which both validators report)."""
 # the codes that every list the validation of a profile applies contains
 # (the lists of the write guard, which tools/zugferd/gen_guard.py intersects:
 # `validator` of src/zugferd/guard/lists.typ), and reports an error for any
-# other, under the rule of a validator that rejects it (`code-rule` of
-# src/zugferd/rules/engine.typ).
+# other, under the rule of a validator that rejects it (`code-finding` of
+# src/zugferd/rules/rare.typ).
 
 ["BR-CL-03"]
 rejected-by = ["mustang", "kosit"]

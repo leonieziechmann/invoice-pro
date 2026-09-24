@@ -2511,15 +2511,17 @@ def count_text(n, noun):
 # the tables: per name, the position whose lists they are, as (path,
 # attribute or None, factur-x). `validator_lists` takes them from the tables
 # of the profiles, so that the validator accepts the codes the validation of
-# each profile accepts (see `code-rule` of src/zugferd/rules/engine.typ):
+# each profile accepts (see `code-finding` of src/zugferd/rules/rare.typ):
 #
 #   every      the codes of every validation of BASIC and EN 16931 at the
 #              position in EN 16931: the Factur-X list and both CEN lists
 #              (1.3.12 in Mustang, 1.3.16 in KoSIT, which BASIC applies as
-#              well, see `withdrawn`)
+#              well, see `withdrawn`). Every list of a profile holds them, so
+#              the validator accepts a code of `every` in every profile
+#              without a look at the others
 #   xrechnung  the codes of the validation of XRechnung, which applies both
 #              CEN lists and no Factur-X list (e.g. the scheme 0219, which
-#              the Factur-X list lacks)
+#              the Factur-X list lacks); only where they are not `every`
 #   factur-x   with `factur-x` true: the Factur-X list, which the validation
 #              of MINIMUM and BASIC WL applies alone, with the codes the CEN
 #              lists lack (e.g. South Sudan, SS) and their withdrawn codes;
@@ -2547,6 +2549,10 @@ VALIDATOR_LISTS = {
     "vat-category": (f"{_SETTLEMENT}/ram:ApplicableTradeTax/ram:CategoryCode", None, False),
     "vatex": (f"{_SETTLEMENT}/ram:ApplicableTradeTax/ram:ExemptionReasonCode", None, False),
 }
+# The names whose codes the validator checks with `every` in every profile
+# (the unit codes, `_lines` of src/zugferd/rules/engine.typ): the list of
+# XRechnung must be `every` as well.
+VALIDATOR_EVERY_ONLY = ("unit",)
 
 
 def _validator_position(compilers, names, name, profile, path, attr):
@@ -2568,9 +2574,9 @@ def _validator_position(compilers, names, name, profile, path, attr):
 
 def validator_lists(compilers, names):
     """The lists of VALIDATOR_LISTS: per name, the name in lists.typ of each
-    list (`every`, `xrechnung`, `factur-x`) and the codes of `newer` and
-    `withdrawn`, sorted. Fails where the lists of a profile are not what the
-    validator assumes (see VALIDATOR_LISTS)."""
+    list (`every`, `xrechnung` where it is another, `factur-x`) and the codes
+    of `newer` and `withdrawn`, sorted. Fails where the lists of a profile
+    are not what the validator assumes (see VALIDATOR_LISTS)."""
     out = {}
     for name, (path, attr, factur_x) in sorted(VALIDATOR_LISTS.items()):
         at = {p: _validator_position(compilers, names, name, p, path, attr) for p in PROFILES}
@@ -2602,7 +2608,14 @@ def validator_lists(compilers, names):
             if fx and not withdrawn <= frozenset.intersection(*fx):
                 raise GenError(f"VALIDATOR_LISTS {name}: withdrawn codes that the Factur-X list lacks; "
                                "give it `factur-x`")
-        entry["xrechnung"] = names.name(at["xrechnung"][1])
+        xrechnung = at["xrechnung"][1]
+        if not every <= xrechnung or any(not every <= codes for codes in own):
+            raise GenError(f"VALIDATOR_LISTS {name}: a list of a profile lacks codes of `every`")
+        if xrechnung != every:
+            if name in VALIDATOR_EVERY_ONLY:
+                raise GenError(f"VALIDATOR_LISTS {name}: the list of XRechnung is not `every`, which the "
+                               "validator checks in every profile (VALIDATOR_EVERY_ONLY)")
+            entry["xrechnung"] = names.name(xrechnung)
         if newer:
             entry["newer"] = sorted(newer)
         if withdrawn:

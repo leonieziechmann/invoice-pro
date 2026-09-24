@@ -408,18 +408,16 @@
   ),
   icd: (
     every: icd,
-    xrechnung: icd,
     newer: _codes(
       "0231 0232 0233 0234 0235 0236 0237 0238 0239 0240 0241 0242 0243 0244",
       "0245 0246 0247 0248",
     ),
   ),
-  payment-means: (every: payment-means, xrechnung: payment-means),
-  unit: (every: unit, xrechnung: unit),
+  payment-means: (every: payment-means),
+  unit: (every: unit),
   vat-category: (every: vat-category-2, xrechnung: vat-category),
   vatex: (
     every: vatex,
-    xrechnung: vatex,
     newer: _codes(
       "VATEX-EU-135-1 VATEX-EU-144 VATEX-EU-146-1E VATEX-EU-153 VATEX-EU-159",
       "VATEX-FR-298SEXDECIESA VATEX-FR-AE VATEX-FR-CGI261-1 VATEX-FR-CGI261-2",

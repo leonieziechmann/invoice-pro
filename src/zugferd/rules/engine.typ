@@ -43,16 +43,13 @@
 // accept the XML, but the invoice would still be wrong (e.g. required by
 // law, or a value would be lost).
 //
-// Code lists: the checks look codes up (`in-list`, `code-rule`) in the
-// lists of the write guard (../guard/lists.typ, `validator`), which
+// Code lists: the checks look codes up (`in-list`) in the lists of the
+// write guard (../guard/lists.typ, `validator`), which
 // tools/zugferd/gen_guard.py generates from the official validations of the
 // profiles: `every` holds the codes all of them accept (Factur-X 1.0.07 and
-// the CEN Schematron 1.3.12 of Mustang and 1.3.16 of KoSIT), `xrechnung` the
-// codes of the validation of XRechnung (both CEN lists, no Factur-X list),
-// `factur-x` the codes of the Factur-X validation of MINIMUM and BASIC WL,
-// `withdrawn` the codes the newest CEN list has withdrawn, and `newer` the
-// codes only the newest CEN list has, which messages.typ names as codes the
-// validation of the profile does not know yet.
+// the CEN Schematron 1.3.12 of Mustang and 1.3.16 of KoSIT), and the lists
+// of each profile hold at least these. `code-finding` of rare.typ names the
+// rule a code outside `every` breaks in the profile, if any.
 //
 // Performance (concept 6.4): a valid invoice parses this module and, for
 // XRechnung, xrechnung.typ, but none of the messages; the code lists are
@@ -85,84 +82,16 @@
     and (" " + code + " ") in list
 )
 
-/// The rule that a code of the code list `name` of `validator` breaks in a
-/// profile, or `none` where the validation of the profile accepts it:
-/// `cen`, the code list rule of the CEN Schematron, where a CEN list of the
-/// validation lacks the code; `fx`, the one of the Factur-X Schematron,
-/// where only the Factur-X list lacks it (e.g. the scheme 0219, which
-/// XRechnung accepts); and IP-CODE-01 for a code the newest CEN list has
-/// withdrawn, which no validator of BASIC, MINIMUM and BASIC WL rejects,
-/// but a receiver that applies the current list does (e.g. the scheme
-/// 9901). MINIMUM and BASIC WL accept the Factur-X list of a name with
-/// `factur-x` as it is, e.g. the currency BGN.
-///
-/// -> none | str
-#let code-rule(name, code, profile, cen, fx) = {
-  let entry = lists.at(name)
-  if profile.xrechnung {
-    return if in-list(entry.xrechnung, code) { none } else { cen }
-  }
-  let own = entry.at("factur-x", default: none)
-  if not profile.en16931 and own != none {
-    return if in-list(own, code) { none } else { fx }
-  }
-  if in-list(entry.every, code) { return none }
-  let withdrawn = entry.at("withdrawn", default: "")
-  if not profile.en16931 {
-    // `every` is the Factur-X list without the withdrawn codes.
-    return if in-list(withdrawn, code) { "IP-CODE-01" } else { fx }
-  }
-  // Both CEN lists have it: only the Factur-X list lacks it.
-  if in-list(entry.xrechnung, code) { return fx }
-  // Only CEN 1.3.16 lacks it, which KoSIT applies to EN 16931 but not to
-  // BASIC.
-  if profile.id == "basic" and in-list(withdrawn, code) {
-    return if own == none or in-list(own, code) { "IP-CODE-01" } else { fx }
-  }
-  cen
-}
-
-/// The finding of a code of the code list `name` that the validation of
-/// the profile rejects (see `code-rule`), or `none`. `finding` is the field
-/// and the values of the message of `cen`, the code list rule of the CEN
-/// Schematron, whose entry reports `fx`, the one of the Factur-X
-/// Schematron, as well (`id`, with `fx-only` where only the Factur-X list
-/// lacks the code). A withdrawn code is IP-CODE-01, whose message names it
-/// by `term` (`scheme`: the code is the scheme of the term).
-///
-/// -> none | dictionary
-#let code-finding(
-  name,
-  code,
-  profile,
-  cen,
-  fx,
-  finding,
-  term,
-  scheme: false,
-) = {
-  let rule = code-rule(name, code, profile, cen, fx)
-  if rule == none { return none }
-  if rule == "IP-CODE-01" {
-    return (
-      key: rule,
-      field: finding.field,
-      code: code,
-      term: term,
-      scheme: scheme,
-      list: name,
-      profile: profile.name,
-    )
-  }
-  (
-    finding
-      + (
-        key: cen,
-        id: rule,
-        fx-only: rule == fx and in-list(lists.at(name).xrechnung, code),
-      )
-  )
-}
+// The lists of the checks, one by one: a check captures (and Typst hashes)
+// only the lists it names.
+#let _countries = lists.country.every
+#let _currencies = lists.currency.every
+#let _factur-x-currencies = lists.currency.factur-x
+#let _eas-codes = lists.eas.every
+#let _icd-codes = lists.icd.every
+#let _units = lists.unit.every
+#let _vat-categories = lists.vat-category.every
+#let _means-codes = lists.payment-means.every
 
 // A rate in percent as the XML states it, e.g. "19%" or "9.975%".
 #let _percent(rate) = (
@@ -225,25 +154,9 @@
   let currency = model.currency
   if currency == none {
     out.push((key: "BR-05", field: "locale"))
-  } else {
-    // A currency of the Factur-X list that a CEN list lacks names the
-    // profile (`profile`), whose validation cannot accept it.
-    let found = code-finding(
-      "currency",
-      currency,
-      model.profile,
-      "BR-CL-04",
-      "FX-SCH-A-000040",
-      (
-        field: currency-field,
-        code: currency,
-        profile: if in-list(lists.currency.factur-x, currency) {
-          model.profile.name
-        },
-      ),
-      "invoice currency code (BT-5)",
-    )
-    if found != none { out.push(found) }
+  } else if not in-list(_currencies, currency) {
+    import "rare.typ": currency-code
+    out += currency-code(currency, currency-field, model.profile)
   }
 
   // IP-TAX-01: `tax: none` prints 0%, but does not say why no VAT is charged:
@@ -269,7 +182,7 @@
   let printed = model.at("printed-currency", default: none)
   if (
     type(currency) == str
-      and in-list(lists.currency.factur-x, currency)
+      and in-list(_factur-x-currencies, currency)
       and type(printed) == dictionary
   ) {
     for (kind, sample) in (
@@ -334,13 +247,11 @@
     out += document-type(code)
   }
 
-  // The preceding invoice reference (BG-3), from BASIC WL on: the builder
-  // writes it with its number (BT-25) only, so a date (BT-26) without number
-  // would be lost (IP-DOC-05; BR-55, which requires the number of a written
-  // reference, cannot fail). A corrected invoice replaces the invoice it
-  // names: a document that amends an invoice must refer to it (Art. 219 of
-  // the VAT Directive), which XRechnung checks as BR-DE-26. XRechnung only
-  // warns about BR-DE-26, but validators such as Mustang reject the invoice.
+  // The preceding invoice reference (BG-3), from BASIC WL on, is written
+  // with its number (BT-25) only: a date (BT-26) without it would be lost
+  // (IP-DOC-05). A document that amends an invoice must refer to it (Art.
+  // 219 of the VAT Directive): XRechnung checks it as BR-DE-26, which it
+  // only warns about, but validators such as Mustang reject the invoice.
   if model.profile.document-references {
     let number = invoice.at("preceding-invoice-nr", default: none)
     if (
@@ -500,26 +411,16 @@
 
 // --- Parties --------------------------------------------------------------
 
-/// The country of a party (`rule`: missing, a safety net, as an address
-/// without `country` gets the country of the locale) and its code list
-/// (BR-CL-14, see `code-rule`): the code list of EN 16931 lacks South
-/// Sudan ("SS"), which the Factur-X profiles MINIMUM and BASIC WL accept,
-/// the one of Factur-X the Netherlands Antilles ("AN"), which XRechnung
-/// accepts.
+/// The country of a party (`rule`: missing, a safety net: an address
+/// without `country` has the one of the locale) and its code list
+/// (BR-CL-14, see `country-code` of rare.typ).
 ///
 /// -> array
 #let country(code, rule, field, term, profile) = {
   if code == none { return ((key: rule, field: field, term: term),) }
-  let found = code-finding(
-    "country",
-    code,
-    profile,
-    "BR-CL-14",
-    "FX-SCH-A-000036",
-    (field: field, term: term, code: code),
-    term,
-  )
-  if found == none { () } else { (found,) }
+  if in-list(_countries, code) { return () }
+  import "rare.typ": country-code
+  country-code(code, field, term, profile)
 }
 
 /// IP-COUNTRY-01: a party without `country` is in the country of the
@@ -620,17 +521,9 @@
       ),
     )
   }
-  let found = code-finding(
-    "eas",
-    address.scheme,
-    profile,
-    "BR-CL-25",
-    "FX-SCH-A-000031",
-    (field: field + ".electronic-address", term: term, scheme: address.scheme),
-    term,
-    scheme: true,
-  )
-  if found == none { () } else { (found,) }
+  if in-list(_eas-codes, address.scheme) { return () }
+  import "rare.typ": address-scheme
+  address-scheme(address.scheme, field, term, profile)
 }
 
 /// The input key a party identifier came from (see `id-keys` and
@@ -647,18 +540,14 @@
 /// -> array
 #let global-id(party, rule, field, profile) = {
   let global-id = party.at("global-id", default: none)
-  if global-id == none or global-id.scheme == none { return () }
-  let found = code-finding(
-    "icd",
-    global-id.scheme,
-    profile,
-    rule,
-    "FX-SCH-A-000031",
-    (field: field + "." + id-key(party, "global-id"), scheme: global-id.scheme),
-    "global identifier",
-    scheme: true,
-  )
-  if found == none { () } else { (found,) }
+  if (
+    global-id == none
+      or global-id.scheme == none
+      or in-list(_icd-codes, global-id.scheme)
+  ) { return () }
+  import "rare.typ": global-id-scheme
+  let field = field + "." + id-key(party, "global-id")
+  global-id-scheme(global-id.scheme, rule, field, profile)
 }
 
 /// IP-ID-02: two different values for one identifier of a party, of which
@@ -725,7 +614,7 @@
   if (
     prefix != none
       and (
-        in-list(lists.country.every, prefix) or prefix in ("EL", "1A", "AN")
+        in-list(_countries, prefix) or prefix in ("EL", "1A", "AN")
       )
   ) {
     return ()
@@ -740,23 +629,13 @@
 /// -> array
 #let legal-id(party, field, term, bt, profile) = {
   let legal-id = party.at("legal-id", default: none)
-  if legal-id == none or legal-id.scheme == none { return () }
-  let found = code-finding(
-    "icd",
-    legal-id.scheme,
-    profile,
-    "BR-CL-11",
-    "FX-SCH-A-000031",
-    (
-      field: field + ".legal-id",
-      term: term,
-      bt: bt,
-      scheme: legal-id.scheme,
-    ),
-    term + " legal registration identifier (" + bt + ")",
-    scheme: true,
-  )
-  if found == none { () } else { (found,) }
+  if (
+    legal-id == none
+      or legal-id.scheme == none
+      or in-list(_icd-codes, legal-id.scheme)
+  ) { return () }
+  import "rare.typ": legal-id-scheme
+  legal-id-scheme(legal-id.scheme, field, term, bt, profile)
 }
 
 #let _parties(model) = {
@@ -954,10 +833,8 @@
   }
 
   if profile.addresses {
-    // Required by XRechnung, which checks them with the Peppol rules
-    // PEPPOL-EN16931-R020 and R010. EN 16931 leaves them optional, and its
-    // validation checks neither: a warning of invoice-pro's own there
-    // (IP-EADDR-01), as a delivery over Peppol needs them.
+    // Required by XRechnung (PEPPOL-EN16931-R020, R010); EN 16931 leaves
+    // them optional, but a delivery over Peppol needs them (IP-EADDR-01).
     let (required, seller-rule, buyer-rule) = if profile.xrechnung {
       ("error", "PEPPOL-EN16931-R020", "PEPPOL-EN16931-R010")
     } else if profile.id == "en16931" {
@@ -1025,7 +902,7 @@
     let known = if type(code) == str and code != "" {
       let seen = units.at(code, default: none)
       if seen == none {
-        seen = in-list(lists.unit.every, code)
+        seen = in-list(_units, code)
         units.insert(code, seen)
       }
       seen
@@ -1034,9 +911,8 @@
     if not known {
       out.push((key: "BR-CL-23", field: line-field(line), code: code))
     } else if unit-issue != none and unit-issue.kind == "unknown" {
-      // IP-UNIT-02: the unit is written as a code, and a text invoice-pro
-      // does not know has none: writing "one" (C62) for it, which the
-      // validators accept, would be a guess.
+      // IP-UNIT-02: a text invoice-pro does not know has no unit code, and
+      // "one" (C62) would be a guess.
       out.push((
         key: "IP-UNIT-02",
         field: line-field(line),
@@ -1045,9 +921,8 @@
     } else if unit-issue != none and unit-issue.kind == "ambiguous" {
       out.push((key: "IP-UNIT-01", field: line-field(line), issue: unit-issue))
     }
-    // BR-CO-04, a safety net: every item has a VAT category (`tax: none` is
-    // written as zero rated, IP-TAX-01). (The price base quantity is above
-    // 0, PEPPOL-EN16931-R121: `item` and `bundle` stop on any other.)
+    // BR-CO-04, a safety net: `tax: none` is zero rated (IP-TAX-01). (A
+    // price base quantity is above 0: `item` and `bundle` stop on any other.)
     if line.key == none or line.category == none {
       out.push((key: "BR-CO-04", field: line-field(line)))
     }
@@ -1196,21 +1071,15 @@
       }
     }
 
-    // The split payment of Italy (B) is no category of Factur-X
-    // (FX-SCH-A-000179); XRechnung accepts it (see `split-payment` of
-    // rare.typ for its rules).
-    let found = code-finding(
-      "vat-category",
-      category,
-      model.profile,
-      "BR-CL-18",
-      "FX-SCH-A-000179",
-      (field: field),
-      "VAT category code (BT-118)",
-    )
-    if found != none {
-      out.push(found + (category: category))
-      continue
+    // The VAT category, e.g. the split payment of Italy (B), which only
+    // XRechnung accepts (see `category-code` of rare.typ).
+    if not in-list(_vat-categories, category) {
+      import "rare.typ": category-code
+      let found = category-code(category, field, model.profile)
+      if found != () {
+        out += found
+        continue
+      }
     }
     if tax.rate == none { continue }
 
@@ -1311,10 +1180,8 @@
     }
   }
   // The buyer VAT identifier (BT-48) of K and AE: see `buyer-vat-id` of
-  // rare.typ. BR-IC-12: an intra-community supply states the deliver-to
-  // country (BT-80), which the model derives from the buyer without a
-  // delivery address (a safety net; see `intra-community` of rare.typ for
-  // the country itself).
+  // rare.typ. BR-IC-12 is a safety net: the model states the buyer's country
+  // as the deliver-to country (BT-80) of K.
   if "K" in categories and model.ship-to == none {
     out.push((key: "BR-IC-12", field: "delivery-address"))
   }
@@ -1384,12 +1251,10 @@
   // An invoice states one payment means code (BT-81). XRechnung forbids the
   // details of a direct debit (BG-19: the mandate reference, the creditor
   // identifier or a debited account) next to a credit transfer (BR-DE-23-b)
-  // or a payment card (BR-DE-24-b); the CEN Schematron 1.3.16 of EN 16931
-  // and XRechnung forbids payment means codes that differ (CII-SR-467),
-  // which the kinds of payment means here have (see `code-kind`). The other
-  // combinations are conflicting instructions as well, which could make the
-  // buyer pay twice, but the validation of BASIC WL and BASIC accepts them
-  // (IP-PAY-03).
+  // or a payment card (BR-DE-24-b). Kinds of payment means have different
+  // codes (see `code-kind`), which break CII-SR-467 of CEN 1.3.16 in EN 16931
+  // and XRechnung; BASIC WL and BASIC accept them, but the buyer could pay
+  // twice (IP-PAY-03).
   let kinds = ()
   let conflicting = ()
   let debit-details = (
@@ -1425,12 +1290,10 @@
       if entry.iban == none {
         // `paid(method: "transfer")` without bank details, or bank details
         // without an IBAN (with `zugferd-errors: "report"`; otherwise
-        // `bank-details` stops the compilation): the builder writes no
-        // account (BG-17). XRechnung requires it (BR-DE-23-a), the CEN
-        // Schematron 1.3.16 of EN 16931 its IBAN or proprietary ID
-        // (CII-SR-470). BR-61 of the other CEN version and of Factur-X tests
-        // the debited account instead, so BASIC WL and BASIC accept it:
-        // IP-PAY-04.
+        // `bank-details` stops the compilation): no account (BG-17) is
+        // written. XRechnung: BR-DE-23-a; EN 16931: CII-SR-470 (CEN 1.3.16);
+        // BASIC WL and BASIC accept it, as their BR-61 tests the debited
+        // account: IP-PAY-04.
         let paid = entry.field == "paid"
         out.push((
           key: if xrechnung { "BR-DE-23-a" } else if profile.id == "en16931" {
@@ -1462,16 +1325,10 @@
       import "rare.typ": payment-means-details
       out += payment-means-details(entry, payment, profile)
     }
-    let found = code-finding(
-      "payment-means",
-      entry.type-code,
-      profile,
-      "BR-CL-16",
-      "FX-SCH-A-000023",
-      (field: "paid.method", code: entry.type-code),
-      "payment means code (BT-81)",
-    )
-    if found != none { out.push(found) }
+    if not in-list(_means-codes, entry.type-code) {
+      import "rare.typ": means-code
+      out += means-code(entry.type-code, profile)
+    }
   }
 
   // The check digits of a SEPA creditor identifier (BT-90).
@@ -1509,9 +1366,7 @@
 
   out += _payment-means(model)
 
-  // IP-PREPAID-01: prepayments above the total leave a negative amount due
-  // (BT-115). BR-CO-16 (the amount due is the total minus the prepaid
-  // amount) holds: the model computes it so.
+  // IP-PREPAID-01: prepayments above the total leave a negative amount due.
   if model.totals.prepaid > model.totals.gross and model.totals.gross >= _zero {
     out.push((key: "IP-PREPAID-01", field: "prepayment"))
   }
@@ -1603,8 +1458,7 @@
   found
 }
 
-// The rules of the VAT categories that compare the taxable amount of a VAT
-// group (BT-116) with its lines, allowances and charges.
+// BR-x-08 (the taxable amount of a VAT group) by VAT category.
 #let _basis-rules = (
   S: "BR-S-08",
   Z: "BR-Z-08",
@@ -1623,12 +1477,10 @@
 #let _consistency(model) = {
   let out = ()
 
-  // IP-DEC-02: the XML states amounts with 2 decimals, which the write guard
-  // enforces (the BR-DEC-* rules). The builder writes them rounded, so an
-  // amount with more (of a currency such as KWD, or of a locale that rounds
-  // money more finely) would be stated as another amount than the invoice
-  // prints, and the amounts would no longer add up (BR-CO-10, BR-S-08, ...):
-  // they cannot be written at all.
+  // IP-DEC-02: the XML states amounts with 2 decimals (BR-DEC-*). Amounts
+  // with more (e.g. of KWD, or of a locale that rounds money more finely)
+  // would be written rounded, other than printed, and would no longer add
+  // up (BR-CO-10, BR-S-08, ...).
   let excess = _excess-decimals(model)
   if excess.count > 0 {
     // A currency with more decimals (e.g. KWD, `invoice(currency: ..)`)
@@ -1651,10 +1503,8 @@
     return out
   }
 
-  // IP-PRINT-01: the XML states the totals the invoice prints (BT-109,
-  // BT-112), and its VAT breakdown (BT-116) adds up to them. (BR-CO-13 and
-  // BR-CO-15, the sums of the totals in the XML, hold: the model computes
-  // them so.)
+  // IP-PRINT-01: the XML states the printed totals (BT-109, BT-112), and
+  // its VAT breakdown (BT-116) adds up to them.
   let totals = model.totals
   let printed = model.printed-totals
   for (term, stated, shown) in (
@@ -1720,8 +1570,7 @@
         sums.insert(e.key, sums.at(e.key, default: _zero) + amount)
       }
     }
-    // BR-x-08 of each VAT category that has such a rule (e.g. not the split
-    // payment, B).
+    // BR-x-08 of each VAT category that has one (not B).
     for tax in model.taxes {
       if type(tax.key) != str or type(tax.category) != str { continue }
       let rule = _basis-rules.at(tax.category, default: none)
