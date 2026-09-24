@@ -14,25 +14,41 @@ if command -v nix &> /dev/null; then
   SYSTEM="$(nix eval --raw --impure --expr 'builtins.currentSystem' 2>/dev/null || echo "x86_64-linux")"
 
   echo ""
-  echo "[1/4] Running linter..."
+  echo "[1/8] Running linter..."
   nix build ".#checks.${SYSTEM}.lint" --print-build-logs
 
   echo ""
-  echo "[2/4] Running tests..."
+  echo "[2/8] Running tests..."
   nix develop .#test --accept-flake-config --command tt run
 
   echo ""
-  echo "[3/4] Building documentation..."
+  echo "[3/8] Building documentation..."
   nix build .#documentation --print-build-logs
 
   echo ""
-  echo "[4/4] Validating ZUGFeRD PDF..."
+  echo "[4/8] Validating ZUGFeRD PDF (Mustang and KoSIT)..."
   nix run .#validate-all-zugferd --accept-flake-config
+
+  echo ""
+  echo "[5/8] Comparing with the golden XML..."
+  nix run .#zugferd-golden --accept-flake-config
+
+  echo ""
+  echo "[6/8] Running the e-invoice conformance corpus..."
+  nix run .#zugferd-corpus --accept-flake-config
+
+  echo ""
+  echo "[7/8] Checking the Factur-X PDF (expected failure)..."
+  nix run .#zugferd-xmp --accept-flake-config
+
+  echo ""
+  echo "[8/8] Checking the package bundle..."
+  nix run .#check-package-bundle --accept-flake-config
 else
   echo "Notice: Nix not found. Running non-Nix fallback checks..."
 
   echo ""
-  echo "[1/4] Running linter..."
+  echo "[1/8] Running linter..."
   if command -v typstyle &> /dev/null; then
     typstyle --check src/ tests/ template/
   fi
@@ -41,13 +57,13 @@ else
   fi
 
   echo ""
-  echo "[2/4] Running tests..."
+  echo "[2/8] Running tests..."
   if command -v tt &> /dev/null; then
     tt run
   fi
 
   echo ""
-  echo "[3/4] Building documentation..."
+  echo "[3/8] Building documentation..."
   if [ -d "docs" ] && command -v yarn &> /dev/null; then
     (cd docs && yarn build)
   elif [ -d "docs" ] && command -v npm &> /dev/null; then
@@ -55,8 +71,43 @@ else
   fi
 
   echo ""
-  echo "[4/4] Validating ZUGFeRD PDF..."
+  echo "[4/8] Validating ZUGFeRD PDF (Mustang and KoSIT)..."
   ./scripts/validate-all-zugferd
+
+  # The tools of the following checks are configured by environment
+  # variables (tests/TESTING.md, "Running Without Nix").
+  python_tools=""
+  if "${PYTHON:-python3}" -c 'import lxml, pypdf' &> /dev/null; then
+    python_tools="yes"
+  fi
+
+  echo ""
+  echo "[5/8] Comparing with the golden XML..."
+  if [ -n "$python_tools" ]; then
+    ./scripts/zugferd-golden
+  else
+    echo "Notice: skipped: needs Python with lxml and pypdf (\$PYTHON)."
+  fi
+
+  echo ""
+  echo "[6/8] Running the e-invoice conformance corpus..."
+  if [ -n "$python_tools" ] && [ -n "${MUSTANG_JAR:-}" ] && [ -n "${KOSIT_JAR:-}" ] && [ -n "${KOSIT_CONFIG:-}" ]; then
+    ./scripts/zugferd-corpus
+  else
+    echo "Notice: skipped: needs Python with lxml and pypdf, MUSTANG_JAR, KOSIT_JAR and KOSIT_CONFIG."
+  fi
+
+  echo ""
+  echo "[7/8] Checking the Factur-X PDF (expected failure)..."
+  if [ -n "$python_tools" ] && [ -n "${MUSTANG_JAR:-}" ]; then
+    ./scripts/zugferd-xmp
+  else
+    echo "Notice: skipped: needs Python with lxml and pypdf and MUSTANG_JAR."
+  fi
+
+  echo ""
+  echo "[8/8] Checking the package bundle..."
+  ./scripts/check-package-bundle
 fi
 
 echo ""

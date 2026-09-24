@@ -1,0 +1,62 @@
+name: Package Bundle
+on:
+  push:
+    branches: [main]
+    paths:
+      - "typst.toml"
+      - "README.md"
+      - "LICENSE"
+      - "thumbnail.png"
+      - "src/**"
+      - "template/**"
+      - "tests/docs/e-invoicing-sepa-debit/**"
+      - "tests/docs/e-invoicing-report/**"
+      - "scripts/check-package-bundle"
+      - ".github/workflows/package.yaml"
+      - ".github/workflows/publish-package.yaml"
+      - "flake.nix"
+      - "flake.lock"
+  pull_request:
+    branches: [main]
+    paths:
+      - "typst.toml"
+      - "README.md"
+      - "LICENSE"
+      - "thumbnail.png"
+      - "src/**"
+      - "template/**"
+      - "tests/docs/e-invoicing-sepa-debit/**"
+      - "tests/docs/e-invoicing-report/**"
+      - "scripts/check-package-bundle"
+      - ".github/workflows/package.yaml"
+      - ".github/workflows/publish-package.yaml"
+      - "flake.nix"
+      - "flake.lock"
+  workflow_dispatch:
+
+jobs:
+  # The package works on its own: the files a Typst Universe release
+  # publishes compile the template and e-invoice documents offline, without
+  # the repository and without other tools (scripts/check-package-bundle).
+  # The log states the size of the bundle and its largest files.
+  bundle:
+    name: Package bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 #  v17
+        with:
+          name: typ-flow
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Check the package bundle
+        run: nix run .#check-package-bundle --accept-flake-config
