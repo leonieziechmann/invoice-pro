@@ -24,6 +24,12 @@ trap 'rm -rf "$tmp_dir"' EXIT
 
 if [ -n "$output_path" ]; then
   pdf_path="$output_path"
+elif [ -n "${ZUGFERD_PDF_DIR:-}" ]; then
+  # Keep the PDF for later checks, named after the document
+  # (scripts/validate-all-zugferd validates them with KoSIT).
+  mkdir -p "$ZUGFERD_PDF_DIR"
+  name=$(printf '%s' "${src_file%.typ}" | tr -c 'A-Za-z0-9._-' '_')
+  pdf_path="$ZUGFERD_PDF_DIR/$name.pdf"
 else
   name=$(basename "$src_file" .typ)
   pdf_path="$tmp_dir/$name.pdf"
@@ -39,13 +45,22 @@ echo "Compiling ZUGFeRD PDF for $src_file..."
   "$src_file" \
   "$pdf_path"
 
-echo "Extracting factur-x.xml..."
+echo "Extracting the e-invoice XML..."
 "$PDFDETACH" -saveall -o "$extract_dir" "$pdf_path"
 
-if [ ! -f "$extract_dir/factur-x.xml" ]; then
-  echo "Error: factur-x.xml not found in compiled PDF!" >&2
+# The name of the attached XML: factur-x.xml, or xrechnung.xml for the
+# XRECHNUNG profile of ZUGFeRD.
+xml_path=""
+for name in factur-x.xml xrechnung.xml; do
+  if [ -f "$extract_dir/$name" ]; then
+    xml_path="$extract_dir/$name"
+    break
+  fi
+done
+if [ -z "$xml_path" ]; then
+  echo "Error: no factur-x.xml or xrechnung.xml found in the compiled PDF!" >&2
   exit 1
 fi
 
-echo "Validating ZUGFeRD XML..."
-"$MUSTANG" --action validate --source "$extract_dir/factur-x.xml"
+echo "Validating ZUGFeRD XML ($(basename "$xml_path"))..."
+"$MUSTANG" --action validate --source "$xml_path"
