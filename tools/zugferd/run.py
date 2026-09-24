@@ -105,7 +105,7 @@ TOTALS = {
     "BT-112": "ram:GrandTotalAmount",
     "BT-115": "ram:DuePayableAmount",
 }
-_HEADER = re.compile(r"^//\s*(expect|error|finding|facts):\s*(.*)$")
+_HEADER = re.compile(r"^//\s*(expect|warns|error|finding|facts):\s*(.*)$")
 # Arguments of a regression case that would switch the harness off.
 _THEME_ARG = re.compile(r"(?<![\w-])theme\s*:\s*(\S*)")
 _ERRORS_ARG = re.compile(r"(?<![\w-])zugferd-errors\s*:\s*([^\s,)]*)")
@@ -118,11 +118,12 @@ def parse_header(path):
     """The header comments of a case file:
 
       // expect: <CLASS> [RULE ...]   class and rules invoice-pro must report
+      // warns: RULE ...              rules invoice-pro must report as warnings
       // error: <text>                INPUT_ERROR: text of the expected message
       // finding: <id>                audit finding or issue it reproduces
       // facts: {<json>}              oracle facts (see oracles.py), repeatable
     """
-    expect, rules, finding, facts, error = None, [], None, {}, None
+    expect, rules, warns, finding, facts, error = None, [], [], None, {}, None
     for line in Path(path).read_text(encoding="utf-8").splitlines():
         m = _HEADER.match(line.strip())
         if not m:
@@ -133,6 +134,8 @@ def parse_header(path):
         if key == "expect":
             parts = value.split()
             expect, rules = parts[0], parts[1:]
+        elif key == "warns":
+            warns += value.split()
         elif key == "error":
             error = value.strip()
         elif key == "finding":
@@ -148,7 +151,8 @@ def parse_header(path):
         raise common.ToolError(f"{path}: unknown class {expect!r} (one of {', '.join([*CLASSES, *UNIONS])})")
     if expect == "INPUT_ERROR" and not error:
         raise common.ToolError(f"{path}: `// expect: INPUT_ERROR` needs `// error: <text of the message>`")
-    return {"expect": expect, "expect_rules": rules, "expect_error": error, "finding": finding, "facts": facts}
+    return {"expect": expect, "expect_rules": rules, "expect_warnings": warns, "expect_error": error,
+            "finding": finding, "facts": facts}
 
 
 def load_cases(paths):
@@ -298,10 +302,18 @@ UNIONS = {
 }
 
 
-def expectation_met(case, cls, ours):
+def warning_rules(res):
+    return sorted({d.get("rule", "?") for d in res.get("diagnostics", []) if d.get("level") != "error"})
+
+
+def expectation_met(case, cls, ours, warned=()):
+    """Whether the class is the expected one, and the expected rules that
+    invoice-pro did not report: errors (`// expect:`) and warnings
+    (`// warns:`, listed with the prefix "warning:")."""
     expect = case["expect"]
     class_ok = cls in UNIONS[expect] if expect in UNIONS else cls == expect
     missing = [r for r in case.get("expect_rules", []) if r not in ours]
+    missing += [f"warning:{r}" for r in case.get("expect_warnings", []) if r not in warned]
     return class_ok, missing
 
 
@@ -587,7 +599,7 @@ def make_row(case, res, doc):
         elif case["expect"] == "AGREE" and _DELIBERATE.search(res["crash"]):
             cls = "INPUT_ERROR"
     ours = error_rules(res)
-    class_ok, missing = expectation_met(case, cls, ours)
+    class_ok, missing = expectation_met(case, cls, ours, warning_rules(res))
     problems = oracles.check_diagnostics(res.get("diagnostics", []))
     if cls == "AGREE_VALID" and doc is not None:
         problems += oracles.check(case.get("facts") or {}, doc, res.get("pdf_text"), res.get("profile"))
@@ -644,7 +656,8 @@ def fixture_parity(case, res, levels, differences):
     if passing or profile not in levels:
         return []
     views = (res.get("official") or {}).get("validators", {})
-    wanted = [r for r in dict.fromkeys([rule, *case.get("expect_rules", [])]) if not r.startswith("IP-")]
+    expected = [*case.get("expect_rules", []), *case.get("expect_warnings", [])]
+    wanted = [r for r in dict.fromkeys([rule, *expected]) if not r.startswith("IP-")]
     problems = []
     for r in wanted:
         have = levels[profile].get(r)

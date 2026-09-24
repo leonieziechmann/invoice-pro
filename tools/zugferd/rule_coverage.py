@@ -158,7 +158,7 @@ SVRL = gen_guard.SVRL
 SCENARIOS_NS = "{http://www.xoev.de/de/validator/framework/1/scenarios}"
 _BUSINESS_ID = re.compile(r"\[((?:BR|CII|PEPPOL)[A-Za-z0-9-]*)\]")
 _IP_ID = re.compile(r'"(IP-[A-Z]+-\d+)"')
-_EXPECT = re.compile(r"^//\s*expect:\s*(\S+)(.*)$")
+_EXPECT = re.compile(r"^//\s*(expect|warns):\s*(\S+)(.*)$")
 
 
 class CoverageError(common.ToolError):
@@ -492,14 +492,19 @@ def load_toml(path=TOML):
 
 
 def parse_expect(path):
-    """(class, rules) of the `// expect:` header of a case file."""
+    """(class, rules) of the `// expect:` header of a case file, with the
+    rules of its `// warns:` lines (warnings invoice-pro must report)."""
+    expect, rules = None, []
     for line in Path(path).read_text(encoding="utf-8").splitlines():
         m = _EXPECT.match(line.strip())
-        if m:
-            return m.group(1), m.group(2).split()
-        if line.strip() and not line.startswith("//"):
+        if m and m.group(1) == "expect":
+            expect = m.group(2)
+            rules += m.group(3).split()
+        elif m:
+            rules += [m.group(2), *m.group(3).split()]
+        elif line.strip() and not line.startswith("//"):
             break
-    return None, []
+    return expect, rules
 
 
 def fixture_rule(path):
