@@ -333,6 +333,35 @@ def parse_mustang_report(report):
     return {"status": status[-1] if status else "?", "errors": errors, "warnings": warnings}
 
 
+_PDF_PART = re.compile(r"<pdf>(.*?)</pdf>", re.S)
+_XML_PART = re.compile(r"<xml>(.*?)</xml>", re.S)
+_PDF_ERROR = re.compile(r'<error\b[^>]*?type="(\d+)"[^>]*>(.*?)</error>', re.S)
+
+
+def parse_mustang_pdf_report(report):
+    """The parts of Mustang's report on a PDF (rather than an XML file).
+
+    `pdf`: the check of the PDF itself, `status` ("valid"/"invalid"),
+    `compliant` (the PDF/A check of veraPDF) and `errors`, a list of (type,
+    text), e.g. (11, "XMP Metadata: ConformanceLevel not found") for missing
+    Factur-X XMP metadata. `xml`: the attached XML as parse_mustang_report
+    reads it. `status`: the overall verdict (the last summary).
+    """
+    pdf_part = _PDF_PART.search(report)
+    xml_part = _XML_PART.search(report)
+    pdf = {"status": "?", "compliant": None, "errors": []}
+    if pdf_part:
+        body = pdf_part.group(1)
+        compliant = re.search(r"isCompliant=(true|false)", body)
+        pdf["compliant"] = compliant.group(1) == "true" if compliant else None
+        status = _STATUS.findall(body)
+        pdf["status"] = status[-1] if status else "?"
+        pdf["errors"] = [(int(t), re.sub(r"\s+", " ", _unescape(text)).strip()) for t, text in _PDF_ERROR.findall(body)]
+    xml = parse_mustang_report(xml_part.group(1)) if xml_part else {"status": "?", "errors": {}, "warnings": []}
+    status = _STATUS.findall(report)
+    return {"pdf": pdf, "xml": xml, "status": status[-1] if status else "?"}
+
+
 class Mustang:
     """Mustang's validator in one long-lived JVM (tools/zugferd/java).
 
@@ -399,6 +428,7 @@ class Mustang:
                 path, millis = current
                 result = parse_mustang_report("".join(body))
                 result["ms"] = millis
+                result["report"] = "".join(body)
                 with self.lock:
                     future = self.pending.pop(path, None)
                 if future:
