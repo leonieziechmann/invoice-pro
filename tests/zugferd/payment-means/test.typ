@@ -386,6 +386,22 @@
   }
 })[#items #goal]
 
+// ... but on a credit note, the sender pays the amount: the hint names the
+// recipient's account, not the payment means that collect it
+#model-test(
+  ..xrechnung,
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  model => {
+    assert.eq(rules(model), ("BR-DE-1",))
+    let hint = diagnostic(model, "BR-DE-1").hint
+    assert(hint.contains("the recipient's account"), message: hint)
+    assert(hint.contains("(not your own)"), message: hint)
+    assert(hint.contains("\"97\""), message: hint)
+    assert(not hint.contains("#direct-debit("), message: hint)
+  },
+)[#items #goal]
+
 // --- 5. The account name (BT-85): only a name given to `bank-details` ---
 #model-test(model => {
   assert.eq(model.payment.means.first().account-name, "Factoring Bank AG")

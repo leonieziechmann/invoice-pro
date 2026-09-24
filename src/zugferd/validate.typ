@@ -709,6 +709,10 @@
 // `rules`: the rule for a missing address and the rule for a missing scheme.
 // `represented`: the party is a seller with a tax representative, whose VAT
 // identifier is not the seller's `vat-id` (nor its address).
+// A Leitweg-ID, the routing identifier of a German public buyer (as
+// `id.leitweg` checks it), e.g. "04011000-1234512345-06".
+#let _leitweg-pattern = regex("^[0-9]{2,12}(-[0-9A-Z]{1,30})?-[0-9]{2}$")
+
 #let _check-electronic-address(
   party,
   required,
@@ -716,6 +720,7 @@
   field,
   term,
   represented: false,
+  leitweg: none,
 ) = {
   let (missing-rule, scheme-rule) = rules
   let address = party.electronic-address
@@ -748,6 +753,18 @@
           + ". Set `electronic-address` or `email` on the "
           + field
           + "."
+      )
+    }
+    // A public buyer in Germany receives XRechnung at its Leitweg-ID, the
+    // buyer reference of this invoice (EAS 0204).
+    if leitweg != none {
+      hint = (
+        "A public buyer is reached by its Leitweg-ID: set `electronic-address: id.leitweg("
+          + _quoted(leitweg)
+          + ")` on the "
+          + field
+          + ". "
+          + hint
       )
     }
     return (
@@ -1684,12 +1701,16 @@
       "seller electronic address (BT-34)",
       represented: represented,
     )
+    let reference = model.invoice.at("buyer-reference", default: none)
     out += _check-electronic-address(
       buyer,
       required,
       ("PEPPOL-EN16931-R010", "BR-63"),
       "recipient",
       "buyer electronic address (BT-49)",
+      leitweg: if (
+        type(reference) == str and reference.match(_leitweg-pattern) != none
+      ) { reference },
     )
   }
 
@@ -1780,11 +1801,25 @@
     }
 
     if model.invoice.buyer-reference == none {
+      // A buyer reached by its Leitweg-ID (EAS 0204) names it as reference.
+      let address = buyer.at("electronic-address", default: none)
+      let routing = if (
+        type(address) == dictionary
+          and address.at("scheme", default: none) == "0204"
+      ) { address.at("id", default: none) }
       out.push(error(
         "BR-DE-15",
         "recipient.buyer-reference",
         "XRechnung requires the buyer reference (BT-10), e.g. the Leitweg-ID.",
-        hint: "Set `buyer-reference` (or `leitweg-id`) on the recipient.",
+        hint: if routing != none {
+          (
+            "Set the Leitweg-ID of its electronic address as `leitweg-id: id.leitweg("
+              + _quoted(routing)
+              + ")` on the recipient, or another `buyer-reference`."
+          )
+        } else {
+          "Set `buyer-reference` on the recipient, or for a public buyer its Leitweg-ID, e.g. `leitweg-id: id.leitweg(\"04011000-1234512345-06\")`, which can be its electronic address as well."
+        },
       ))
     }
   }
@@ -2465,6 +2500,13 @@
 
   if means.len() == 0 {
     if xrechnung {
+      // On a credit note or a self-billed invoice, the sender pays the
+      // amount: to the recipient's account, or by a set-off.
+      let document = model.invoice.at("document", default: none)
+      let sender-pays = (
+        type(document) == dictionary
+          and document.at("sender-pays", default: false)
+      )
       out.push(error(
         "BR-DE-1",
         if payment.at("paid", default: false) { "paid.method" } else {
@@ -2473,6 +2515,8 @@
         "XRechnung requires payment instructions (BG-16).",
         hint: if payment.at("paid", default: false) {
           "Set `method` on `paid` to the way the invoice was paid, e.g. `paid(method: \"cash\")`, or add the payment means it was paid with, e.g. `#bank-details(iban: ..)` for a credit transfer."
+        } else if sender-pays {
+          "You pay the amount of a credit note or a self-billed invoice: add `#bank-details(iban: ..)` with the recipient's account you transfer it to (not your own), `#paid(method: ..)` if it is paid already, or for a set-off against an invoice `#paid(method: (code: \"97\", name: [Verrechnung]))`."
         } else { "Add the payment means of the invoice: " + _means-hint + "." },
       ))
     }
