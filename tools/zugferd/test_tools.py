@@ -539,6 +539,113 @@ class Headers(unittest.TestCase):
         for case in cases:
             self.assertTrue(case["finding"], case["id"])
 
+    def test_expected_warnings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "case.typ"
+            file.write_text("// expect: AGREE_VALID\n// warns: BR-DE-TMP-32\n// warns: IP-UNIT-01\n\n#x\n",
+                            encoding="utf-8")
+            header = run.parse_header(file)
+        self.assertEqual((header["expect_rules"], header["expect_warnings"]), ([], ["BR-DE-TMP-32", "IP-UNIT-01"]))
+        self.assertEqual(run.expectation_met(header, "AGREE_VALID", [], ["IP-UNIT-01"]),
+                         (True, ["warning:BR-DE-TMP-32"]))
+        self.assertEqual(run.expectation_met(header, "AGREE_VALID", [], ["BR-DE-TMP-32", "IP-UNIT-01"]), (True, []))
+        # An error is no warning.
+        res = {"diagnostics": [{"level": "error", "rule": "BR-DE-TMP-32"}, {"level": "warning", "rule": "IP-UNIT-01"}]}
+        self.assertEqual(run.warning_rules(res), ["IP-UNIT-01"])
+
+    def test_parity_fixtures(self):
+        cases = run.load_cases([run.RULES])
+        self.assertTrue(cases)
+        for case in cases:
+            self.assertTrue(case["id"].startswith("rule-"), case["id"])
+            self.assertEqual(case["population"], "rules")
+        # Only a run of every fixture can tell that each rule classified as
+        # `fixture` has one that passed.
+        self.assertTrue(run.rules_complete(cases))
+        self.assertFalse(run.rules_complete(cases[1:]))
+        # A fixture is no regression case, and the other way round.
+        self.assertFalse(run.regression_complete(cases))
+        self.assertTrue(run.rules_complete(run.load_cases([run.RULES, run.REGRESSION])))
+
+
+def fixture_case(name, *rules, warns=()):
+    return {"file": str(run.RULES / f"{name}.typ"), "expect_rules": list(rules), "expect_warnings": list(warns)}
+
+
+class RuleChecks(unittest.TestCase):
+    """The rule ids of every case (O-RULE) and the parity of the fixtures
+    (O-PARITY), against the rules of the validators of the profile."""
+
+    LEVELS = {
+        "xrechnung": {
+            "BR-DE-27": {"mustang": "error", "kosit": "warning"},
+            "BR-DE-TMP-32": {"kosit": "information"},
+            "BR-DE-16": {"mustang": "error", "kosit": "error"},
+            "BR-S-02": {"mustang": "error", "kosit": "error"},
+            "BR-AG-05": {"mustang": "error", "kosit": "error"},
+            "BR-02": {"mustang": "error", "kosit": "error"},
+        },
+        "basic-wl": {"BR-O-11": {"mustang": "error"}},
+    }
+
+    def parity(self, case, res, differences=None):
+        return run.fixture_parity(case, res, self.LEVELS, differences or {})
+
+    def test_both_validators_report_the_rule(self):
+        res = collected(mustang_report("BR-02"), kosit_report("BR-02"), ours=["BR-02"])
+        self.assertEqual(self.parity(fixture_case("BR-02", "BR-02"), res), [])
+        res = collected(mustang_report("BR-02"), kosit_report("BR-CO-26"), ours=["BR-02"])
+        self.assertEqual(self.parity(fixture_case("BR-02", "BR-02"), res),
+                         ["O-PARITY: KoSIT does not report BR-02 (error in its artefacts)"])
+        # The case runs without the validators: nobody reports the rule.
+        res = collected(ours=["BR-02"])
+        self.assertEqual(self.parity(fixture_case("BR-02", "BR-02"), res), ["O-PARITY: no official validator reports BR-02"])
+
+    def test_at_the_level_of_each_validator(self):
+        # KoSIT warns about BR-DE-27, Mustang reports an error.
+        res = collected(mustang_report("BR-DE-27"), kosit_report(warnings=["BR-DE-27"]), ours=["BR-DE-27"])
+        self.assertEqual(self.parity(fixture_case("BR-DE-27", "BR-DE-27"), res), [])
+        # A warning expected of invoice-pro, which KoSIT reports as information.
+        res = collected(mustang_report(), kosit_report(information=["BR-DE-TMP-32"]))
+        self.assertEqual(self.parity(fixture_case("BR-DE-TMP-32", warns=["BR-DE-TMP-32"]), res), [])
+        res = collected(mustang_report(), kosit_report())
+        self.assertEqual(self.parity(fixture_case("BR-DE-TMP-32", warns=["BR-DE-TMP-32"]), res),
+                         ["O-PARITY: KoSIT does not report BR-DE-TMP-32 (information in its artefacts)"])
+
+    def test_documented_differences_and_schema_errors(self):
+        res = collected(mustang_report("BR-AG-05"), kosit_report(), ours=["BR-AG-05"])
+        self.assertEqual(len(self.parity(fixture_case("BR-AG-05", "BR-AG-05"), res)), 1)
+        differences = {"BR-AG-05": {"rejected-by": ["mustang"], "other": ["nothing"], "reason": "r"}}
+        self.assertEqual(self.parity(fixture_case("BR-AG-05", "BR-AG-05"), res, differences), [])
+        # KoSIT runs no Schematron on a document that fails its schema.
+        kosit = dict(kosit_report("XSD"), schematron=False)
+        res = collected(mustang_report("BR-02", "XSD"), kosit, ours=["BR-02"])
+        self.assertEqual(self.parity(fixture_case("BR-02", "BR-02"), res), [])
+
+    def test_related_rules_and_counterparts(self):
+        # BR-DE-16 is reported as BR-S-02: both must come from the validators.
+        res = collected(mustang_report("BR-DE-16", "BR-S-02"), kosit_report("BR-DE-16", "BR-S-02"), ours=["BR-S-02"])
+        self.assertEqual(self.parity(fixture_case("BR-DE-16", "BR-S-02"), res), [])
+        res = collected(mustang_report("BR-DE-16"), kosit_report("BR-DE-16"), ours=["BR-S-02"])
+        self.assertEqual(len(self.parity(fixture_case("BR-DE-16", "BR-S-02"), res)), 2)
+        # invoice-pro's own rules have no official counterpart to compare.
+        res = collected(mustang_report("BR-02"), kosit_report("BR-02"), ours=["BR-02", "IP-PAY-03"])
+        self.assertEqual(self.parity(fixture_case("BR-02", "BR-02", "IP-PAY-03"), res), [])
+        # A passing counterpart has nothing to compare, a rule of another
+        # profile fails.
+        self.assertEqual(self.parity(fixture_case("BR-02--pass"), collected(mustang_report(), kosit_report())), [])
+        res = collected(mustang_report("BR-O-11"), ours=["BR-O-11"])
+        self.assertEqual(self.parity(fixture_case("BR-O-11", "BR-O-11"), res),
+                         ["O-PARITY: no official validator of the xrechnung profile has BR-O-11"])
+
+    def test_foreign_rules(self):
+        res = collected(mustang_report("BR-O-03"), ours=["BR-O-02", "IP-VAT-226"])
+        res["profile"] = "basic-wl"
+        self.assertEqual(run.foreign_rule_problems(res, self.LEVELS),
+                         ["O-RULE: invoice-pro reports BR-O-02, which no official validator of the basic-wl profile has"])
+        res["profile"] = "minimum"  # no inventory of the profile: no check
+        self.assertEqual(run.foreign_rule_problems(res, self.LEVELS), [])
+
 
 # A trimmed CII document (not schema-complete): what the oracles read.
 CII = """<?xml version="1.0" encoding="UTF-8"?>
