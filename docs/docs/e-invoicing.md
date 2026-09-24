@@ -751,7 +751,7 @@ A Factur-X / ZUGFeRD PDF announces its XML in the XMP metadata of the PDF, with 
 - The embedded `factur-x.xml` is complete and valid for its profile. Most receiving systems only extract and process this XML.
 - Validators that check the PDF itself reject it. The Mustang validator, for example, reports `XMP Metadata: ConformanceLevel not found` together with the missing `DocumentType`, `DocumentFileName` and `Version`, and rates the PDF (not the XML) as invalid.
 
-`invoice-pro` will write the metadata as soon as Typst supports custom XMP metadata.
+`invoice-pro` will write the metadata as soon as Typst supports custom XMP metadata ([typst/typst#5667](https://github.com/typst/typst/issues/5667)). It is prepared already: `src/zugferd/xmp.typ` builds the Factur-X metadata of every profile (the document type `INVOICE`, the name of the attached XML, the version `1.0` and the conformance level `MINIMUM`, `BASIC WL`, `BASIC`, `EN 16931` or `XRECHNUNG`) together with the PDF/A description of its extension schema, and a test compares it with the metadata that Mustang writes (see below). Until Typst can write it, the package does not load this module, so it costs no compile time.
 
 :::info Optional post-processing, outside the package
 You do not need any of this to create an invoice, and `invoice-pro` does not run external tools. If a recipient requires a PDF that passes the Factur-X PDF check, you can add the metadata afterwards with the [Mustang](https://www.mustangproject.org/) command line tool, which needs Java: download `Mustang-CLI-2.14.0.jar` from the [Mustang releases](https://github.com/ZUGFeRD/mustangproject/releases) and run it with `java -jar`. The steps below were tested with Mustang CLI 2.14.0.
