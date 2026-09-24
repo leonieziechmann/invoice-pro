@@ -41,7 +41,7 @@ DOCUMENTS=(
 )
 
 toml_value() {
-  sed -nE "s/^$1[[:space:]]*=[[:space:]]*\"([^\"]*)\".*/\1/p" typst.toml | head -n 1
+  sed -nE "s/^$1[[:space:]]*=[[:space:]]*\"([^\"]*)\".*/\1/p" typst.toml | sed -n '1p'
 }
 name="$(toml_value name)"
 version="$(toml_value version)"
@@ -172,7 +172,9 @@ src_files="$(find "$bundle/src" -type f | wc -l | tr -d ' ')"
 echo ""
 echo "Bundle: $bundle_files files, $(kib "$bundle_bytes"); src/: $src_files files, $(kib "$src_bytes")"
 echo "Largest source files:"
-(cd "$bundle" && find src -type f -exec wc -c {} + | grep -v '[[:space:]]total$' | sort -rn | head -n 10) |
+# `sed -n` reads all its input: `head` would stop early, and `sort` could die
+# of SIGPIPE, which `set -o pipefail` turns into a failure of the script.
+(cd "$bundle" && find src -type f -exec wc -c {} + | grep -v '[[:space:]]total$' | sort -rn | sed -n '1,10p') |
   while read -r bytes file; do
     printf '  %10s  %s\n' "$(kib "$bytes")" "$file"
   done
