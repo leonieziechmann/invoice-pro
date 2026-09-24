@@ -50,7 +50,9 @@
 // value, k: value -> (maximum, rule)). Further checks: `e` the rule that
 // forbids an empty element, `v` minimum numbers of variants, `g` counts over
 // paths, `y` children of which one is required, `x` children that exclude
-// each other, `r` the currency cross references of the VAT total.
+// each other, `r` the currency cross references of the VAT total. Besides
+// its `nodes`, the module of a profile has `empty`, the rule that forbids an
+// empty leaf (XRechnung), or none.
 //
 // Performance (concept 6.4, budget 0.5 ms per invoice line): Typst memoizes
 // every call of a closure and spends about a microsecond on a call of a

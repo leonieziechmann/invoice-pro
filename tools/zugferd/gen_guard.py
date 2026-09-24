@@ -25,10 +25,12 @@ Schematrons as errors too. The reports of the Factur-X Schematron mark
 elements and attributes as not used in a profile; Mustang ignores them, the
 guard does not, since they define the profile.
 
-Output (Typst data, shipped with the package, see `emit_profile`):
+Output (Typst data, shipped with the package, see `emit_profile`; the
+serializer src/zugferd/guard/write.typ reads it and describes the format):
 
   src/zugferd/guard/lists.typ      the code lists
-  src/zugferd/guard/<profile>.typ  the nodes of each profile
+  src/zugferd/guard/<profile>.typ  the nodes of each profile, and the rule
+                                   that forbids an empty leaf
 
 A node describes an element at a position. Positions with the same type and
 the same constraints share a node, so a complex type is written once unless
