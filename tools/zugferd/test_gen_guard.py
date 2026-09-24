@@ -102,6 +102,37 @@ def position(compiler, path):
 
 DOC = "/rsm:CrossIndustryInvoice/rsm:ExchangedDocument"
 
+# A document with tax elements, for the rules of the VAT categories.
+TAX_DOCUMENT = (
+    '<xs:complexType name="ExchangedDocumentType"><xs:sequence>'
+    '<xs:element name="ID" type="xs:token"/>'
+    '<xs:element name="ApplicableTradeTax" type="ram:TradeTaxType" minOccurs="0" maxOccurs="unbounded"/>'
+    "</xs:sequence></xs:complexType>"
+    '<xs:complexType name="TradeTaxType"><xs:sequence>'
+    '<xs:element name="CalculatedAmount" type="xs:decimal" minOccurs="0"/>'
+    '<xs:element name="TypeCode" type="xs:token"/>'
+    '<xs:element name="ExemptionReason" type="xs:string" minOccurs="0"/>'
+    '<xs:element name="BasisAmount" type="xs:decimal" minOccurs="0"/>'
+    '<xs:element name="CategoryCode" type="xs:token"/>'
+    '<xs:element name="ExemptionReasonCode" type="xs:token" minOccurs="0"/>'
+    '<xs:element name="RateApplicablePercent" type="xs:decimal" minOccurs="0"/>'
+    "</xs:sequence></xs:complexType>"
+)
+TAX = DOC + "/ram:ApplicableTradeTax"
+TAX_RULES = [
+    rule(TAX + "[ram:CategoryCode = 'S']", "ram:RateApplicablePercent > 0", rid="BR-S-05"),
+    rule(TAX + "[ram:CategoryCode = 'O']", "not(ram:RateApplicablePercent)", rid="BR-O-05"),
+    rule(TAX + "/ram:CategoryCode[. = 'E']", "(../ram:ExemptionReason) or (../ram:ExemptionReasonCode)",
+         rid="BR-E-10"),
+    rule(TAX + "/ram:CategoryCode[. = 'E']", "../ram:CalculatedAmount = 0", rid="BR-E-09"),
+    # For VAT only: exact, as the tax type must be "VAT".
+    rule(TAX + "[ram:CategoryCode = 'Z'][upper-case(ram:TypeCode) = 'VAT']", "ram:RateApplicablePercent = 0",
+         rid="BR-Z-05"),
+    rule(TAX + "/ram:TypeCode", "contains(' VAT ', concat(' ', normalize-space(.), ' '))", rid="BR-T-CL"),
+    # A sum of a category is a business rule.
+    rule(TAX + "[ram:CategoryCode = 'S']", "ram:BasisAmount = 100", rid="BR-S-08"),
+]
+
 
 class SchemaSubset(unittest.TestCase):
     """The generator understands a small subset of XML Schema and fails on
@@ -218,6 +249,47 @@ class RuleCompiler(unittest.TestCase):
                 source="FX",
                 variables={"codeValue1": "."},
             )])
+
+    def test_rules_of_the_vat_categories(self):
+        """A rule on the rate, VAT amount or exemption reason of a tax
+        element of a VAT category joins the table of that category; other
+        rules of a category are business rules."""
+        c = compiled(TAX_RULES, schema(TAX_DOCUMENT))
+        tax = position(c, TAX)
+        self.assertEqual(tax.categories, {
+            "S": [("r", 1, "BR-S-05")],
+            "O": [("r", None, "BR-O-05")],
+            "E": [("e", True, "BR-E-10"), ("a", 0, "BR-E-09")],
+            "Z": [("r", 0, "BR-Z-05")],
+        })
+        self.assertEqual(g.category_table(tax), (
+            ("E", (("a", 0, "BR-E-09"), ("e", True, "BR-E-10"))),
+            ("O", (("r", None, "BR-O-05"),)),
+            ("S", (("r", 1, "BR-S-05"),)),
+            ("Z", (("r", 0, "BR-Z-05"),)),
+        ))
+        self.assertEqual(
+            [d for r, d, _ in c.dispositions if r.id != "BR-T-CL"],
+            ["compiled"] * 5 + ["business"],
+        )
+
+    def test_rules_of_the_vat_categories_that_fail(self):
+        tax_schema = schema(TAX_DOCUMENT)
+        # A test from the tax element that names its parent's children.
+        with self.assertRaises(g.GenError):
+            compiled([rule(TAX + "[ram:CategoryCode = 'S']", "../ram:RateApplicablePercent > 0")], tax_schema)
+        # A rule for VAT only where the tax type may be another.
+        with self.assertRaises(g.GenError) as caught:
+            compiled([rule(TAX + "[ram:CategoryCode = 'Z'][upper-case(ram:TypeCode) = 'VAT']",
+                           "ram:RateApplicablePercent = 0")], tax_schema)
+        self.assertIn("whose tax type may be another", str(caught.exception))
+        # Two validators that want different rates of one category.
+        c = compiled([
+            rule(TAX + "[ram:CategoryCode = 'M']", "ram:RateApplicablePercent > 0", rid="BR-AG-05"),
+            rule(TAX + "[ram:CategoryCode = 'M']", "ram:RateApplicablePercent = 0", rid="FX-T-9", source="FX"),
+        ], tax_schema)
+        with self.assertRaises(g.GenError):
+            g.category_table(position(c, TAX))
 
     def test_rules_of_no_position(self):
         c = compiled([rule(DOC + "/ram:Name/ram:Other", "ram:ID", rid="BR-T-8")])

@@ -17,8 +17,10 @@
 //   number (maxOccurs and the Schematron's counts); every required element
 //   is there, and only the attributes the schema allows.
 // - G2, values: the lexical form of decimals, indicators and format 102
-//   dates (calendar dates), the maximum number of decimals (BR-DEC-*), and
-//   every code in the official code lists of its position.
+//   dates (calendar dates), the maximum number of decimals (BR-DEC-*),
+//   every code in the official code lists of its position, and on a tax
+//   element what its VAT category requires of its rate, VAT amount and
+//   exemption reason (e.g. BR-S-05, BR-E-10).
 //
 // The XML does not depend on the checks: the serializer writes the same
 // document whatever it finds and returns what it found as findings (see
@@ -51,8 +53,11 @@
 // value, k: value -> (maximum, rule)). Further checks: `e` the rule that
 // forbids an empty element, `v` minimum numbers of variants, `g` counts over
 // paths, `y` children of which one is required, `x` children that exclude
-// each other, `r` the currency cross references of the VAT total. Besides
-// its `nodes`, the module of a profile has `empty`, the rule that forbids an
+// each other, `r` the currency cross references of the VAT total, `t` the
+// tax elements among the children, each with the table of the rules of the
+// VAT categories where it is (lists.typ): per category code, (check, value,
+// rule) of the rate, the VAT amount and the exemption reason. Besides its
+// `nodes`, the module of a profile has `empty`, the rule that forbids an
 // empty leaf (XRechnung), or none.
 //
 // Performance (concept 6.4, budget 0.5 ms per invoice line): Typst memoizes
@@ -79,6 +84,8 @@
 #let _decimal = regex("^[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)$")
 // The same with at most two decimals as written (fast class "d2").
 #let _decimal2 = regex("^[+-]?(?:[0-9]+(?:\\.[0-9]{0,2})?|\\.[0-9]{1,2})$")
+// A decimal whose value is zero, in any of its lexical forms.
+#let _zero = regex("^[+-]?(?:0+(?:\\.0*)?|\\.0+)$")
 #let _booleans = ("true": true, "false": true, "1": true, "0": true)
 
 // The patterns only rare paths need, compiled on their first use (a call
@@ -508,8 +515,68 @@
   level
 }
 
+// The text of a leaf as written (see `_leaf`), or none when it is not
+// written.
+#let _leaf-text(value) = {
+  if not _present(value) { return none }
+  _text(if type(value) == dictionary { value.at("", default: none) } else {
+    value
+  })
+}
+
+// The check of a decimal against the value a rule of a VAT category wants:
+// 1 above 0, 0 zero (as XPath compares them: an absent element is neither).
+// A text that is no decimal passes here; its lexical check reports it.
+#let _compares(value, expected) = {
+  let text = _leaf-text(value)
+  if text == none { return false }
+  if text.match(_decimal) == none { return true }
+  let zero = text.match(_zero) != none
+  if expected == 0 { zero } else { not zero and not text.starts-with("-") }
+}
+
+// The rules of the VAT category of a tax element (`body`, the child `step`
+// of `tag`): the `checks` of its `category` (see lists.typ) on its rate
+// ("r"), its VAT amount ("a") and its exemption reason ("e"). Memoized on
+// the small tax element, so that lines of the same tax are checked once.
+#let _category-checks(tag, step, body, category, checks) = {
+  let found = ()
+  for (check, expected, rule) in checks {
+    let (element, ok) = if check == "e" {
+      let stated = (
+        _present(body.at("ram:ExemptionReason", default: none))
+          or _present(body.at("ram:ExemptionReasonCode", default: none))
+      )
+      ("ram:ExemptionReason", stated == expected)
+    } else {
+      let element = if check == "r" { "ram:RateApplicablePercent" } else {
+        "ram:CalculatedAmount"
+      }
+      let value = body.at(element, default: none)
+      (
+        element,
+        if expected == none { not _present(value) } else {
+          _compares(value, expected)
+        },
+      )
+    }
+    if not ok {
+      found.push(_finding(
+        "category",
+        rule,
+        (tag, step, element),
+        category: category,
+        check: check,
+        expected: expected,
+        value: _leaf-text(body.at(element, default: none)),
+      ))
+    }
+  }
+  found
+}
+
 // The further checks of a complex node (`z`) on the values of its tree:
-// `v`, `g` and `r` (`structure` in `write` does the others).
+// `v`, `g` and `r` (`structure` and `element` in `write` do the others).
 #let _further-checks(tag, body, z, variants) = {
   let found = ()
   for (key, value, low, rule) in z.at("v", default: ()) {
@@ -803,6 +870,29 @@
     let problems = structure(id, tag, body.keys(), skipped, counts)
     if problems != () { found += problems }
     let z = node.z
+    if z != none and "t" in z {
+      // The tax elements among the children, each by its VAT category.
+      for (child, table) in z.t {
+        let value = body.at(child, default: none)
+        let many = type(value) == array
+        let i = 0
+        for item in if many { value } else { (value,) } {
+          i += 1
+          if type(item) != dictionary { continue }
+          let code = item.at("ram:CategoryCode", default: none)
+          if type(code) != str {
+            code = _discriminator(item, ("ram:CategoryCode",))
+          }
+          let checks = if code == none { none } else {
+            table.at(code, default: none)
+          }
+          if checks == none { continue }
+          let step = if many { child + "[" + str(i) + "]" } else { child }
+          let f = _category-checks(tag, step, item, code, checks)
+          if f != () { found += f }
+        }
+      }
+    }
     if z != none and ("v" in z or "g" in z or "r" in z) {
       found += _further-checks(tag, body, z, variants)
     }

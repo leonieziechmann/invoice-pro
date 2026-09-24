@@ -35,6 +35,7 @@
   date: "IP-GUARD-08",
   code: "IP-GUARD-07",
   prefix: "IP-GUARD-07",
+  category: "IP-GUARD-07",
   name: "IP-GUARD-09",
   namespace: "IP-GUARD-09",
   root: "IP-GUARD-09",
@@ -268,6 +269,37 @@
         + _quoted(f.value)
         + ", which is no country prefix of the code list."
     )
+  } else if kind == "category" {
+    let subject = "The VAT category " + f.category
+    if f.check == "e" {
+      if f.expected {
+        (
+          subject
+            + " requires an exemption reason (ram:ExemptionReason or ram:ExemptionReasonCode)"
+            + where
+            + "."
+        )
+      } else {
+        subject + " has no exemption reason, but one is stated" + where + "."
+      }
+    } else {
+      let what = if f.check == "r" { "rate" } else { "VAT amount" }
+      (
+        subject
+          + if f.expected == none { " has no " + what } else if (
+            f.expected == 0
+          ) { " requires the " + what + " 0" } else {
+            " requires a " + what + " above 0"
+          }
+          + "; "
+          + element
+          + where
+          + if f.value == none { " is missing" } else {
+            " is " + _quoted(f.value)
+          }
+          + "."
+      )
+    }
   } else if kind == "xref-count" {
     (
       "The VAT total is stated "

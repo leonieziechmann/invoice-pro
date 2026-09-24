@@ -38,7 +38,10 @@ the Schematron treats its positions differently. A complex node lists its
 children in schema order with their cardinality and the rule that sets it; a
 leaf node its lexical kind, its attributes and the code lists of its text.
 The code list at a position is the intersection of the lists of every
-validator that applies there.
+validator that applies there. The rules of a VAT category on a tax element
+(its rate, VAT amount and exemption reason, e.g. BR-S-05, BR-E-10) are
+tables by category code in lists.typ, shared by the profiles, which the
+node of the tax element's parent names (see TAX_ELEMENTS).
 
 The Factur-X XSDs use a small subset of XML Schema, and the Schematron rules
 a small set of shapes. The script fails on anything outside of that subset
@@ -360,6 +363,20 @@ FAMILIES = {
     "ram:AdditionalReferencedDocument": ("ram:TypeCode",),
 }
 
+# The tax elements: the VAT breakdown and the tax of a line
+# (ram:ApplicableTradeTax) and of an allowance or charge
+# (ram:CategoryTradeTax). The Schematron states the rules of a VAT category
+# on the tax elements of that category, e.g. BR-S-05 on
+# `ram:ApplicableTradeTax[ram:CategoryCode = 'S']` or BR-E-10 on
+# `ram:ApplicableTradeTax/ram:CategoryCode[. = 'E']`. A rule that constrains
+# the tax element's own rate, VAT amount or exemption reason is compiled into
+# a table of its category (`category_check`), which the writer applies by
+# the category code the element states; the others (sums, the identifiers
+# of the parties, other elements) are business rules. The positions are not
+# split by category, which keeps the tables small.
+TAX_ELEMENTS = ("ram:ApplicableTradeTax", "ram:CategoryTradeTax")
+EXEMPTION_REASONS = ("ram:ExemptionReason", "ram:ExemptionReasonCode")
+
 
 @dataclasses.dataclass
 class Attr:
@@ -400,6 +417,8 @@ class Pos:
     exclusive: list = dataclasses.field(default_factory=list)  # (child tags, rule)
     no_empty: str = None  # rule forbidding this element empty
     xref: list = dataclasses.field(default_factory=list)  # complex: cross-reference checks
+    # tax element: VAT category -> [(check, value, rule)] (see `category_check`)
+    categories: dict = dataclasses.field(default_factory=dict)
     attrs: dict = dataclasses.field(default_factory=dict)  # leaf: name -> Attr
     lists: list = dataclasses.field(default_factory=list)  # leaf text: [CodeList]
     prefix: list = dataclasses.field(default_factory=list)  # leaf text: [CodeList] of its first 2 characters
@@ -703,10 +722,42 @@ def family_values(pred, pos):
     return None
 
 
+_SELF_EQ = re.compile(r"^\. ?= ?'(\w+)'$")
+_VAT_TYPE = re.compile(r"^upper-case\((\.\./)?ram:TypeCode\) ?= ?'VAT'$")
+
+
+def category_condition(pred, pos):
+    """The condition of a predicate on the VAT category of a tax element
+    (TAX_ELEMENTS): `[ram:CategoryCode = 'S']` on the element, or `[. = 'S']`
+    on its `ram:CategoryCode`, as a Dynamic "category" (tax element, codes);
+    `[upper-case(ram:TypeCode) = 'VAT']` (`../ram:TypeCode` on the category
+    code), the rule's restriction to VAT, as a Dynamic "vat" (tax element).
+    None for any other predicate."""
+    if pos.tag in TAX_ELEMENTS:
+        tax, own = pos, True
+    elif pos.tag == "ram:CategoryCode" and pos.parent is not None and pos.parent.tag in TAX_ELEMENTS:
+        tax, own = pos.parent, False
+    else:
+        return None
+    m = _VAT_TYPE.match(pred)
+    if m:
+        return Dynamic("vat", tax) if (m.group(1) is None) == own else None
+    if own:
+        cond = value_condition(pred)
+        if cond is not None and cond[0] == "ram:CategoryCode" and not cond[2]:
+            return Dynamic("category", (tax, cond[1]))
+        return None
+    m = _SELF_EQ.match(pred)
+    return Dynamic("category", (tax, frozenset({m.group(1)}))) if m else None
+
+
 def eval_predicate(pred, pos):
     """TRUE, FALSE or a Dynamic condition of a predicate at `pos`."""
     if "$isExtension" in pred:
         return FALSE  # rules of the XRechnung extension, never active here
+    category = category_condition(pred, pos)
+    if category is not None:
+        return category
     conj = split_top(pred, " and ")
     if len(conj) > 1 and all(_ANCESTOR_NOT.match(strip_parens(c)) for c in conj):
         tags = {p.tag for p in pos.ancestors()}
@@ -887,6 +938,43 @@ _T_INDICATOR = re.compile(
     r"normalize-space\(ram:ChargeIndicator/udt:Indicator/text\(\)\) = 'false'$"
 )
 _EMPTY_CONTEXT = re.compile(r"^//\*\[not\(name\(\) = '([\w:]+)'\) and not\(\*\) and not\(normalize-space\(\)\)\]$")
+# Tests of the rules of a VAT category, on the tax element or, with `../`,
+# from its category code (see `category_check`).
+_T_RATE = re.compile(r"^(\.\./)?ram:RateApplicablePercent ?(>|=) ?0$")
+_T_NO_RATE = re.compile(r"^not ?\((\.\./)?ram:RateApplicablePercent\)$")
+_T_ZERO_AMOUNT = re.compile(r"^(\.\./)?ram:CalculatedAmount ?= ?0$")
+_T_PRESENT = re.compile(r"^(\.\./)?(ram:\w+)$")
+_T_ABSENT = re.compile(r"^not ?\((\.\./)?(ram:\w+)\)$")
+
+
+def category_check(test):
+    """The check of a test of a VAT category rule, as (check, value,
+    children of the tax element, from its category code): the rate ("r",
+    value 1: above 0, 0: zero, None: absent), the VAT amount ("a", 0: zero)
+    or the exemption reason ("e", True: `ram:ExemptionReason` or
+    `ram:ExemptionReasonCode` is required, False: both are forbidden). None
+    for any other test.
+
+    As in XPath, a comparison with 0 needs the element: an absent rate is
+    neither above 0 nor zero."""
+    test = strip_parens(test)
+    m = _T_RATE.match(test)
+    if m:
+        return "r", 1 if m.group(2) == ">" else 0, m.group(1) is not None
+    m = _T_NO_RATE.match(test)
+    if m:
+        return "r", None, m.group(1) is not None
+    m = _T_ZERO_AMOUNT.match(test)
+    if m:
+        return "a", 0, m.group(1) is not None
+    for separator, pattern, value in ((" or ", _T_PRESENT, True), (" and ", _T_ABSENT, False)):
+        parts = [pattern.match(strip_parens(p)) for p in split_top(test, separator)]
+        if len(parts) != 2 or None in parts:
+            continue
+        relative = {m.group(1) is not None for m in parts}
+        if {m.group(2) for m in parts} == set(EXEMPTION_REASONS) and len(relative) == 1:
+            return "e", value, relative.pop()
+    return None
 
 # Defects of the official artefacts, with the reading the guard compiles.
 # The Schematron of BR-DEC-23 names `ram:SpecifiedTradeSettlement`, which
@@ -922,6 +1010,7 @@ class Compiler:
         self.dispositions = []  # (rule, disposition, detail)
         self.deferred = []  # path constraints resolved after the direct ones
         self.xref_lists = []  # (rule, currency element, list) of the VAT total
+        self.vat_types = []  # (rule, tax element) of the category rules for VAT only
         self.empty_leaf = None  # the rule that forbids empty leaves, if any
         self.variants = self._variant_values()
         self.root = unfold(schema, self.variants)
@@ -981,9 +1070,12 @@ class Compiler:
     def targets(self, pos, relpath):
         return [c for b, tag in self.resolve(pos, relpath) for c in b.child_positions(tag)]
 
-    def shadowed(self, rule, pos):
+    def shadowed(self, rule, pos, conds=()):
         """Whether a rule of higher priority in the same Schematron pattern
-        takes `pos`: "yes", "maybe" (only under a condition) or "no"."""
+        takes `pos`: "yes", "maybe" (only under a condition) or "no". `conds`
+        are the rule's own conditions at `pos`: a rule of another VAT
+        category of the same tax element never takes it."""
+        own = {id(d.data[0]): d.data[1] for _, _, d in conds if d.kind == "category"}
         outcome = "no"
         for priority, context in self.modes[(rule.source, rule.mode)]:
             if priority <= rule.priority or context == rule.context:
@@ -993,6 +1085,11 @@ class Compiler:
                 continue
             found = match_pattern(pattern, pos)
             if found is None:
+                continue
+            if any(
+                d.kind == "category" and id(d.data[0]) in own and not (d.data[1] & own[id(d.data[0])])
+                for _, _, d in found
+            ):
                 continue
             if not found:
                 return "yes"
@@ -1006,7 +1103,20 @@ class Compiler:
             self.compile_rule(r)
         self.resolve_deferred()
         self.check_xref_lists()
+        self.check_vat_types()
         return self
+
+    def check_vat_types(self):
+        """A rule of a VAT category that applies to VAT only
+        (`[upper-case(ram:TypeCode) = 'VAT']`) is compiled for every tax
+        element of the category. That is exact where the tax type is
+        required and its code list is "VAT" alone: an element of another
+        type fails that list."""
+        for r, tax in self.vat_types:
+            leaves = tax.child_positions("ram:TypeCode")
+            ref = combine_lists(leaves[0].lists) if len(leaves) == 1 else None
+            if ref is None or ref.codes != frozenset({"VAT"}) or effective_min(tax, "ram:TypeCode") < 1:
+                raise GenError(f"a rule for VAT at {tax.path()}, whose tax type may be another: {r.label()}")
 
     def check_xref_lists(self):
         """The list of the VAT total's currency where it equals a currency
@@ -1052,12 +1162,15 @@ class Compiler:
             if "business" in kinds:
                 business = next(d.data for _, _, d in found if d.kind == "business")
                 continue
+            if "vat" in kinds and "category" not in kinds:
+                business = "on the tax type"
+                continue
             if r.source in ("CEN", "XR"):
                 # Within a Schematron pattern, only the rule of the highest
                 # priority whose context matches fires on an element. When
                 # that rule only matches under a condition on values, this
                 # rule is applied anyway: stricter, and what the rule says.
-                state = self.shadowed(r, pos)
+                state = self.shadowed(r, pos, found)
                 if state == "yes":
                     shadowed = pos
                     continue
@@ -1070,14 +1183,59 @@ class Compiler:
             if shadowed is not None:
                 return self.record(r, "shadowed", "a rule of higher priority takes every position")
             return self.record(r, "unmatched", "no position of the profile")
-        applied = self.apply_test(r, test, matched)
-        if applied is None:
-            applied = self.apply_presence(r, test, matched)
+        if any(d.kind == "category" for _, conds in matched for _, _, d in conds):
+            applied = self.apply_category(r, test, matched)
+            if applied is None:
+                return self.record(r, "business", "a rule of a VAT category on sums or other elements")
+        else:
+            applied = self.apply_test(r, test, matched)
+            if applied is None:
+                applied = self.apply_presence(r, test, matched)
         if applied is None:
             return self.record(r, "business", "test")
         for pos in maybe:
             self.record(r, "conservative", f"{pos.path()}: a rule of higher priority may take it")
         return self.record(r, "compiled", applied)
+
+    def apply_category(self, r, test, matched):
+        """A rule of a VAT category (see TAX_ELEMENTS): its check joins the
+        table of the category at every matched tax element. None when the
+        test is no check of the element's own rate, VAT amount or exemption
+        reason (a business rule)."""
+        check = category_check(test)
+        if check is None:
+            return None
+        kind, value, relative = check
+        targets = {"r": ("ram:RateApplicablePercent",), "a": ("ram:CalculatedAmount",), "e": EXEMPTION_REASONS}[kind]
+        plans = []
+        for pos, conds in matched:
+            categories = [d for _, _, d in conds if d.kind == "category"]
+            others = [d for _, _, d in conds if d.kind not in ("category", "vat")]
+            if len(categories) != 1 or others:
+                raise GenError(f"unsupported conditions {conds} of a rule of a VAT category: {r.label()}")
+            tax, codes = categories[0].data
+            if any(d.data is not tax for _, _, d in conds if d.kind == "vat"):
+                raise GenError(f"a restriction to VAT of another element: {r.label()}")
+            # From the category code, the test names the tax element's
+            # children with `../`; from the tax element, without.
+            if relative != (pos is not tax):
+                raise GenError(f"a rule of a VAT category on other elements than its tax element's: {r.label()}")
+            tags = {p.tag for p in tax.type.children}
+            if not set(targets) <= tags:
+                raise GenError(f"{tax.path()} has no {', '.join(targets)}: {r.label()}")
+            if any(d.kind == "vat" for _, _, d in conds):
+                self.vat_types.append((r, tax))
+            plans.append((tax, codes))
+        for tax, codes in plans:
+            for code in sorted(codes):
+                entry = (kind, value, r.ref)
+                if entry not in tax.categories.setdefault(code, []):
+                    tax.categories[code].append(entry)
+        what = {
+            ("r", 1): "a rate above 0", ("r", 0): "the rate 0", ("r", None): "no rate",
+            ("a", 0): "the VAT amount 0", ("e", True): "an exemption reason", ("e", False): "no exemption reason",
+        }[(kind, value)]
+        return f"VAT category {', '.join(sorted(set().union(*(c for _, c in plans))))}: {what}"
 
     def apply_test(self, r, test, matched):
         """Compiles the test at every matched position; None for a test that
@@ -1760,6 +1918,27 @@ def best_rule(rules):
     return min(rules, key=rule_rank) if rules else None
 
 
+def category_table(pos):
+    """The VAT category rules of a tax element as ((category, ((check,
+    value, rule), ...)), ...), sorted: one value per check, and of the rules
+    that state it, the one a diagnostic names. Two validators that want
+    different values of one check fail: no element of the category could be
+    valid."""
+    table = []
+    for code in sorted(pos.categories):
+        by_check = collections.defaultdict(dict)
+        for check, value, rule in pos.categories[code]:
+            by_check[check].setdefault(value, []).append(rule)
+        entries = []
+        for check in sorted(by_check):
+            if len(by_check[check]) != 1:
+                raise GenError(f"contradicting rules of the VAT category {code} at {pos.path()}: {dict(by_check)}")
+            [(value, rules)] = by_check[check].items()
+            entries.append((check, value, best_rule(rules)))
+        table.append((code, tuple(entries)))
+    return tuple(table)
+
+
 @dataclasses.dataclass(frozen=True)
 class ListRef:
     """A code list at a position: the intersection of every list that
@@ -1841,6 +2020,10 @@ class Nodes:
 
     def complex_key(self, pos):
         children = []
+        # The VAT category rules of tax elements among the children: they
+        # belong to the parent's node, so that the node of the tax element
+        # itself stays one for all of its positions.
+        categories = []
         for i, particle in enumerate(pos.type.children):
             instances = [c for c in pos.children if c.index == i]
             tag = particle.tag
@@ -1877,11 +2060,17 @@ class Nodes:
             else:
                 target = self.dispatch(pos, tag, instances, targets)
             children.append((tag, i, low, high, target, low_rule, high_rule))
+            with_rules = [c for c, t in zip(instances, targets) if c.categories and t[0] != "F"]
+            if with_rules and high != 0:
+                if len(instances) != 1:
+                    raise GenError(f"VAT category rules of a variant of {tag} at {pos.path()}")
+                categories.append((tag, category_table(with_rules[0])))
         extras = (
             tuple(sorted(set(pos.aggregates))),
             tuple(sorted({(tags, best_rule([r for t, r in pos.anyof if t == tags])) for tags, _ in pos.anyof})),
             tuple(sorted({(tags, best_rule([r for t, r in pos.exclusive if t == tags])) for tags, _ in pos.exclusive})),
             tuple(sorted(pos.xref)),
+            tuple(categories),
         )
         required = any(c[2] > 0 for c in children)
         empty = None if required else pos.no_empty or "ok"
@@ -1974,9 +2163,8 @@ class Nodes:
 
 # ================================================================ Typst output
 
-HEADER = """// Generated by tools/zugferd/gen_guard.py from the artefacts of the Mustang
-// CLI jar 2.14.0; do not edit. Regenerate with `python3
-// tools/zugferd/gen_guard.py` (scripts/zugferd-corpus checks for drift).
+HEADER = """// Generated by tools/zugferd/gen_guard.py from the Mustang CLI jar 2.14.0;
+// do not edit, rerun it (scripts/zugferd-corpus checks for drift).
 """
 
 # Names of the code lists, by the element (or `element@attribute`) they are
@@ -2089,11 +2277,25 @@ def count_text(n, noun):
     return f"{n} {noun}" + ("" if n == 1 else "s")
 
 
+# Names of the tables of VAT category rules, by where they apply: (parent,
+# its variant, tax element). A table elsewhere fails the generator.
+VAT_TABLE_NAMES = {
+    ("ram:SpecifiedLineTradeSettlement", None, "ram:ApplicableTradeTax"): "vat-line",
+    ("ram:ApplicableHeaderTradeSettlement", None, "ram:ApplicableTradeTax"): "vat-breakdown",
+    ("ram:SpecifiedTradeAllowanceCharge", "false", "ram:CategoryTradeTax"): "vat-allowance",
+    ("ram:SpecifiedTradeAllowanceCharge", "true", "ram:CategoryTradeTax"): "vat-charge",
+}
+
+
 class ListNames:
     """Readable, stable names of the distinct code sets of all profiles:
-    the name of what they list, numbered by size when several differ."""
+    the name of what they list, numbered by size when several differ; and
+    of the distinct tables of VAT category rules (`vat`), by where they
+    apply."""
 
     def __init__(self, all_nodes):
+        all_nodes = list(all_nodes)
+        self.vat = self._vat_names(all_nodes)
         by_base = collections.defaultdict(list)
         for nodes in all_nodes:
             for key in nodes.order:
@@ -2120,6 +2322,27 @@ class ListNames:
                     continue  # the same codes under two names: keep the first
                 self.names[codes] = base if i == 0 else f"{base}-{i + 1}"
                 self.base[codes] = sorted(sets, key=lambda s: (-len(s), sorted(s)))[0]
+
+    @staticmethod
+    def _vat_names(all_nodes):
+        found = collections.defaultdict(list)
+        for nodes in all_nodes:
+            for key in nodes.order:
+                if key[0] != "C":
+                    continue
+                for tag, table in key[7]:
+                    bases = {VAT_TABLE_NAMES.get((p.tag, p.variant, tag)) for p in nodes.positions[key]}
+                    if len(bases) != 1 or None in bases:
+                        raise GenError(f"no name for the VAT category rules of {tag} below "
+                                       f"{nodes.positions[key][0].path()}: add it to VAT_TABLE_NAMES")
+                    base = bases.pop()
+                    if table not in found[base]:
+                        found[base].append(table)
+        names = {}
+        for base, tables in sorted(found.items()):
+            for i, table in enumerate(sorted(tables, key=repr)):
+                names[table] = base if i == 0 else f"{base}-{i + 1}"
+        return names
 
     def name(self, codes):
         return self.names[codes]
@@ -2184,6 +2407,23 @@ def emit_lists(names):
             out.append(f"// {count_text(len(codes), 'code')}.")
             out.append(wrap(f"#let {name} = _codes(", [typ_str(line) for line in chunks(sorted(codes))], ")", 0))
         out.append("")
+    if names.vat:
+        out += [
+            "// The rules of the VAT categories on the tax of a line (BG-30), a VAT",
+            "// breakdown (BG-23), an allowance and a charge: per category code, the",
+            '// checks (check, value, rule) of the rate ("r": 1 above 0, 0 zero, none',
+            '// absent), the VAT amount ("a": 0) and the exemption reason ("e": true',
+            "// required, false forbidden); see src/zugferd/guard/write.typ.",
+            "",
+        ]
+        for table, name in sorted(names.vat.items(), key=lambda kv: kv[1]):
+            entries = [
+                f"{typ_str(code)}: "
+                + typ_array([typ_array([typ_str(check), typ_value(value), typ_str(rule)]) for check, value, rule in checks])
+                for code, checks in table
+            ]
+            out.append(wrap(f"#let {name} = (", entries, ")", 0))
+            out.append("")
     out += [
         "/// The code lists by name.",
         wrap("#let lists = (", [f"{typ_str(name)}: {name}" for _, name in ordered], ")", 0),
@@ -2316,7 +2556,8 @@ def emit_node(key, nodes, names, imports):
     list, decimals, date); a complex node as a dictionary (n: number of
     required children, z: further checks, c: children), one child per line;
     the dispatch of a family element (see `emit_dispatch`). The code lists
-    the actions of the children name are added to `imports`."""
+    and tables of VAT category rules the node names are added to
+    `imports`."""
     if key[0] == "D":
         return emit_dispatch(key, nodes)
     if key[0] == "L":
@@ -2342,7 +2583,7 @@ def emit_node(key, nodes, names, imports):
         items.append(typ_value(date))
         return typ_array(items)
     _, children, empty = key[:3]
-    aggregates, anyof, exclusive, xref = key[3:]
+    aggregates, anyof, exclusive, xref, categories = key[3:]
     specs = []
     for tag, index, low, high, target, low_rule, high_rule in children:
         if high == 0:
@@ -2383,6 +2624,9 @@ def emit_node(key, nodes, names, imports):
             typ_array([typ_str(kind), typ_array([typ_str("ram:" + r) for r in refs]), typ_str(rule)])
             for kind, refs, rule in xref
         ]))
+    if categories:
+        imports.update(names.vat[table] for _, table in categories)
+        extras.append("t: " + typ_dict((tag, names.vat[table]) for tag, table in categories))
     fields.append("z: " + ("(" + ", ".join(extras) + ")" if extras else "none"))
     if not specs:
         return "(" + ", ".join(fields) + ", c: (:))"

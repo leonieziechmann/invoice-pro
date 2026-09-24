@@ -28,6 +28,12 @@
   tree
 }
 
+// The element at `path` of the tree.
+#let get(tree, path) = {
+  for step in path { tree = tree.at(step) }
+  tree
+}
+
 // The tree without the element at `path`.
 #let drop(tree, path) = {
   let (step, ..rest) = path
@@ -133,8 +139,7 @@
   assert.eq(check(model, put(tree, quantity + ("@unitCode",), "HOURS")), (
     ("code", "BR-CL-23", path(..quantity)),
   ))
-  // The split payment category of Italy (B) is no category of Factur-X;
-  // IPSI (M) at 0 % is valid for every validator.
+  // The split payment category of Italy (B) is no category of Factur-X.
   let tax = line(
     0,
     "ram:SpecifiedLineTradeSettlement",
@@ -144,12 +149,6 @@
   assert.eq(check(model, put(tree, category, "B")), (
     ("code", "FX-SCH-A-000179", path(..category)),
   ))
-  let ipsi = put(
-    put(tree, category, "M"),
-    tax + ("ram:RateApplicablePercent",),
-    "0.00",
-  )
-  assert.eq(check(model, ipsi), ())
   // The currency of the invoice; the VAT total is then stated in another
   // currency (Factur-X marks it as not used).
   let settlement = tx("ram:ApplicableHeaderTradeSettlement")
@@ -179,6 +178,119 @@
   )
   assert.eq(check(model, put(tree, category, "B")), ())
 })
+
+// --- 2b. G2: the rules of the VAT categories on their tax elements ---
+// The rate of a line, allowance or charge, and the VAT amount and exemption
+// reason of a VAT breakdown, as the category they state requires.
+#guard-test(zugferd: "en16931", model => {
+  let tree = build-tree(model)
+  let tax = line(
+    0,
+    "ram:SpecifiedLineTradeSettlement",
+    "ram:ApplicableTradeTax",
+  )
+  let category = tax + ("ram:CategoryCode",)
+  let rate = tax + ("ram:RateApplicablePercent",)
+  // IPSI (M) needs a rate above 0: `ram:RateApplicablePercent > 0` in the
+  // Schematrons of Factur-X (FX-SCH-A-000246) and EN 16931 (BR-AG-05) that
+  // the guard is compiled from, although the text of the rule reads "0
+  // (zero) or greater than zero".
+  let ipsi = put(put(tree, category, "M"), rate, "0.00")
+  assert.eq(check(model, ipsi), (("category", "BR-AG-05", path(..rate)),))
+  assert.eq(check(model, put(tree, category, "M")), ())
+  // Standard rated at 0 % or without a rate, zero rated at 19 %, and a line
+  // not subject to VAT with a rate.
+  assert.eq(check(model, put(tree, rate, "0")), (
+    ("category", "BR-S-05", path(..rate)),
+  ))
+  assert.eq(check(model, drop(tree, rate)), (
+    ("category", "BR-S-05", path(..rate)),
+  ))
+  assert.eq(check(model, put(tree, category, "Z")), (
+    ("category", "BR-Z-05", path(..rate)),
+  ))
+  assert.eq(check(model, put(tree, category, "O")), (
+    ("category", "BR-O-05", path(..rate)),
+  ))
+  assert.eq(check(model, drop(put(tree, category, "O"), rate)), ())
+
+  // The VAT breakdown: exempt (E) has no VAT and needs an exemption reason;
+  // standard rated (S) has none.
+  let breakdown = tx(
+    "ram:ApplicableHeaderTradeSettlement",
+    "ram:ApplicableTradeTax",
+    0,
+  )
+  let exempt = put(tree, breakdown + ("ram:CategoryCode",), "E")
+  assert.eq(check(model, exempt), (
+    ("category", "BR-E-09", path(..breakdown, "ram:CalculatedAmount")),
+    ("category", "BR-E-10", path(..breakdown, "ram:ExemptionReason")),
+  ))
+  let reasoned = (:)
+  for (key, value) in get(tree, breakdown) {
+    reasoned.insert(key, value)
+    if key == "ram:TypeCode" {
+      reasoned.insert("ram:ExemptionReason", "Exempt")
+    }
+  }
+  assert.eq(check(model, put(tree, breakdown, reasoned)), (
+    ("category", "BR-S-10", path(..breakdown, "ram:ExemptionReason")),
+  ))
+  let exempt = put(
+    put(put(tree, breakdown, reasoned), breakdown + ("ram:CategoryCode",), "E"),
+    breakdown + ("ram:CalculatedAmount",),
+    "0.00",
+  )
+  assert.eq(check(model, exempt), ())
+})
+
+// Document level allowances and charges state the rate of their category.
+#model-test(
+  model => {
+    let tree = build-tree(model)
+    let entries = tx(
+      "ram:ApplicableHeaderTradeSettlement",
+      "ram:SpecifiedTradeAllowanceCharge",
+    )
+    assert.eq(check(model, tree), ())
+    let rate(n) = (
+      entries + (n, "ram:CategoryTradeTax", "ram:RateApplicablePercent")
+    )
+    assert.eq(check(model, put(tree, rate(0), "0.00")), (
+      ("category", "BR-S-06", path(..rate(0))),
+    ))
+    assert.eq(check(model, put(tree, rate(1), "0.00")), (
+      ("category", "BR-S-07", path(..rate(1))),
+    ))
+  },
+  zugferd: "en16931",
+)[
+  #line-items[
+    #item([Consulting], price: 100, quantity: 2, unit: unit.hour)
+    #discount([Discount], amount: 10%)
+    #surcharge([Travel], amount: 30)
+  ]
+  #payment-goal(days: 14)
+  #bank
+]
+
+// BASIC WL without lines: its VAT breakdown is missing (BR-CO-18). The
+// builder writes none when there are no items.
+#model-test(
+  model => {
+    let tree = build-tree(model)
+    let breakdown = tx(
+      "ram:ApplicableHeaderTradeSettlement",
+      "ram:ApplicableTradeTax",
+    )
+    assert.eq(check(model, tree), (("min", "BR-CO-18", path(..breakdown)),))
+  },
+  zugferd: "basic-wl",
+)[
+  #line-items[]
+  #payment-goal(days: 14)
+  #bank
+]
 
 // --- 3. G2: lexical forms, decimals and dates ---
 #guard-test(zugferd: "en16931", model => {
