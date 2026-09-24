@@ -41,7 +41,7 @@
 "BT-17" = { name = "Tender or lot reference", disposition = "unsupported", reason = "no input for public procurement references" }
 "BT-18" = { name = "Invoiced object identifier", disposition = "unsupported", reason = "no input for invoiced objects (e.g. subscriptions, meters)" }
 "BT-19" = { name = "Buyer accounting reference", disposition = "unsupported", reason = "no input for the buyer's booking account" }
-"BT-20" = { name = "Payment terms", disposition = "input", input = "payment-goal (its text) or due-date (a text)" }
+"BT-20" = { name = "Payment terms", disposition = "input", input = "payment-goal (its text), due-date (a text) or paid (the printed sentence)" }
 # ---------------------------------------------------------------- BG-1 Invoice note
 "BG-1" = { name = "INVOICE NOTE", disposition = "unsupported", reason = "no input for notes of the e-invoice yet" }
 "BT-21" = { name = "Invoice note subject code", disposition = "unsupported", reason = "no input for notes of the e-invoice yet" }
@@ -137,24 +137,24 @@
 "BT-79" = { name = "Deliver to country subdivision", disposition = "input", input = "delivery-address.city (the state of a city dictionary or of a US city line)" }
 "BT-80" = { name = "Deliver to country code", disposition = "input", input = "delivery-address.country", note = "without one, the country of the recipient" }
 # ---------------------------------------------------------------- BG-16 Payment instructions
-"BG-16" = { name = "PAYMENT INSTRUCTIONS", disposition = "input", input = "bank-details" }
-"BT-81" = { name = "Payment means type code", disposition = "derived", source = "bank-details with an IBAN: 58 (SEPA credit transfer) for EUR invoices, 30 (credit transfer) otherwise" }
+"BG-16" = { name = "PAYMENT INSTRUCTIONS", disposition = "input", input = "bank-details, direct-debit, card-payment or paid" }
+"BT-81" = { name = "Payment means type code", disposition = "derived", source = "the payment means component: bank-details 58 (SEPA credit transfer) in euro, 30 otherwise; direct-debit 59 or 49; card-payment 54, 55 or 48; paid(method:) the code of its method, e.g. 10 for cash" }
 "BT-82" = { name = "Payment means text", disposition = "unsupported", reason = "the payment means code (BT-81) says it; no input for a text" }
 "BT-83" = { name = "Remittance information", disposition = "input", input = "bank-details(reference:, text:), payment-reference or invoice-nr" }
 # ---------------------------------------------------------------- BG-17 Credit transfer
 "BG-17" = { name = "CREDIT TRANSFER", disposition = "input", input = "bank-details" }
 "BT-84" = { name = "Payment account identifier", disposition = "input", input = "bank-details(iban:)" }
-"BT-85" = { name = "Payment account name", disposition = "unsupported", reason = "the account holder of `bank-details` (`name`) is printed, but not written into the e-invoice yet" }
+"BT-85" = { name = "Payment account name", disposition = "input", input = "bank-details(name:)", note = "only an explicit name: the default account holder, the payee or the seller, is named by BT-59 or BT-27" }
 "BT-86" = { name = "Payment service provider identifier", disposition = "input", input = "bank-details(bic:)" }
 # ---------------------------------------------------------------- BG-18 Payment card information
-"BG-18" = { name = "PAYMENT CARD INFORMATION", disposition = "unsupported", reason = "no input for card payments yet" }
-"BT-87" = { name = "Payment card primary account number", disposition = "unsupported", reason = "no input for card payments yet" }
-"BT-88" = { name = "Payment card holder name", disposition = "unsupported", reason = "no input for card payments yet" }
+"BG-18" = { name = "PAYMENT CARD INFORMATION", disposition = "input", input = "card-payment" }
+"BT-87" = { name = "Payment card primary account number", disposition = "input", input = "card-payment(last4:)" }
+"BT-88" = { name = "Payment card holder name", disposition = "input", input = "card-payment(holder:)" }
 # ---------------------------------------------------------------- BG-19 Direct debit
-"BG-19" = { name = "DIRECT DEBIT", disposition = "unsupported", reason = "no input for direct debits yet" }
-"BT-89" = { name = "Mandate reference identifier", disposition = "unsupported", reason = "no input for direct debits yet" }
-"BT-90" = { name = "Bank assigned creditor identifier", disposition = "unsupported", reason = "no input for direct debits yet" }
-"BT-91" = { name = "Debited account identifier", disposition = "unsupported", reason = "no input for direct debits yet" }
+"BG-19" = { name = "DIRECT DEBIT", disposition = "input", input = "direct-debit" }
+"BT-89" = { name = "Mandate reference identifier", disposition = "input", input = "direct-debit(mandate:)" }
+"BT-90" = { name = "Bank assigned creditor identifier", disposition = "input", input = "direct-debit(creditor-id:)" }
+"BT-91" = { name = "Debited account identifier", disposition = "input", input = "direct-debit(debtor-iban:)" }
 # ---------------------------------------------------------------- BG-20 Document level allowances
 "BG-20" = { name = "DOCUMENT LEVEL ALLOWANCES", disposition = "input", input = "discount (a document level modifier)", note = "one allowance per VAT category the discount applies to (BR-53)" }
 "BT-92" = { name = "Document level allowance amount", disposition = "derived", source = "the amount of a document level discount in each VAT category" }
@@ -182,7 +182,7 @@
 "BT-110" = { name = "Invoice total VAT amount", disposition = "derived", source = "the VAT amounts of the VAT breakdown (BG-23)" }
 "BT-111" = { name = "Invoice total VAT amount in accounting currency", disposition = "unsupported", reason = "no VAT accounting currency (BT-6)" }
 "BT-112" = { name = "Invoice total amount with VAT", disposition = "derived", source = "the printed gross total" }
-"BT-113" = { name = "Paid amount", disposition = "input", input = "prepayment" }
+"BT-113" = { name = "Paid amount", disposition = "input", input = "prepayment, or paid (the total)" }
 "BT-114" = { name = "Rounding amount", disposition = "unsupported", reason = "amounts are not rounded to a payable amount" }
 "BT-115" = { name = "Amount due for payment", disposition = "derived", source = "the gross total less the prepayments" }
 # ---------------------------------------------------------------- BG-23 VAT breakdown
