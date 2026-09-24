@@ -168,9 +168,15 @@
       )
       assert.eq(guard-code-rules(m), (), message: code + " in " + id)
     }
-    m.profile = resolve-profile("basic-wl", "FR")
-    assert.eq(rules(m) + rules(m, level: "warning"), (), message: code)
-    assert.eq(guard-code-rules(m), (), message: code + " in basic-wl")
+    for id in ("minimum", "basic-wl") {
+      m.profile = resolve-profile(id, "FR")
+      assert.eq(
+        rules(m) + rules(m, level: "warning"),
+        (),
+        message: code + " in " + id,
+      )
+      assert.eq(guard-code-rules(m), (), message: code + " in " + id)
+    }
     m.profile = resolve-profile("xrechnung", "DE")
     assert("BR-CL-04" in rules(m), message: code + " in xrechnung")
     assert.eq(
@@ -198,10 +204,13 @@
     message: diagnostic(m, "BR-CL-04").hint,
   )
   // The withdrawn Mauritanian ouguiya (MRO) is no code of Factur-X, whose
-  // validation rejects it in BASIC; KoSIT rejects it in EN 16931.
+  // validation rejects it in MINIMUM, BASIC WL and BASIC; KoSIT rejects it
+  // in EN 16931.
   m.currency = "MRO"
-  m.profile = resolve-profile("basic", "FR")
-  assert.eq(rules(m), ("FX-SCH-A-000040",))
+  for id in ("minimum", "basic-wl", "basic") {
+    m.profile = resolve-profile(id, "FR")
+    assert.eq(rules(m), ("FX-SCH-A-000040",), message: id)
+  }
   m.profile = resolve-profile("en16931", "FR")
   assert.eq(rules(m), ("BR-CL-04",))
 })[
