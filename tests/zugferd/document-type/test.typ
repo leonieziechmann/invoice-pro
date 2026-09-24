@@ -76,7 +76,7 @@
   assert.eq(kind(""), none)
   // The title of an invoice in each language of the package names an
   // invoice: `invoice` passes a default subject to the e-invoice only when
-  // the locale titles an invoice otherwise (`given-title` in
+  // the locale titles an invoice otherwise (`_title-to-check` in
   // src/invoice.typ).
   for (code, language) in dictionary(languages) {
     assert.eq(kind(language.document.invoice), "invoice", message: code)
