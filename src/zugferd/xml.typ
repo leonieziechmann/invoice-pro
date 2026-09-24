@@ -5,10 +5,14 @@
 #let _invalid-class = "\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x{FFFE}\\x{FFFF}"
 #let _invalid-chars = regex("[" + _invalid-class + "]")
 
-// Characters `xml-escape` has to change: the markup characters and the
-// characters of `_invalid-chars`, built from the same class so that the two
-// cannot drift apart. Most values contain none of them.
-#let _needs-escape = regex("[&<>\"'" + _invalid-class + "]")
+/// The characters `xml-escape` has to change, as the body of a character
+/// class of a regex: the markup characters and the characters of
+/// `_invalid-chars`, built from the same class so that the two cannot drift
+/// apart.
+#let escaped-class = "&<>\"'" + _invalid-class
+
+// Most values contain none of them.
+#let _needs-escape = regex("[" + escaped-class + "]")
 
 // Escape a value for safe embedding in XML text/attribute content.
 #let xml-escape(s) = {
@@ -69,67 +73,28 @@
   date.display("[year][month][day]")
 } else { none }
 
-// Serializes the element `tag` with the value `body`, see `dict-to-xml`.
-//
-// This runs once per element of the document, so it avoids everything that
-// costs per call: Typst memoizes every closure call and hashes its arguments,
-// which made the former `.pairs().map(..).filter(..)` chains, and the wrapper
-// dictionary built for each child, re-hash a subtree several times per level.
-// Plain `for` loops and one call per element keep the serializer linear in
-// the size of the document. The recursion follows the nesting of the elements
-// (about ten levels), so it stays far below Typst's call depth limit, and it
-// needs no `while` loop, which Typst stops after 10 000 iterations.
-#let _element(tag, body) = {
-  if body == none { return "" }
-  if type(body) == array {
-    let out = ""
-    for item in body { out += _element(tag, item) }
-    return out
-  }
-  if type(body) == dictionary {
-    let attrs = ""
-    let children = ""
-    for (key, value) in body {
-      if key.starts-with("@") {
-        if value != none {
-          attrs += " " + key.slice(1) + "=\"" + xml-escape(value) + "\""
-        }
-      } else if key == "" {
-        // The text of an element with attributes.
-        if type(value) == dictionary {
-          for (k, v) in value { children += _element(k, v) }
-        } else if value != none {
-          children += xml-escape(value)
-        }
-      } else {
-        children += _element(key, value)
-      }
-    }
-    // An identifier or code without its value would be invalid.
-    if "" in body and children.trim() == "" { return "" }
-    return if children == "" {
-      "<" + tag + attrs + " />"
-    } else {
-      "<" + tag + attrs + ">" + children + "</" + tag + ">"
-    }
-  }
-  let value = xml-escape(body)
-  if value.trim() == "" { return "" }
-  "<" + tag + ">" + value + "</" + tag + ">"
-}
 
-// Serialize a Typst dictionary/value to XML format.
-//
-// Keys starting with `@` become attributes and the key `""` holds the text of
-// an element with attributes. `none` values and elements without text are left
-// out, so optional data can be passed through unchecked; dictionaries without
-// any children are kept as empty elements (e.g. an empty
-// `ram:ApplicableHeaderTradeDelivery`, which the schema requires). An array
-// repeats its element once per item.
-#let dict-to-xml(data) = {
-  if data == none { return "" }
-  if type(data) != dictionary { return xml-escape(data) }
-  let out = ""
-  for (tag, body) in data { out += _element(tag, body) }
-  out
+/// Serializes the builder's element tree `data` (see build.typ) into the
+/// CrossIndustryInvoice XML and checks every element against the guard
+/// tables of `profile` in the same pass: the write guard (G1, G2; see
+/// guard/write.typ).
+///
+/// Keys starting with `@` become attributes and the key `""` holds the text
+/// of an element with attributes. `none` values and elements without text
+/// are left out, so optional data can be passed through unchecked;
+/// dictionaries without any children are kept as empty elements (e.g. an
+/// empty `ram:ApplicableHeaderTradeDelivery`, which the schema requires). An
+/// array repeats its element once per item.
+///
+/// Returns `(xml: str, findings: array)`: the XML, without the XML
+/// declaration, and every problem the guard found, as findings `(kind, rule,
+/// path, ..details)` (see guard/report.typ). The XML does not depend on the
+/// findings.
+///
+/// -> dictionary
+#let dict-to-xml(data, profile) = {
+  // Loaded on the first call, so that the modules of the e-invoice load
+  // without the guard.
+  import "guard/write.typ": write
+  write(data, profile)
 }
