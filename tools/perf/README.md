@@ -95,71 +95,46 @@ The count of the zf invoice minus that of the plain invoice is the work the e-in
 
 ## Budget table
 
-Measured on a shared virtual machine with 4 cores and typst 0.14.2, before (6125e79) and after the changes that cut the fixed costs of the e-invoice path (7a631be), on the `b` benchmark invoices. Times are medians of interleaved traced runs (11, 5 and 3 runs at 5, 50 and 300 lines). The totals are steadier than the single steps: in both checkouts, the time of a step jumps between runs of the same document, as one-time pauses (e.g. when Typst's memoization cache grows) land in whichever call is running. At 5 lines, one such pause of about 1 ms fell into a single call of `plain-text`; at 300 lines, `dict-to-xml` took between about 75 and 125 ms in runs of the same checkout. The medians of a step at 50 and 300 lines therefore differ by 10 ms and more between measurements; the instruction counts below are the reliable comparison.
+Measured on a shared virtual machine with 4 cores and typst 0.14.2, before (8d5b259) and after the second pass over the fixed costs of the e-invoice path, on the benchmark invoices of `gen_bench.py`.
 
-The e-invoice path by step, in ms (inclusive times of the functions `process-zugferd` calls):
+Instructions executed (millions, `measure.py --instructions`, see [above](#measuring-small-changes)); the e-invoice path is the compile with e-invoice minus the plain one:
 
-| Step                                   |     5 lines |    50 lines |     300 lines |
-| :------------------------------------- | ----------: | ----------: | ------------: |
-| Module import                          | 25.1 → 24.1 | 26.7 → 24.2 |   25.4 → 23.4 |
-| `build-model`                          |   6.7 → 4.9 |  17.1 → 8.5 |   84.4 → 36.7 |
-| `validate`                             |   1.7 → 2.1 |   5.5 → 3.5 |   14.0 → 12.5 |
-| `build-tree`                           |   1.3 → 1.1 |   6.7 → 5.0 |   45.4 → 26.1 |
-| `dict-to-xml` (serializer, G1 and G2)  |  13.4 → 8.0 | 30.1 → 19.5 |  110.2 → 94.1 |
-| of which loading the guard tables      |   2.5 → 0.8 |   2.6 → 0.8 |     2.6 → 0.8 |
-| G4 (Typst parses the XML)              |   0.2 → 0.3 |   1.3 → 1.3 |     6.6 → 6.5 |
-| `process-zugferd` in total             | 26.0 → 19.4 | 65.3 → 46.1 | 270.7 → 183.2 |
-| E-invoice path (import and processing) | 51.2 → 43.5 | 92.2 → 70.2 | 297.1 → 206.5 |
+| Invoice                      |         5 lines |         50 lines |        300 lines |
+| :--------------------------- | --------------: | ---------------: | ---------------: |
+| `b`: plain compile           |           1 134 |            3 176 |           14 520 |
+| `b`: e-invoice path          |   137.3 → 125.4 |    252.2 → 227.1 |    880.9 → 786.8 |
+| `r`: plain compile           |           1 296 |            3 600 |           16 361 |
+| `r`: e-invoice path          |   154.6 → 141.5 |    284.4 → 260.2 |  1 024.2 → 938.8 |
+| Change of the e-invoice path | −8.7 % / −8.5 % | −10.0 % / −8.5 % | −10.7 % / −8.3 % |
 
-`process-zugferd` takes about 3 ms more than its steps at 5 lines, mostly for hashing, at its first call, the closures it reaches (their syntax trees and captured values) for memoization: hashing the closures `validate` reaches takes 1.3 to 1.6 ms, those `build-model` reaches another 0.7 to 0.9 ms. `validate` was not changed and makes the same calls on an equal model; that each of them took somewhat longer at 5 lines is the timing effect of the memory layout described in [Measuring small changes](#measuring-small-changes).
+The plain compiles changed by −0.9 M (`b`) and −0.7 M (`r`) instructions at 5 lines, −9 M (`r`) at 300 lines, and less than 0.01 % otherwise.
 
-Loading the modules, in ms (5 lines; each module once per compile):
+What each change saved at 5 lines (`b-5`, e-invoice path, each against the commit before it):
 
-| Module                         | KiB | parse | prepare | eval | total | before |
-| :----------------------------- | --: | ----: | ------: | ---: | ----: | -----: |
-| `validate.typ`                 | 111 |   5.0 |     0.8 |  1.4 |   7.2 |    7.1 |
-| `model.typ`                    |  56 |   3.3 |     0.5 |  1.3 |   5.0 |    5.6 |
-| `guard/write.typ`              |  31 |   1.8 |     0.3 |  1.1 |   3.3 |    3.7 |
-| `codelists.typ`                |  16 |   0.2 |     0.0 |  2.7 |   2.9 |    3.0 |
-| `build.typ`                    |  23 |   1.2 |     0.2 |  0.3 |   1.7 |    1.7 |
-| `guard/lists.typ`              |  22 |   0.5 |     0.1 |  0.5 |   1.1 |    1.1 |
-| `zugferd.typ`                  | 5.5 |   0.3 |     0.0 |  0.3 |   0.6 |    0.7 |
-| `document.typ`                 | 7.9 |   0.3 |     0.1 |  0.2 |   0.6 |    0.5 |
-| `xml.typ`                      | 4.2 |   0.2 |     0.0 |  0.1 |   0.4 |    0.7 |
-| `profile.typ`                  | 6.1 |   0.2 |     0.0 |  0.1 |   0.3 |    0.3 |
-| `guard/xrechnung.typ` (before) |     |       |         |      |       |    2.4 |
-| `report.typ` (before)          |     |       |         |      |       |    0.3 |
+| Change                                                                                                      | Instructions |
+| :---------------------------------------------------------------------------------------------------------- | -----------: |
+| The serializer writes a valid document in one pass; its checked writer (`guard/rare.typ`) runs for others   |       −6.1 M |
+| `invoice` passes its subject to the e-invoice only when the subject can name another type of document       |       −0.5 M |
+| `plain-text` takes strings and simple content the short way and collapses whitespace without a pattern      |       −0.9 M |
+| The code lists are JSON (`guard/lists.json`)                                                                |       −3.7 M |
+| The warnings of a fallback of `zugferd: auto` and the diagnostics of a self-billed invoice load when needed |       −1.0 M |
 
-Before, the guard tables were Typst modules (`guard/xrechnung.typ`: 2.4 ms); they are JSON now, which the serializer reads in 0.8 ms. `report.typ` loads only when there is something to report. The rest of the import is mostly the size of the sources: parsing code costs 45 to 60 µs per KiB (long string literals far less), preparing 7 to 10 µs per KiB. `eval` of `codelists.typ` builds dictionaries of its code lists.
+Where the rest goes at 5 lines (`b-5`, 125 M instructions): loading the modules takes about 66 M. Parsing and preparing them costs about 530 instructions per byte of code and 90 per byte of comments; `guard/write.typ` (25 KiB) takes 9.9 M, of which 1.4 M compile its three patterns and 1.0 M read its comments. No benchmark invoice leaves more than about 2 KiB of the code of any module uncalled (`model.typ` 2.0, `rules/engine.typ` 1.9, `build.typ` 1.2 KiB), so splitting the large modules would save little: the import is the size of the code an e-invoice runs. `process-zugferd` takes about 60 M, of which about 13 M hash the closures it reaches at their first call (see rule 9 below): 10.4 M at the call of `process-zugferd` (4.1 M for what `build-model` reaches, 4.3 M for `run-rules`, 1.6 M for `build-tree`), 1.8 M at the first call of the serializer's `write` and about 1 M at that of its `element`, which captures the table of the profile.
 
-Instructions executed (millions, `--jobs 1`, see [above](#measuring-small-changes)):
+The perf gate (`scripts/perf-gate --runs 5`), run alternately on both commits:
 
-| Invoice                                 | 5 lines | 50 lines | 300 lines |
-| :-------------------------------------- | ------: | -------: | --------: |
-| Plain compile (the same before)         |   1 135 |    3 175 |    14 520 |
-| E-invoice path (zf minus plain), before |   196.6 |    326.6 |   1 030.6 |
-| E-invoice path (zf minus plain), after  |   162.7 |    278.8 |     922.1 |
-| Change                                  |   −17 % |    −15 % |     −11 % |
+| Gate metric (median of 4 runs of the gate each) | 5 lines         | 50 lines       | 300 lines        |
+| :---------------------------------------------- | :-------------- | :------------- | :--------------- |
+| Share of the plain compile                      | 16.1 % → 15.2 % | 8.8 % → 7.9 %  | 5.6 % → 5.0 %    |
+| E-invoice path                                  | 38.9 → 36.3 ms  | 68.6 → 60.3 ms | 213.2 → 183.2 ms |
+| Module import (budget 12 ms)                    | 18.9 → 17.2 ms  | 17.8 → 16.6 ms | 18.4 → 16.3 ms   |
+| Serializer per line (budget 0.5 ms)             | 1.84 → 1.65 ms  | 0.54 → 0.47 ms | 0.36 → 0.29 ms   |
 
-The serializer on its own, counted as the difference to a copy of the same checkout whose `dict-to-xml` returns a constant document (the difference also holds Typst's parse of the XML and its attachment, the same before and after), in millions of instructions:
+The single runs of the gate gave shares of 15.0 to 16.6 % (before) and 14.3 to 15.7 % (after) at 5 lines, where the plain compile took 230 to 265 ms; the gate stays yellow at 5 lines, for the share and the module import. An earlier gate run on the same commit measured 18.4 % (43.2 ms of 234.8 ms): the load of the shared machine moves the medians by several milliseconds, so compare checkouts in runs one after the other, as here.
 
-| Serializer (`dict-to-xml`) | 5 lines | 50 lines | 300 lines |
-| :------------------------- | ------: | -------: | --------: |
-| Before                     |    43.3 |    103.5 |     413.0 |
-| After                      |    27.2 |     86.6 |     415.9 |
+Loading the modules of the serializer, before and after (KiB): `guard/write.typ` 31.2 → 24.8 (its checked writer moved to `guard/rare.typ`, 6.3 → 25.5, which a valid invoice does not load), `guard/lists.typ` 21.5 → 2.0 plus `guard/lists.json` (23.1, which Typst reads natively: 2.1 M instead of 5.9 M instructions), `zugferd.typ` 5.5 → 3.7 (plus `rare.typ`, 2.5, loaded when needed).
 
-Its saving is a fixed 16 to 17 M instructions, about 4 ms: the guard tables load as JSON, and the elements that occur once, as in the header, need no memoized check of their structure. Its work per line grew by about 6 % (1.24 → 1.32 M instructions per line between 50 and 300 lines): 6125e79 checked the structure of an element with one memoized call, which the elements of every line after the first found in the cache, while the writer now does the bookkeeping for every child it writes. The two balance at about 300 lines; extrapolated to 1 000 lines, the serializer does about 4 % more work than before. The serializer time per line of the gate below falls because the fixed saving is spread over the lines, not because a line got cheaper.
-
-The perf gate (`scripts/perf-gate --runs 5`), run for both commits one after the other:
-
-| Gate metric                  | 5 lines         | 50 lines       | 300 lines        |
-| :--------------------------- | :-------------- | :------------- | :--------------- |
-| Share of the plain compile   | 23.9 % → 18.4 % | 11.8 % → 9.3 % | 7.7 % → 5.4 %    |
-| E-invoice path               | 56.6 → 45.4 ms  | 86.9 → 69.6 ms | 293.3 → 204.7 ms |
-| Module import (budget 12 ms) | 26.5 → 24.1 ms  | 26.1 → 24.8 ms | 26.6 → 24.6 ms   |
-| Serializer per line          | 2.48 → 1.81 ms  | 0.50 → 0.40 ms | 0.37 → 0.31 ms   |
-
-The gate is yellow before and after: the share at 5 lines is above its target of 15 % and the module import above its budget of 12 ms. Of the import, `validate.typ` and `codelists.typ` take about 10 ms; the other modules about 13 ms, mostly for their size.
+The first pass (6125e79 → 7a631be) cut the e-invoice path from 196.6 to 162.7 M instructions at 5 lines: the guard tables became JSON (0.8 ms to load instead of 2.4 ms), the elements that occur once no longer had a memoized check of their structure, and the modules of rare cases loaded only when needed.
 
 ## Keeping the e-invoice path cheap
 
@@ -168,12 +143,13 @@ These rules come from measurements of the e-invoice path. They apply to all code
 1. Compile regular expressions once at module level, never inside a function: `regex(..)` costs 0.05 to 0.4 ms per call.
 2. A function called per line gets the line (and small flags), never the whole model or `ctx`. Typst hashes the arguments of every closure call to memoize it; for a 300-line model that is about 70 µs per call.
 3. Use `for` loops instead of `.map(..)`, `.filter(..)` or `.find(..)` with a closure in code that runs per line or per element (a few µs per closure call, plus hashing).
-4. Look codes up in a dictionary (a hash lookup, about 500 instructions) or in a string of codes between spaces (`" " + code + " " in list`, about 6 000 instructions in a list of 2 000 codes), never in an array (about 60 000). A dictionary costs about 4 400 instructions per code to build when its module loads, a string literal only its parsing; code lists that every e-invoice loads are strings for that reason (`guard/lists.typ`).
+4. Look codes up in a dictionary (a hash lookup, about 500 instructions) or in a string of codes between spaces (`" " + code + " " in list`, about 6 000 instructions in a list of 2 000 codes), never in an array (about 60 000). A dictionary costs about 4 400 instructions per code to build when its module loads, a string little more than reading it; the code lists that every e-invoice loads are strings for that reason (`guard/lists.json`, whose lines of codes `guard/lists.typ` joins).
 5. Call `process-zugferd` once per compile, outside of `context` and outside of loom's measure pass.
 6. Bound every iterative walk per line: Typst stops a `while` loop after 10 000 iterations, which a loop over all elements of a large invoice reaches.
 7. Load the e-invoice modules only when `zugferd` is set.
 8. Count calls in code that runs per element or per line. A call of a function or method (e.g. `type(..)`, `.at(..)`) costs 4 000 to 5 500 instructions, as does a call of a closure whose result Typst has memoized; an operator, a field access or `in` costs about 500, a `let` in a loop body about 2 400, destructuring about 1 300 per name. Prefer operators and fields, and leave out bookkeeping that can be derived: the serializer tells that an element wrote no child from the index of the last child written, without a counter.
-9. At the first call of a closure in a compile, Typst hashes the closure with its syntax tree and everything it captures, closures included; the arguments, deeply, at every call. Large constant data (tables, lists) belongs in values a function captures or loads, not in its arguments; a call on small arguments (an index, a string) is cheap to memoize.
-10. Every module the e-invoice path loads costs its size (see the budget table), and the closures a call reaches cost hashing once. Code that only some invoices need goes into a module of its own, imported in the function that needs it (`import "rare.typ": other-child` in the function body): Typst parses the module only when the import runs (`guard/rare.typ`, `keys.typ`, `units.typ`, `report.typ`).
-11. Generated data that the code only reads is JSON, read with `json(..)`: Typst reads it several times faster than the same data as a module (the XRechnung guard table: 0.8 ms instead of 2.4 ms).
-12. Test the common case first, with one cheap check: most texts of an invoice are plain ASCII, which one regular expression tells, so that `plain-text` and its replacements run only for the others; most amounts are decimals already (`type(value) == decimal`), so they are not converted again.
+9. At the first call of a closure in a compile, Typst hashes the closure with its syntax tree and everything it captures, closures and modules included; the arguments, deeply, at every call. Large constant data (tables, lists) belongs in values a function captures or loads, not in its arguments; a call on small arguments (an index, a string) is cheap to memoize. A module a function refers to is hashed with the function: `invoice` referring to the module of the languages cost every compile 0.5 M instructions, so the helper that needs the languages imports the module in its body.
+10. Every module the e-invoice path loads costs its size (see the budget table), and the closures a call reaches cost hashing once. Code that only some invoices need goes into a module of its own, imported in the function that needs it (`import "rare.typ": skipped-warnings` in the function body): Typst parses the module only when the import runs (`rare.typ`, `guard/rare.typ`, `keys.typ`, `units.typ`, `report.typ`, the messages of the rules). The perf gate fails when a benchmark invoice loads one of them (`LAZY_MODULES` of `gate.py`).
+11. Generated data that the code only reads is JSON, read with `json(..)`: Typst reads it several times faster than the same data as a module (the XRechnung guard table: 0.8 ms instead of 2.4 ms; the code lists: 2.1 M instructions instead of 5.9 M).
+12. Test the common case first, with one cheap check: most texts of an invoice are plain ASCII, which one regular expression tells (`plain-ascii` of `utils/text.typ`), so that the replacements of `plain-text` run only for the others; most amounts are decimals already (`type(value) == decimal`), so they are not converted again.
+13. Write the common case in one pass that gives up at the first problem, and leave the reporting to a complete path that loads only then: the serializer writes a valid document without collecting findings and hands any other to its checked writer (`guard/rare.typ`), which writes the same XML and reports every finding. Both must agree on every input; the tests of the guard and criterion C0 of the mutation test compare them.
