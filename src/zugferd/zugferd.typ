@@ -4,7 +4,8 @@
 
 #import "model.typ": build-model
 #import "profile.typ": switch-profile
-#import "rules/engine.typ": run-rules
+#import "rules/engine.typ": diagnostics as rule-diagnostics, run-rules
+#import "rules/equivalence.typ": findings as equivalence-findings
 #import "build.typ": build-tree, xml-declaration
 #import "xml.typ": dict-to-xml
 // The code of the write guard loads with the other modules; the tables of a
@@ -12,6 +13,18 @@
 #import "guard/write.typ": malformed-kinds, root-tag
 
 #let _has-errors(diagnostics) = diagnostics.any(d => d.level == "error")
+
+// The diagnostics of the validator with the invariants that the model
+// states what the invoice prints (rules/equivalence.typ), errors first,
+// each level in the order of the checks.
+#let _with-invariants(diagnostics, invariants) = {
+  let errors = ()
+  let warnings = ()
+  for d in diagnostics + rule-diagnostics(invariants) {
+    if d.level == "error" { errors.push(d) } else { warnings.push(d) }
+  }
+  errors + warnings
+}
 
 // On a self-billed invoice, the sender of the document is the buyer and its
 // recipient the seller (see `build-model`). The validator names the inputs
@@ -102,7 +115,24 @@
     bank: bank,
     payment-means: payment-means,
   )
+  // The totals the invoice prints (`ctx.global.total` of the root), else
+  // those of the line items.
+  let printed = ctx.at("global", default: (:)).at("total", default: none)
+  if type(printed) != dictionary or printed == (:) {
+    printed = (
+      net: item-data.at("net-total", default: decimal("0")),
+      gross: item-data.at("gross-total", default: decimal("0")),
+      prepaid: item-data.at("prepaid-total", default: decimal("0")),
+      due: item-data.at("due-total", default: decimal("0")),
+    )
+  }
   let diagnostics = run-rules(model)
+  // The invariants do not depend on the profile, except the rule of
+  // XRechnung among them (PEPPOL-EN16931-R120), the first candidate if any.
+  let invariants = equivalence-findings(model, item-data, printed)
+  if invariants != () {
+    diagnostics = _with-invariants(diagnostics, invariants)
+  }
 
   // The model does not depend on the candidate profile, so switching the
   // profile only repeats the validation.
@@ -116,6 +146,10 @@
     ))
     model.profile = switch-profile(model.profile, id)
     diagnostics = run-rules(model)
+    invariants = invariants.filter(f => f.key != "PEPPOL-EN16931-R120")
+    if invariants != () {
+      diagnostics = _with-invariants(diagnostics, invariants)
+    }
   }
   if skipped.len() > 0 {
     model.profile.skipped = skipped.map(c => (id: c.id, name: c.name))

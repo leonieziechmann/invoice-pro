@@ -58,7 +58,10 @@ class = "fixture"
 
 # The lines.
 [[rule]]
-ids = ["BR-16", "BR-25", "BR-30", "BR-CL-23", "PEPPOL-EN16931-R110", "PEPPOL-EN16931-R111"]
+ids = [
+  "BR-16", "BR-25", "BR-30", "BR-CL-23",
+  "PEPPOL-EN16931-R110", "PEPPOL-EN16931-R111", "PEPPOL-EN16931-R120",
+]
 class = "fixture"
 
 # The country of origin of an item (BT-159), from EN 16931 on; BASIC has no
@@ -565,13 +568,6 @@ class = "open"
 reason = """A credit transfer without account: invoice-pro reports BR-61, which neither validator \
 reports for it (the element BR-61 tests is not written); KoSIT reports CII-SR-470."""
 
-[[rule]]
-ids = ["PEPPOL-EN16931-R120"]
-class = "open"
-reason = """With `tax-mode: "inclusive"`, the net price (BT-146) is rounded, so the invoiced \
-quantity times the price may differ from the line net amount (BT-131) by more than 0.02 (e.g. 1000 x \
-9.99 incl. 19 %: 8395.00 against 8394.96). KoSIT warns; invoice-pro reports nothing."""
-
 # ======================================================================
 # without-fixture: official rule ids of src/ that no fixture shows
 # ======================================================================
@@ -694,6 +690,24 @@ level = "error"
 summary = "The printed invoice shows neither the seller's VAT identifier nor its tax number, which the XML states."
 basis = "§ 14 Abs. 4 Satz 1 Nr. 2 UStG; Art. 226 No. 3 of the VAT Directive 2006/112/EC."
 tests = ["tests/zugferd/printed/test.typ"]
+
+[ip."IP-PRINT-01"]
+level = "error"
+summary = "An amount or quantity of the XML differs from the one the invoice prints (a line, an allowance or charge, a VAT group, a total)."
+basis = "§ 14 Abs. 4 Satz 1 Nr. 5, 7 and 8 UStG; Art. 226 No. 6 and 8 to 10 of the VAT Directive 2006/112/EC: the XML of a hybrid invoice states the invoice its PDF shows."
+tests = ["tests/zugferd/equivalence/test.typ"]
+
+[ip."IP-CALC-01"]
+level = "error"
+summary = "The parts of a document level allowance or charge per VAT category do not add up to its printed amount, or have the other sign."
+basis = "§ 14 Abs. 4 Satz 1 Nr. 7 UStG; Art. 226 No. 8 of the VAT Directive 2006/112/EC (the taxable amount per rate, with its reductions)."
+tests = ["tests/zugferd/equivalence/test.typ"]
+
+[ip."IP-CALC-02"]
+level = "error"
+summary = "The printed lines, allowances and charges of a VAT category do not add up to its printed taxable amount (gross prices: its gross total)."
+basis = "§ 14 Abs. 4 Satz 1 Nr. 7 and 8 UStG; Art. 226 No. 8 and 10 of the VAT Directive 2006/112/EC."
+tests = ["tests/zugferd/equivalence/test.typ"]
 
 [ip."IP-DOC-01"]
 level = "error"

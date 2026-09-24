@@ -1252,4 +1252,69 @@
       + ".",
     _bug-hint,
   ),
+  // The e-invoice states what the invoice prints (equivalence.typ).
+  "IP-PRINT-01": f => {
+    let shown(value) = if value == none { "(none)" } else { str(value) }
+    let stated = shown(f.stated)
+    if f.rate != none and type(f.stated) == decimal {
+      let gross = calc.round(f.stated * (1 + f.rate), digits: 2)
+      stated += (
+        " net, which with " + _percent(f.rate) + " VAT is " + str(gross)
+      )
+    }
+    (
+      "The e-invoice states the "
+        + f.term
+        + " "
+        + stated
+        + ", but the invoice prints "
+        + shown(f.printed)
+        + ".",
+      _bug-hint,
+    )
+  },
+  "IP-CALC-01": f => (
+    if f.signs {
+      (
+        "The parts of this allowance or charge per VAT category add up to "
+          + str(f.parts)
+          + ", but it amounts to "
+          + str(f.amount)
+          + "."
+      )
+    } else {
+      (
+        "A part of this allowance or charge per VAT category has the other sign, so the e-invoice would state it as "
+          + if f.amount < 0 { "a charge" } else { "an allowance" }
+          + "."
+      )
+    },
+    _bug-hint,
+  ),
+  "IP-CALC-02": f => (
+    "The lines, allowances and charges of this VAT category add up to "
+      + str(f.sum)
+      + ", but the invoice prints its "
+      + if f.gross { "gross total " } else { "taxable amount " }
+      + str(f.expected)
+      + ".",
+    _bug-hint,
+  ),
+  "PEPPOL-EN16931-R120": f => (
+    "The line net amount (BT-131) "
+      + str(f.net)
+      + " is not the quantity "
+      + fmt-number(f.quantity, min-digits: 0, max-digits: 6)
+      + " times the net price "
+      + fmt-number(f.price, min-digits: 0, max-digits: 12)
+      + if f.base-quantity != 1 {
+        " per " + fmt-number(f.base-quantity, min-digits: 0, max-digits: 6)
+      } else { "" }
+      + " plus the line's charges minus its allowances ("
+      + fmt-number(f.expected, min-digits: 2, max-digits: 6)
+      + "): XRechnung allows a difference of "
+      + str(f.slack)
+      + ".",
+    "The line total is rounded to the decimals of the currency: give a price that the quantity turns into an amount of the currency (e.g. whole yen for a currency without decimals).",
+  ),
 )
