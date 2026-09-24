@@ -9,6 +9,7 @@ the same twice, and stay within the size budget.
 """
 
 import io
+import json
 import os
 import sys
 import tempfile
@@ -345,20 +346,50 @@ class RuleCompiler(unittest.TestCase):
 
 
 class Output(unittest.TestCase):
-    """The Typst output: typstyle's layout, and the fast paths of the
-    writer."""
+    """The output: the Typst layout of the lists, the JSON of the nodes, and
+    the fast paths of the writer."""
 
-    def test_import_layout(self):
-        self.assertEqual(g.import_line("lists.typ", ["country", "currency"]),
-                         '#import "lists.typ": country, currency')
-        names = ["country", "currency-2", "document-type", "note-subject", "payment-means", "tax-type",
-                 "vat-category"]
-        self.assertEqual(g.import_line("lists.typ", names), (
-            '#import "lists.typ": (\n'
-            "  country, currency-2, document-type, note-subject, payment-means, tax-type,\n"
-            "  vat-category,\n"
-            ")"
-        ))
+    def test_json_nodes(self):
+        class Nodes:
+            ids = {}
+
+        class Names:
+            vat = {}
+
+            @staticmethod
+            def name(codes):
+                return "country"
+
+        ref = g.ListRef(frozenset({"DE"}), "BR-CL-14", (("XX", "BR-X"),), False)
+        leaf = ("L", "s", (("schemeID", "XSD", None, None),), ref, None, None, None)
+        self.assertEqual(json.loads(g.emit_node(leaf, Nodes, Names)),
+                         ["s", {"schemeID": [True, None, None]}, ["country", "BR-CL-14", {"XX": "BR-X"}, False],
+                          None, None, None])
+        self.assertEqual(g.emit_node(("L", "d", (), None, None, None, None), Nodes, Names), '"d"')
+        Nodes.ids = {leaf: 3, ("L", "d", (), None, None, None, None): 4}
+        node = ("C", (
+            ("ram:ID", 0, 1, 1, ("N", leaf), "BR-1", None),
+            ("ram:Amount", 1, 0, g.UNBOUNDED, ("N", ("L", "d", (), None, None, None, None)), None, "BR-2"),
+            ("ram:Other", 2, 0, 0, ("F", "FX-1"), None, None),
+        ), None, (), (), (), (), ())
+        text = g.emit_node(node, Nodes, Names)
+        # One child per line, and every child with six entries.
+        self.assertEqual(text.count("\n"), 2)
+        self.assertEqual(json.loads(text), {
+            "n": 1,
+            "u": {"ram:Other": "FX-1"},
+            "c": {"ram:ID": [None, 0, 1, 1, 3, ["BR-1"]], "ram:Amount": ["d", 1, 0, None, 4, [None, "BR-2"]]},
+        })
+
+    def test_short_list_names_fail(self):
+        class Names:
+            @staticmethod
+            def name(codes):
+                return "d2"
+
+        ref = g.ListRef(frozenset({"A"}), "BR-T", (), False)
+        with self.assertRaises(g.GenError):
+            g.emit_action(("N", ("L", "s", (), ref, None, None, None)), None, Names)
 
     def test_chunks_and_wrap(self):
         codes = [f"C{i:03}" for i in range(40)]
@@ -419,10 +450,13 @@ class Tables(unittest.TestCase):
             lists = Path(committed) / "lists.typ"
             lists.write_text(lists.read_text(encoding="utf-8").replace(" DE ", " "), encoding="utf-8")
             (Path(committed) / "old.typ").write_text(g.HEADER, encoding="utf-8")
+            (Path(committed) / "old.json").write_text(
+                "{\n" + f'"generated":{g.json_value(g.JSON_NOTICE)},' + "\n}", encoding="utf-8"
+            )
             diffs = g.compare(self.fresh, committed)
             self.assertEqual(len(diffs), 2)
             self.assertIn("committed/lists.typ", diffs[0])
-            self.assertIn("no longer writes: old.typ", diffs[1])
+            self.assertIn("no longer writes: old.json, old.typ", diffs[1])
 
     def test_deterministic_and_small(self):
         with tempfile.TemporaryDirectory() as again:

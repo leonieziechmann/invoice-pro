@@ -620,7 +620,7 @@ python3 tools/zugferd/bt_disposition.py   # ✔ 196 business terms of EN 16931 h
 
 #### The XML Write Guard
 
-The serializer checks every element it writes against tables of the profile (see [the documentation](../docs/docs/e-invoicing.md#the-xml-write-guard)). `tools/zugferd/gen_guard.py` compiles these tables from the official artefacts inside the Mustang CLI jar 2.14.0 (pinned by their SHA-256): the Factur-X 1.0.07 XSDs and Schematron, the CEN Schematron of EN 16931 and the XRechnung 3.0 Schematron. It writes `src/zugferd/guard/lists.typ` and one module per profile, and covers exactly the elements `src/zugferd/build.typ` can write. It fails on any XSD construct or Schematron shape outside the subset it understands, instead of guessing, and prints what it did with every rule:
+The serializer checks every element it writes against tables of the profile (see [the documentation](../docs/docs/e-invoicing.md#the-xml-write-guard)). `tools/zugferd/gen_guard.py` compiles these tables from the official artefacts inside the Mustang CLI jar 2.14.0 (pinned by their SHA-256): the Factur-X 1.0.07 XSDs and Schematron, the CEN Schematron of EN 16931 and the XRechnung 3.0 Schematron. It writes the code lists `src/zugferd/guard/lists.typ` and the nodes of each profile as JSON (`src/zugferd/guard/<profile>.json`, which Typst reads several times faster than Typst source), and covers exactly the elements `src/zugferd/build.typ` can write. It fails on any XSD construct or Schematron shape outside the subset it understands, instead of guessing, and prints what it did with every rule:
 
 ```bash
 python3 tools/zugferd/gen_guard.py            # regenerate the tables (after a change of build.typ)
