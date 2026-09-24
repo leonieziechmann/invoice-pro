@@ -449,6 +449,48 @@
   ))
 })
 
+// The elements XRechnung requires with their text
+// (`ram:CityName[boolean(normalize-space(.))]`): the addresses, the contact
+// of the seller, the buyer reference and the rate of each VAT breakdown.
+#guard-test(zugferd: "xrechnung", recipient: buyer-de, model => {
+  let tree = build-tree(model)
+  assert.eq(check(model, tree), ())
+  let city = seller("ram:PostalTradeAddress", "ram:CityName")
+  assert.eq(check(model, drop(tree, city)), (("min", "BR-DE-3", path(..city)),))
+  let code = buyer("ram:PostalTradeAddress", "ram:PostcodeCode")
+  assert.eq(check(model, drop(tree, code)), (("min", "BR-DE-9", path(..code)),))
+  let contact = seller("ram:DefinedTradeContact")
+  assert.eq(check(model, drop(tree, contact + ("ram:PersonName",))), (
+    ("any-of", "BR-DE-5", path(..contact)),
+  ))
+  let phone = contact + ("ram:TelephoneUniversalCommunication",)
+  assert.eq(check(model, drop(tree, phone)), (
+    ("min", "BR-DE-6", path(..phone)),
+  ))
+  let reference = tx("ram:ApplicableHeaderTradeAgreement", "ram:BuyerReference")
+  assert.eq(check(model, drop(tree, reference)), (
+    ("min", "BR-DE-15", path(..reference)),
+  ))
+  let rate = tx(
+    "ram:ApplicableHeaderTradeSettlement",
+    "ram:ApplicableTradeTax",
+    0,
+    "ram:RateApplicablePercent",
+  )
+  assert.eq(check(model, drop(tree, rate)), (
+    ("min", "BR-DE-14", path(..rate)),
+  ))
+})
+
+// EN 16931 does not require them.
+#guard-test(zugferd: "en16931", recipient: buyer-de, model => {
+  let tree = build-tree(model)
+  let city = seller("ram:PostalTradeAddress", "ram:CityName")
+  let contact = seller("ram:DefinedTradeContact")
+  let reference = tx("ram:ApplicableHeaderTradeAgreement", "ram:BuyerReference")
+  assert.eq(check(model, drop(drop(drop(tree, city), contact), reference)), ())
+})
+
 // Elements a profile does not use (the subject of the note of a line, which
 // the Factur-X Schematron of BASIC marks as not used).
 #guard-test(zugferd: "basic", model => {

@@ -177,8 +177,8 @@
   "ram:LineTotalAmount": ("d2", 0, 1, 1, 51, "BR-24"),
 )),
 ("d", ("currencyID": (false, "CII-DT-031", none)), none, none, (2, true, "BR-DEC-23"), none),
-(n: 2, z: none, c: (
-  "ram:BuyerReference": ("s", 0, 0, 1, 10),
+(n: 3, z: none, c: (
+  "ram:BuyerReference": ("s", 0, 1, 1, 10, "BR-DE-15"),
   "ram:SellerTradeParty": (53, 1, 1, 1, 53, "BR-08"),
   "ram:BuyerTradeParty": (68, 2, 1, 1, 68, "BR-10"),
   "ram:SellerTaxRepresentativeTradeParty": (75, 3, 0, 1, 75),
@@ -202,25 +202,25 @@
   "ram:ID": ("s", 0, 0, 1, 3),
   "ram:TradingBusinessName": ("s", 1, 0, 1, 10),
 )),
-(n: 0, z: (e: "PEPPOL-EN16931-R008"), c: (
+(n: 2, z: (y: ((("ram:PersonName", "ram:DepartmentName"), "BR-DE-5"),)), c: (
   "ram:PersonName": ("s", 0, 0, 1, 10),
-  "ram:TelephoneUniversalCommunication": (57, 2, 0, 1, 57),
-  "ram:EmailURIUniversalCommunication": (58, 3, 0, 1, 58),
-)),
-(n: 0, z: (e: "PEPPOL-EN16931-R008"), c: (
-  "ram:URIID": ("CII-SR-232",),
-  "ram:CompleteNumber": ("s", 1, 0, 1, 10),
-)),
-(n: 0, z: (e: "PEPPOL-EN16931-R008"), c: (
-  "ram:URIID": ("s", 0, 0, 1, 15),
-  "ram:CompleteNumber": ("CII-SR-238",),
+  "ram:TelephoneUniversalCommunication": (57, 2, 1, 1, 57, "BR-DE-6"),
+  "ram:EmailURIUniversalCommunication": (58, 3, 1, 1, 58, "BR-DE-7"),
 )),
 (n: 1, z: none, c: (
-  "ram:PostcodeCode": ("s", 0, 0, 1, 60),
+  "ram:URIID": ("CII-SR-232",),
+  "ram:CompleteNumber": ("s", 1, 1, 1, 10, "BR-DE-6"),
+)),
+(n: 1, z: none, c: (
+  "ram:URIID": ("s", 0, 1, 1, 15, "BR-DE-7"),
+  "ram:CompleteNumber": ("CII-SR-238",),
+)),
+(n: 3, z: none, c: (
+  "ram:PostcodeCode": ("s", 0, 1, 1, 60, "BR-DE-4"),
   "ram:LineOne": ("s", 1, 0, 1, 10),
   "ram:LineTwo": ("s", 2, 0, 1, 10),
   "ram:LineThree": ("s", 3, 0, 1, 10),
-  "ram:CityName": ("s", 4, 0, 1, 10),
+  "ram:CityName": ("s", 4, 1, 1, 10, "BR-DE-3"),
   "ram:CountryID": (country, 5, 1, 1, 61, "BR-09"),
   "ram:CountrySubDivisionName": ("s", 6, 0, 1, 10),
 )),
@@ -263,12 +263,12 @@
   "ram:URIID": ("s", 0, 0, 1, 15),
   "ram:CompleteNumber": ("CII-SR-267",),
 )),
-(n: 1, z: none, c: (
-  "ram:PostcodeCode": ("s", 0, 0, 1, 60),
+(n: 3, z: none, c: (
+  "ram:PostcodeCode": ("s", 0, 1, 1, 60, "BR-DE-9"),
   "ram:LineOne": ("s", 1, 0, 1, 10),
   "ram:LineTwo": ("s", 2, 0, 1, 10),
   "ram:LineThree": ("s", 3, 0, 1, 10),
-  "ram:CityName": ("s", 4, 0, 1, 10),
+  "ram:CityName": ("s", 4, 1, 1, 10, "BR-DE-8"),
   "ram:CountryID": (country, 5, 1, 1, 61, "BR-11"),
   "ram:CountrySubDivisionName": ("s", 6, 0, 1, 10),
 )),
@@ -349,12 +349,12 @@
   "ram:SpecifiedTaxRegistration": ("CII-SR-314",),
 )),
 ("s", ("schemeID": (false, none, ("icd", "BR-CL-26", none, false))), none, none, none, none),
-(n: 1, z: none, c: (
-  "ram:PostcodeCode": ("s", 0, 0, 1, 60),
+(n: 3, z: none, c: (
+  "ram:PostcodeCode": ("s", 0, 1, 1, 60, "BR-DE-11"),
   "ram:LineOne": ("s", 1, 0, 1, 10),
   "ram:LineTwo": ("s", 2, 0, 1, 10),
   "ram:LineThree": ("s", 3, 0, 1, 10),
-  "ram:CityName": ("s", 4, 0, 1, 10),
+  "ram:CityName": ("s", 4, 1, 1, 10, "BR-DE-10"),
   "ram:CountryID": (country, 5, 1, 1, 61, "BR-57"),
   "ram:CountrySubDivisionName": ("s", 6, 0, 1, 10),
 )),
@@ -429,13 +429,13 @@
 (n: 1, z: none, c: (
   "ram:BICID": ("s", 0, 1, 1, 15),
 )),
-(n: 4, z: none, c: (
+(n: 5, z: none, c: (
   "ram:CalculatedAmount": ("d2", 0, 1, 1, 103, "BR-46"),
   "ram:TypeCode": (tax-type, 1, 1, 1, 32),
   "ram:ExemptionReason": ("s", 2, 0, 1, 10),
   "ram:BasisAmount": ("d2", 3, 1, 1, 104, "BR-45"),
   "ram:CategoryCode": (vat-category, 4, 1, 1, 33),
-  "ram:RateApplicablePercent": ("d", 8, 0, 1, 34),
+  "ram:RateApplicablePercent": ("d", 8, 1, 1, 34, "BR-DE-14"),
 )),
 ("d", ("currencyID": (false, "CII-DT-031", none)), none, none, (2, true, "BR-DEC-20"), none),
 ("d", ("currencyID": (false, "CII-DT-031", none)), none, none, (2, true, "BR-DEC-19"), none),

@@ -872,14 +872,24 @@ def parse_location(expr):
     return absolute, steps, attr
 
 
+# The predicate of the last step of a location that asks for its text.
+_WITH_TEXT = re.compile(r"(.*)\[boolean\(normalize-space\(\.\)\)\]")
+
+
 def presence_atom(text):
-    """(location, non-empty) of `E`, `E != ''` or `normalize-space(E) != ''`."""
+    """(location, non-empty) of `E`, `E != ''`, `normalize-space(E) != ''`
+    or `E[boolean(normalize-space(.))]` (an E with text, the form of the
+    XRechnung Schematron)."""
     text = strip_parens(text)
     m = re.fullmatch(r"normalize-space\((.*)\) ?!= ?''", text)
     if m:
         location = parse_location(m.group(1))
         return (location, True) if location else None
     m = re.fullmatch(r"(.*?) ?!= ?''", text)
+    if m:
+        location = parse_location(m.group(1))
+        return (location, True) if location else None
+    m = _WITH_TEXT.fullmatch(text)
     if m:
         location = parse_location(m.group(1))
         return (location, True) if location else None
@@ -914,6 +924,8 @@ _T_EXCLUSIVE = re.compile(
     rf"or \(not ?\(\1/\2\) and not ?\(\1/\3\)\)$"
 )
 _T_NOT_OR = re.compile(rf"^not ?\(({RELPATH})\) or (.+)$")
+# One of several elements with text: `(A,B)[boolean(normalize-space(.))]`.
+_T_ANY_WITH_TEXT = re.compile(rf"^\(({RELPATH}(?:, ?{RELPATH})+)\)\[boolean\(normalize-space\(\.\)\)\]$")
 _T_LIST = re.compile(
     r"^(?:\(?\(?not\(contains\(normalize-space\((\.|@\w+)\), ' '\)\) and )?"
     r"contains\('((?: [A-Za-z0-9-]+)+) ', concat\(' ', (normalize-space\((?:upper-case\()?(\.|@\w+)\)?\)"
@@ -1413,6 +1425,13 @@ class Compiler:
                 self.expect_conditions(r, pos, conds)
                 self.any_of(r, pos, disjuncts)
             return "requires one of " + ", ".join(disjuncts)
+        m = _T_ANY_WITH_TEXT.match(test)
+        if m:
+            alternatives = [p.strip() for p in m.group(1).split(",")]
+            for pos, conds in matched:
+                self.expect_conditions(r, pos, conds)
+                self.any_of(r, pos, alternatives)
+            return "requires one of " + ", ".join(alternatives) + " with text"
         m = _T_NOT_OR.match(test)
         if m:
             outcomes = []
@@ -1433,10 +1452,11 @@ class Compiler:
 
     def apply_presence(self, r, test, matched):
         """Presence rules: an element or attribute must exist (`E`,
-        `E != ''`, `normalize-space(E) != ''`), must exist when another one
-        does (`E or not(F)`, `(F and E) or not(F)`), or one of several
-        children must exist. The writer treats a required leaf without text
-        as missing (a "blank" finding, see src/zugferd/guard/write.typ), so
+        `E != ''`, `normalize-space(E) != ''`,
+        `E[boolean(normalize-space(.))]`), must exist when another one does
+        (`E or not(F)`, `(F and E) or not(F)`), or one of several children
+        must exist. The writer treats a required leaf without text as
+        missing (a "blank" finding, see src/zugferd/guard/write.typ), so
         "exists" and "is not empty" are the same for what it accepts. None
         when the test is anything else."""
         disjuncts = [strip_parens(d) for d in split_top(test, " or ")]

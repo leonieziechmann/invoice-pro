@@ -207,6 +207,21 @@ class RuleCompiler(unittest.TestCase):
         self.assertEqual(doc.cmax["ram:Name"], [(1, "BR-T-2")])
         self.assertEqual([d for _, d, _ in c.dispositions], ["compiled", "compiled"])
 
+    def test_elements_with_text(self):
+        """The form of the XRechnung Schematron: `E[boolean(normalize-space(.))]`
+        requires an E with text (BR-DE-3), `(A,B)[boolean(normalize-space(.))]`
+        one of them (BR-DE-5); a condition on the text is a business rule."""
+        c = compiled([
+            rule(DOC, "ram:Name[boolean(normalize-space(.))]", rid="BR-DE-T1", source="XR"),
+            rule(DOC, "(ram:ID,ram:Name)[boolean(normalize-space(.))]", rid="BR-DE-T2", source="XR"),
+        ])
+        doc = position(c, DOC)
+        self.assertEqual(doc.cmin["ram:Name"], [(1, "BR-DE-T1")])
+        self.assertEqual(doc.anyof, [(("ram:ID", "ram:Name"), "BR-DE-T2")])
+        self.assertEqual([d for _, d, _ in c.dispositions], ["compiled", "compiled"])
+        c = compiled([rule(DOC, "ram:Name[normalize-space(.) = 'x']", rid="BR-DE-T3", source="XR")])
+        self.assertEqual([d for _, d, _ in c.dispositions], ["business"])
+
     def test_business_rules_are_left_to_the_validator(self):
         c = compiled([rule(DOC, "ram:ID = ../rsm:ExchangedDocument/ram:Name", rid="BR-T-3")])
         self.assertEqual([d for _, d, _ in c.dispositions], ["business"])
