@@ -597,16 +597,17 @@ python3 tools/zugferd/gen_guard.py --explain  # every rule with its disposition 
 
 A new element in the builder changes the tables, and the drift test fails until they are regenerated and committed with the builder change; review their diff like code. `tools/zugferd/test_gen_guard.py` tests the generator on small synthetic schemas and rules (and, with `$MUSTANG_JAR`, the drift, the determinism and the size budget of the real tables); `tests/zugferd/guard/test.typ` tests the checks of the serializer with the validator bypassed, on the element tree of valid invoices changed after the validation.
 
-`tools/zugferd/mutate.py` is the mutation test of the guard. It derives mutants from the golden XML files of every profile with a fixed seed: structural ones (an element deleted, duplicated, swapped with its next sibling, moved, renamed, emptied, or an unknown one inserted), codes (another code of any list, or none) and lexical values (decimals, dates, indicators). `tools/zugferd/mutate.typ` reads each mutant with Typst's XML parser, turns it back into the builder's element tree and serializes it with the guard; the XSD of the profile and Mustang (`--kosit`: also KoSIT) validate it. It fails when one of these criteria does not hold:
+`tools/zugferd/mutate.py` is the mutation test of the guard. It derives mutants from the golden XML files of every profile with a fixed seed: structural ones (an element deleted, duplicated, swapped with its next sibling, moved, renamed, emptied, or an unknown one inserted), codes (another code of any list, or none), lexical values (decimals, dates, indicators) and the values of tax elements (the rate, VAT amount, exemption reason or VAT category). `tools/zugferd/mutate.typ` reads each mutant with Typst's XML parser, turns it back into the builder's element tree and serializes it with the guard; the XSD of the profile and Mustang (`--kosit`: also KoSIT) validate it. It fails when one of these criteria does not hold:
 
 | Criterion | Holds when                                                                                                                                                                                                                |
 | :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | C1        | the guard accepts no mutant that the XSD rejects                                                                                                                                                                          |
 | C2        | the guard blocks no structural mutant the official validators accept, except by its documented stricter checks (an element the builder never writes, one the Factur-X Schematron marks as not used, a date naming no day) |
 | C3        | the guard rejects a mutated code exactly when the official validator reports a code list rule of that position                                                                                                            |
+| C4        | for a mutated tax element or category code, the guard reports exactly the rules of the VAT categories (rate, VAT amount, exemption reason) that Mustang reports                                                           |
 
 ```bash
-python3 tools/zugferd/mutate.py                          # 38 golden files, 2 mutants per operator: about 700 mutants
+python3 tools/zugferd/mutate.py                          # 38 golden files, 2 mutants per operator: about 750 mutants
 python3 tools/zugferd/mutate.py --per-operator 4 --kosit # a larger sample, codes also against KoSIT
 python3 tools/zugferd/mutate.py --only 'zugferd-basic*'  # from some golden files only
 ```

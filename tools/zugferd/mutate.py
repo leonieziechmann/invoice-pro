@@ -17,9 +17,10 @@ mutants from them with a fixed seed and puts every mutant through
 
 Operators: structural (delete, duplicate, swap with the next sibling,
 insert an unknown element, move to another parent, rename, empty a leaf),
-code (another code of any list, or none) and lexical (decimals, dates,
-indicators). A mutant the builder's tree cannot express as it is (the XML
-the guard writes differs from the mutant) is left out and counted.
+code (another code of any list, or none), lexical (decimals, dates,
+indicators) and tax (the rate, VAT amount, exemption reason or category of
+a tax element). A mutant the builder's tree cannot express as it is (the
+XML the guard writes differs from the mutant) is left out and counted.
 
 The proof criteria, each must hold for every mutant:
 
@@ -30,7 +31,10 @@ The proof criteria, each must hold for every mutant:
       those reports), a date that names no day;
   C3  the guard rejects a mutated code exactly when Mustang reports a code
       list rule of that position (and KoSIT one of EN 16931 or XRechnung,
-      with --kosit).
+      with --kosit);
+  C4  for a tax mutant or a mutated category code, the guard reports
+      exactly the rules of the VAT categories (rate, VAT amount, exemption
+      reason) that Mustang reports.
 
 Needs Python 3.11+ with lxml, Typst, a JDK and $MUSTANG_JAR; the numbers go
 to <out>/mutate-report.json. Exit status 1 when a criterion fails.
@@ -64,9 +68,12 @@ NSMAP = common.NS
 PREFIX_OF = {uri: prefix for prefix, uri in NSMAP.items()}
 
 # Mutants by operator and seed file, with the default --per-operator 2 and
-# the 38 golden files: about 1100 mutants, a few minutes with Mustang.
+# the 38 golden files: about 750 mutants, about a minute with Mustang.
 STRUCTURAL = ("delete", "duplicate", "swap", "unknown", "move", "rename", "empty")
-VALUES = ("code", "lexical")
+VALUES = ("code", "lexical", "tax")
+
+# The tax elements, whose values the rules of the VAT categories constrain.
+TAX_ELEMENTS = {"ApplicableTradeTax", "CategoryTradeTax"}
 
 # Elements and attributes with a code list somewhere, the targets of code
 # mutants (the tables say which list applies where).
@@ -220,6 +227,59 @@ def op_code(root, rng, codes):
     return f"code {path_of(el)}{'' if attr is None else '/@' + attr}: {old!r} -> {value!r}", (path_of(el), what)
 
 
+def op_tax(root, rng, codes):
+    """A value the rules of the VAT categories constrain on a tax element:
+    its rate, its VAT amount, its exemption reason or its category."""
+    targets = [el for el in elements(root, leaf=False) if local(el) in TAX_ELEMENTS]
+    if not targets:
+        return None
+    el = rng.choice(targets)
+
+    def child(name):
+        return el.find(f"{{{NSMAP['ram']}}}{name}")
+
+    def new(name, text):
+        made = etree.Element(f"{{{NSMAP['ram']}}}{name}")
+        made.text = text
+        return made
+
+    what = rng.choice(("rate", "no rate", "amount", "reason", "no reason", "category"))
+    if what == "rate":
+        rate, value = child("RateApplicablePercent"), rng.choice(("0.00", "0", "19.00", "7"))
+        if rate is None:
+            el.append(new("RateApplicablePercent", value))  # the last child of both tax types
+        elif rate.text == value:
+            return None
+        else:
+            rate.text = value
+    elif what == "no rate":
+        rate = child("RateApplicablePercent")
+        if rate is None:
+            return None
+        el.remove(rate)
+    elif what == "amount":
+        amount, value = child("CalculatedAmount"), rng.choice(("0.00", "1.00"))
+        if amount is None or amount.text == value:
+            return None
+        amount.text = value
+    elif what == "reason":
+        if child("ExemptionReason") is not None or child("TypeCode") is None:
+            return None
+        child("TypeCode").addnext(new("ExemptionReason", "Exempt"))  # its place in the schema
+    elif what == "no reason":
+        reasons = [c for c in (child("ExemptionReason"), child("ExemptionReasonCode")) if c is not None]
+        if not reasons:
+            return None
+        for reason in reasons:
+            el.remove(reason)
+    else:
+        category, value = child("CategoryCode"), rng.choice(("S", "Z", "E", "AE", "K", "G", "O", "L", "M"))
+        if category is None or category.text == value:
+            return None
+        category.text = value
+    return f"tax {path_of(el)}: {what}", path_of(el)
+
+
 def op_lexical(root, rng, codes):
     targets = []
     for el in elements(root, leaf=True):
@@ -236,6 +296,7 @@ def op_lexical(root, rng, codes):
 OPERATORS = {
     "delete": op_delete, "duplicate": op_duplicate, "swap": op_swap, "unknown": op_unknown,
     "move": op_move, "rename": op_rename, "empty": op_empty, "code": op_code, "lexical": op_lexical,
+    "tax": op_tax,
 }
 
 
@@ -279,13 +340,14 @@ def representable(root):
 # ---------------------------------------------------------------- oracles
 
 
-def code_list_rules(jar, profiles):
-    """The rules of every code list the official validators apply at each
-    position of a profile: {profile: {(path, "." or "@name"): {rule:
-    source}}}, from the generator's compiled rules."""
+def compiled_rules(jar, profiles):
+    """From the generator's compiled rules, per profile: the rules of every
+    code list the official validators apply at each position ({(path, "."
+    or "@name"): {rule: source}}), and the rules of the VAT categories (a
+    set of the ids Mustang reports)."""
     j = gen_guard.Jar(jar)
     schemas = gen_guard.load_schemas(j)
-    out = {}
+    lists, categories = {}, {}
     for profile in profiles:
         compiler = gen_guard.load_profile(j, profile, schemas)
         rules = collections.defaultdict(dict)
@@ -302,17 +364,26 @@ def code_list_rules(jar, profiles):
                     rules[(path, "@" + name)][cl.rule] = cl.source
             for cl in getattr(pos, "prefix", None) or []:
                 rules[(path, ".")][cl.rule] = cl.source
-        out[profile] = rules
-    return out
+        lists[profile] = rules
+        categories[profile] = {
+            rule for pos in compiler.positions for checks in pos.categories.values() for _, _, rule in checks
+        }
+    return lists, categories
 
 
 def all_codes(jar):
     """Every code of every list of the tables, sorted: candidates for code
-    mutants that some list knows."""
+    mutants that some list knows. The codes are the literals of the calls
+    that build the lists (`_codes(..)`, `_derive(..)` in lists.typ)."""
     text = (common.REPO / "src" / "zugferd" / "guard" / "lists.typ").read_text(encoding="utf-8")
     codes = set()
-    for literal in re.findall(r'"([^"\n]*)"', text):
-        codes.update(c for c in literal.split() if re.fullmatch(r"[A-Za-z0-9.-]+", c))
+    for call in re.finditer(r"= _(?:codes|derive)\(", text):
+        depth, end = 1, call.end()
+        while depth:
+            depth += {"(": 1, ")": -1}.get(text[end], 0)
+            end += 1
+        for literal in re.findall(r'"([^"\n]*)"', text[call.end():end]):
+            codes.update(c for c in literal.split() if re.fullmatch(r"[A-Za-z0-9.-]+", c))
     return sorted(codes)
 
 
@@ -439,7 +510,9 @@ def main(argv=None):
         finally:
             mustang.close()
         kosit = run_kosit([m["file"] for m in mutants if m["class"] == "code"], out) if args.kosit else {}
-        rules = code_list_rules(jar, sorted({m["profile"] for m in mutants if m["class"] == "code"}))
+        rules, category_rules = compiled_rules(
+            jar, sorted({m["profile"] for m in mutants if m["class"] in ("code", "tax")})
+        )
 
         failures = collections.defaultdict(list)
         stats = collections.Counter()
@@ -469,6 +542,18 @@ def main(argv=None):
                     stats[("structural", "blocked by stricter checks")] += 1
                 else:
                     failures["C2"].append(entry)
+            # C4: a mutated value of a tax element (or its category code)
+            # breaks exactly the rules of the VAT categories Mustang reports.
+            category_code = m["class"] == "code" and m["target"][0].endswith("/ram:CategoryCode") and (
+                m["target"][1] == "."
+            )
+            if m["class"] == "tax" or category_code:
+                ours = {f[1] for f in findings if f[0] == "category"}
+                theirs = set(report["errors"]) & category_rules[m["profile"]]
+                stats[(m["class"], "VAT category rules compared with Mustang")] += 1
+                stats[(m["class"], "VAT category rules broken")] += bool(theirs)
+                if ours != theirs:
+                    failures["C4"].append(entry | {"category rules": sorted(ours ^ theirs)})
             if m["class"] == "code":
                 path, what = m["target"]
                 known_rules = rules[m["profile"]].get((path, what), {})
@@ -508,7 +593,7 @@ def main(argv=None):
         if failures:
             print("\n✘ the write guard fails the mutation test (see above)", file=sys.stderr)
             return 1
-        print("✔ the write guard passes the mutation test (C1, C2, C3)", file=sys.stderr)
+        print("✔ the write guard passes the mutation test (C1 to C4)", file=sys.stderr)
         return 0
     except common.ToolError as e:
         print(f"error: {e}", file=sys.stderr)
