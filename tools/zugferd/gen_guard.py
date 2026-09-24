@@ -1680,9 +1680,9 @@ class Compiler:
         `E[boolean(normalize-space(.))]`), must exist when another one does
         (`E or not(F)`, `(F and E) or not(F)`), or one of several children
         must exist. The writer treats a required leaf without text as
-        missing (a "blank" finding, see src/zugferd/guard/write.typ), so
-        "exists" and "is not empty" are the same for what it accepts. None
-        when the test is anything else."""
+        missing (a "blank" finding of its checked writer, see
+        src/zugferd/guard/rare.typ), so "exists" and "is not empty" are the
+        same for what it accepts. None when the test is anything else."""
         disjuncts = [strip_parens(d) for d in split_top(test, " or ")]
         plans = []
         for pos, conds in matched:
