@@ -155,6 +155,23 @@ def kosit_setup():
     return Path(jar).resolve(), Path(config).resolve()
 
 
+def kosit_config():
+    """The configuration directory of KoSIT alone (KOSIT_CONFIG), for tools
+    that read its artefacts without running the validator; a ToolError says
+    what is missing and where to get it."""
+    config = os.environ.get("KOSIT_CONFIG")
+    if not config:
+        raise ToolError(
+            "KOSIT_CONFIG is not set. It is the unpacked XRechnung configuration of the KoSIT validator, "
+            "xrechnung-3.0.2-validator-configuration-2026-08-31.zip "
+            "(https://github.com/itplr-kosit/validator-configuration-xrechnung/releases), the directory with "
+            "scenarios.xml. The Nix apps set it (see tests/TESTING.md)."
+        )
+    if not (Path(config) / "scenarios.xml").is_file():
+        raise ToolError(f"KOSIT_CONFIG={config} has no scenarios.xml; point it to the unpacked XRechnung configuration")
+    return Path(config).resolve()
+
+
 def sha256_file(path, chunk=1 << 20):
     h = hashlib.sha256()
     with open(path, "rb") as f:
@@ -488,8 +505,11 @@ def parse_kosit_report(report):
     `errors` and `warnings` map each rule to its message. The rule is the
     code of the message, "XSD" for the schema validation (whose codes are the
     `cvc-*` ids of XML Schema) and "XML" for a document that is not
-    well-formed. Messages of the level "information" are left out; `scenario`
-    is the name of the matched scenario.
+    well-formed. `information` maps the rules of the messages of the level
+    "information", which never reject a document (the parity fixtures of
+    rules of that level compare them); `scenario` is the name of the matched
+    scenario. `schematron` says whether a Schematron step ran: KoSIT stops
+    after a document that fails the schema, so it reports no rules then.
     """
     from lxml import etree
 
@@ -498,14 +518,18 @@ def parse_kosit_report(report):
     try:
         root = etree.fromstring(report, etree.XMLParser(resolve_entities=False, no_network=True, huge_tree=True))
     except etree.XMLSyntaxError as e:
-        return {"status": "crash", "scenario": None, "errors": {"KOSIT-CRASH": f"unreadable report: {e}"}, "warnings": {}}
+        return {"status": "crash", "scenario": None, "errors": {"KOSIT-CRASH": f"unreadable report: {e}"},
+                "warnings": {}, "information": {}, "schematron": False}
     ns = {"rep": VARL, "s": SCENARIOS}
-    errors, warnings = {}, {}
+    errors, warnings, information = {}, {}, {}
+    found = {"error": errors, "warning": warnings, "information": information}
+    schematron = False
     for step in root.iter(f"{{{VARL}}}validationStepResult"):
         kind = step.get("id", "")
+        schematron = schematron or kind.startswith("val-sch")
         for message in step.findall("rep:message", ns):
             level = message.get("level")
-            if level not in ("error", "warning"):
+            if level not in found:
                 continue
             if kind == "val-xsd":
                 rule = "XSD"
@@ -514,7 +538,7 @@ def parse_kosit_report(report):
             else:
                 rule = message.get("code") or "?"
             text = " ".join((message.text or "").split())
-            (errors if level == "error" else warnings).setdefault(rule, text[:400])
+            found[level].setdefault(rule, text[:400])
     scenario = root.findtext("rep:scenarioMatched/s:scenario/s:name", namespaces=ns)
     if root.find("rep:noScenarioMatched", ns) is not None and not errors:
         status = "no-scenario"
@@ -524,7 +548,8 @@ def parse_kosit_report(report):
         status = "reject"
         if not errors:  # a rejection must name a reason
             errors["KOSIT-REJECT"] = "rejected without an error message; see the report"
-    return {"status": status, "scenario": scenario, "errors": errors, "warnings": warnings}
+    return {"status": status, "scenario": scenario, "errors": errors, "warnings": warnings,
+            "information": information, "schematron": schematron}
 
 
 def _configuration_name(config):
@@ -590,6 +615,7 @@ class Kosit:
             if report.exists():
                 results[str(path)] = parse_kosit_report(report.read_bytes())
             else:
-                results[str(path)] = {"status": "crash", "scenario": None, "warnings": {},
+                results[str(path)] = {"status": "crash", "scenario": None, "warnings": {}, "information": {},
+                                      "schematron": False,
                                       "errors": {"KOSIT-CRASH": f"no report for this file; see {log_path}"}}
         return results

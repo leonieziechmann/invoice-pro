@@ -87,8 +87,9 @@ class KositReport(unittest.TestCase):
         self.assertEqual((result["status"], result["scenario"]), ("reject", "EN16931 XRechnung (CII)"))
         self.assertEqual(set(result["errors"]), {"BR-DE-15"})
         self.assertIn("muss übermittelt", result["errors"]["BR-DE-15"])
-        # Warnings are kept apart, information is left out.
+        # Warnings and information are kept apart.
         self.assertEqual(set(result["warnings"]), {"BR-DE-27"})
+        self.assertEqual(set(result["information"]), {"BR-CL-10"})
 
     def test_accepted_with_warnings(self):
         report = varl(scenario("EN16931 (CII)", step("val-xsd"), step("val-sch.1", ("warning", "BR-DE-28", "x"))),
@@ -141,9 +142,10 @@ def mustang_report(*errors, warnings=()):
             "warnings": [f"{w}: text" for w in warnings]}
 
 
-def kosit_report(*errors, warnings=(), status=None):
+def kosit_report(*errors, warnings=(), information=(), status=None):
     return {"status": status or ("reject" if errors else "accept"), "scenario": "EN16931 XRechnung (CII)",
-            "errors": {e: e for e in errors}, "warnings": {w: w for w in warnings}}
+            "errors": {e: e for e in errors}, "warnings": {w: w for w in warnings},
+            "information": {i: i for i in information}}
 
 
 def collected(mustang=None, kosit=None, ours=(), xsd_errors=()):

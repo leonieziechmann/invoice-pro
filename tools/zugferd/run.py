@@ -4,8 +4,9 @@
   run.py [PATH ...] [--jobs N] [--only ID,..] [--strict] [--no-mustang] [--no-kosit]
 
 PATH is a generated corpus (a directory with `manifest.json`, see
-corpus/gen.py), a directory of regression cases, or single `.typ` files.
-Default: <build dir>/corpus (when generated) and corpus/regression.
+corpus/gen.py), a directory of regression cases or of parity fixtures, or
+single `.typ` files. Default: <build dir>/corpus (when generated),
+corpus/regression and corpus/rules.
 
 For every case:
   1. Typst, once: `zugferd-errors: "report"` with the harness theme
@@ -23,6 +24,12 @@ For every case:
      expectation, the semantic oracles (oracles.py), the metamorphic
      relations between twins, and that every error of invoice-pro names its
      rule, field and a hint.
+  6. Rule ids (rule_coverage.py): every error of invoice-pro names a rule the
+     official validators of the case's profile have, or one of its own
+     (O-RULE); a parity fixture (corpus/rules/<RULE>.typ) is reported under
+     its rule by each validator that has the rule (O-PARITY). A run with every
+     fixture checks that each rule the classification calls `fixture` has a
+     fixture that passed.
 
 Failures are grouped by signature. `known-issues.toml` lists the signatures
 of known bugs with their finding: a known signature does not fail the run,
@@ -57,9 +64,13 @@ sys.path.insert(0, str(HERE))
 
 import common  # noqa: E402
 import oracles  # noqa: E402
+import rule_coverage  # noqa: E402
 
-# The committed regression cases (default path of a run).
+# The committed regression cases and parity fixtures (default paths of a run).
 REGRESSION = HERE / "corpus" / "regression"
+RULES = rule_coverage.RULES_DIR
+# Case ids and populations of the committed case files, by directory.
+FILE_CASES = {REGRESSION: ("rg-", "regression"), RULES: ("rule-", "rules")}
 
 CLASSES = {
     "AGREE_VALID": "no invoice-pro error, officially valid",
@@ -169,8 +180,18 @@ def regression_complete(cases, directory=REGRESSION):
     they show every documented validator difference, so only such a run can
     tell that a difference no longer occurs; a single case file run on its
     own is a regression case as well, but shows only its own."""
+    return _complete(cases, directory, "rg-")
+
+
+def rules_complete(cases, directory=RULES):
+    """Whether the cases include every parity fixture: only such a run can
+    tell that every rule classified as `fixture` has a fixture that passed."""
+    return _complete(cases, directory, "rule-")
+
+
+def _complete(cases, directory, prefix):
     ids = {case["id"] for case in cases}
-    return all("rg-" + file.stem in ids for file in Path(directory).glob("*.typ") if not file.name.startswith("_"))
+    return all(prefix + file.stem in ids for file in Path(directory).glob("*.typ") if not file.name.startswith("_"))
 
 
 def _file_case(file):
@@ -188,9 +209,12 @@ def _file_case(file):
     for m in _ERRORS_ARG.finditer(code):
         if m.group(1) != '"report"':
             raise common.ToolError(f"{file}: the harness needs `zugferd-errors: \"report\"`, not {m.group(1)}")
+    # A parity fixture of corpus/rules is a case of its own population; any
+    # other case file counts as a regression case.
+    prefix, population = FILE_CASES.get(Path(file).resolve().parent, FILE_CASES[REGRESSION])
     return {
-        "id": "rg-" + file.stem,
-        "population": "regression",
+        "id": prefix + file.stem,
+        "population": population,
         "file": str(file),
         "features": None,
         "twin": None,
@@ -534,6 +558,9 @@ class Checker:
                 "valid": k["status"] == "accept",
                 "rules": sorted(k["errors"]),
                 "warned": sorted(k["warnings"]),
+                "informed": sorted(k.get("information", ())),
+                # KoSIT runs no Schematron on a document that fails the schema.
+                "schematron": k.get("schematron", True),
             }
         rules = set().union(*(set(v["rules"]) for v in views.values()))
         res["official"] = {
@@ -598,10 +625,82 @@ def make_row(case, res, doc):
     }
 
 
+def fixture_parity(case, res, levels, differences):
+    """Problems of a parity fixture (corpus/rules/<RULE>.typ): each official
+    validator whose artefacts have the rule in the document's profile
+    reports it, and so for every official rule the fixture expects
+    invoice-pro to report (normally the same one; a rule of the same
+    violation where invoice-pro reports that instead, see `reported-as` in
+    rule-coverage.toml). A validator reports a rule of its warning or
+    information level at that level. A validator that does not report a rule
+    documented in validator-differences.toml as rejected by the other one
+    only is fine, and so is one that ran no Schematron (KoSIT stops at a
+    schema error); at least one validator must report the rule, though. A
+    passing counterpart (<RULE>--pass.typ) has nothing to compare. `levels`:
+    {profile: {rule: {validator: level}}} of the validators
+    (rule_coverage.rule_levels)."""
+    rule, passing = rule_coverage.fixture_rule(case["file"])
+    profile = res.get("profile")
+    if passing or profile not in levels:
+        return []
+    views = (res.get("official") or {}).get("validators", {})
+    wanted = [r for r in dict.fromkeys([rule, *case.get("expect_rules", [])]) if not r.startswith("IP-")]
+    problems = []
+    for r in wanted:
+        have = levels[profile].get(r)
+        if not have:
+            problems.append(f"O-PARITY: no official validator of the {profile} profile has {r}")
+            continue
+        reported = False
+        for validator, level in sorted(have.items()):
+            view = views.get(validator)
+            if view is None or not view.get("schematron", True):
+                continue  # it did not run, has no scenario for the profile, or stopped at the schema
+            if r in view["rules"] or (level != "error" and r in (*view.get("warned", ()), *view.get("informed", ()))):
+                reported = True
+                continue
+            entry = differences.get(r)
+            if entry and validator not in entry["rejected-by"]:
+                continue
+            problems.append(f"O-PARITY: {VALIDATOR_NAMES[validator]} does not report {r} ({level} in its artefacts)")
+            reported = True  # the problem says it already
+        if not reported:
+            problems.append(f"O-PARITY: no official validator reports {r}")
+    return problems
+
+
+def foreign_rule_problems(res, levels):
+    """The backward check of every case: an error of invoice-pro that names a
+    rule the official validators of the profile do not have (a wrong id, or
+    a rule of another profile). invoice-pro's own rules are IP-*."""
+    profile = res.get("profile")
+    if profile not in levels:
+        return []
+    return [
+        f"O-RULE: invoice-pro reports {rule}, which no official validator of the {profile} profile has"
+        for rule in rule_coverage.foreign_rules(res, levels)
+    ]
+
+
+def rule_levels(checker, use_kosit):
+    """{profile: {rule: {validator: level}}} of the official validators of
+    this run, or None without the Mustang jar (the rule checks are skipped
+    then, and the report says so)."""
+    jar = os.environ.get("MUSTANG_JAR")
+    if not jar:
+        return None
+    config = checker.kosit.config if use_kosit and checker.kosit else None
+    try:
+        return rule_coverage.rule_levels(jar, config)
+    except rule_coverage.CoverageError as e:
+        raise common.ToolError(f"the rule inventory for the rule checks: {e}")
+
+
 def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass, use_kosit=True, differences=None,
-        check_stale=False):
+        check_stale=False, check_fixtures=False):
     started = time.perf_counter()
     checker = Checker(out_dir.parent, use_mustang, use_kosit)
+    levels = rule_levels(checker, use_kosit)
     try:
         results, docs = {}, {}
         t_compile = time.perf_counter()
@@ -632,8 +731,19 @@ def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass, use_kosit
 
     rows = [make_row(case, results[case["id"]], docs.get(case["id"])) for case in cases]
     metamorphic(rows, docs, {c["id"]: c for c in cases})
+    if levels is not None:
+        for case, row in zip(cases, rows):
+            res = results[case["id"]]
+            row["oracle"] += foreign_rule_problems(res, levels)
+            if case["population"] == "rules":
+                row["oracle"] += fixture_parity(case, res, levels, differences or {})
 
     failures, hits, xpass, stale = triage(rows, known, strict, check_xpass, differences, check_stale)
+    coverage = []
+    if check_fixtures:
+        entries, _ = rule_coverage.load_toml()
+        fixtures, _ = rule_coverage.fixture_files()
+        coverage = rule_coverage.fixture_results(rows, entries, fixtures)
     timing = {
         "total_s": round(time.perf_counter() - started, 1),
         "compile_s": round(t_compile, 1),
@@ -642,6 +752,8 @@ def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass, use_kosit
         "mustang_wait_s": round(t_wait, 1),
         "jobs": jobs,
         "validators": checker.describe(),
+        "rule_checks": levels is not None,
+        "coverage": coverage,
     }
     return rows, failures, hits, xpass, stale, timing
 
@@ -753,6 +865,8 @@ def report(rows, failures, known_hits, xpass, timing, use_mustang, stale=(), use
         lines.append("WARNING: --no-mustang: Mustang did not run; the classes are NOT the official verdict")
     if not use_kosit:
         lines.append("WARNING: --no-kosit: KoSIT did not run; the classes are NOT the official verdict")
+    if timing.get("rule_checks") is False:
+        lines.append("WARNING: without MUSTANG_JAR, the rule ids of invoice-pro were not checked (O-RULE, O-PARITY)")
     for pop, counts in sorted(by_pop.items()):
         shown = ", ".join(f"{k} {v}" for k, v in sorted(counts.items(), key=lambda kv: -kv[1]))
         lines.append(f"  {pop:12s} {sum(counts.values()):4d}: {shown}")
@@ -787,6 +901,11 @@ def report(rows, failures, known_hits, xpass, timing, use_mustang, stale=(), use
         lines.append("\nSTALE - documented validator differences that no case shows any more; remove them from "
                      "validator-differences.toml (or add a regression case that shows them):")
         lines += [f"  {rule}" for rule in stale]
+    coverage = timing.get("coverage") or []
+    if coverage:
+        lines.append("\nRULE COVERAGE - rules classified as `fixture` in rule-coverage.toml without a fixture "
+                     "that passed:")
+        lines += [f"  {problem}" for problem in coverage]
     if failures:
         groups = {}
         for row in failures:
@@ -816,9 +935,10 @@ def report(rows, failures, known_hits, xpass, timing, use_mustang, stale=(), use
             if ex["crash"]:
                 crash = [l for l in ex["crash"].splitlines() if l.strip()]
                 lines.append("        crash: " + " | ".join(crash[:3])[:400])
-    ok = not failures and not xpass and not stale
+    ok = not failures and not xpass and not stale and not coverage
     lines.append("\n" + ("OK: no new failures" if ok else
-                         "FAILED: see NEW FAILURES / XPASS / STALE above (tests/TESTING.md explains the triage)"))
+                         "FAILED: see NEW FAILURES / XPASS / STALE / RULE COVERAGE above "
+                         "(tests/TESTING.md explains the triage)"))
     return "\n".join(lines), ok
 
 
@@ -843,7 +963,7 @@ def main(argv=None):
         if skipped and common.in_ci():
             raise common.ToolError(f"{' and '.join(skipped)} in CI: the corpus needs the official verdict")
         build = common.build_dir(args.build_dir)
-        paths = args.paths or [p for p in (build / "corpus", REGRESSION) if p.exists()]
+        paths = args.paths or [p for p in (build / "corpus", REGRESSION, RULES) if p.exists()]
         cases = load_cases(paths)
         subset = False
         if args.only:
@@ -862,10 +982,13 @@ def main(argv=None):
         out_dir.mkdir(parents=True, exist_ok=True)
         known = load_known(args.known_issues)
         differences = load_differences(args.validator_differences)
+        # Only a run of every committed case can tell that a documented
+        # difference or a fixture of the rule coverage no longer shows.
+        complete = not subset and regression_complete(cases) and rules_complete(cases)
         rows, failures, known_hits, xpass, stale, timing = run(
             cases, args.jobs, out_dir, not args.no_mustang, known, args.strict, check_xpass=not subset,
-            use_kosit=not args.no_kosit, differences=differences,
-            check_stale=not subset and regression_complete(cases),
+            use_kosit=not args.no_kosit, differences=differences, check_stale=complete,
+            check_fixtures=not subset and rules_complete(cases),
         )
     except common.ToolError as e:
         print(f"error: {e}", file=sys.stderr)

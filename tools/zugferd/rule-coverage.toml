@@ -1,0 +1,5 @@
+# How invoice-pro handles every rule id of the official validators.
+#
+# tools/zugferd/rule_coverage.py collects the rule ids of every profile from
+# the pinned artefacts of Mustang and KoSIT and fails on any id without a
+# class (see tests/TESTING.md, "Rule Coverage").
