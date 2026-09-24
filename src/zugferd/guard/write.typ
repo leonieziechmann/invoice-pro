@@ -44,8 +44,9 @@
 // children, z: further checks, u: the children the profile does not use
 // here, each with the rule that says so, c: the children} (z and u only
 // when there are any). A child maps its name to [action, index in the
-// schema's sequence, minimum, maximum or null, node, rules]: the rules of the
-// minimum and the maximum, as far as there are any, or null. The action is
+// schema's sequence, minimum (0 or 1), maximum or null, node, rules]: the
+// rules of the minimum and the maximum, as far as there are any, or null.
+// The action is
 // the writer's fast path: the index of a complex node, which a dictionary
 // value is written as; the class of plain texts that pass every check of the
 // leaf by their form alone ("s" any text, "d" a decimal, "d2" a decimal with
@@ -642,10 +643,9 @@
     let attrs = ""
     let found = ()
     let problems = ()
-    // The index of the last child written, the number of children written
-    // and of those among them the node requires.
+    // The index of the last child written (-1: none yet) and the number of
+    // children written that the node requires (a minimum is 0 or 1).
     let last = -1
-    let written = 0
     let required = 0
     // The children the node allows that are not written.
     let skipped = ()
@@ -678,7 +678,6 @@
       }
       let (action, index, low, high, target, rules) = children.at(key)
       let t = type(value)
-      let count = 1
       // A leaf that a plain text of its form satisfies: a text, a decimal,
       // an indicator, or a code of its list (a code has no space and nothing
       // to escape).
@@ -715,7 +714,7 @@
         let n = nodes.at(target)
         let many = t == array
         let dispatch = type(n) == dictionary and "d" in n
-        count = 0
+        let count = 0
         // Leaves written without text: a required one counts as missing,
         // as the official rules require its text (`normalize-space(..) !=
         // ''`, XRechnung's `[boolean(normalize-space(.))]`).
@@ -781,22 +780,26 @@
           skipped.push(key)
           continue
         }
+        // Written `count` times: its order, whether the node requires it,
+        // and its number.
+        if index < last { problems.push(_finding("order", none, (tag, key))) }
+        last = index
+        required += low
+        if count > 1 and high != none and count > high {
+          problems.push(_finding(
+            "max",
+            _rule(rules, 1),
+            (tag, key),
+            count: count,
+            limit: high,
+          ))
+        }
+        continue
       }
-      // The child is written `count` times: its order, number and whether
-      // the node requires it.
-      written += 1
+      // Written once: its order and whether the node requires it.
       if index < last { problems.push(_finding("order", none, (tag, key))) }
       last = index
-      if low > 0 { required += 1 }
-      if count > 1 and high != none and count > high {
-        problems.push(_finding(
-          "max",
-          _rule(rules, 1),
-          (tag, key),
-          count: count,
-          limit: high,
-        ))
-      }
+      required += low
     }
     // A child the node allows is written when it is in the tree and not
     // skipped.
@@ -831,7 +834,7 @@
           }
         }
       }
-      if "e" in z and written == 0 {
+      if "e" in z and last == -1 {
         problems.push(_finding("empty", z.e, (tag,)))
       }
     }

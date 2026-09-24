@@ -2660,6 +2660,10 @@ def emit_node(key, nodes, names):
             # Not used at this position: the rule that says so.
             unused[tag] = high_rule or target[1]
             continue
+        if low > 1:
+            # The writer checks that a required child is there and counts
+            # the required children by their minimum.
+            raise GenError(f"{tag}: a minimum of {low}; the guard supports 0 and 1")
         # The rules of the minimum and the maximum, as far as there are any,
         # or null: every child has six entries, which the writer binds with
         # one destructuring.

@@ -381,6 +381,15 @@ class Output(unittest.TestCase):
             "c": {"ram:ID": [None, 0, 1, 1, 3, ["BR-1"]], "ram:Amount": ["d", 1, 0, None, 4, [None, "BR-2"]]},
         })
 
+    def test_minimum_above_one_fails(self):
+        class Nodes:
+            ids = {}
+
+        node = ("C", (("ram:ID", 0, 2, 2, ("N", ("L", "s", (), None, None, None, None)), None, None),),
+                None, (), (), (), (), ())
+        with self.assertRaises(g.GenError):
+            g.emit_node(node, Nodes, None)
+
     def test_short_list_names_fail(self):
         class Names:
             @staticmethod
