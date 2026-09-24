@@ -22,6 +22,7 @@
   exclusive: "IP-GUARD-03",
   xref-count: "IP-GUARD-03",
   min: "IP-GUARD-04",
+  blank: "IP-GUARD-04",
   variant-min: "IP-GUARD-04",
   any-of: "IP-GUARD-04",
   empty: "IP-GUARD-04",
@@ -170,6 +171,8 @@
     )
   } else if kind == "min" {
     "The required element " + element + where + " is missing."
+  } else if kind == "blank" {
+    "The required element " + element + where + " has no text."
   } else if kind == "variant-min" {
     (
       "The element "

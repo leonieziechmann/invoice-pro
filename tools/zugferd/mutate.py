@@ -28,13 +28,17 @@ The proof criteria, each must hold for every mutant:
   C2  the guard blocks no structural mutant the official validators accept,
       except by its documented stricter checks: an element the builder never
       writes, one the Factur-X Schematron marks as not used (Mustang ignores
-      those reports), a date that names no day;
+      those reports), a required element without text, a date that names no
+      day;
   C3  the guard rejects a mutated code exactly when Mustang reports a code
       list rule of that position (and KoSIT one of EN 16931 or XRechnung,
       with --kosit);
   C4  for a tax mutant or a mutated category code, the guard reports
       exactly the rules of the VAT categories (rate, VAT amount, exemption
-      reason) that Mustang reports.
+      reason) that Mustang reports;
+  C5  the guard accepts no mutant with a deleted or emptied element for
+      which Mustang reports a rule that the tables compile as a requirement
+      of that element (e.g. BR-06 for an empty seller name).
 
 Needs Python 3.11+ with lxml, Typst, a JDK and $MUSTANG_JAR; the numbers go
 to <out>/mutate-report.json. Exit status 1 when a criterion fails.
@@ -92,8 +96,9 @@ LEXICAL = [
 ]
 
 # Finding kinds of the guard's documented checks beyond the official
-# validators (criterion C2).
-STRICTER = {"unknown", "not-used", "attribute-not-used", "xref-other"}
+# validators (criterion C2): a required element without text ("blank") is
+# missing for the guard, also where a rule only asks for the element.
+STRICTER = {"unknown", "not-used", "attribute-not-used", "xref-other", "blank"}
 
 
 def local(el):
@@ -343,14 +348,17 @@ def representable(root):
 def compiled_rules(jar, profiles):
     """From the generator's compiled rules, per profile: the rules of every
     code list the official validators apply at each position ({(path, "."
-    or "@name"): {rule: source}}), and the rules of the VAT categories (a
-    set of the ids Mustang reports)."""
+    or "@name"): {rule: source}}), the rules of the VAT categories (a set of
+    the ids Mustang reports), and the rules that require an element ({path:
+    set of rules}: its minimum, the minimum of a variant, one of several
+    alternatives, a count over a path)."""
     j = gen_guard.Jar(jar)
     schemas = gen_guard.load_schemas(j)
-    lists, categories = {}, {}
+    lists, categories, presence = {}, {}, {}
     for profile in profiles:
         compiler = gen_guard.load_profile(j, profile, schemas)
         rules = collections.defaultdict(dict)
+        required = collections.defaultdict(set)
         for pos in compiler.positions:
             steps, p = [], pos
             while p is not None:
@@ -364,11 +372,23 @@ def compiled_rules(jar, profiles):
                     rules[(path, "@" + name)][cl.rule] = cl.source
             for cl in getattr(pos, "prefix", None) or []:
                 rules[(path, ".")][cl.rule] = cl.source
+            for tag, entries in pos.cmin.items():
+                required[path + "/" + tag] |= {rule for low, rule in entries if low > 0}
+            for tag, by_variant in pos.vmin.items():
+                for entries in by_variant.values():
+                    required[path + "/" + tag] |= {rule for low, rule in entries if low > 0}
+            for tags, rule in pos.anyof:
+                for tag in tags:
+                    required[path + "/" + tag].add(rule)
+            for steps_below, low, _, rule in pos.aggregates:
+                if low > 0:
+                    required[path + "/" + "/".join(steps_below)].add(rule)
         lists[profile] = rules
         categories[profile] = {
             rule for pos in compiler.positions for checks in pos.categories.values() for _, _, rule in checks
         }
-    return lists, categories
+        presence[profile] = required
+    return lists, categories, presence
 
 
 def all_codes(jar):
@@ -510,9 +530,7 @@ def main(argv=None):
         finally:
             mustang.close()
         kosit = run_kosit([m["file"] for m in mutants if m["class"] == "code"], out) if args.kosit else {}
-        rules, category_rules = compiled_rules(
-            jar, sorted({m["profile"] for m in mutants if m["class"] in ("code", "tax")})
-        )
+        rules, category_rules, presence_rules = compiled_rules(jar, sorted({m["profile"] for m in mutants}))
 
         failures = collections.defaultdict(list)
         stats = collections.Counter()
@@ -542,6 +560,14 @@ def main(argv=None):
                     stats[("structural", "blocked by stricter checks")] += 1
                 else:
                     failures["C2"].append(entry)
+            # C5: a deleted or emptied element that Mustang reports missing
+            # by a rule the tables compile for it.
+            if m["op"] in ("delete", "empty"):
+                theirs = set(report["errors"]) & presence_rules[m["profile"]].get(m["target"], set())
+                if theirs:
+                    stats[("structural", "required elements compared with Mustang")] += 1
+                    if accepted:
+                        failures["C5"].append(entry | {"required by": sorted(theirs)})
             # C4: a mutated value of a tax element (or its category code)
             # breaks exactly the rules of the VAT categories Mustang reports.
             category_code = m["class"] == "code" and m["target"][0].endswith("/ram:CategoryCode") and (
@@ -593,7 +619,7 @@ def main(argv=None):
         if failures:
             print("\n✘ the write guard fails the mutation test (see above)", file=sys.stderr)
             return 1
-        print("✔ the write guard passes the mutation test (C1 to C4)", file=sys.stderr)
+        print("✔ the write guard passes the mutation test (C1 to C5)", file=sys.stderr)
         return 0
     except common.ToolError as e:
         print(f"error: {e}", file=sys.stderr)

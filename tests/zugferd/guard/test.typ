@@ -401,10 +401,27 @@
       ("text", none, path(..seller("ram:PostalTradeAddress"))),
     ),
   )
-  // An element without text: EN 16931 allows an empty text, but not an
-  // empty decimal or code.
+  // An element without text: a required one counts as missing, as the rules
+  // that require it ask for its text (`normalize-space(..) != ''`, e.g.
+  // BR-06 and BR-21); an optional one may be empty in EN 16931, but no
+  // decimal or code.
   let name = seller("ram:Name")
-  assert.eq(check(model, put(tree, name, (:))), ())
+  assert.eq(check(model, put(tree, name, (:))), (
+    ("blank", "BR-06", path(..name)),
+  ))
+  let number = line(0, "ram:AssociatedDocumentLineDocument", "ram:LineID")
+  assert.eq(check(model, put(tree, number, (:))), (
+    ("blank", "BR-21", path(..number)),
+  ))
+  // An identifier with its scheme but without text, which has no country
+  // prefix either.
+  let vat-id = seller("ram:SpecifiedTaxRegistration", 0, "ram:ID")
+  assert.eq(check(model, drop(tree, vat-id + ("",))), (
+    ("prefix", "BR-CO-09", path(..vat-id)),
+    ("blank", none, path(..vat-id)),
+  ))
+  let legal = seller("ram:Description")
+  assert.eq(check(model, put(tree, legal, (:))), ())
   let total = line(
     0,
     "ram:SpecifiedLineTradeSettlement",
@@ -413,10 +430,12 @@
   )
   assert.eq(check(model, put(tree, total, (:))), (
     ("lexical", none, path(..total)),
+    ("blank", "BR-24", path(..total)),
   ))
   let country = buyer("ram:PostalTradeAddress", "ram:CountryID")
   assert.eq(check(model, put(tree, country, (:))), (
     ("code", "BR-CL-14", path(..country)),
+    ("blank", "BR-11", path(..country)),
   ))
 })
 
@@ -426,6 +445,7 @@
   let name = seller("ram:Name")
   assert.eq(check(model, put(tree, name, (:))), (
     ("empty", "PEPPOL-EN16931-R008", path(..name)),
+    ("blank", "BR-06", path(..name)),
   ))
 })
 

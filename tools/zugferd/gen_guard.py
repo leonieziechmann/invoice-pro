@@ -1435,9 +1435,10 @@ class Compiler:
         """Presence rules: an element or attribute must exist (`E`,
         `E != ''`, `normalize-space(E) != ''`), must exist when another one
         does (`E or not(F)`, `(F and E) or not(F)`), or one of several
-        children must exist. The serializer never writes an empty element or
-        leaf, so "exists" and "is not empty" are the same for its output.
-        None when the test is anything else."""
+        children must exist. The writer treats a required leaf without text
+        as missing (a "blank" finding, see src/zugferd/guard/write.typ), so
+        "exists" and "is not empty" are the same for what it accepts. None
+        when the test is anything else."""
         disjuncts = [strip_parens(d) for d in split_top(test, " or ")]
         plans = []
         for pos, conds in matched:

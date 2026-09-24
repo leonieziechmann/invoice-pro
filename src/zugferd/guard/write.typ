@@ -15,7 +15,8 @@
 // - G1, structure: the profile's schema knows the element at its position
 //   and does not mark it as not used there; it is in schema order and
 //   number (maxOccurs and the Schematron's counts); every required element
-//   is there, and only the attributes the schema allows.
+//   is there with its text (a leaf without text counts as missing), and
+//   only the attributes the schema allows.
 // - G2, values: the lexical form of decimals, indicators and format 102
 //   dates (calendar dates), the maximum number of decimals (BR-DEC-*),
 //   every code in the official code lists of its position, and on a tax
@@ -798,6 +799,10 @@
         let many = t == array
         let items = if many { value } else { (value,) }
         let count = 0
+        // Leaves written without text: a required one counts as missing,
+        // as the official rules require its text (`normalize-space(..) !=
+        // ''`, XRechnung's `[boolean(normalize-space(.))]`).
+        let blank = 0
         let i = 0
         for item in items {
           i += 1
@@ -822,7 +827,10 @@
               )
             }
           } else if type(nodes.at(child)) != dictionary {
-            _leaf(key, item, nodes.at(child), empty)
+            let (xml, f) = _leaf(key, item, nodes.at(child), empty)
+            // A leaf without text is written as an empty element.
+            if xml.ends-with(" />") { blank += 1 }
+            (xml, f)
           } else if type(item) == dictionary {
             element(key, item, child)
           } else {
@@ -841,6 +849,9 @@
         }
         if count == 0 { skipped.push(key) } else if count != 1 {
           counts.insert(key, count)
+        }
+        if blank > 0 and blank == count and spec.at(2) > 0 {
+          found.push(_finding("blank", spec.at(5, default: none), (tag, key)))
         }
         if type(n) == dictionary and "k" in n {
           for (v, limit) in n.k {
