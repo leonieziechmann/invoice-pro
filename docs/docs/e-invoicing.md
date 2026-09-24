@@ -158,11 +158,11 @@ The tests of `invoice-pro` account for every rule of the official validators, pr
 
 | Profile   | Rule ids | Reported by invoice-pro | Enforced by the guard | Excluded by construction | Cannot occur | Open |
 | :-------- | -------: | ----------------------: | --------------------: | -----------------------: | -----------: | ---: |
-| MINIMUM   |       46 |                       5 |                    41 |                        0 |            0 |    0 |
-| BASIC WL  |      196 |                      55 |                   118 |                       14 |            7 |    2 |
-| BASIC     |      851 |                      71 |                   714 |                       41 |           23 |    2 |
-| EN 16931  |      905 |                      72 |                   735 |                       54 |           40 |    4 |
-| XRechnung |      885 |                     104 |                   647 |                       62 |           67 |    5 |
+| MINIMUM   |       46 |                       6 |                    40 |                        0 |            0 |    0 |
+| BASIC WL  |      196 |                      56 |                   117 |                       14 |            7 |    2 |
+| BASIC     |      851 |                      72 |                   713 |                       41 |           23 |    2 |
+| EN 16931  |      905 |                      73 |                   734 |                       54 |           40 |    4 |
+| XRechnung |      885 |                     105 |                   646 |                       62 |           67 |    5 |
 
 Open: `BR-B-01` (BASIC, EN 16931, XRechnung), `BR-B-02` (BASIC, EN 16931, XRechnung), `BR-O-03` (BASIC WL), `BR-O-04` (BASIC WL), `CII-SR-467` (EN 16931, XRechnung), `CII-SR-470` (EN 16931, XRechnung), `PEPPOL-EN16931-R120` (XRechnung).
 

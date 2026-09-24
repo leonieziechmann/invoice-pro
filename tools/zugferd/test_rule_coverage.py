@@ -339,14 +339,16 @@ class ClassificationFile(unittest.TestCase):
             return rc.load_toml(path)
 
     def test_entries(self):
-        entries, ip = self.load(
+        entries, ip, without = self.load(
             '[[rule]]\nids = ["BR-27"]\nclass = "construction"\nreason = "r"\nevidence = ["src/x.typ"]\n'
             '[[rule]]\nids = ["BR-DE-16"]\nclass = "fixture"\nreported-as = ["BR-S-02"]\nreason = "r"\n'
+            '[[without-fixture]]\nids = ["BR-55"]\nreason = "w"\n'
             '[ip."IP-TAX-01"]\nlevel = "error"\nsummary = "s"\nbasis = "b"\ntests = ["t.typ"]\n'
         )
         self.assertEqual([(e.ids, e.cls, e.reported_as) for e in entries],
                          [(["BR-27"], "construction", []), (["BR-DE-16"], "fixture", ["BR-S-02"])])
         self.assertEqual(list(ip), ["IP-TAX-01"])
+        self.assertEqual([(w.ids, w.reason) for w in without], [(["BR-55"], "w")])
 
     def test_refused(self):
         bad = {
@@ -362,6 +364,9 @@ class ClassificationFile(unittest.TestCase):
             '[ip."IP-X"]\nlevel = "error"\n': "looks like IP-VAT-226",
             '[ip."IP-TAX-01"]\nlevel = "error"\nsummary = "s"\nbasis = "b"\n': "needs `tests`",
             '[ip."IP-TAX-01"]\nlevel = "fatal"\nsummary = "s"\nbasis = "b"\ntests = ["t"]\n': "`level`",
+            '[[without-fixture]]\nids = ["BR-55"]\n': "needs `reason`",
+            '[[without-fixture]]\nids = []\nreason = "r"\n': "non-empty list",
+            '[[without-fixture]]\nids = ["BR-55"]\nreason = "r"\nclass = "open"\n': "unknown keys",
         }
         for text, message in bad.items():
             with self.assertRaisesRegex(rc.CoverageError, message, msg=text):
@@ -371,7 +376,7 @@ class ClassificationFile(unittest.TestCase):
         # The classification file loads, its fixture entries have fixture
         # files (their parity is run.py's part), and its IP rules are those
         # of the source.
-        entries, ip = rc.load_toml()
+        entries, ip, without = rc.load_toml()
         fixtures, problems = rc.fixture_files()
         self.assertEqual(problems, [])
         named = {rule for f in fixtures for rule in (f.rule, *f.rules)}
@@ -380,6 +385,11 @@ class ClassificationFile(unittest.TestCase):
                 for rule in e.ids:
                     self.assertIn(rule, named, rule)
         self.assertEqual(rc.check_ip(ip, rc.ip_rules_in_source()), [])
+        # The official rule ids without a fixture are those of the source.
+        source = rc.official_rules_in_source()
+        for w in without:
+            for rule in w.ids:
+                self.assertIn(rule, source, rule)
 
 
 def fixture_source(expect, profiles="en16931", argument='fixture-profile("en16931")', more=""):
@@ -502,6 +512,39 @@ class OwnRules(unittest.TestCase):
         problems = rc.check_ip({"IP-TAX-01": ip("tests/nowhere.typ", "typst.toml")}, {"IP-TAX-01": source["IP-TAX-01"]})
         self.assertEqual(problems, ["IP IP-TAX-01: its test tests/nowhere.typ does not exist",
                                     "IP IP-TAX-01: none of its tests names the rule"])
+
+
+class WithoutFixture(unittest.TestCase):
+    def test_source(self):
+        found = rc.official_rules_in_source()
+        self.assertIn(rc.REPO / "src" / "zugferd" / "validate.typ", found["BR-55"])
+        # The guard's tables name the rules it compiles: they do not count.
+        self.assertNotIn("BR-01", found)
+        # A prefix the source completes is no rule id.
+        self.assertNotIn("BR-AE", found)
+
+    def test_every_rule_of_the_source_is_shown_or_listed(self):
+        inv = inventory(en16931={rule: [assertion(rule, dispositions=("business",))]
+                                 for rule in ("BR-27", "BR-55", "BR-61", "BR-CO-16")})
+        decisions, _ = rc.classify(inv, [entry(["BR-27"], "fixture"), entry(["BR-55", "BR-61", "BR-CO-16"], "open",
+                                                                              index=1)],
+                                   [fixture("BR-27")])
+        src = rc.REPO / "src" / "zugferd" / "validate.typ"
+        source = {rule: [src] for rule in ("BR-27", "BR-55", "BR-61", "BR-98")}
+        without = [rc.WithoutFixture(0, ["BR-55", "BR-CO-16"], "r"), rc.WithoutFixture(1, ["BR-27", "BR-55"], "r")]
+        problems = rc.check_without_fixture(without, source, decisions)
+        self.assertEqual([p.split(":")[0] for p in problems], [
+            "DUPLICATE BR-55",
+            "NAMED BR-61",  # neither shown nor listed
+            "NAMED BR-98",  # no artefact has it
+            "NAMED BR-27",  # listed, although a fixture shows it
+            "NAMED BR-CO-16",  # listed, but no longer in the source
+        ])
+        self.assertIn("src/zugferd/validate.typ names it, but no parity fixture shows invoice-pro report it",
+                      problems[1])
+        self.assertIn("no artefact of any profile has", problems[2])
+        self.assertIn("a parity fixture shows it", problems[3])
+        self.assertIn("stale", problems[4])
 
 
 class Documentation(unittest.TestCase):

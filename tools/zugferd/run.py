@@ -794,7 +794,7 @@ def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass, use_kosit
     failures, hits, xpass, stale = triage(rows, known, strict, check_xpass, differences, check_stale)
     coverage = []
     if check_fixtures and levels is not None:
-        entries, _ = rule_coverage.load_toml()
+        entries, _, _ = rule_coverage.load_toml()
         fixtures, _ = rule_coverage.fixture_files()
         coverage = rule_coverage.fixture_results(rows, entries, fixtures, levels)
     timing = {

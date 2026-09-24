@@ -29,7 +29,9 @@
 #   open          not handled yet (the target is none)
 #
 # invoice-pro's own rules are listed at the end ([ip."IP-.."]) with their
-# level, what they check, their basis and their tests.
+# level, what they check, their basis and their tests, and so are the
+# official rule ids src/ names that no parity fixture shows
+# ([[without-fixture]]).
 
 # ======================================================================
 # fixture: reported under the rule's own id
@@ -37,7 +39,7 @@
 
 # The document and its references.
 [[rule]]
-ids = ["BR-02", "BR-CL-04", "BR-CL-08", "BR-DE-17", "BR-DE-26", "BR-DE-TMP-32"]
+ids = ["BR-02", "BR-05", "BR-CL-04", "BR-CL-08", "BR-DE-17", "BR-DE-26", "BR-DE-TMP-32"]
 class = "fixture"
 
 # The parties: names, addresses, identifiers, electronic addresses and the
@@ -568,6 +570,71 @@ class = "open"
 reason = """With `tax-mode: "inclusive"`, the net price (BT-146) is rounded, so the invoiced \
 quantity times the price may differ from the line net amount (BT-131) by more than 0.02 (e.g. 1000 x \
 9.99 incl. 19 %: 8395.00 against 8394.96). KoSIT warns; invoice-pro reports nothing."""
+
+# ======================================================================
+# without-fixture: official rule ids of src/ that no fixture shows
+# ======================================================================
+#
+# Every official rule id that a file of src/ names outside the write guard
+# (src/zugferd/guard/) has a parity fixture that shows invoice-pro report
+# it, or an entry here that says why there is none. An id used for another
+# condition than the official rule is a bug: the validators do not report it
+# for such an invoice, so no fixture can show it. Fix the id, then remove it
+# here (the gate names every entry that no file of src/ names any more).
+
+[[without-fixture]]
+ids = ["BR-03"]
+reason = """Cannot fire: `invoice` requires `date` to be a datetime, by default the day of the \
+compilation."""
+
+[[without-fixture]]
+ids = ["BR-09", "BR-11", "BR-20", "BR-57"]
+reason = """Cannot fire: a party or delivery address without `country` gets the country of the \
+locale, so the country code is never missing."""
+
+[[without-fixture]]
+ids = ["BR-CO-04", "BR-DE-30", "PEPPOL-EN16931-R121"]
+reason = """Cannot fire: every item has a VAT category (`tax: none` is written as zero rated, with \
+IP-TAX-01), `direct-debit` requires the creditor identifier, and `item` and `bundle` refuse a price \
+base quantity of 0 or less (see the construction entries of these rules)."""
+
+[[without-fixture]]
+ids = [
+  "BR-CO-13", "BR-CO-15", "BR-CO-17",
+  "BR-S-08", "BR-Z-08", "BR-E-08", "BR-AE-08", "BR-IC-08", "BR-G-08", "BR-O-08", "BR-AF-08", "BR-AG-08",
+]
+reason = """A safety net that cannot fire: `check-consistency` re-checks the totals and the VAT \
+breakdown that the model computes from the lines, allowances and charges it writes; a failure is a \
+bug of invoice-pro, which no input shows."""
+
+[[without-fixture]]
+ids = [
+  "BR-DEC-01", "BR-DEC-05", "BR-DEC-09", "BR-DEC-10", "BR-DEC-11", "BR-DEC-12", "BR-DEC-13", "BR-DEC-14",
+  "BR-DEC-16", "BR-DEC-18", "BR-DEC-19", "BR-DEC-20", "BR-DEC-23", "BR-DEC-24", "BR-DEC-27",
+]
+reason = """Used for another condition: invoice-pro reports an amount with more than 2 decimals \
+(e.g. of a currency such as KWD) under these ids, but the builder writes the amounts rounded, so the \
+official rules cannot fail: the validators report the sums that no longer add up (e.g. BR-CO-15) or \
+nothing (MINIMUM). The guard enforces the decimals of the XML."""
+
+[[without-fixture]]
+ids = ["BR-55"]
+reason = """Used for another condition: invoice-pro reports a preceding invoice date (BT-26) without \
+its number under this id, but the builder writes the preceding invoice reference (BG-3) only with its \
+number, so the validators accept the XML (the date is lost)."""
+
+[[without-fixture]]
+ids = ["BR-61"]
+reason = """Used for another condition: invoice-pro reports a credit transfer without account \
+outside XRechnung under this id, but the builder writes no account then, which BR-61 does not test; \
+KoSIT reports CII-SR-470 (open), Mustang nothing."""
+
+[[without-fixture]]
+ids = ["BR-IC-12", "BR-CO-16"]
+reason = """Warnings for other conditions: a deliver-to country of an intra-community supply that \
+is the seller's own (the official BR-IC-12 requires a deliver-to country, which the builder always \
+writes, so the error of that name cannot fire), and a prepaid amount above the total (the official \
+BR-CO-16 is arithmetic that holds by construction)."""
 
 # ======================================================================
 # invoice-pro's own rules (IP-*): stricter than the official validators
