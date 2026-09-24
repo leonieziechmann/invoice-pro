@@ -150,7 +150,7 @@ The document type says what kind of document the invoice is. Unless you set `sub
 
 Any other UNTDID 1001 code of an invoice or credit note is accepted as text (e.g. `"326"` for a partial invoice) and printed with the title of its kind.
 
-On a credit note and a self-billed invoice, the sender pays the amount to the recipient: [`payment-goal`](../components.md#payment-goal) says so, and the [`bank-details`](../components.md#bank-details) are the recipient's account (its name is the default account holder) without EPC-QR code. The titles can be changed with [`locale.custom.document`](../locale/custom.md), the payment sentence with `locale.custom.payment(text-credit: ..)`.
+On a credit note and a self-billed invoice, the sender pays the amount to the recipient: [`payment-goal`](../components.md#payment-goal) says so, and the [`bank-details`](../components.md#bank-details) are the recipient's account (its name, or on a self-billed invoice the name of the `payee`, is the default account holder) without EPC-QR code. The titles can be changed with [`locale.custom.document`](../locale/custom.md), the payment sentence with `locale.custom.payment(text-credit: ..)`.
 
 ```typst
 #show: invoice.with(

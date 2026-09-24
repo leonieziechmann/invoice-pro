@@ -48,8 +48,8 @@
   /// company: `(name: .., id: .., global-id: .., legal-id: ..)`, of which
   /// only `name` is required. Written into the e-invoice as the payee
   /// (BG-10), printed by the default `references` and
-  /// `references.payee()`, and the account holder of `bank-details` unless
-  /// they name another one.
+  /// `references.payee()`, and, except on a credit note, the account holder
+  /// of `bank-details` unless they name another one.
   /// -> none | dictionary
   payee: none,
 

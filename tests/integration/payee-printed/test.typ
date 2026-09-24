@@ -43,19 +43,28 @@
 #test-invoice()
 #test-invoice(name: "Treuhandkonto Muster GmbH")
 #test-invoice(payee: none)
+// The payee receives what the buyer pays the seller: also on a self-billed
+// invoice, whose recipient is the seller, but not on a credit note, which
+// refunds the buyer (the recipient of a credit note, the sender of a
+// self-billed credit note)
+#test-invoice(document-type: "self-billed")
+#test-invoice(document-type: "credit-note")
+#test-invoice(document-type: "261")
 
 #context {
   let references = query(<references>).map(it => it.value)
   let views = query(<bank-details>).map(it => it.value)
-  assert.eq(views.len(), 3)
-  let (default, named, without) = views
+  assert.eq(views.len(), 6)
+  let (default, named, without, self-billed, credit, self-billed-credit) = (
+    views
+  )
 
   // The default references name the payee
   assert(
     ("Zahlungsempfänger", "Factoring Bank AG") in references.first(),
     message: repr(references.first()),
   )
-  assert(references.last().all(((label, _)) => label != "Zahlungsempfänger"))
+  assert(references.at(2).all(((label, _)) => label != "Zahlungsempfänger"))
 
   // The payee is the default account holder and the beneficiary of the
   // EPC-QR code
@@ -66,6 +75,10 @@
   assert.eq(named.qr-code.payload.beneficiary, "Treuhandkonto Muster GmbH")
   // Without a payee, the seller
   assert.eq(without.sender.name, "Seller GmbH")
+  // The seller's payee on a self-billed invoice, the buyer on credit notes
+  assert.eq(self-billed.sender.name, "Factoring Bank AG")
+  assert.eq(credit.sender.name, "Buyer SAS")
+  assert.eq(self-billed-credit.sender.name, "Seller GmbH")
 }
 
 // The e-invoice names the payee (BG-10) and states an account name (BT-85)

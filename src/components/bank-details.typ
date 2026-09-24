@@ -171,15 +171,17 @@
 
       // The account holder: the explicit `name`, else the name on one line
       // of whom the amount is paid to: the payee (BG-10, e.g. a factoring
-      // company that receives the payment instead of the seller), the sender
-      // (as in the e-invoice, BT-27), or the recipient for the recipient's
-      // account.
+      // company that receives the payment instead of the seller) of what
+      // the buyer pays, also on a self-billed invoice, but not of a credit
+      // note, which refunds the buyer; else the sender (as in the e-invoice,
+      // BT-27), or the recipient for the recipient's account.
+      let credit = (
+        type(document) == dictionary and document.at("credit", default: false)
+      )
       let holder = ctx.sender.name
       if name == auto {
         let payee = ctx.at("payee", default: none)
-        let payee-name = if (
-          type(payee) == dictionary and not recipient-account
-        ) {
+        let payee-name = if type(payee) == dictionary and not credit {
           payee.at("name", default: none)
         }
         if not _is-missing(payee-name) {
