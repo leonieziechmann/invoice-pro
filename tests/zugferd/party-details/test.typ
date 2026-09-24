@@ -383,6 +383,14 @@
   assert.eq(rules(m), ("IP-COUNTRY-01",))
   m.tax-representative.address.country = "SS"
   assert("BR-CL-14" in rules(m))
+  m.tax-representative.address.country = none
+  assert.eq(rules(m), ("BR-20",))
+  let country = diagnostic(m, "BR-20")
+  assert.eq(country.field, "sender.tax-representative.country")
+  assert.eq(
+    country.message,
+    "The tax representative country code (BT-69) is missing.",
+  )
   m.tax-representative = representative(email: "f@fiskal.de")
   assert.eq(rules(m, level: "warning"), ("IP-KEY-01",))
   // Not subject to VAT: no VAT identifiers at all (BR-O-02)
