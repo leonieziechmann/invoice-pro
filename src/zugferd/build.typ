@@ -16,8 +16,10 @@
 
 // A unit price (BT-146) keeps every decimal of the model: the price the
 // invoice prints (with the fine decimals of its locale), or the net price of
-// a gross price, which has 6 decimals or more (see logic/net-amounts.typ).
-#let _fmt-price = fmt-number.with(max-digits: 12)
+// a gross price, which has 6 decimals or more, 13 for a quantity of
+// billions (see logic/net-amounts.typ). 28 is the most a decimal has, so
+// nothing is rounded here.
+#let _fmt-price = fmt-number.with(max-digits: 28)
 
 #let _date(date) = (
   "udt:DateTimeString": (

@@ -3,7 +3,11 @@
 // line's net amount (PEPPOL-EN16931-R120), and the base quantity is above 0.
 
 #import "/src/lib.typ": *
-#import "/tests/zugferd/harness.typ": bank, model-test, rules, xml-values
+#import "/src/zugferd/model.typ": profile-terms
+#import "/src/zugferd/guard/roundtrip.typ": round-trip
+#import "/tests/zugferd/harness.typ": (
+  bank, build-xml, model-test, rules, xml-values,
+)
 
 // The line's net amount (BT-131) minus the quantity (BT-129) times the net
 // price (BT-146) per base quantity (BT-149) and its charges, plus its
@@ -78,6 +82,35 @@
   },
 )[
   #line-items[#item([Schrauben], price: 9.99, quantity: 1000)]
+  #payment-goal(days: 14)
+  #bank
+]
+
+// The XML states every decimal of the net price: 2 000 000 000 calls at
+// 0.0001 including 19 % VAT need 13 (0.0000840336134), which a writer of at
+// most 12 rounded, so that the written price differed from the model's (the
+// round trip of the strict mode reported it).
+#model-test(
+  tax-mode: "inclusive",
+  zugferd-strict: true,
+  model => {
+    let line = model.lines.first()
+    assert.eq(line.price, decimal("0.0000840336134"))
+    assert.eq(xml-values(model, "ram:ChargeAmount"), ("0.0000840336134",))
+    assert(calc.abs(r120(line)) <= decimal("0.02"))
+    let root = xml(bytes(build-xml(model))).find(n => type(n) == dictionary)
+    assert.eq(
+      round-trip(
+        root,
+        model,
+        profile-terms(model.payment, model.profile),
+        strict: true,
+      ),
+      (),
+    )
+  },
+)[
+  #line-items[#item([API-Aufrufe], price: 0.0001, quantity: 2000000000)]
   #payment-goal(days: 14)
   #bank
 ]
