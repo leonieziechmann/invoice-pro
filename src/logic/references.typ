@@ -1,5 +1,5 @@
 #import "payment-reference.typ": bank-signal, resolve-payment-reference
-#import "service-period.typ": format-service-period, resolve-service-period
+#import "service-period.typ": format-service-period, service-period-of
 #import "../utils/helper.typ": first-given
 
 // An identifier given as a dictionary, e.g. a typed identifier of the `id`
@@ -90,11 +90,9 @@
     // the locale, as any date the invoice prints; else a text of its own.
     let (val, own-text) = if value == auto {
       let items = ctx.at("items", default: none)
-      let period = resolve-service-period(
-        if items == none { () } else { items },
-        ctx.invoice-date,
-        service-period: ctx.at("service-period", default: none),
-      )
+      let period = service-period-of(ctx, if items == none { () } else {
+        items
+      })
       (format-service-period(period, format-date), false)
     } else if type(value) == datetime {
       (format-date(value), false)

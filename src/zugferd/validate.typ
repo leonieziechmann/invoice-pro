@@ -519,6 +519,24 @@
     ))
   }
 
+  // BR-DE-TMP-32 (information in the XRechnung 3.0 Schematron): an invoice
+  // states the date of the supply (BT-72, BG-14, or BG-26 on every line).
+  // An invoice without dates states its invoice date; a credit note, whose
+  // own date is not the date of the supply, states none (see
+  // `service-period-of`), so it needs the date of the supply it credits.
+  if (
+    profile.xrechnung
+      and delivery.at("date", default: none) == none
+      and delivery.at("period", default: none) == none
+  ) {
+    out.push(warning(
+      "BR-DE-TMP-32",
+      "service-period",
+      "XRechnung recommends the date of the supply (BT-72) or the invoicing period (BG-14), which the e-invoice does not state: a credit note without dates states none, as its own date is not the date of the supply.",
+      hint: "Set `service-period` to the date or period of the supply the credit note refers to, e.g. the one of the preceding invoice, or give the items their `date`.",
+    ))
+  }
+
   // IP-PERIOD-03: the invoice prints the date of the supply: by its
   // references, with the dates of the items or in its text (see
   // `_period-shown` of the model). German law requires it on

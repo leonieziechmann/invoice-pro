@@ -146,6 +146,8 @@
 // The date of the supply of a German seller (§ 14 Abs. 4 Satz 1 Nr. 6
 // UStG), here the invoice date, is marked content
 #let plain-refs(refs) = refs.map(((label, value)) => (label, plain-text(value)))
+// A credit note amends the preceding invoice: its own date (01.09.2026) is
+// not the date of the supply, so without dates it prints none
 #default-references(
   document-type: "credit-note",
   preceding-invoice-nr: "R-2026-11",
@@ -154,9 +156,28 @@
     ("Steuernummer", "123/456/78901"),
     ("USt-IdNr.", "DE123456789"),
     ("Empfänger:in USt-IdNr.", "DE987654321"),
-    ("Leistungszeitraum", "01.09.2026"),
     ("Vorherige Rechnungsnummer", "R-2026-11"),
     ("Datum der vorherigen Rechnung", "30.08.2026"),
+  )),
+)
+// ... but its `service-period`
+#default-references(
+  document-type: "credit-note",
+  preceding-invoice-nr: "R-2026-11",
+  service-period: datetime(year: 2026, month: 8, day: 20),
+  refs => assert.eq(plain-refs(refs).slice(3), (
+    ("Leistungszeitraum", "20.08.2026"),
+    ("Vorherige Rechnungsnummer", "R-2026-11"),
+  )),
+)
+// A corrected invoice replaces the preceding invoice, with all of its
+// details: the invoice date, as for any invoice
+#default-references(
+  document-type: "corrected",
+  preceding-invoice-nr: "R-2026-11",
+  refs => assert.eq(plain-refs(refs).slice(3), (
+    ("Leistungszeitraum", "01.09.2026"),
+    ("Vorherige Rechnungsnummer", "R-2026-11"),
   )),
 )
 // With gross prices (B2C) as well

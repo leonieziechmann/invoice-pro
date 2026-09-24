@@ -13,9 +13,7 @@
 #import "../locale/lang/lang.typ" as languages
 #import "../logic/payment-reference.typ": resolve-payment-reference
 #import "../logic/document-type.typ": resolve-document-type
-#import "../logic/service-period.typ": (
-  format-service-period, resolve-service-period,
-)
+#import "../logic/service-period.typ": format-service-period, service-period-of
 #import "../logic/payment-means.typ": (
   card-code, direct-debit-code, method-code, resolve as resolve-payment-means,
   transfer-code,
@@ -1072,11 +1070,7 @@
   }
 }
 
-#let _service-period(ctx, items) = resolve-service-period(
-  items,
-  ctx.at("invoice-date", default: none),
-  service-period: ctx.at("service-period", default: none),
-)
+#let _service-period(ctx, items) = service-period-of(ctx, items)
 
 #let determine-delivery-dates(ctx, items) = _delivery(_service-period(
   ctx,

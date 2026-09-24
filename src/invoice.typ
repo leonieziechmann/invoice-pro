@@ -64,7 +64,8 @@
   /// `references.service-time()` (which the default `references` include if
   /// it is given, and for a seller in Germany always) and written to the
   /// e-invoice (BT-72 or BG-14). If `none`, the earliest to the latest date
-  /// of the items, or the invoice date if no item has a date.
+  /// of the items, or the invoice date if no item has a date, except on a
+  /// credit note, which amends an invoice and then states no date.
   /// -> none | datetime | array
   service-period: none,
   /// The subject line of the invoice. If `auto`, the title of the

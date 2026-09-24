@@ -1,8 +1,9 @@
 // The service period is resolved once for the printed invoice
 // (`references.service-time`) and the e-invoice (BT-72 or BG-14): the
 // invoice's `service-period`, else the dates of the items (items without a
-// date do not count), else the invoice date. A service period printed as a
-// text of its own cannot reach the XML (IP-PERIOD-01).
+// date do not count), else the invoice date, except on a credit note, which
+// then states none. A service period printed as a text of its own cannot
+// reach the XML (IP-PERIOD-01).
 
 #import "/src/lib.typ": *
 #import "/src/utils/text.typ": plain-text
@@ -154,6 +155,64 @@
   #payment-goal(days: 14)
   #bank
 ]
+// ... but not on a credit note, which amends an invoice: its own date is not
+// the date of the supply, so neither the XML nor the printed invoice states
+// one
+#let undated = [
+  #line-items[#item([A], price: 100)]
+  #payment-goal(days: 14)
+  #bank
+]
+#model-test(
+  date: invoice-date,
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  model => {
+    assert.eq(model.delivery.date, none)
+    assert.eq(model.delivery.period, none)
+    assert.eq(model.delivery.source, none)
+    assert.eq(xml-elements(model, "ram:ActualDeliverySupplyChainEvent"), ())
+    assert.eq(xml-elements(model, "ram:BillingSpecifiedPeriod"), ())
+    assert.eq(rules(model), ())
+    assert.eq(rules(model, level: "warning"), ())
+    // XRechnung recommends the date of the supply (BR-DE-TMP-32, information
+    // in its Schematron): a warning that names `service-period`
+    let m = model
+    m.profile = resolve-profile("xrechnung", "DE")
+    assert("BR-DE-TMP-32" in rules(m, level: "warning"))
+    assert.eq(diagnostic(m, "BR-DE-TMP-32").field, "service-period")
+  },
+)[#undated]
+#printed-test(
+  references: auto,
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  refs => {
+    assert("Leistungszeitraum" not in refs.map(ref => ref.first()))
+    []
+  },
+)[#undated]
+#printed-test(
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  refs => {
+    assert.eq(refs, ())
+    []
+  },
+)[#undated]
+// ... unless its items are dated
+#model-test(
+  date: invoice-date,
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  model => {
+    assert.eq(model.delivery.date, day(8, 15))
+    assert.eq(model.delivery.source, "items")
+    let m = model
+    m.profile = resolve-profile("xrechnung", "DE")
+    assert("BR-DE-TMP-32" not in rules(m, level: "warning"))
+  },
+)[#mixed]
 
 // --- 3. The invoice's service period overrides the items ---
 #let june = (day(6, 1), day(6, 30))

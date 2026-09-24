@@ -58,6 +58,29 @@
   none
 }
 
+/// Resolves the service period of the invoice of the root context `ctx`
+/// with its computed `items`, see `resolve-service-period`: the one source
+/// of the printed service period (`references.service-time`) and the
+/// e-invoice (BT-72, BG-14).
+///
+/// A credit note (`document-type`, e.g. `"credit-note"`, 381) amends an
+/// invoice: its own date is not the date of the supply, so it falls back to
+/// no date at all rather than to the invoice date. Its `service-period` and
+/// the dates of its items still count.
+///
+/// -> none | dictionary
+#let service-period-of(ctx, items) = {
+  let document = ctx.at("document-type", default: none)
+  let credit = (
+    type(document) == dictionary and document.at("credit", default: false)
+  )
+  resolve-service-period(
+    items,
+    if credit { none } else { ctx.at("invoice-date", default: none) },
+    service-period: ctx.at("service-period", default: none),
+  )
+}
+
 /// The printed text of a service period: its date, or its first and last
 /// date joined by " – ", each formatted with `format-date` (the date format
 /// of the locale).
