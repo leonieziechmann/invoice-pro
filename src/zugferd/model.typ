@@ -30,8 +30,14 @@
 // invoice takes (see `first-given`).
 #let first-of = first-given
 
+// A string that `plain-text` returns as it is: printable ASCII words with
+// single spaces between them, as most names, numbers and codes are. The
+// test is cheaper than `plain-text`, which runs three replacements.
+#let _plain-ascii = regex("^[!-~]+(?: [!-~]+)*$")
+
 // The plain text of a value, or `none` if it has no visible text.
 #let text-or-none(value) = {
+  if type(value) == str and _plain-ascii in value { return value }
   let result = plain-text(value)
   if result == "" { none } else { result }
 }
@@ -72,6 +78,9 @@
 // characters (VAT IDs, IBANs, email addresses, codes). `plain-text` turns all
 // whitespace into single spaces.
 #let compact(value) = {
+  if type(value) == str and _plain-ascii in value {
+    return value.replace(" ", "")
+  }
   let result = _visible(plain-text(value).replace(" ", ""))
   if result == "" { none } else { result }
 }
@@ -79,6 +88,7 @@
 // The plain text of an identifier that may contain spaces (e.g. the tax
 // number "143/123/45678" or "HRB 12345"), without invisible characters.
 #let _identifier(value) = {
+  if type(value) == str and _plain-ascii in value { return value }
   let result = _visible(plain-text(value))
   if result == "" { none } else { result }
 }
@@ -967,8 +977,11 @@
   if unit == auto { unit = resolve-unit(item.at("unit", default: none)) }
 
   // The texts of the item, most of them not given.
+  // The position, e.g. "3" or "2.1".
   let pos = item.at("pos", default: none)
-  let id = if pos != none { text-or-none(pos) }
+  let id = if type(pos) == str and _plain-ascii in pos { pos } else if (
+    pos != none
+  ) { text-or-none(pos) }
   let description = item.at("description", default: none)
   let standard-id = item-id.at("standard", default: none)
   let seller-id = item-id.at("seller", default: none)
