@@ -664,6 +664,9 @@
 
 // Patterns of rare checks, compiled once on first use.
 #let _post-code-digits() = regex("[0-9]{3,}")
+// A Leitweg-ID, the routing identifier of a German public buyer (as
+// `id.leitweg` checks it), e.g. "04011000-1234512345-06".
+#let _leitweg-pattern() = regex("^[0-9]{2,12}(-[0-9A-Z]{1,30})?-[0-9]{2}$")
 // XR-TELEPHONE-REGEX (three digits, BR-DE-27) and XR-EMAIL-REGEX (BR-DE-28)
 // of the XRechnung 3.0 Schematron.
 #let _xr-patterns() = (
@@ -709,10 +712,6 @@
 // `rules`: the rule for a missing address and the rule for a missing scheme.
 // `represented`: the party is a seller with a tax representative, whose VAT
 // identifier is not the seller's `vat-id` (nor its address).
-// A Leitweg-ID, the routing identifier of a German public buyer (as
-// `id.leitweg` checks it), e.g. "04011000-1234512345-06".
-#let _leitweg-pattern = regex("^[0-9]{2,12}(-[0-9A-Z]{1,30})?-[0-9]{2}$")
-
 #let _check-electronic-address(
   party,
   required,
@@ -720,7 +719,7 @@
   field,
   term,
   represented: false,
-  leitweg: none,
+  reference: none,
 ) = {
   let (missing-rule, scheme-rule) = rules
   let address = party.electronic-address
@@ -756,11 +755,11 @@
       )
     }
     // A public buyer in Germany receives XRechnung at its Leitweg-ID, the
-    // buyer reference of this invoice (EAS 0204).
-    if leitweg != none {
+    // buyer reference (`reference`) of this invoice (EAS 0204).
+    if type(reference) == str and reference.match(_leitweg-pattern()) != none {
       hint = (
         "A public buyer is reached by its Leitweg-ID: set `electronic-address: id.leitweg("
-          + _quoted(leitweg)
+          + _quoted(reference)
           + ")` on the "
           + field
           + ". "
@@ -1701,16 +1700,13 @@
       "seller electronic address (BT-34)",
       represented: represented,
     )
-    let reference = model.invoice.at("buyer-reference", default: none)
     out += _check-electronic-address(
       buyer,
       required,
       ("PEPPOL-EN16931-R010", "BR-63"),
       "recipient",
       "buyer electronic address (BT-49)",
-      leitweg: if (
-        type(reference) == str and reference.match(_leitweg-pattern) != none
-      ) { reference },
+      reference: model.invoice.at("buyer-reference", default: none),
     )
   }
 
