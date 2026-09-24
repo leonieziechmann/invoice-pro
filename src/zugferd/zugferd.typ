@@ -133,9 +133,12 @@
   // parse, as a parse error would stop the compilation (it is an error
   // anyway).
   if findings.all(f => f.kind not in malformed-kinds) {
-    let parsed = xml(xml-bytes)
-    let roots = parsed.filter(n => type(n) == dictionary)
-    if roots.len() != 1 or roots.first().tag != "CrossIndustryInvoice" {
+    // A loop, as a closure (`filter`) would hash the parsed document.
+    let roots = ()
+    for node in xml(xml-bytes) {
+      if type(node) == dictionary { roots.push(node.tag) }
+    }
+    if roots != ("CrossIndustryInvoice",) {
       findings.push((kind: "well-formed", rule: none, path: (root-tag,)))
     }
   }
