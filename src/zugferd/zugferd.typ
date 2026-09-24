@@ -4,7 +4,7 @@
 
 #import "model.typ": build-model
 #import "profile.typ": switch-profile
-#import "validate.typ": validate
+#import "rules/engine.typ": run-rules
 #import "build.typ": build-tree, xml-declaration
 #import "xml.typ": dict-to-xml
 // The code of the write guard loads with the other modules; the tables of a
@@ -102,7 +102,7 @@
     bank: bank,
     payment-means: payment-means,
   )
-  let diagnostics = validate(model)
+  let diagnostics = run-rules(model)
 
   // The model does not depend on the candidate profile, so switching the
   // profile only repeats the validation.
@@ -115,7 +115,7 @@
       diagnostics: diagnostics,
     ))
     model.profile = switch-profile(model.profile, id)
-    diagnostics = validate(model)
+    diagnostics = run-rules(model)
   }
   if skipped.len() > 0 {
     model.profile.skipped = skipped.map(c => (id: c.id, name: c.name))

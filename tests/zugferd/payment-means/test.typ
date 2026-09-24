@@ -8,7 +8,7 @@
 #import "/src/lib.typ": *
 #import "/src/zugferd/profile.typ": resolve-profile
 #import "/src/zugferd/build.typ": build-xml
-#import "/src/zugferd/validate.typ": validate
+#import "/src/zugferd/rules/engine.typ": run-rules
 #import "/tests/zugferd/harness.typ": (
   bank, buyer-de, diagnostic, model-test, rules, xml-elements, xml-values,
 )
@@ -443,7 +443,7 @@
     (),
   )
   assert.eq(rules(model), ())
-  let warnings = validate(model).filter(d => d.level == "warning")
+  let warnings = run-rules(model).filter(d => d.level == "warning")
   assert.eq(warnings.map(d => (d.rule, d.field)), (
     ("IP-PROFILE-01", "direct-debit"),
     ("IP-PROFILE-01", "card-payment"),
@@ -464,7 +464,7 @@
   assert.eq(xml-values(model, "ram:DuePayableAmount"), ("0.00",))
   assert.eq(rules(model), ())
   // ... nor the payment means of `paid` (IP-PROFILE-01)
-  let warnings = validate(model).filter(d => d.level == "warning")
+  let warnings = run-rules(model).filter(d => d.level == "warning")
   assert.eq(warnings.map(d => (d.rule, d.field)), (
     ("IP-PROFILE-01", "paid.method"),
   ))

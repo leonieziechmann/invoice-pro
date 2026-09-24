@@ -39,9 +39,9 @@ tests/
 └── zugferd/               # Unit tests of the e-invoice (ZUGFeRD) pipeline
     ├── xml/               # Plain text, number formatting, XML serialization
     ├── guard/             # XML write guard: structure, values, names, diagnostics
-    ├── codelists/         # Construction of the code lists
+    ├── codelists/         # Code lists of the rules, codes of the newest lists
     ├── model/             # E-invoice data model built from an invoice
-    ├── validate/          # Business rule checks (diagnostics)
+    ├── validate/          # Business rule checks (diagnostics), the rule registry
     ├── parties/           # Parties: electronic addresses, identifiers, keys
     ├── parties-invoice/   # Party inputs of whole invoices, XML and diagnostics
     ├── identifiers/       # Typed identifiers of the `id` module, check digits
@@ -378,7 +378,7 @@ ZUGFeRD tests verify that generated invoices comply with the **EN 16931** Europe
 3. Validates the XML syntax and Schematron business rules (including XRechnung / EN16931 rules) using the **Mustangproject CLI validator** (`mustang-cli`).
 4. `validate-all-zugferd` then validates the XML of all EN 16931 and XRechnung documents once more with **KoSIT**, the reference validator for XRechnung (validator 1.6.3 with the XRechnung configuration 2026-08-31), in a single JVM (`tools/zugferd/kosit.py`). KoSIT has no scenario for MINIMUM, BASIC WL and BASIC; it lists these documents as skipped. The step needs `KOSIT_JAR`, `KOSIT_CONFIG` and Python with `lxml` and `pypdf` (see [Running Without Nix](#running-without-nix)); `nix run .#validate-all-zugferd` provides them. Without `KOSIT_JAR` and `KOSIT_CONFIG`, a local run skips KoSIT with a notice, and a run in CI (`CI=true`) fails.
 
-Independently of Mustang, `invoice-pro` checks the e-invoice data itself while compiling (`src/zugferd/validate.typ`) and lists every violated rule at once. The tests under `tests/zugferd/` cover these checks; the Mustang validation makes sure that an invoice passing them is valid for the official validator as well.
+Independently of Mustang, `invoice-pro` checks the e-invoice data itself while compiling (the rule registry in `src/zugferd/rules/`, see [The Rule Registry](#the-rule-registry)) and lists every violated rule at once. The tests under `tests/zugferd/` cover these checks; the Mustang validation makes sure that an invoice passing them is valid for the official validator as well.
 
 #### Running Validations
 
@@ -457,7 +457,7 @@ If Mustang reports validation errors:
    pdfdetach -saveall -o /tmp/extracted /tmp/test.pdf
    cat /tmp/extracted/factur-x.xml
    ```
-4. If Mustang rejects an invoice that compiled without errors, `invoice-pro`'s own validation misses a rule: add the check to `src/zugferd/validate.typ` and a case to `tests/zugferd/validate/test.typ`.
+4. If Mustang rejects an invoice that compiled without errors, `invoice-pro`'s own validation misses a rule: add the check to the rule registry (see [The Rule Registry](#the-rule-registry)) and a case to `tests/zugferd/validate/test.typ`.
 5. If KoSIT rejects a document, the output names the rule of each error (`error [BR-DE-15] ...`); `KOSIT_JAR=... KOSIT_CONFIG=... python3 tools/zugferd/kosit.py <file.pdf|file.xml>` validates single files. A rule that only one of Mustang and KoSIT reports is documented in `tools/zugferd/validator-differences.toml` (see [Validator Differences](#validator-differences)).
 
 ---
@@ -491,7 +491,7 @@ The scripts take their tools from environment variables, and their generated fil
 | `MUSTANG_JAR`                            | corpus                     | none: `Mustang-CLI-2.14.0.jar` from the [Mustang releases](https://github.com/ZUGFeRD/mustangproject/releases)                      |
 | `JAVA_BIN`, `JAVAC_BIN` (or `JAVA_HOME`) | corpus                     | `java`, `javac`: a JDK, because the batch validator `tools/zugferd/java/MustangBatch.java` is compiled against the jar on first use |
 | `ZUGFERD_BUILD_DIR`                      | corpus, golden             | `build/zugferd`; must be inside the repository (the cases import `/src/lib.typ`)                                                    |
-| `KOSIT_JAR`, `KOSIT_CONFIG`              | corpus, KoSIT, `mutate.py` | none: the KoSIT validator jar and its unpacked XRechnung configuration (see below); `mutate.py` uses them only with `--kosit`       |
+| `KOSIT_JAR`, `KOSIT_CONFIG`              | corpus, KoSIT, `mutate.py` | none: the KoSIT jar and its unpacked XRechnung configuration (see below); `gen_guard.py` and `mutate.py` need the configuration     |
 
 KoSIT, in the corpus and in `validate-all-zugferd`, needs `KOSIT_JAR`, the standalone jar `validator-1.6.3-standalone.jar` of the [KoSIT validator releases](https://github.com/itplr-kosit/validator/releases), and `KOSIT_CONFIG`, the directory with `scenarios.xml` of the unpacked `xrechnung-3.0.2-validator-configuration-2026-08-31.zip` of the [XRechnung configuration releases](https://github.com/itplr-kosit/validator-configuration-xrechnung/releases). `flake.nix` pins both with their hashes; KoSIT runs with the `java` of `JAVA_BIN`. Without them, the corpus stops with a message that says where to get them. `--no-kosit` (like `--no-mustang`) skips a validator for a quick local run: the report then warns that its classes are not the official verdict, and CI (`CI=true`) refuses both flags. The Factur-X PDF check (`scripts/zugferd-xmp`) needs `MUSTANG_JAR` and a JDK as well, the package bundle check (`scripts/check-package-bundle`) only Typst.
 
@@ -618,9 +618,70 @@ reason = """The phone number of the seller contact (BT-42) has at least three di
 python3 tools/zugferd/bt_disposition.py   # ✔ 196 business terms of EN 16931 have a disposition (...)
 ```
 
+#### The Rule Registry
+
+invoice-pro's own validation checks the invoice data against the business rules before the XML is written (see [the documentation](../docs/docs/e-invoicing.md#validation-and-error-reporting)). Its rules form one registry in `src/zugferd/rules/`, in three parts that load as they are needed:
+
+| File                                              | Holds                                                                                                              | Loaded                                                                                 |
+| :------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
+| `registry.json`                                   | the metadata of every rule (below), for the tools and the documentation                                            | by the tools; by Typst only for a diagnostic                                           |
+| `engine.typ`, with `rare.typ` and `xrechnung.typ` | the checks: `run-rules(model)` returns the diagnostics of an e-invoice data model, errors first                    | with the e-invoice; `rare.typ` and `xrechnung.typ` only for an invoice that needs them |
+| `messages.typ`                                    | the message and the hint of every rule, and `diagnostics`, which turns the findings of the checks into diagnostics | only when a check fails                                                                |
+
+A check that fails records a finding, `(key: .., field: .., ..values)`: the key of its entry, the input field the diagnostic names, the id where the entry reports several (e.g. `BR-S-05` of the entry `vat-rate-positive`), the level where the entry has two, and the values its message needs. `diagnostics` takes the level and the id from the entry and builds the message only then; a finding without an entry or a message, or with an id or a level its entry does not list, stops the compilation, so every diagnostic is a rule of the registry. The code lists of the checks are those of the write guard (`validator` of `src/zugferd/guard/lists.typ`, see [The XML Write Guard](#the-xml-write-guard)): `every` holds the codes of every validation of the profiles with the rules of EN 16931 (Factur-X 1.0.07, the CEN Schematron 1.3.12 of Mustang and 1.3.16 of KoSIT), `factur-x` those of the Factur-X validation of MINIMUM and BASIC WL, and `newer` the codes only the newest CEN list has, whose diagnostic says that the validation of the profile does not know them yet (e.g. the currency `XCG`).
+
+An entry of `registry.json`, by its key (the rule id, or a name for an entry that reports several ids):
+
+```json
+"BR-CO-25": {
+  "covers": ["BR-CO-25", "FX-SCH-A-000155"],
+  "source": "EN16931",
+  "versions": ["1.3.12", "1.3.16"],
+  "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
+  "scope": "payment",
+  "terms": ["BT-9", "BT-20", "BT-115"],
+  "level": "error",
+  "field": "payment-goal",
+  "summary": "An invoice with an amount due (BT-115) has a payment due date (BT-9) or payment terms (BT-20).",
+  "legal": null
+}
+```
+
+| Field                | Meaning                                                                                                                                                                                                                   |
+| :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ids`                | the rule ids the entry reports (optional, default: the key), e.g. `BR-S-05` to `BR-AG-07` of `vat-rate-positive`                                                                                                          |
+| `covers`             | the official rules the check implements, with their Factur-X aliases (e.g. `FX-SCH-A-000011` for `BR-02`); none for a rule of invoice-pro                                                                                 |
+| `source`, `versions` | where the rule comes from, and the versions of the artefacts it was compared with: `EN16931` and `CII` (CEN Schematron 1.3.12, 1.3.16), `FACTUR-X` (1.0.07), `XRECHNUNG` and `PEPPOL` (XRechnung 3.0), `IP` (invoice-pro) |
+| `profiles`           | the profiles the check runs in                                                                                                                                                                                            |
+| `scope`              | `document`, `party`, `line`, `tax`, `allowance-charge`, `payment` or `printed`                                                                                                                                            |
+| `terms`              | the business terms (BT, BG) the rule is about                                                                                                                                                                             |
+| `level`              | `"error"`, `"warning"`, or both (the first is the usual one)                                                                                                                                                              |
+| `field`              | the input the diagnostic names                                                                                                                                                                                            |
+| `summary`            | what the rule checks; the tables of the rules of invoice-pro in `docs/docs/e-invoicing.md` are generated from it                                                                                                          |
+| `legal`              | the legal basis of a rule of invoice-pro that the law requires (e.g. `Art. 226 No. 4 and No. 15 of the VAT Directive 2006/112/EC`), else `null`                                                                           |
+| `note`               | a remark (optional), e.g. where invoice-pro follows one version of an official rule                                                                                                                                       |
+
+The tools read the registry with `tools/zugferd/registry.py`:
+
+```python
+import registry                          # tools/zugferd/registry.py
+rules = registry.load()                  # the checked registry; raises ValueError on a problem
+registry.reported(rules)                 # {rule id: [key, ..]}: the ids invoice-pro reports
+registry.covering(rules, "en16931")      # {official id: [key, ..]}: the official rules it checks in a profile
+```
+
+```bash
+python3 tools/zugferd/registry.py --check        # entries, messages, checks, tables of the documentation; with $MUSTANG_JAR the Factur-X aliases
+python3 tools/zugferd/registry.py --write-docs   # regenerate the tables of the rules in docs/docs/e-invoicing.md
+```
+
+`tools/zugferd/test_registry.py` (run by `zugferd-corpus`) checks that the entries are valid, that every entry has a message and a check and every rule id of the checks an entry, that the tables of the documentation are the generated ones and, with `$MUSTANG_JAR`, that `covers` names exactly the Factur-X aliases of the rules it covers. `tests/zugferd/validate/test.typ` checks the Typst side: the messages are those of the entries, and a finding outside the registry stops the compilation.
+
+A new rule is a check that records a finding (`engine.typ`, or `rare.typ` for inputs most invoices do not give, `xrechnung.typ` for XRechnung), its message (`messages.typ`) and its entry (`registry.json`); then `registry.py --check`, `--write-docs` for a rule of invoice-pro, and a case in `tests/zugferd/`.
+
 #### The XML Write Guard
 
-The serializer checks every element it writes against tables of the profile (see [the documentation](../docs/docs/e-invoicing.md#the-xml-write-guard)). `tools/zugferd/gen_guard.py` compiles these tables from the official artefacts inside the Mustang CLI jar 2.14.0 (pinned by their SHA-256): the Factur-X 1.0.07 XSDs and Schematron, the CEN Schematron of EN 16931 and the XRechnung 3.0 Schematron. It writes `src/zugferd/guard/lists.typ` and one module per profile, and covers exactly the elements `src/zugferd/build.typ` can write. It fails on any XSD construct or Schematron shape outside the subset it understands, instead of guessing, and prints what it did with every rule:
+The serializer checks every element it writes against tables of the profile (see [the documentation](../docs/docs/e-invoicing.md#the-xml-write-guard)). `tools/zugferd/gen_guard.py` compiles these tables from the official artefacts inside the Mustang CLI jar 2.14.0 (pinned by their SHA-256): the Factur-X 1.0.07 XSDs and Schematron, the CEN Schematron of EN 16931 (1.3.12) and the XRechnung 3.0 Schematron. The code lists of a profile with the rules of EN 16931 are also narrowed to those of the current CEN Schematron 1.3.16 of the KoSIT XRechnung configuration 2026-08-31 (`$KOSIT_CONFIG` or `--kosit-config`, pinned as well; there is no fallback without it): a code must be in every list that applies. It writes `src/zugferd/guard/lists.typ` and one module per profile, and covers exactly the elements `src/zugferd/build.typ` can write. It fails on any XSD construct or Schematron shape outside the subset it understands, instead of guessing, and prints what it did with every rule:
 
 ```bash
 python3 tools/zugferd/gen_guard.py            # regenerate the tables (after a change of build.typ)

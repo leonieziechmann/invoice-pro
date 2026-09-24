@@ -3,7 +3,7 @@
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/model.typ": build-model
-#import "/src/zugferd/validate.typ": validate
+#import "/src/zugferd/rules/engine.typ": run-rules
 #import "/src/zugferd/build.typ": build-xml
 #import "/src/logic/payment-means.typ": resolve as resolve-payment-means
 #import "/tests/data-test.typ": data-test, loom
@@ -92,11 +92,11 @@
 /// The sorted rules of the diagnostics of `level` the validator reports for
 /// a model.
 #let rules(model, level: "error") = (
-  validate(model).filter(d => d.level == level).map(d => d.rule).sorted()
+  run-rules(model).filter(d => d.level == level).map(d => d.rule).sorted()
 )
 
 /// The first diagnostic of `rule`, or `none`.
-#let diagnostic(model, rule) = validate(model).find(d => d.rule == rule)
+#let diagnostic(model, rule) = run-rules(model).find(d => d.rule == rule)
 
 /// Every element `tag` (e.g. "ram:BilledQuantity") with its attributes and
 /// text, as written in the XML the builder writes for a model.

@@ -1,18 +1,21 @@
 // Country codes in the e-invoice: the country code list behind BR-CL-14 and
 // the electronic address scheme (EAS) derived from the VAT ID prefix.
 
-#import "/src/zugferd/codelists.typ"
+#import "/src/zugferd/guard/lists.typ": validator as lists
+#import "/src/zugferd/rules/engine.typ": in-list
 #import "/src/zugferd/model.typ": get-electronic-address
 
 // --- 1. The country codes mirror the EN 16931 Schematron (BR-CL-14) ---
 #{
+  let countries = lists.country.every
   // South Sudan is missing in the list the official validators apply, an
   // "SS" country would make the XML invalid.
-  assert("SS" not in codelists.countries)
+  assert(not in-list(countries, "SS"))
   // The official list has 251 codes, including the withdrawn "AN".
-  assert.eq(codelists.countries.len(), 250)
+  assert(not in-list(countries, "AN"))
+  assert.eq(countries.trim().split(" ").len(), 250)
   for code in ("DE", "FR", "GB", "XI", "1A", "NO", "FI", "CA", "JP") {
-    assert(code in codelists.countries, message: code)
+    assert(in-list(countries, code), message: code)
   }
 }
 

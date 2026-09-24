@@ -1,0 +1,3225 @@
+{
+  "format": 1,
+  "sources": {
+    "EN16931": "The CEN EN 16931 CII Schematron (EN16931-CII-validation): 1.3.12 in the Mustang CLI 2.14.0, 1.3.16 in the KoSIT XRechnung configuration 2026-08-31.",
+    "CII": "The rules of the CII syntax binding (CII-SR-*, CII-DT-*) of the same Schematron.",
+    "FACTUR-X": "The Factur-X 1.0.07 (ZUGFeRD 2.3) Schematron of the profile, in the Mustang CLI 2.14.0.",
+    "XRECHNUNG": "The XRechnung 3.0 CII Schematron: in the Mustang CLI 2.14.0, and 3.0.2 in the KoSIT XRechnung configuration 2026-08-31.",
+    "PEPPOL": "The PEPPOL rules of the XRechnung CII Schematron.",
+    "IP": "A rule of invoice-pro: the official rules accept the XML, but the invoice would be wrong, e.g. required by law or a value would be lost."
+  },
+  "rules": {
+    "BR-02": {
+      "covers": [
+        "BR-02",
+        "FX-SCH-A-000011"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-1"
+      ],
+      "level": "error",
+      "field": "invoice-nr",
+      "summary": "An invoice has an invoice number (BT-1).",
+      "legal": null
+    },
+    "BR-03": {
+      "covers": [
+        "BR-03",
+        "FX-SCH-A-000012",
+        "FX-SCH-A-000022"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-2"
+      ],
+      "level": "error",
+      "field": "date",
+      "summary": "An invoice has an invoice date (BT-2) that is a calendar date.",
+      "legal": null
+    },
+    "BR-05": {
+      "covers": [
+        "BR-05",
+        "FX-SCH-A-000014"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-5"
+      ],
+      "level": "error",
+      "field": "locale",
+      "summary": "An invoice has an invoice currency code (BT-5).",
+      "legal": null
+    },
+    "BR-CL-04": {
+      "covers": [
+        "BR-CL-04",
+        "FX-SCH-A-000040"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-5"
+      ],
+      "level": "error",
+      "field": "currency",
+      "summary": "The invoice currency code (BT-5) is in the ISO 4217 code list of every validation of the profile: of Factur-X, and in the profiles based on EN 16931 also of both versions of the EN 16931 code list (1.3.12 of Mustang, 1.3.16 of KoSIT).",
+      "legal": null,
+      "note": "The field is `locale` when the currency comes from the locale. A code only the newest EN 16931 code list has is named as such."
+    },
+    "IP-TAX-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-151"
+      ],
+      "level": "error",
+      "field": "tax",
+      "summary": "`tax: none` in an e-invoice: the items would be declared as zero rated (`Z`). Use `tax.zero()`, `tax.exempt(grounds: ..)`, `tax.outside-scope()` or `tax-exempt-small-biz`.",
+      "legal": "§ 14 Abs. 4 Satz 1 Nr. 8 UStG; Art. 226 No. 9 and 11 of the VAT Directive 2006/112/EC (the rate, or the reason why no VAT is charged)"
+    },
+    "IP-PRINT-02": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "printed",
+      "terms": [
+        "BT-5"
+      ],
+      "level": "error",
+      "field": "locale",
+      "summary": "Amounts printed in another currency than the invoice currency (BT-5), e.g. a custom locale that prints \"zł\" while the XML states EUR.",
+      "legal": null
+    },
+    "IP-DOC-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-3"
+      ],
+      "level": "error",
+      "field": "subject",
+      "summary": "A subject that names another kind of document than an invoice (e.g. \"Gutschrift\", \"Angebot\", \"Credit note\", \"Devis\") without `document-type`: the e-invoice would state a commercial invoice that asks the buyer to pay. See [Document Type](#9-document-type-bt-3).",
+      "legal": null
+    },
+    "BR-DE-17": {
+      "covers": [
+        "BR-DE-17"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-3"
+      ],
+      "level": "error",
+      "field": "document-type",
+      "summary": "XRechnung allows the document types 326, 380, 381, 384, 389, 875, 876 and 877 (BT-3). XRechnung only warns, but validators such as Mustang reject the invoice, so it is an error.",
+      "legal": null
+    },
+    "BR-55": {
+      "covers": [
+        "BR-55",
+        "FX-SCH-A-000182"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-25",
+        "BT-26"
+      ],
+      "level": "error",
+      "field": "preceding-invoice-nr",
+      "summary": "A preceding invoice reference (BG-3) has the number of the preceding invoice (BT-25).",
+      "legal": null
+    },
+    "BR-DE-26": {
+      "covers": [
+        "BR-DE-26"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-3",
+        "BT-25"
+      ],
+      "level": "error",
+      "field": "preceding-invoice-nr",
+      "summary": "A corrected invoice (BT-3 = 384) names the invoice it corrects (BG-3). XRechnung only warns, but validators such as Mustang reject the invoice, so it is an error.",
+      "legal": null
+    },
+    "IP-DOC-02": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-3",
+        "BT-25"
+      ],
+      "level": "error",
+      "field": "preceding-invoice-nr",
+      "summary": "A corrected invoice (`document-type: \"corrected\"`) without `preceding-invoice-nr`: it replaces an invoice, which the VAT Directive (Art. 219) requires it to name. XRechnung checks it as `BR-DE-26`.",
+      "legal": "Art. 219 of the VAT Directive 2006/112/EC"
+    },
+    "IP-DOC-03": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-3",
+        "BT-112"
+      ],
+      "level": "error",
+      "field": "line-items",
+      "summary": "A credit note with a negative total: it states the credited amounts as positive amounts, so it would ask the buyer to pay.",
+      "legal": null
+    },
+    "IP-DOC-04": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-3",
+        "BT-112"
+      ],
+      "level": "warning",
+      "field": "line-items",
+      "summary": "An invoice with a negative total: valid, but a credit note (`document-type: \"credit-note\"`) is the document for a credit.",
+      "legal": null
+    },
+    "IP-PROFILE-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [],
+      "level": "warning",
+      "field": "the input",
+      "summary": "An input the profile cannot state, e.g. the buyer trading name (BT-45) in `\"basic\"`, or `notes`, a `payee` or the method of `paid` in `\"minimum\"`: the invoice may print it, but it is not written into the e-invoice. The hint names the lowest profile that states it.",
+      "legal": null
+    },
+    "BR-CL-08": {
+      "covers": [
+        "BR-CL-08",
+        "FX-SCH-A-000162"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-21"
+      ],
+      "level": "error",
+      "field": "notes",
+      "summary": "The subject code of a note (BT-21) is a code of UNTDID 4451.",
+      "legal": null
+    },
+    "IP-PERIOD-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "printed",
+      "terms": [
+        "BT-72",
+        "BG-14"
+      ],
+      "level": [
+        "error",
+        "warning"
+      ],
+      "field": "references",
+      "summary": "A printed service period that is not the one the XML states: another date, or a text of its own where the XML states the invoice date. A text of its own besides dated items or a `service-period` is a warning. See [Service Period](#10-service-period-bt-72--bg-14).",
+      "legal": "§ 14 Abs. 4 Satz 1 Nr. 6 UStG; Art. 226 No. 7 of the VAT Directive 2006/112/EC (the date of the supply)"
+    },
+    "BR-DE-TMP-32": {
+      "covers": [
+        "BR-DE-TMP-32"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-72",
+        "BG-14"
+      ],
+      "level": "warning",
+      "field": "service-period",
+      "summary": "An invoice states the date of the supply (BT-72) or the invoicing period (BG-14). Information in the XRechnung Schematron, a warning of invoice-pro: a credit note or a prepayment invoice without dates states none.",
+      "legal": null
+    },
+    "IP-PERIOD-03": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "printed",
+      "terms": [
+        "BT-72",
+        "BG-14"
+      ],
+      "level": [
+        "error",
+        "warning"
+      ],
+      "field": "references",
+      "summary": "The printed invoice does not show the date of the supply, which German law requires on every invoice but a small-amount invoice; for a seller elsewhere a warning where it is not the invoice date. See [Printed Details](#printed-details).",
+      "legal": "§ 14 Abs. 4 Satz 1 Nr. 6 UStG, UStAE 14.5 Abs. 16, § 33 UStDV; Art. 226 No. 7 of the VAT Directive 2006/112/EC"
+    },
+    "BR-06": {
+      "covers": [
+        "BR-06",
+        "FX-SCH-A-000015"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-27"
+      ],
+      "level": "error",
+      "field": "sender.name",
+      "summary": "The seller has a name (BT-27).",
+      "legal": null
+    },
+    "BR-07": {
+      "covers": [
+        "BR-07",
+        "FX-SCH-A-000016"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-44"
+      ],
+      "level": "error",
+      "field": "recipient.name",
+      "summary": "The buyer has a name (BT-44).",
+      "legal": null
+    },
+    "IP-KEY-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [],
+      "level": "warning",
+      "field": "sender.<key>",
+      "summary": "A key of `sender`, `recipient`, `delivery-address`, `sender.tax-representative` or `payee` that `invoice-pro` does not know: its value is not written into the e-invoice.",
+      "legal": null
+    },
+    "IP-KEY-02": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [],
+      "level": "error",
+      "field": "sender.<key>",
+      "summary": "A misspelled key the e-invoice reads, or another name of it (e.g. `vatId`, `vat_id`, `ustid`, `uid`, `e-mail`, `siret` or `zip`): its value would be missing without notice.",
+      "legal": null
+    },
+    "BR-09": {
+      "covers": [
+        "BR-09",
+        "FX-SCH-A-000018"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-40"
+      ],
+      "level": "error",
+      "field": "sender.country",
+      "summary": "The seller postal address has a country code (BT-40).",
+      "legal": null
+    },
+    "BR-11": {
+      "covers": [
+        "BR-11",
+        "FX-SCH-A-000157"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-55"
+      ],
+      "level": "error",
+      "field": "recipient.country",
+      "summary": "The buyer postal address has a country code (BT-55).",
+      "legal": null
+    },
+    "BR-57": {
+      "covers": [
+        "BR-57",
+        "FX-SCH-A-000170"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-80"
+      ],
+      "level": "error",
+      "field": "delivery-address.country",
+      "summary": "The deliver-to address has a country code (BT-80).",
+      "legal": null
+    },
+    "BR-20": {
+      "covers": [
+        "BR-20",
+        "FX-SCH-A-000078"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-69"
+      ],
+      "level": "error",
+      "field": "sender.tax-representative.country",
+      "summary": "The postal address of the seller tax representative has a country code (BT-69).",
+      "legal": null
+    },
+    "BR-CL-14": {
+      "covers": [
+        "BR-CL-14",
+        "FX-SCH-A-000036"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-40",
+        "BT-55",
+        "BT-69",
+        "BT-80"
+      ],
+      "level": "error",
+      "field": "sender.country",
+      "summary": "A country code of an address is in the ISO 3166-1 code list of every validation of the profile (the profiles based on EN 16931 lack South Sudan, SS).",
+      "legal": null
+    },
+    "IP-COUNTRY-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-40",
+        "BT-55",
+        "BT-69"
+      ],
+      "level": "error",
+      "field": "sender.country",
+      "summary": "A party without `country` whose VAT identifier was issued by another country: the country of the locale would be written (e.g. \"DE\" for the Austrian VAT ID \"ATU12345678\"). Set `country` on the party, also for a foreign VAT registration.",
+      "legal": null
+    },
+    "IP-ADDR-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-37",
+        "BT-38",
+        "BT-52",
+        "BT-53",
+        "BT-66",
+        "BT-67",
+        "BT-77",
+        "BT-78"
+      ],
+      "level": "error",
+      "field": "sender.city",
+      "summary": "A city line with a number of three or more digits, but no post code in the format of the party's country (e.g. \"1012 Amsterdam\" instead of \"1012 AB Amsterdam\"): the post code would be missing, and the number would be written into the city name.",
+      "legal": null
+    },
+    "BR-CO-09": {
+      "covers": [
+        "BR-CO-09",
+        "FX-SCH-A-000002"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-31",
+        "BT-48",
+        "BT-63"
+      ],
+      "level": "error",
+      "field": "sender.vat-id",
+      "summary": "A VAT identifier starts with the prefix of a country (\"EL\" for Greece).",
+      "legal": null
+    },
+    "BR-CO-26": {
+      "covers": [
+        "BR-CO-26",
+        "FX-SCH-A-000001"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-29",
+        "BT-30",
+        "BT-31"
+      ],
+      "level": "error",
+      "field": "sender",
+      "summary": "The seller is identified by an identifier (BT-29), a legal registration identifier (BT-30) or a VAT identifier (BT-31); in MINIMUM by BT-30 or BT-31.",
+      "legal": null
+    },
+    "IP-PRINT-03": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "printed",
+      "terms": [
+        "BT-31",
+        "BT-32"
+      ],
+      "level": "error",
+      "field": "references",
+      "summary": "The XML states the seller's VAT identifier (BT-31) or tax number (BT-32), one of which the law requires on the invoice, but the printed invoice shows neither. See [Printed Details](#printed-details).",
+      "legal": "§ 14 Abs. 4 Satz 1 Nr. 2 UStG, § 33 UStDV; Art. 226 No. 3 of the VAT Directive 2006/112/EC"
+    },
+    "IP-ID-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-29",
+        "BT-30",
+        "BT-46",
+        "BT-47",
+        "BT-60",
+        "BT-61",
+        "BT-71",
+        "BT-10"
+      ],
+      "level": "error",
+      "field": "sender.legal-id",
+      "summary": "An identifier of the [`id` module](./api-reference/invoice/identifiers.md) whose format or check digit is wrong, e.g. a SIRET with a typo. `id.custom(..)` takes an identifier unchecked.",
+      "legal": null
+    },
+    "IP-ID-03": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-29",
+        "BT-30",
+        "BT-46",
+        "BT-47",
+        "BT-71",
+        "BT-10"
+      ],
+      "level": "error",
+      "field": "recipient.leitweg-id",
+      "summary": "An identifier given for a field it does not belong to: a Leitweg-ID as party identifier or legal registration identifier, another identifier as `leitweg-id`, a GLN or D-U-N-S number as `legal-id`, or a register number as `id`.",
+      "legal": null
+    },
+    "BR-CL-11": {
+      "covers": [
+        "BR-CL-11",
+        "FX-SCH-A-000031"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-30",
+        "BT-47",
+        "BT-61"
+      ],
+      "level": "error",
+      "field": "sender.legal-id",
+      "summary": "The scheme of a legal registration identifier (BT-30, BT-47, BT-61) is an ISO/IEC 6523 code of every validation.",
+      "legal": null
+    },
+    "BR-O-02": {
+      "covers": [
+        "BR-O-02",
+        "FX-SCH-A-000247"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-63"
+      ],
+      "level": "error",
+      "field": "sender.tax-representative",
+      "summary": "An invoice not subject to VAT (O) states no VAT identifiers, so it names no seller tax representative (BG-11).",
+      "legal": null
+    },
+    "BR-18": {
+      "covers": [
+        "BR-18",
+        "FX-SCH-A-000076"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-62"
+      ],
+      "level": "error",
+      "field": "sender.tax-representative.name",
+      "summary": "The seller tax representative has a name (BT-62).",
+      "legal": null
+    },
+    "BR-56": {
+      "covers": [
+        "BR-56",
+        "FX-SCH-A-000079"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-63"
+      ],
+      "level": "error",
+      "field": "sender.tax-representative.vat-id",
+      "summary": "The seller tax representative has a VAT identifier (BT-63).",
+      "legal": null
+    },
+    "IP-VAT-226": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-48",
+        "BG-12"
+      ],
+      "level": "error",
+      "field": "recipient.vat-id",
+      "summary": "An intra-community supply (`K`) or a cross-border reverse charge (`AE`) without the buyer VAT identifier (Art. 226 No. 4 VAT Directive), which the official rules miss: in BASIC WL (no invoice lines) and with a buyer `legal-id`; a tax representative without address (No. 15).",
+      "legal": "Art. 226 No. 4 and No. 15 of the VAT Directive 2006/112/EC"
+    },
+    "BR-17": {
+      "covers": [
+        "BR-17",
+        "FX-SCH-A-000075"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-59"
+      ],
+      "level": "error",
+      "field": "payee.name",
+      "summary": "The payee (BG-10) has a name (BT-59), and is someone other than the seller.",
+      "legal": null
+    },
+    "IP-ID-02": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-29",
+        "BT-46",
+        "BT-60",
+        "BT-71"
+      ],
+      "level": "error",
+      "field": "sender.id",
+      "summary": "Two values for one party identifier, of which only one can be written: a `global-id` without scheme next to `id`, a `location-id` next to `id` of the delivery address, or two identifiers with scheme.",
+      "legal": null
+    },
+    "BR-CL-10": {
+      "covers": [
+        "BR-CL-10",
+        "FX-SCH-A-000031"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-29",
+        "BT-46",
+        "BT-60"
+      ],
+      "level": "error",
+      "field": "sender.global-id",
+      "summary": "The scheme of a global identifier of the seller, the buyer or the payee is an ISO/IEC 6523 code of every validation.",
+      "legal": null
+    },
+    "BR-CL-26": {
+      "covers": [
+        "BR-CL-26",
+        "FX-SCH-A-000031"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-71"
+      ],
+      "level": "error",
+      "field": "delivery-address.global-id",
+      "summary": "The scheme of the global identifier of the deliver-to location (BT-71) is an ISO/IEC 6523 code of every validation.",
+      "legal": null
+    },
+    "CII-SR-450": {
+      "covers": [
+        "CII-SR-450"
+      ],
+      "source": "CII",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-46"
+      ],
+      "level": "error",
+      "field": "recipient",
+      "summary": "The buyer has one identifier (BT-46): `ram:ID` or `ram:GlobalID`.",
+      "legal": null
+    },
+    "CII-SR-449": {
+      "covers": [
+        "CII-SR-449"
+      ],
+      "source": "CII",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-71"
+      ],
+      "level": "error",
+      "field": "delivery-address",
+      "summary": "The deliver-to location has one identifier (BT-71): `ram:ID` or `ram:GlobalID`.",
+      "legal": null
+    },
+    "CII-SR-451": {
+      "covers": [
+        "CII-SR-451"
+      ],
+      "source": "CII",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-60"
+      ],
+      "level": "error",
+      "field": "payee",
+      "summary": "The payee has one identifier (BT-60): `ram:ID` or `ram:GlobalID`.",
+      "legal": null
+    },
+    "PEPPOL-EN16931-R020": {
+      "covers": [
+        "PEPPOL-EN16931-R020"
+      ],
+      "source": "PEPPOL",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-34"
+      ],
+      "level": [
+        "error",
+        "warning"
+      ],
+      "field": "sender",
+      "summary": "The seller has an electronic address (BT-34): required by XRechnung, recommended for EN 16931 (a warning).",
+      "legal": null
+    },
+    "PEPPOL-EN16931-R010": {
+      "covers": [
+        "PEPPOL-EN16931-R010"
+      ],
+      "source": "PEPPOL",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-49"
+      ],
+      "level": [
+        "error",
+        "warning"
+      ],
+      "field": "recipient",
+      "summary": "The buyer has an electronic address (BT-49): required by XRechnung, recommended for EN 16931 (a warning).",
+      "legal": null
+    },
+    "BR-62": {
+      "covers": [
+        "BR-62",
+        "FX-SCH-A-000158"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-34"
+      ],
+      "level": "error",
+      "field": "sender.electronic-address",
+      "summary": "The seller electronic address (BT-34) has a scheme identifier.",
+      "legal": null
+    },
+    "BR-63": {
+      "covers": [
+        "BR-63",
+        "FX-SCH-A-000159"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-49"
+      ],
+      "level": "error",
+      "field": "recipient.electronic-address",
+      "summary": "The buyer electronic address (BT-49) has a scheme identifier.",
+      "legal": null
+    },
+    "BR-CL-25": {
+      "covers": [
+        "BR-CL-25",
+        "FX-SCH-A-000031"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-34",
+        "BT-49"
+      ],
+      "level": "error",
+      "field": "sender.electronic-address",
+      "summary": "The scheme of an electronic address (BT-34, BT-49) is in the CEF EAS code list of every validation, in every profile: e.g. the withdrawn scheme 9901 is not.",
+      "legal": null
+    },
+    "BR-DE-2": {
+      "covers": [
+        "BR-DE-2"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BG-6"
+      ],
+      "level": "error",
+      "field": "sender.contact",
+      "summary": "XRechnung requires the seller contact (BG-6).",
+      "legal": null
+    },
+    "BR-DE-5": {
+      "covers": [
+        "BR-DE-5"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-41"
+      ],
+      "level": "error",
+      "field": "sender.contact.name",
+      "summary": "XRechnung requires the name of the seller contact (BT-41).",
+      "legal": null
+    },
+    "BR-DE-6": {
+      "covers": [
+        "BR-DE-6"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-42"
+      ],
+      "level": "error",
+      "field": "sender.contact.phone",
+      "summary": "XRechnung requires the phone number of the seller contact (BT-42).",
+      "legal": null
+    },
+    "BR-DE-7": {
+      "covers": [
+        "BR-DE-7"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-43"
+      ],
+      "level": "error",
+      "field": "sender.contact.email",
+      "summary": "XRechnung requires the email address of the seller contact (BT-43).",
+      "legal": null
+    },
+    "BR-DE-27": {
+      "covers": [
+        "BR-DE-27"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-42"
+      ],
+      "level": "error",
+      "field": "sender.contact.phone",
+      "summary": "The phone number of the seller contact (BT-42) has at least three digits. XRechnung only warns (and KoSIT accepts it), but validators such as Mustang reject the invoice, so it is an error (maintainer decision).",
+      "legal": null
+    },
+    "BR-DE-28": {
+      "covers": [
+        "BR-DE-28"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-43"
+      ],
+      "level": "error",
+      "field": "sender.contact.email",
+      "summary": "The email address of the seller contact (BT-43) matches XR-EMAIL-REGEX of the XRechnung Schematron. XRechnung only warns (and KoSIT accepts it), but validators such as Mustang reject the invoice, so it is an error (maintainer decision).",
+      "legal": null
+    },
+    "BR-DE-3": {
+      "covers": [
+        "BR-DE-3"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-37"
+      ],
+      "level": "error",
+      "field": "sender.city",
+      "summary": "XRechnung requires the seller city (BT-37).",
+      "legal": null
+    },
+    "BR-DE-4": {
+      "covers": [
+        "BR-DE-4"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-38"
+      ],
+      "level": "error",
+      "field": "sender.city",
+      "summary": "XRechnung requires the seller post code (BT-38).",
+      "legal": null
+    },
+    "BR-DE-8": {
+      "covers": [
+        "BR-DE-8"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-52"
+      ],
+      "level": "error",
+      "field": "recipient.city",
+      "summary": "XRechnung requires the buyer city (BT-52).",
+      "legal": null
+    },
+    "BR-DE-9": {
+      "covers": [
+        "BR-DE-9"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-53"
+      ],
+      "level": "error",
+      "field": "recipient.city",
+      "summary": "XRechnung requires the buyer post code (BT-53).",
+      "legal": null
+    },
+    "BR-DE-10": {
+      "covers": [
+        "BR-DE-10"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-77"
+      ],
+      "level": "error",
+      "field": "delivery-address.city",
+      "summary": "XRechnung requires the deliver-to city (BT-77).",
+      "legal": null
+    },
+    "BR-DE-11": {
+      "covers": [
+        "BR-DE-11"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-78"
+      ],
+      "level": "error",
+      "field": "delivery-address.city",
+      "summary": "XRechnung requires the deliver-to post code (BT-78).",
+      "legal": null
+    },
+    "BR-DE-15": {
+      "covers": [
+        "BR-DE-15"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "party",
+      "terms": [
+        "BT-10"
+      ],
+      "level": "error",
+      "field": "recipient.buyer-reference",
+      "summary": "XRechnung requires the buyer reference (BT-10), e.g. the Leitweg-ID.",
+      "legal": null
+    },
+    "vat-buyer-id": {
+      "ids": [
+        "BR-IC-02",
+        "BR-IC-03",
+        "BR-IC-04",
+        "BR-AE-02",
+        "BR-AE-03",
+        "BR-AE-04"
+      ],
+      "covers": [
+        "BR-IC-02",
+        "BR-IC-03",
+        "BR-IC-04",
+        "BR-AE-02",
+        "BR-AE-03",
+        "BR-AE-04",
+        "FX-SCH-A-000081",
+        "FX-SCH-A-000087",
+        "FX-SCH-A-000099",
+        "FX-SCH-A-000105",
+        "FX-SCH-A-000235",
+        "FX-SCH-A-000241"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-48",
+        "BT-47"
+      ],
+      "level": "error",
+      "field": "recipient.vat-id",
+      "summary": "An intra-community supply (K) states the buyer VAT identifier (BT-48), a reverse charge (AE) it or the buyer legal registration identifier (BT-47), where the category occurs: on an invoice line (BR-IC-02, BR-AE-02), a document level allowance (-03) or charge (-04).",
+      "legal": null
+    },
+    "BR-IC-12": {
+      "covers": [
+        "BR-IC-12",
+        "FX-SCH-A-000145"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-80"
+      ],
+      "level": [
+        "error",
+        "warning"
+      ],
+      "field": "delivery-address",
+      "summary": "An intra-community supply (K) states the deliver-to country (BT-80); a warning where it is the seller's own country, as the goods must be dispatched to another member state.",
+      "legal": null
+    },
+    "IP-VAT-138": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-48"
+      ],
+      "level": "warning",
+      "field": "recipient.vat-id",
+      "summary": "An intra-community supply (`K`) to a buyer whose VAT identifier was not issued by an EU member state (or \"XI\" for Northern Ireland).",
+      "legal": "Art. 138 of the VAT Directive 2006/112/EC"
+    },
+    "BR-16": {
+      "covers": [
+        "BR-16",
+        "FX-SCH-A-000253"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "line",
+      "terms": [
+        "BG-25"
+      ],
+      "level": "error",
+      "field": "line-items",
+      "summary": "An invoice has at least one invoice line (BG-25).",
+      "legal": null
+    },
+    "BR-25": {
+      "covers": [
+        "BR-25",
+        "FX-SCH-A-000204"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "line",
+      "terms": [
+        "BT-153"
+      ],
+      "level": "error",
+      "field": "item <id> (<name>)",
+      "summary": "Every invoice line has an item name (BT-153).",
+      "legal": null
+    },
+    "BR-CL-23": {
+      "covers": [
+        "BR-CL-23",
+        "FX-SCH-A-000275"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "line",
+      "terms": [
+        "BT-130"
+      ],
+      "level": "error",
+      "field": "item <id> (<name>)",
+      "summary": "The unit code of an invoice line (BT-130) is a UN/ECE Recommendation 20 code, and a unit given as text is one invoice-pro knows: it never writes \"one\" (C62) for a text it does not know.",
+      "legal": null
+    },
+    "IP-UNIT-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "line",
+      "terms": [
+        "BT-130"
+      ],
+      "level": "warning",
+      "field": "item <id> (<name>)",
+      "summary": "A unit code used verbatim that is also a common German abbreviation of another unit (`STK`, `PAL`, `FL`, `GL`, `KT`).",
+      "legal": null
+    },
+    "BR-CO-04": {
+      "covers": [
+        "BR-CO-04",
+        "FX-SCH-A-000210"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "line",
+      "terms": [
+        "BT-151"
+      ],
+      "level": "error",
+      "field": "item <id> (<name>)",
+      "summary": "Every invoice line has a VAT category (BT-151).",
+      "legal": null
+    },
+    "PEPPOL-EN16931-R121": {
+      "covers": [
+        "PEPPOL-EN16931-R121"
+      ],
+      "source": "PEPPOL",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "line",
+      "terms": [
+        "BT-149"
+      ],
+      "level": "error",
+      "field": "item <id> (<name>)",
+      "summary": "The price base quantity (BT-149) is greater than 0.",
+      "legal": null,
+      "note": "The PEPPOL rule is part of the XRechnung Schematron; invoice-pro checks it in every profile with lines."
+    },
+    "BR-30": {
+      "covers": [
+        "BR-30",
+        "FX-SCH-A-000212"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "line",
+      "terms": [
+        "BT-134",
+        "BT-135"
+      ],
+      "level": "error",
+      "field": "item <id> (<name>)",
+      "summary": "The period of an invoice line (BG-26) does not end before it starts.",
+      "legal": null
+    },
+    "PEPPOL-EN16931-R110": {
+      "covers": [
+        "PEPPOL-EN16931-R110"
+      ],
+      "source": "PEPPOL",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "line",
+      "terms": [
+        "BT-134",
+        "BG-14"
+      ],
+      "level": "error",
+      "field": "item <id> (<name>)",
+      "summary": "The start of the period of an invoice line (BT-134) is within the invoicing period (BG-14).",
+      "legal": null
+    },
+    "PEPPOL-EN16931-R111": {
+      "covers": [
+        "PEPPOL-EN16931-R111"
+      ],
+      "source": "PEPPOL",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "line",
+      "terms": [
+        "BT-135",
+        "BG-14"
+      ],
+      "level": "error",
+      "field": "item <id> (<name>)",
+      "summary": "The end of the period of an invoice line (BT-135) is within the invoicing period (BG-14).",
+      "legal": null
+    },
+    "IP-PERIOD-02": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "line",
+      "terms": [
+        "BG-26",
+        "BG-14",
+        "BT-72"
+      ],
+      "level": "warning",
+      "field": "item <id> (<name>)",
+      "summary": "The date of an item outside the `service-period` of the invoice. XRechnung checks it for an invoicing period (BG-14) as `PEPPOL-EN16931-R110` and `R111`. See [Item Notes, Periods and Country of Origin](#12-item-notes-periods-and-country-of-origin).",
+      "legal": null
+    },
+    "BR-CL-15": {
+      "covers": [
+        "BR-CL-15",
+        "FX-SCH-A-000026"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "line",
+      "terms": [
+        "BT-159"
+      ],
+      "level": "error",
+      "field": "item <id> (<name>)",
+      "summary": "The country of origin of an item (BT-159) is in the ISO 3166-1 code list of EN 16931.",
+      "legal": null
+    },
+    "BR-CO-18": {
+      "covers": [
+        "BR-CO-18",
+        "FX-SCH-A-000135"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BG-23"
+      ],
+      "level": "error",
+      "field": "line-items",
+      "summary": "An invoice has at least one VAT breakdown (BG-23).",
+      "legal": null
+    },
+    "BR-48": {
+      "covers": [
+        "BR-48",
+        "FX-SCH-A-000050"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-119"
+      ],
+      "level": "error",
+      "field": "tax <category> <rate>",
+      "summary": "Every VAT breakdown (BG-23) has a VAT category rate (BT-119), except one not subject to VAT (O). The write guard checks the XML for it as well; this names the VAT group.",
+      "legal": null
+    },
+    "IP-DEC-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-119",
+        "BT-152"
+      ],
+      "level": "error",
+      "field": "tax <category> <rate>",
+      "summary": "A VAT rate with more than 4 decimals, which the XML cannot state exactly (and which could collide with another VAT group).",
+      "legal": null
+    },
+    "BR-CL-18": {
+      "covers": [
+        "BR-CL-18",
+        "FX-SCH-A-000179"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-118",
+        "BT-151"
+      ],
+      "level": "error",
+      "field": "tax <category> <rate>",
+      "summary": "The VAT category code is one EN 16931 allows: S, Z, E, AE, K, G, O, L or M.",
+      "legal": null
+    },
+    "vat-rate-positive": {
+      "ids": [
+        "BR-S-05",
+        "BR-S-06",
+        "BR-S-07",
+        "BR-AF-05",
+        "BR-AF-06",
+        "BR-AF-07",
+        "BR-AG-05",
+        "BR-AG-06",
+        "BR-AG-07"
+      ],
+      "covers": [
+        "BR-S-05",
+        "BR-S-06",
+        "BR-S-07",
+        "BR-AF-05",
+        "BR-AF-06",
+        "BR-AF-07",
+        "BR-AG-05",
+        "BR-AG-06",
+        "BR-AG-07",
+        "FX-SCH-A-000090",
+        "FX-SCH-A-000092",
+        "FX-SCH-A-000096",
+        "FX-SCH-A-000108",
+        "FX-SCH-A-000110",
+        "FX-SCH-A-000114",
+        "FX-SCH-A-000244",
+        "FX-SCH-A-000246",
+        "FX-SCH-A-000250"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-152",
+        "BT-96",
+        "BT-103"
+      ],
+      "level": "error",
+      "field": "tax <category> <rate>",
+      "summary": "The standard rate (S), IGIC (L) and IPSI (M) have a rate above 0 where they occur: on invoice lines (BR-S-05), document level allowances (-06) and charges (-07).",
+      "legal": null,
+      "note": "Follows CEN 1.3.12 for IPSI (M), whose rate must be above 0; CEN 1.3.16 accepts 0."
+    },
+    "vat-rate-zero": {
+      "ids": [
+        "BR-Z-05",
+        "BR-Z-06",
+        "BR-Z-07",
+        "BR-Z-09",
+        "BR-E-05",
+        "BR-E-06",
+        "BR-E-07",
+        "BR-E-09",
+        "BR-AE-05",
+        "BR-AE-06",
+        "BR-AE-07",
+        "BR-AE-09",
+        "BR-IC-05",
+        "BR-IC-06",
+        "BR-IC-07",
+        "BR-IC-09",
+        "BR-G-05",
+        "BR-G-06",
+        "BR-G-07",
+        "BR-G-09"
+      ],
+      "covers": [
+        "BR-Z-05",
+        "BR-Z-06",
+        "BR-Z-07",
+        "BR-Z-09",
+        "BR-E-05",
+        "BR-E-06",
+        "BR-E-07",
+        "BR-E-09",
+        "BR-AE-05",
+        "BR-AE-06",
+        "BR-AE-07",
+        "BR-AE-09",
+        "BR-IC-05",
+        "BR-IC-06",
+        "BR-IC-07",
+        "BR-IC-09",
+        "BR-G-05",
+        "BR-G-06",
+        "BR-G-07",
+        "BR-G-09",
+        "FX-SCH-A-000055",
+        "FX-SCH-A-000082",
+        "FX-SCH-A-000084",
+        "FX-SCH-A-000086",
+        "FX-SCH-A-000088",
+        "FX-SCH-A-000098",
+        "FX-SCH-A-000100",
+        "FX-SCH-A-000102",
+        "FX-SCH-A-000104",
+        "FX-SCH-A-000106",
+        "FX-SCH-A-000116",
+        "FX-SCH-A-000136",
+        "FX-SCH-A-000138",
+        "FX-SCH-A-000140",
+        "FX-SCH-A-000142",
+        "FX-SCH-A-000236",
+        "FX-SCH-A-000238",
+        "FX-SCH-A-000240",
+        "FX-SCH-A-000242",
+        "FX-SCH-A-000252"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-152",
+        "BT-96",
+        "BT-103",
+        "BT-119"
+      ],
+      "level": "error",
+      "field": "tax <category> <rate>",
+      "summary": "Zero rated (Z), exempt (E), reverse charge (AE), intra-community (K) and export (G) items have the rate 0 where they occur: on invoice lines (BR-Z-05), document level allowances (-06) and charges (-07), in BASIC WL in the VAT breakdown (-09).",
+      "legal": null
+    },
+    "BR-O-09": {
+      "covers": [
+        "BR-O-09",
+        "FX-SCH-A-000150"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-119",
+        "BT-117"
+      ],
+      "level": "error",
+      "field": "tax <category> <rate>",
+      "summary": "Items not subject to VAT (O) carry no VAT, so they have no rate.",
+      "legal": null
+    },
+    "BR-E-10": {
+      "covers": [
+        "BR-E-10",
+        "FX-SCH-A-000139"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-120",
+        "BT-121"
+      ],
+      "level": "error",
+      "field": "tax <category> <rate>",
+      "summary": "Exempt items (E) have a VAT exemption reason (BT-120) or code (BT-121).",
+      "legal": null
+    },
+    "BR-CL-22": {
+      "covers": [
+        "BR-CL-22",
+        "FX-SCH-A-000181"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-121"
+      ],
+      "level": "error",
+      "field": "tax <category> <rate>",
+      "summary": "A VAT exemption reason code (BT-121) is in the VATEX code list of every validation.",
+      "legal": null
+    },
+    "IP-TAX-02": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-121",
+        "BT-118"
+      ],
+      "level": "error",
+      "field": "tax <category> <rate>",
+      "summary": "A VAT exemption reason code (BT-121, `code` of the `tax` module) of another VAT category, e.g. `\"VATEX-EU-IC\"` on an exemption (`E`), or on a taxed category (`S`, `Z`, `L`, `M`). See [Tax Category Codes](#3-tax-category-codes).",
+      "legal": null
+    },
+    "IP-TAX-03": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-121",
+        "BT-120"
+      ],
+      "level": "warning",
+      "field": "tax <category> <rate>",
+      "summary": "Items of one VAT category and rate with different exemption reason codes: EN 16931 states one code per VAT group, so the reasons are stated as text (BT-120) only.",
+      "legal": null
+    },
+    "IP-TAX-04": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-120",
+        "BT-121"
+      ],
+      "level": "error",
+      "field": "tax <category> <rate>",
+      "summary": "An exemption (`E`) with an exemption reason code but without `grounds`: the printed invoice must state why no VAT is charged (§ 14 Abs. 4 Satz 1 Nr. 8 UStG, Art. 226 No. 11 of the VAT Directive).",
+      "legal": "§ 14 Abs. 4 Satz 1 Nr. 8 UStG; Art. 226 No. 11 of the VAT Directive 2006/112/EC"
+    },
+    "vat-seller-id": {
+      "ids": [
+        "BR-S-02",
+        "BR-S-03",
+        "BR-S-04",
+        "BR-Z-02",
+        "BR-Z-03",
+        "BR-Z-04",
+        "BR-E-02",
+        "BR-E-03",
+        "BR-E-04",
+        "BR-AE-02",
+        "BR-AE-03",
+        "BR-AE-04",
+        "BR-AF-02",
+        "BR-AF-03",
+        "BR-AF-04",
+        "BR-AG-02",
+        "BR-AG-03",
+        "BR-AG-04"
+      ],
+      "covers": [
+        "BR-S-02",
+        "BR-S-03",
+        "BR-S-04",
+        "BR-Z-02",
+        "BR-Z-03",
+        "BR-Z-04",
+        "BR-E-02",
+        "BR-E-03",
+        "BR-E-04",
+        "BR-AE-02",
+        "BR-AE-03",
+        "BR-AE-04",
+        "BR-AF-02",
+        "BR-AF-03",
+        "BR-AF-04",
+        "BR-AG-02",
+        "BR-AG-03",
+        "BR-AG-04",
+        "FX-SCH-A-000081",
+        "FX-SCH-A-000083",
+        "FX-SCH-A-000089",
+        "FX-SCH-A-000091",
+        "FX-SCH-A-000095",
+        "FX-SCH-A-000097",
+        "FX-SCH-A-000099",
+        "FX-SCH-A-000101",
+        "FX-SCH-A-000107",
+        "FX-SCH-A-000109",
+        "FX-SCH-A-000113",
+        "FX-SCH-A-000115",
+        "FX-SCH-A-000235",
+        "FX-SCH-A-000237",
+        "FX-SCH-A-000243",
+        "FX-SCH-A-000245",
+        "FX-SCH-A-000249",
+        "FX-SCH-A-000251"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-31",
+        "BT-32",
+        "BT-63"
+      ],
+      "level": "error",
+      "field": "sender",
+      "summary": "Taxed categories (S, Z, E, AE, L, M) need the seller VAT identifier (BT-31), its tax number (BT-32) or the VAT identifier of its tax representative (BT-63), where they occur: on invoice lines (BR-S-02), document level allowances (-03) or charges (-04).",
+      "legal": null
+    },
+    "vat-seller-vat-id": {
+      "ids": [
+        "BR-IC-02",
+        "BR-IC-03",
+        "BR-IC-04",
+        "BR-G-02",
+        "BR-G-03",
+        "BR-G-04"
+      ],
+      "covers": [
+        "BR-IC-02",
+        "BR-IC-03",
+        "BR-IC-04",
+        "BR-G-02",
+        "BR-G-03",
+        "BR-G-04",
+        "FX-SCH-A-000085",
+        "FX-SCH-A-000087",
+        "FX-SCH-A-000103",
+        "FX-SCH-A-000105",
+        "FX-SCH-A-000239",
+        "FX-SCH-A-000241"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-31",
+        "BT-63"
+      ],
+      "level": "error",
+      "field": "sender.vat-id",
+      "summary": "An intra-community supply (K) and an export (G) need the seller VAT identifier (BT-31) or the VAT identifier of its tax representative (BT-63), where they occur: on invoice lines (BR-IC-02, BR-G-02), document level allowances (-03) or charges (-04).",
+      "legal": null
+    },
+    "BR-IC-11": {
+      "covers": [
+        "BR-IC-11",
+        "FX-SCH-A-000144"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-72",
+        "BG-14"
+      ],
+      "level": "error",
+      "field": "service-period",
+      "summary": "An intra-community supply (K) states the date of the supply (BT-72) or the invoicing period (BG-14).",
+      "legal": null
+    },
+    "BR-O-11": {
+      "covers": [
+        "BR-O-11",
+        "FX-SCH-A-000152"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-118"
+      ],
+      "level": "error",
+      "field": "tax",
+      "summary": "Items not subject to VAT (O) are not combined with other VAT categories on one invoice.",
+      "legal": null
+    },
+    "BR-DE-18": {
+      "covers": [
+        "BR-DE-18"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-20"
+      ],
+      "level": "error",
+      "field": "payment-goal",
+      "summary": "The payment terms (BT-20) write every cash discount in the Skonto syntax of XRechnung, on a line of its own that a line break follows, and its base amount with 2 decimals.",
+      "legal": null
+    },
+    "BR-CO-25": {
+      "covers": [
+        "BR-CO-25",
+        "FX-SCH-A-000155"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-9",
+        "BT-20",
+        "BT-115"
+      ],
+      "level": "error",
+      "field": "payment-goal",
+      "summary": "An invoice with an amount due (BT-115) has a payment due date (BT-9) or payment terms (BT-20).",
+      "legal": null
+    },
+    "BR-DE-1": {
+      "covers": [
+        "BR-DE-1"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BG-16"
+      ],
+      "level": "error",
+      "field": "bank-details",
+      "summary": "XRechnung requires payment instructions (BG-16).",
+      "legal": null
+    },
+    "BR-DE-23-b": {
+      "covers": [
+        "BR-DE-23-b"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-81",
+        "BG-17",
+        "BG-19"
+      ],
+      "level": "error",
+      "field": "bank-details, direct-debit",
+      "summary": "XRechnung forbids the details of a direct debit (BG-19) next to a credit transfer (BG-17). An invoice states one payment means (BT-81): a credit transfer, a direct debit, a payment card or one other means, so that the buyer knows how to pay and does not pay twice.",
+      "legal": null
+    },
+    "BR-DE-24-b": {
+      "covers": [
+        "BR-DE-24-b"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-81",
+        "BG-18",
+        "BG-19"
+      ],
+      "level": "error",
+      "field": "card-payment, direct-debit",
+      "summary": "XRechnung forbids the details of a direct debit (BG-19) next to a payment card (BG-18). An invoice states one payment means (BT-81): a credit transfer, a direct debit, a payment card or one other means, so that the buyer knows how to pay and does not pay twice.",
+      "legal": null
+    },
+    "IP-PAY-03": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-81"
+      ],
+      "level": "error",
+      "field": "bank-details, card-payment",
+      "summary": "Two kinds of payment means that the official rules accept together, e.g. `bank-details` next to `card-payment`: an invoice states one payment means (BT-81), so that the buyer does not pay twice.",
+      "legal": null
+    },
+    "BR-DE-23-a": {
+      "covers": [
+        "BR-DE-23-a"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-84"
+      ],
+      "level": "error",
+      "field": "bank-details.iban",
+      "summary": "A credit transfer (BT-81 = 30, 58) states the account it is paid to (BT-84).",
+      "legal": null
+    },
+    "BR-61": {
+      "covers": [
+        "BR-61",
+        "FX-SCH-A-000134"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-84"
+      ],
+      "level": "error",
+      "field": "bank-details.iban",
+      "summary": "A credit transfer (BT-81 = 30, 58) states the account it is paid to (BT-84).",
+      "legal": null
+    },
+    "BR-DE-19": {
+      "covers": [
+        "BR-DE-19"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-84"
+      ],
+      "level": "error",
+      "field": "bank-details.iban",
+      "summary": "The IBAN of a SEPA credit transfer (BT-84) has valid check digits.",
+      "legal": null
+    },
+    "BR-DE-20": {
+      "covers": [
+        "BR-DE-20"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-91"
+      ],
+      "level": "error",
+      "field": "direct-debit.debtor-iban",
+      "summary": "The IBAN of the debited account of a SEPA direct debit (BT-91) has valid check digits.",
+      "legal": null
+    },
+    "IP-PAY-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-84",
+        "BT-91"
+      ],
+      "level": "error",
+      "field": "bank-details.iban",
+      "summary": "An IBAN with wrong check digits or format in `bank-details` or as `debtor-iban` of `direct-debit`, where `BR-DE-19` and `BR-DE-20` do not check it (outside XRechnung, or an invoice not in euro).",
+      "legal": null
+    },
+    "BR-DE-25-a": {
+      "covers": [
+        "BR-DE-25-a"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BG-19"
+      ],
+      "level": "error",
+      "field": "paid.method",
+      "summary": "A SEPA direct debit (BT-81 = 59) states the direct debit (BG-19).",
+      "legal": null
+    },
+    "PEPPOL-EN16931-R061": {
+      "covers": [
+        "PEPPOL-EN16931-R061"
+      ],
+      "source": "PEPPOL",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-89"
+      ],
+      "level": "error",
+      "field": "direct-debit.mandate",
+      "summary": "A direct debit states its mandate reference (BT-89).",
+      "legal": null
+    },
+    "BR-DE-30": {
+      "covers": [
+        "BR-DE-30"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-90"
+      ],
+      "level": "error",
+      "field": "direct-debit.creditor-id",
+      "summary": "XRechnung requires the creditor identifier (BT-90) of a direct debit.",
+      "legal": null
+    },
+    "BR-DE-31": {
+      "covers": [
+        "BR-DE-31"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-91"
+      ],
+      "level": "error",
+      "field": "direct-debit.debtor-iban",
+      "summary": "XRechnung requires the debited account (BT-91) of a direct debit.",
+      "legal": null
+    },
+    "BR-DE-24-a": {
+      "covers": [
+        "BR-DE-24-a"
+      ],
+      "source": "XRECHNUNG",
+      "versions": [
+        "3.0",
+        "3.0.2"
+      ],
+      "profiles": [
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BG-18"
+      ],
+      "level": "error",
+      "field": "paid.method",
+      "summary": "A card payment (BT-81 = 48, 54, 55) states the payment card (BG-18).",
+      "legal": null
+    },
+    "BR-CL-16": {
+      "covers": [
+        "BR-CL-16",
+        "FX-SCH-A-000023"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-81"
+      ],
+      "level": "error",
+      "field": "paid.method",
+      "summary": "The payment means code (BT-81) is in the UNTDID 4461 code list.",
+      "legal": null
+    },
+    "IP-PAY-02": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-90"
+      ],
+      "level": "error",
+      "field": "direct-debit.creditor-id",
+      "summary": "A SEPA creditor identifier (BT-90) of `direct-debit` with wrong check digits or format.",
+      "legal": null
+    },
+    "BR-CO-16": {
+      "covers": [
+        "BR-CO-16",
+        "FX-SCH-A-000122"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "payment",
+      "terms": [
+        "BT-113",
+        "BT-115"
+      ],
+      "level": "warning",
+      "field": "prepayment",
+      "summary": "The prepaid amount (BT-113) does not exceed the invoice total: the amount due (BT-115) would be negative. A warning: such an invoice is valid.",
+      "legal": null
+    },
+    "decimals": {
+      "ids": [
+        "BR-DEC-01",
+        "BR-DEC-05",
+        "BR-DEC-09",
+        "BR-DEC-10",
+        "BR-DEC-11",
+        "BR-DEC-12",
+        "BR-DEC-13",
+        "BR-DEC-14",
+        "BR-DEC-16",
+        "BR-DEC-18",
+        "BR-DEC-19",
+        "BR-DEC-20",
+        "BR-DEC-23",
+        "BR-DEC-24",
+        "BR-DEC-27"
+      ],
+      "covers": [
+        "BR-DEC-01",
+        "BR-DEC-05",
+        "BR-DEC-09",
+        "BR-DEC-10",
+        "BR-DEC-11",
+        "BR-DEC-12",
+        "BR-DEC-13",
+        "BR-DEC-14",
+        "BR-DEC-16",
+        "BR-DEC-18",
+        "BR-DEC-19",
+        "BR-DEC-20",
+        "BR-DEC-23",
+        "BR-DEC-24",
+        "BR-DEC-27",
+        "FX-SCH-A-000006",
+        "FX-SCH-A-000007",
+        "FX-SCH-A-000008",
+        "FX-SCH-A-000009",
+        "FX-SCH-A-000053",
+        "FX-SCH-A-000054",
+        "FX-SCH-A-000066",
+        "FX-SCH-A-000073",
+        "FX-SCH-A-000123",
+        "FX-SCH-A-000124",
+        "FX-SCH-A-000125",
+        "FX-SCH-A-000127",
+        "FX-SCH-A-000211",
+        "FX-SCH-A-000218",
+        "FX-SCH-A-000224"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-92",
+        "BT-99",
+        "BT-106",
+        "BT-107",
+        "BT-108",
+        "BT-109",
+        "BT-110",
+        "BT-112",
+        "BT-113",
+        "BT-115",
+        "BT-116",
+        "BT-117",
+        "BT-131",
+        "BT-136",
+        "BT-141"
+      ],
+      "level": "error",
+      "field": "locale",
+      "summary": "The amounts of the XML have at most 2 decimals (BR-DEC-*): a locale or a currency that rounds money more finely cannot be written, as the rounded amounts would no longer add up. The first amount the profile states names the rule.",
+      "legal": null
+    },
+    "BR-CO-15": {
+      "covers": [
+        "BR-CO-15",
+        "FX-SCH-A-000121"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [
+        "BT-109",
+        "BT-112"
+      ],
+      "level": "error",
+      "field": "line-items",
+      "summary": "The totals of the XML (BT-109, BT-112) are the totals the invoice prints. A failure is a bug of invoice-pro.",
+      "legal": null
+    },
+    "BR-CO-13": {
+      "covers": [
+        "BR-CO-13",
+        "FX-SCH-A-000120"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-109",
+        "BT-116"
+      ],
+      "level": "error",
+      "field": "line-items",
+      "summary": "The taxable amounts of the VAT breakdown (BT-116) add up to the total without VAT (BT-109). A failure is a bug of invoice-pro.",
+      "legal": null
+    },
+    "BR-CO-17": {
+      "covers": [
+        "BR-CO-17",
+        "FX-SCH-A-000052"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-116",
+        "BT-117",
+        "BT-119"
+      ],
+      "level": "error",
+      "field": "tax <category> <rate>",
+      "summary": "The VAT amount of a VAT group (BT-117) is its taxable amount (BT-116) times its rate (BT-119), within the tolerance of 1 the validators allow. A failure is a bug of invoice-pro.",
+      "legal": null
+    },
+    "vat-basis": {
+      "ids": [
+        "BR-S-08",
+        "BR-Z-08",
+        "BR-E-08",
+        "BR-AE-08",
+        "BR-IC-08",
+        "BR-G-08",
+        "BR-O-08",
+        "BR-AF-08",
+        "BR-AG-08",
+        "BR-CO-13"
+      ],
+      "covers": [
+        "BR-S-08",
+        "BR-Z-08",
+        "BR-E-08",
+        "BR-AE-08",
+        "BR-IC-08",
+        "BR-G-08",
+        "BR-O-08",
+        "BR-AF-08",
+        "BR-AG-08",
+        "BR-CO-13",
+        "FX-SCH-A-000120",
+        "FX-SCH-A-000197",
+        "FX-SCH-A-000198",
+        "FX-SCH-A-000227",
+        "FX-SCH-A-000228",
+        "FX-SCH-A-000229",
+        "FX-SCH-A-000230",
+        "FX-SCH-A-000231",
+        "FX-SCH-A-000232",
+        "FX-SCH-A-000233"
+      ],
+      "source": "EN16931",
+      "versions": [
+        "1.3.12",
+        "1.3.16"
+      ],
+      "profiles": [
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "tax",
+      "terms": [
+        "BT-116",
+        "BT-131"
+      ],
+      "level": "error",
+      "field": "tax <category> <rate>",
+      "summary": "The net amounts of the lines and the allowances and charges of a VAT group add up to its taxable amount (BT-116, BR-S-08 and the like). A failure is a bug of invoice-pro.",
+      "legal": null
+    },
+    "IP-GUARD-00": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "Summarizes the guard's findings next to errors of the validator.",
+      "legal": null,
+      "note": "A rule of the XML write guard (src/zugferd/guard/report.typ), which builds its messages."
+    },
+    "IP-GUARD-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "An element the profile's schema does not know at its position, or text where it expects elements.",
+      "legal": null,
+      "note": "A rule of the XML write guard (src/zugferd/guard/report.typ), which builds its messages."
+    },
+    "IP-GUARD-02": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "An element out of the order of the schema.",
+      "legal": null,
+      "note": "A rule of the XML write guard (src/zugferd/guard/report.typ), which builds its messages."
+    },
+    "IP-GUARD-03": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "An element more often than the schema or the Schematron allows.",
+      "legal": null,
+      "note": "A rule of the XML write guard (src/zugferd/guard/report.typ), which builds its messages."
+    },
+    "IP-GUARD-04": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "A required element that is missing or has no text.",
+      "legal": null,
+      "note": "A rule of the XML write guard (src/zugferd/guard/report.typ), which builds its messages."
+    },
+    "IP-GUARD-05": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "An element or attribute the Factur-X Schematron of the profile marks as not used.",
+      "legal": null,
+      "note": "A rule of the XML write guard (src/zugferd/guard/report.typ), which builds its messages."
+    },
+    "IP-GUARD-06": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "An attribute the schema does not allow, or a required one that is missing.",
+      "legal": null,
+      "note": "A rule of the XML write guard (src/zugferd/guard/report.typ), which builds its messages."
+    },
+    "IP-GUARD-07": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "A value outside its lexical form (e.g. `1,50` as a decimal) or a code outside its list, where no official rule says so.",
+      "legal": null,
+      "note": "A rule of the XML write guard (src/zugferd/guard/report.typ), which builds its messages."
+    },
+    "IP-GUARD-08": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "A date in the format `102` that names no day of the calendar (e.g. `20260230`), where no official rule checks it.",
+      "legal": null,
+      "note": "A rule of the XML write guard (src/zugferd/guard/report.typ), which builds its messages."
+    },
+    "IP-GUARD-09": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": [
+        "minimum",
+        "basic-wl",
+        "basic",
+        "en16931",
+        "xrechnung"
+      ],
+      "scope": "document",
+      "terms": [],
+      "level": "error",
+      "field": "the input the XML element is written from",
+      "summary": "An invalid name, a missing namespace declaration, or not exactly one root element: the XML may not be well-formed.",
+      "legal": null,
+      "note": "A rule of the XML write guard (src/zugferd/guard/report.typ), which builds its messages."
+    }
+  }
+}
