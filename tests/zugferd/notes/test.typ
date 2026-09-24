@@ -64,11 +64,14 @@
   assert.eq(rules(m, level: "warning"), ("IP-PROFILE-01",))
   assert.eq(diagnostic(m, "IP-PROFILE-01").field, "notes")
 
-  // A subject code outside UNTDID 4451 (BR-CL-08)
+  // A subject code outside UNTDID 4451 (BR-CL-08), which BASIC WL checks
+  // with the same list of the Factur-X Schematron (FX-SCH-A-000162)
   m = model
   m.invoice.notes.at(1).subject-code = "XYZ"
   assert.eq(rules(m), ("BR-CL-08",))
   assert(diagnostic(m, "BR-CL-08").message.contains("\"XYZ\""))
+  m.profile = resolve-profile("basic-wl", "FR")
+  assert.eq(rules(m), ("FX-SCH-A-000162",))
 })[
   #line-items[#item([Consulting], price: 1000)]
   #payment-goal(days: 14)

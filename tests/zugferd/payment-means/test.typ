@@ -297,6 +297,9 @@
   let m = model
   m.payment.means.at(0).type-code = "99"
   assert.eq(rules(m), ("BR-CL-16",))
+  // BASIC WL checks the code with the list of the Factur-X Schematron
+  m.profile = resolve-profile("basic-wl", "DE")
+  assert.eq(rules(m), ("FX-SCH-A-000023",))
 })[#items #paid(method: (code: "97", name: [Verrechnung]))]
 
 // A credit note is paid by its sender: the terms state that the amount was

@@ -164,6 +164,11 @@
       d.message,
       "The VAT exemption reason code (BT-121) \"VATEX-EU-999\" is not a code of the VATEX code list.",
     )
+    // BASIC WL checks it with the list of the Factur-X Schematron
+    let m = model
+    m.profile = resolve-profile("basic-wl", "DE")
+    assert.eq(rules(m), ("FX-SCH-A-000181",))
+    assert.eq(diagnostic(m, "FX-SCH-A-000181").message, d.message)
   },
 )[#items()]
 // A code only the newer list of the KoSIT validator knows: Mustang and the

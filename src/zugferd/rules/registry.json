@@ -46,15 +46,20 @@
       "legal": null
     },
     "BR-CL-04": {
+      "ids": ["BR-CL-04", "FX-SCH-A-000040"],
       "covers": ["BR-CL-04", "FX-SCH-A-000040"],
       "source": "EN16931",
       "versions": ["1.3.12", "1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "id-profiles": {
+        "BR-CL-04": ["basic", "en16931", "xrechnung"],
+        "FX-SCH-A-000040": ["minimum", "basic-wl", "basic", "en16931"]
+      },
       "scope": "document",
       "terms": ["BT-5"],
       "level": "error",
       "field": "currency",
-      "summary": "The invoice currency code (BT-5) is in the ISO 4217 code list of Factur-X and, in the profiles based on EN 16931, also in both versions of the EN 16931 code list (1.3.12 of Mustang, 1.3.16 of KoSIT).",
+      "summary": "The invoice currency code (BT-5) is in the ISO 4217 code list of the validation of the profile: Factur-X alone in MINIMUM and BASIC WL (FX-SCH-A-000040), both versions of the EN 16931 code list (1.3.12 of Mustang, 1.3.16 of KoSIT) in XRechnung, and all of them in BASIC and EN 16931, where a code only the Factur-X list lacks is FX-SCH-A-000040. A code the newest EN 16931 list has withdrawn is rejected in BASIC as well (IP-CODE-01).",
       "legal": null,
       "note": "The field is `locale` when the currency comes from the locale. A code only the newest EN 16931 code list has is named as such."
     },
@@ -179,15 +184,20 @@
       "legal": null
     },
     "BR-CL-08": {
+      "ids": ["BR-CL-08", "FX-SCH-A-000162"],
       "covers": ["BR-CL-08", "FX-SCH-A-000162"],
       "source": "EN16931",
       "versions": ["1.3.12", "1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
+      "id-profiles": {
+        "BR-CL-08": ["basic", "en16931", "xrechnung"],
+        "FX-SCH-A-000162": ["basic-wl", "basic", "en16931"]
+      },
       "scope": "document",
       "terms": ["BT-21"],
       "level": "error",
       "field": "notes",
-      "summary": "The subject code of a note (BT-21) is a code of UNTDID 4451.",
+      "summary": "The subject code of a note (BT-21) is a code of UNTDID 4451; BASIC WL checks the same list as FX-SCH-A-000162.",
       "legal": null
     },
     "IP-PERIOD-01": {
@@ -323,15 +333,20 @@
       "legal": null
     },
     "BR-CL-14": {
+      "ids": ["BR-CL-14", "FX-SCH-A-000036"],
       "covers": ["BR-CL-14", "FX-SCH-A-000036"],
       "source": "EN16931",
       "versions": ["1.3.12", "1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "id-profiles": {
+        "BR-CL-14": ["basic", "en16931", "xrechnung"],
+        "FX-SCH-A-000036": ["minimum", "basic-wl", "basic", "en16931"]
+      },
       "scope": "party",
       "terms": ["BT-40", "BT-55", "BT-69", "BT-80"],
       "level": "error",
       "field": "sender.country",
-      "summary": "A country code of an address is in the ISO 3166-1 code lists of Factur-X and of both versions of EN 16931; MINIMUM and BASIC WL take the Factur-X list alone, which has South Sudan (SS).",
+      "summary": "A country code of an address is in the ISO 3166-1 code list of the validation of the profile: Factur-X alone in MINIMUM and BASIC WL (FX-SCH-A-000036), which has South Sudan (SS); both versions of EN 16931 in XRechnung, which have the Netherlands Antilles (AN); all of them in BASIC and EN 16931, where a code only the Factur-X list lacks is FX-SCH-A-000036.",
       "legal": null
     },
     "IP-COUNTRY-01": {
@@ -419,15 +434,20 @@
       "legal": null
     },
     "BR-CL-11": {
+      "ids": ["BR-CL-11", "FX-SCH-A-000031"],
       "covers": ["BR-CL-11", "FX-SCH-A-000031"],
       "source": "EN16931",
       "versions": ["1.3.12", "1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "id-profiles": {
+        "BR-CL-11": ["basic", "en16931", "xrechnung"],
+        "FX-SCH-A-000031": ["minimum", "basic-wl", "basic", "en16931"]
+      },
       "scope": "party",
       "terms": ["BT-30", "BT-47", "BT-61"],
       "level": "error",
       "field": "sender.legal-id",
-      "summary": "The scheme of a legal registration identifier (BT-30, BT-47, BT-61) is an ISO/IEC 6523 code of every validation.",
+      "summary": "The scheme of a legal registration identifier (BT-30, BT-47, BT-61) is an ISO/IEC 6523 code of every validation of the profile (FX-SCH-A-000031 in MINIMUM and BASIC WL).",
       "legal": null
     },
     "vat-outside-scope": {
@@ -533,27 +553,37 @@
       "legal": null
     },
     "BR-CL-10": {
+      "ids": ["BR-CL-10", "FX-SCH-A-000031"],
       "covers": ["BR-CL-10", "FX-SCH-A-000031"],
       "source": "EN16931",
       "versions": ["1.3.12", "1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
+      "id-profiles": {
+        "BR-CL-10": ["basic", "en16931", "xrechnung"],
+        "FX-SCH-A-000031": ["basic-wl", "basic", "en16931"]
+      },
       "scope": "party",
       "terms": ["BT-29", "BT-46", "BT-60"],
       "level": "error",
       "field": "sender.global-id",
-      "summary": "The scheme of a global identifier of the seller, the buyer or the payee is an ISO/IEC 6523 code of every validation.",
+      "summary": "The scheme of a global identifier of the seller, the buyer or the payee is an ISO/IEC 6523 code of every validation of the profile (FX-SCH-A-000031 in BASIC WL).",
       "legal": null
     },
     "BR-CL-26": {
+      "ids": ["BR-CL-26", "FX-SCH-A-000031"],
       "covers": ["BR-CL-26", "FX-SCH-A-000031"],
       "source": "EN16931",
       "versions": ["1.3.12", "1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
+      "id-profiles": {
+        "BR-CL-26": ["basic", "en16931", "xrechnung"],
+        "FX-SCH-A-000031": ["basic-wl", "basic", "en16931"]
+      },
       "scope": "party",
       "terms": ["BT-71"],
       "level": "error",
       "field": "delivery-address.global-id",
-      "summary": "The scheme of the global identifier of the deliver-to location (BT-71) is an ISO/IEC 6523 code of every validation.",
+      "summary": "The scheme of the global identifier of the deliver-to location (BT-71) is an ISO/IEC 6523 code of every validation of the profile (FX-SCH-A-000031 in BASIC WL).",
       "legal": null
     },
     "CII-SR-450": {
@@ -653,15 +683,20 @@
       "legal": null
     },
     "BR-CL-25": {
+      "ids": ["BR-CL-25", "FX-SCH-A-000031"],
       "covers": ["BR-CL-25", "FX-SCH-A-000031"],
       "source": "EN16931",
       "versions": ["1.3.12", "1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
+      "id-profiles": {
+        "BR-CL-25": ["basic", "en16931", "xrechnung"],
+        "FX-SCH-A-000031": ["basic-wl", "basic", "en16931"]
+      },
       "scope": "party",
       "terms": ["BT-34", "BT-49"],
       "level": "error",
       "field": "sender.electronic-address",
-      "summary": "The scheme of an electronic address (BT-34, BT-49) is in the CEF EAS code list of every validation, in every profile: e.g. the withdrawn scheme 9901 is not.",
+      "summary": "The scheme of an electronic address (BT-34, BT-49) is in the CEF EAS code list of the validation of the profile: XRechnung accepts the schemes 0219 and 0220, which the Factur-X list lacks (FX-SCH-A-000031 in the other profiles). The withdrawn scheme 9901 is rejected in every profile (IP-CODE-01 in BASIC WL and BASIC).",
       "legal": null
     },
     "BR-DE-2": {
@@ -986,15 +1021,19 @@
       "legal": null
     },
     "BR-CL-15": {
+      "ids": ["BR-CL-15", "FX-SCH-A-000026"],
       "covers": ["BR-CL-15", "FX-SCH-A-000026"],
       "source": "EN16931",
       "versions": ["1.3.12", "1.3.16"],
       "profiles": ["en16931", "xrechnung"],
+      "id-profiles": {
+        "FX-SCH-A-000026": ["en16931"]
+      },
       "scope": "line",
       "terms": ["BT-159"],
       "level": "error",
       "field": "item <id> (<name>)",
-      "summary": "The country of origin of an item (BT-159) is in the ISO 3166-1 code list of EN 16931.",
+      "summary": "The country of origin of an item (BT-159) is in the ISO 3166-1 code list of the validation of the profile: a code only the Factur-X list lacks (e.g. AN) is FX-SCH-A-000026 in EN 16931 and accepted in XRechnung.",
       "legal": null
     },
     "BR-CO-18": {
@@ -1035,15 +1074,20 @@
       "legal": null
     },
     "BR-CL-18": {
+      "ids": ["BR-CL-18", "FX-SCH-A-000179"],
       "covers": ["BR-CL-18", "FX-SCH-A-000179"],
       "source": "EN16931",
       "versions": ["1.3.12", "1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
+      "id-profiles": {
+        "BR-CL-18": ["basic", "en16931", "xrechnung"],
+        "FX-SCH-A-000179": ["basic-wl", "basic", "en16931"]
+      },
       "scope": "tax",
       "terms": ["BT-118", "BT-151"],
       "level": "error",
       "field": "tax <category> <rate>",
-      "summary": "The VAT category code is one EN 16931 allows: S, Z, E, AE, K, G, O, L or M.",
+      "summary": "The VAT category code is one EN 16931 allows: S, Z, E, AE, K, G, O, L or M. The split payment of Italy (B), which the code list of EN 16931 has as well, is FX-SCH-A-000179 in the Factur-X profiles and BR-CL-18 in XRechnung, whose rules of it invoice-pro does not check (BR-B-01, BR-B-02).",
       "legal": null
     },
     "vat-rate-positive": {
@@ -1128,15 +1172,20 @@
       "legal": null
     },
     "BR-CL-22": {
+      "ids": ["BR-CL-22", "FX-SCH-A-000181"],
       "covers": ["BR-CL-22", "FX-SCH-A-000181"],
       "source": "EN16931",
       "versions": ["1.3.12", "1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
+      "id-profiles": {
+        "BR-CL-22": ["basic", "en16931", "xrechnung"],
+        "FX-SCH-A-000181": ["basic-wl", "basic", "en16931"]
+      },
       "scope": "tax",
       "terms": ["BT-121"],
       "level": "error",
       "field": "tax <category> <rate>",
-      "summary": "A VAT exemption reason code (BT-121) is in the VATEX code list of every validation.",
+      "summary": "A VAT exemption reason code (BT-121) is in the VATEX code list of every validation of the profile (FX-SCH-A-000181 in BASIC WL).",
       "legal": null
     },
     "IP-TAX-02": {
@@ -1464,15 +1513,20 @@
       "legal": null
     },
     "BR-CL-16": {
+      "ids": ["BR-CL-16", "FX-SCH-A-000023"],
       "covers": ["BR-CL-16", "FX-SCH-A-000023"],
       "source": "EN16931",
       "versions": ["1.3.12", "1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
+      "id-profiles": {
+        "BR-CL-16": ["basic", "en16931", "xrechnung"],
+        "FX-SCH-A-000023": ["basic-wl", "basic", "en16931"]
+      },
       "scope": "payment",
       "terms": ["BT-81"],
       "level": "error",
       "field": "paid.method",
-      "summary": "The payment means code (BT-81) is in the UNTDID 4461 code list.",
+      "summary": "The payment means code (BT-81) is in the UNTDID 4461 code list (FX-SCH-A-000023 in BASIC WL).",
       "legal": null
     },
     "IP-PAY-02": {
@@ -1509,6 +1563,18 @@
       "level": "error",
       "field": "locale",
       "summary": "An amount with more than 2 decimals, e.g. of a currency such as KWD (reported for `currency`) or of a locale that rounds money more finely: the XML states amounts with 2 decimals (`BR-DEC-*`), so it would state another amount than the invoice prints, and the amounts would no longer add up.",
+      "legal": null
+    },
+    "IP-CODE-01": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["basic-wl", "basic"],
+      "scope": "document",
+      "terms": ["BT-5", "BT-34", "BT-49"],
+      "level": "error",
+      "field": "currency",
+      "summary": "A code that the newest EN 16931 code list (1.3.16) has withdrawn, which the validation of BASIC WL and BASIC still accepts: the currencies BGN and HRK (replaced by the euro) in BASIC, the electronic address scheme 9901 in both. A receiver that validates with the current list rejects the e-invoice, as KoSIT does in EN 16931 and XRechnung (`BR-CL-04`, `BR-CL-25`).",
       "legal": null
     },
     "IP-PRINT-01": {

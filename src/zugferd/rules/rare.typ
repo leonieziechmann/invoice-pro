@@ -8,9 +8,8 @@
 // the findings and the registry.
 
 #import "engine.typ": (
-  country, country-of-vat-id, global-id, identifiers, in-list, legal-id,
-  line-field, lists, not-carried, post-code, single-identifier,
-  vat-id-prefix-check,
+  code-finding, country, country-of-vat-id, global-id, identifiers, legal-id,
+  line-field, not-carried, post-code, single-identifier, vat-id-prefix-check,
 )
 #import "../model.typ": vat-id-country, vat-id-prefix
 #import "../../utils/iban.typ": iban-valid
@@ -156,7 +155,7 @@
     "BR-20",
     field + ".country",
     "tax representative country code (BT-69)",
-    profile.en16931,
+    profile,
   )
   out += country-of-vat-id(representative, field, "tax representative", "BT-69")
   if (
@@ -212,8 +211,8 @@
     ))
   }
   out += identifiers(payee, field, "payee")
-  out += global-id(payee, "BR-CL-10", field)
-  out += legal-id(payee, field, "payee", "BT-61")
+  out += global-id(payee, "BR-CL-10", field, profile)
+  out += legal-id(payee, field, "payee", "BT-61", profile)
   if profile.en16931 {
     out += single-identifier(
       payee,
@@ -272,8 +271,17 @@
 
     if origin == none { continue }
     origins += 1
-    if profile.item-origin and not in-list(lists.country.every, origin) {
-      out.push((key: "BR-CL-15", field: line-field(line), code: origin))
+    if profile.item-origin {
+      let found = code-finding(
+        "country",
+        origin,
+        profile,
+        "BR-CL-15",
+        "FX-SCH-A-000026",
+        (field: line-field(line), code: origin),
+        "country of origin (BT-159)",
+      )
+      if found != none { out.push(found) }
     }
   }
   if origins > 0 and not profile.item-origin {
@@ -303,13 +311,22 @@
 /// no text, which the printed invoice needs).
 ///
 /// -> array
-#let exemption-codes(tax, field) = {
+#let exemption-codes(tax, field, profile) = {
   let out = ()
   let category = tax.category
   let codes = tax.at("codes", default: ())
   for code in codes {
-    if not in-list(lists.vatex.every, code) {
-      out.push((key: "BR-CL-22", field: field, code: code))
+    let found = code-finding(
+      "vatex",
+      code,
+      profile,
+      "BR-CL-22",
+      "FX-SCH-A-000181",
+      (field: field, code: code),
+      "VAT exemption reason code (BT-121)",
+    )
+    if found != none {
+      out.push(found)
       continue
     }
     let fits = _code-categories.at(code, default: "E")
@@ -426,13 +443,22 @@
   )
 }
 
-/// BR-CL-08: the subject code of a note (BT-21) is a code of UNTDID 4451.
+/// BR-CL-08: the subject code of a note (BT-21) is a code of UNTDID 4451,
+/// whose list Factur-X checks with the same codes in BASIC WL
+/// (FX-SCH-A-000162), which has no CEN rules.
 ///
 /// -> array
-#let note-subject-code(code) = {
+#let note-subject-code(code, profile) = {
   import "../document.typ": note-subject-code-valid
   if note-subject-code-valid(code) { return () }
-  ((key: "BR-CL-08", field: "notes", code: code),)
+  (
+    (
+      key: "BR-CL-08",
+      id: if profile.en16931 { "BR-CL-08" } else { "FX-SCH-A-000162" },
+      field: "notes",
+      code: code,
+    ),
+  )
 }
 
 // The highest total of a small-amount invoice in euros, which needs fewer

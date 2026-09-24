@@ -81,9 +81,18 @@
     if "newer" not in entry { continue }
     for code in codes(entry.newer) {
       assert(not in-list(entry.every, code), message: name + ": " + code)
+      assert(not in-list(entry.xrechnung, code), message: name + ": " + code)
       if "factur-x" in entry {
         assert(not in-list(entry.factur-x, code), message: name + ": " + code)
       }
+    }
+  }
+  // The withdrawn codes: no profile based on EN 16931 accepts them.
+  for (name, entry) in lists {
+    if "withdrawn" not in entry { continue }
+    for code in codes(entry.withdrawn) {
+      assert(not in-list(entry.every, code), message: name + ": " + code)
+      assert(not in-list(entry.xrechnung, code), message: name + ": " + code)
     }
   }
   assert.eq(codes(lists.currency.newer), ("CNH", "VED", "XCG", "ZWG"))
@@ -105,10 +114,15 @@
 // --- 6. A code that the validation of a profile rejects is an error in that
 // profile, also when only the newest official validation rejects it: the
 // EN 16931 Schematron 1.3.16 of the KoSIT validator, whose lists have
-// withdrawn codes that the older lists of Mustang still have ---
+// withdrawn codes that the older lists of Mustang still have. KoSIT does not
+// validate BASIC, whose validation accepts them: invoice-pro rejects them
+// there all the same, as a receiver that applies the current list does
+// (IP-CODE-01) ---
 #import "/src/lib.typ": item, line-items, payment-goal
 #import "/src/zugferd/profile.typ": resolve-profile
-#import "/tests/zugferd/harness.typ": bank, diagnostic, model-test, rules
+#import "/tests/zugferd/harness.typ": (
+  bank, diagnostic, model-test, rules, xml-elements,
+)
 
 // Currencies the EN 16931 validation has withdrawn: the Netherlands Antillean
 // guilder (ANG, the Caribbean guilder XCG since 2025), the Bulgarian lev
@@ -121,18 +135,35 @@
   for code in ("ANG", "BGN", "CUC", "HRK", "ZWL") {
     assert(in-list(lists.currency.factur-x, code), message: code)
     assert(not in-list(lists.currency.every, code), message: code)
+    assert(in-list(lists.currency.withdrawn, code), message: code)
     m.currency = code
-    for id in ("basic", "en16931") {
-      m.profile = resolve-profile(id, "FR")
-      assert.eq(rules(m), ("BR-CL-04",), message: code + " in " + id)
-    }
+    m.profile = resolve-profile("en16931", "FR")
+    assert.eq(rules(m), ("BR-CL-04",), message: code + " in en16931")
     assert(
       diagnostic(m, "BR-CL-04").message.contains("\"" + code + "\""),
       message: code,
     )
+    m.profile = resolve-profile("basic", "FR")
+    assert.eq(rules(m), ("IP-CODE-01",), message: code + " in basic")
     m.profile = resolve-profile("basic-wl", "FR")
     assert.eq(rules(m), (), message: code + " in basic-wl")
   }
+  m.currency = "BGN"
+  m.profile = resolve-profile("basic", "FR")
+  let d = diagnostic(m, "IP-CODE-01")
+  assert.eq(d.field, "locale")
+  assert.eq(
+    d.message,
+    "The invoice currency code (BT-5) \"BGN\" was withdrawn from the newest version of the EN 16931 code list (1.3.16). The validation of the BASIC profile still accepts it, but a receiver that validates with the current list rejects the e-invoice.",
+  )
+  assert.eq(
+    d.hint,
+    "Invoice in the currency that replaced it, e.g. \"EUR\" for \"BGN\" and \"HRK\".",
+  )
+  // The withdrawn Mauritanian ouguiya (MRO) is no code of Factur-X either,
+  // whose validation rejects it in BASIC.
+  m.currency = "MRO"
+  assert.eq(rules(m), ("FX-SCH-A-000040",))
 })[
   #line-items[#item([Consulting], price: 1000)]
   #payment-goal(days: 14)
@@ -140,12 +171,28 @@
 ]
 
 // --- 7. Electronic address schemes the EAS code list has withdrawn: 9901
-// is no longer in the list of the EN 16931 Schematron 1.3.16 ---
+// is no longer in the list of the EN 16931 Schematron 1.3.16, which KoSIT
+// applies to EN 16931 and XRechnung; in every other profile, invoice-pro
+// rejects it as IP-CODE-01 ---
 #model-test(model => {
   assert(not in-list(lists.eas.every, "9901"))
+  assert(not in-list(lists.eas.xrechnung, "9901"))
   let m = model
   m.buyer.electronic-address = (scheme: "9901", id: "12345678")
   assert.eq(rules(m), ("BR-CL-25",))
+  for id in ("basic-wl", "basic") {
+    m.profile = resolve-profile(id, "FR")
+    assert.eq(rules(m), ("IP-CODE-01",), message: id)
+  }
+  let d = diagnostic(m, "IP-CODE-01")
+  assert.eq(d.field, "recipient.electronic-address")
+  assert(
+    d.message.starts-with(
+      "The scheme \"9901\" of the buyer electronic address (BT-49) was withdrawn",
+    ),
+    message: d.message,
+  )
+  assert.eq(d.hint, "Use a current scheme, e.g. \"EM\" for an email address.")
   m.buyer.electronic-address = (scheme: "0088", id: "4000001123452")
   assert.eq(rules(m), ())
 })[
@@ -165,12 +212,17 @@
 #model-test(model => {
   let m = model
   m.printed-currency = (symbol: none, amount: none, price: none)
-  // The Caribbean guilder (XCG), which replaced ANG in 2025.
+  // The Caribbean guilder (XCG), which replaced ANG in 2025: the rule of the
+  // Factur-X Schematron in MINIMUM and BASIC WL, which apply it alone.
   m.currency = "XCG"
-  for id in ("minimum", "basic-wl", "en16931") {
+  for (id, rule) in (
+    ("minimum", "FX-SCH-A-000040"),
+    ("basic-wl", "FX-SCH-A-000040"),
+    ("en16931", "BR-CL-04"),
+  ) {
     m.profile = resolve-profile(id, "FR")
-    assert.eq(rules(m), ("BR-CL-04",), message: id)
-    let d = diagnostic(m, "BR-CL-04")
+    assert.eq(rules(m), (rule,), message: id)
+    let d = diagnostic(m, rule)
     assert.eq(d.message, not-yet("The invoice currency code (BT-5) \"XCG\""))
     assert.eq(d.hint, not-yet-hint)
   }
@@ -218,6 +270,128 @@
     ),
   )
   assert.eq(d.hint, not-yet-hint)
+})[
+  #line-items[#item([Consulting], price: 1000)]
+  #payment-goal(days: 14)
+  #bank
+]
+
+// --- 9. XRechnung applies the code lists of EN 16931 alone, which have codes
+// the Factur-X lists lack: the electronic address schemes 0219 and 0220, the
+// Netherlands Antilles (AN) and the São Tomé dobra (STD). The Factur-X
+// profiles reject them with the rule of the Factur-X Schematron ---
+#let factur-x-only(subject) = (
+  subject
+    + " is not in the code list of the Factur-X validation, although the code list of EN 16931 has it."
+)
+#let code-rules(model) = rules(model).filter(rule => (
+  rule.starts-with("BR-CL-") or rule.starts-with("FX-")
+))
+
+#model-test(model => {
+  for code in ("0219", "0220") {
+    assert(in-list(lists.eas.xrechnung, code), message: code)
+    assert(not in-list(lists.eas.every, code), message: code)
+  }
+  let m = model
+  m.buyer.electronic-address = (scheme: "0219", id: "12345678")
+  assert.eq(rules(m), ("FX-SCH-A-000031",))
+  let d = diagnostic(m, "FX-SCH-A-000031")
+  assert.eq(
+    d.message,
+    factur-x-only(
+      "The scheme \"0219\" of the buyer electronic address (BT-49)",
+    ),
+  )
+  assert(d.hint.ends-with("accepts it."), message: d.hint)
+  for id in ("basic-wl", "basic") {
+    m.profile = resolve-profile(id, "FR")
+    assert.eq(rules(m), ("FX-SCH-A-000031",), message: id)
+  }
+  // ... which XRechnung states
+  m.profile = resolve-profile("xrechnung", "DE")
+  assert.eq(code-rules(m), ())
+  assert(
+    xml-elements(m, "ram:URIID").contains(
+      "<ram:URIID schemeID=\"0219\">12345678</ram:URIID>",
+    ),
+    message: repr(xml-elements(m, "ram:URIID")),
+  )
+
+  let m = model
+  m.buyer.address.country = "AN"
+  assert.eq(rules(m), ("FX-SCH-A-000036",))
+  assert.eq(
+    diagnostic(m, "FX-SCH-A-000036").message,
+    factur-x-only("The buyer country code (BT-55) \"AN\""),
+  )
+  m.profile = resolve-profile("xrechnung", "DE")
+  assert.eq(code-rules(m), ())
+
+  let m = model
+  m.printed-currency = (symbol: none, amount: none, price: none)
+  m.currency = "STD"
+  assert.eq(rules(m), ("FX-SCH-A-000040",))
+  assert.eq(
+    diagnostic(m, "FX-SCH-A-000040").message,
+    factur-x-only("The invoice currency code (BT-5) \"STD\""),
+  )
+  m.profile = resolve-profile("xrechnung", "DE")
+  assert.eq(code-rules(m), ())
+
+  // The split payment of Italy (B) is no category of Factur-X; XRechnung
+  // accepts the code, but invoice-pro does not check its rules there.
+  let m = model
+  m.taxes.at(0).category = "B"
+  m.lines.at(0).category = "B"
+  assert.eq(rules(m), ("FX-SCH-A-000179",))
+  assert.eq(
+    diagnostic(m, "FX-SCH-A-000179").message,
+    "The VAT category \"B\" is not in the code list of the Factur-X validation, although the code list of EN 16931 has it.",
+  )
+  m.profile = resolve-profile("xrechnung", "DE")
+  assert.eq(code-rules(m), ("BR-CL-18",))
+})[
+  #line-items[#item([Consulting], price: 1000)]
+  #payment-goal(days: 14)
+  #bank
+]
+
+// --- 10. MINIMUM and BASIC WL apply the code lists of the Factur-X
+// Schematron alone: its rules name a code none of its lists has ---
+#model-test(model => {
+  let m = model
+  m.profile = resolve-profile("minimum", "FR")
+  m.seller.address.country = "XX"
+  assert.eq(rules(m), ("FX-SCH-A-000036",))
+  assert.eq(
+    diagnostic(m, "FX-SCH-A-000036").message,
+    "The seller country code (BT-40) \"XX\" is not in the ISO 3166-1 code list of Factur-X.",
+  )
+  m.profile = resolve-profile("basic", "FR")
+  assert.eq(rules(m), ("BR-CL-14",))
+
+  let m = model
+  m.seller.legal-id = (scheme: "9999", id: "12345678")
+  for id in ("minimum", "basic-wl") {
+    m.profile = resolve-profile(id, "FR")
+    assert.eq(rules(m), ("FX-SCH-A-000031",), message: id)
+  }
+  let m = model
+  m.profile = resolve-profile("basic-wl", "FR")
+  m.buyer.global-id = (scheme: "9999", id: "12345678")
+  assert.eq(rules(m), ("FX-SCH-A-000031",))
+  let m = model
+  m.profile = resolve-profile("basic-wl", "FR")
+  m.taxes.at(0).category = "AA"
+  assert.eq(rules(m), ("FX-SCH-A-000179",))
+  assert(
+    diagnostic(m, "FX-SCH-A-000179")
+      .message
+      .ends-with(
+        "is not allowed in Factur-X (allowed: S, Z, E, AE, K, G, O, L, M).",
+      ),
+  )
 })[
   #line-items[#item([Consulting], price: 1000)]
   #payment-goal(days: 14)

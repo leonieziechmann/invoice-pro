@@ -43,12 +43,14 @@
 // accept the XML, but the invoice would still be wrong (e.g. required by
 // law, or a value would be lost).
 //
-// Code lists: the checks look codes up (`in-list`) in the lists of the
-// write guard (../guard/lists.typ, `validator`), which
-// tools/zugferd/gen_guard.py generates from every official validation of a
-// profile: `every` holds the codes all of them accept (Factur-X 1.0.07 and
-// the CEN Schematron 1.3.12 of Mustang and 1.3.16 of KoSIT), `factur-x` the
-// codes of the Factur-X validation of MINIMUM and BASIC WL, and `newer` the
+// Code lists: the checks look codes up (`in-list`, `code-rule`) in the
+// lists of the write guard (../guard/lists.typ, `validator`), which
+// tools/zugferd/gen_guard.py generates from the official validations of the
+// profiles: `every` holds the codes all of them accept (Factur-X 1.0.07 and
+// the CEN Schematron 1.3.12 of Mustang and 1.3.16 of KoSIT), `xrechnung` the
+// codes of the validation of XRechnung (both CEN lists, no Factur-X list),
+// `factur-x` the codes of the Factur-X validation of MINIMUM and BASIC WL,
+// `withdrawn` the codes the newest CEN list has withdrawn, and `newer` the
 // codes only the newest CEN list has, which messages.typ names as codes the
 // validation of the profile does not know yet.
 //
@@ -82,6 +84,85 @@
     and not code.contains(" ")
     and (" " + code + " ") in list
 )
+
+/// The rule that a code of the code list `name` of `validator` breaks in a
+/// profile, or `none` where the validation of the profile accepts it:
+/// `cen`, the code list rule of the CEN Schematron, where a CEN list of the
+/// validation lacks the code; `fx`, the one of the Factur-X Schematron,
+/// where only the Factur-X list lacks it (e.g. the scheme 0219, which
+/// XRechnung accepts); and IP-CODE-01 for a code the newest CEN list has
+/// withdrawn, which no validator of BASIC, MINIMUM and BASIC WL rejects,
+/// but a receiver that applies the current list does (e.g. the scheme
+/// 9901). MINIMUM and BASIC WL accept the Factur-X list of a name with
+/// `factur-x` as it is, e.g. the currency BGN.
+///
+/// -> none | str
+#let code-rule(name, code, profile, cen, fx) = {
+  let entry = lists.at(name)
+  if profile.xrechnung {
+    return if in-list(entry.xrechnung, code) { none } else { cen }
+  }
+  let own = entry.at("factur-x", default: none)
+  if not profile.en16931 and own != none {
+    return if in-list(own, code) { none } else { fx }
+  }
+  if in-list(entry.every, code) { return none }
+  let withdrawn = entry.at("withdrawn", default: "")
+  if not profile.en16931 {
+    // `every` is the Factur-X list without the withdrawn codes.
+    return if in-list(withdrawn, code) { "IP-CODE-01" } else { fx }
+  }
+  // Both CEN lists have it: only the Factur-X list lacks it.
+  if in-list(entry.xrechnung, code) { return fx }
+  // Only CEN 1.3.16 lacks it, which KoSIT applies to EN 16931 but not to
+  // BASIC.
+  if profile.id == "basic" and in-list(withdrawn, code) {
+    return if own == none or in-list(own, code) { "IP-CODE-01" } else { fx }
+  }
+  cen
+}
+
+/// The finding of a code of the code list `name` that the validation of
+/// the profile rejects (see `code-rule`), or `none`. `finding` is the field
+/// and the values of the message of `cen`, the code list rule of the CEN
+/// Schematron, whose entry reports `fx`, the one of the Factur-X
+/// Schematron, as well (`id`, with `fx-only` where only the Factur-X list
+/// lacks the code). A withdrawn code is IP-CODE-01, whose message names it
+/// by `term` (`scheme`: the code is the scheme of the term).
+///
+/// -> none | dictionary
+#let code-finding(
+  name,
+  code,
+  profile,
+  cen,
+  fx,
+  finding,
+  term,
+  scheme: false,
+) = {
+  let rule = code-rule(name, code, profile, cen, fx)
+  if rule == none { return none }
+  if rule == "IP-CODE-01" {
+    return (
+      key: rule,
+      field: finding.field,
+      code: code,
+      term: term,
+      scheme: scheme,
+      list: name,
+      profile: profile.name,
+    )
+  }
+  (
+    finding
+      + (
+        key: cen,
+        id: rule,
+        fx-only: rule == fx and in-list(lists.at(name).xrechnung, code),
+      )
+  )
+}
 
 // A rate in percent as the XML states it, e.g. "19%" or "9.975%".
 #let _percent(rate) = (
@@ -144,17 +225,25 @@
   let currency = model.currency
   if currency == none {
     out.push((key: "BR-05", field: "locale"))
-  } else if not in-list(lists.currency.factur-x, currency) {
-    out.push((key: "BR-CL-04", field: currency-field, code: currency))
-  } else if (
-    model.profile.en16931 and not in-list(lists.currency.every, currency)
-  ) {
-    out.push((
-      key: "BR-CL-04",
-      field: currency-field,
-      code: currency,
-      profile: model.profile.name,
-    ))
+  } else {
+    // A currency of the Factur-X list that a CEN list lacks names the
+    // profile (`profile`), whose validation cannot accept it.
+    let found = code-finding(
+      "currency",
+      currency,
+      model.profile,
+      "BR-CL-04",
+      "FX-SCH-A-000040",
+      (
+        field: currency-field,
+        code: currency,
+        profile: if in-list(lists.currency.factur-x, currency) {
+          model.profile.name
+        },
+      ),
+      "invoice currency code (BT-5)",
+    )
+    if found != none { out.push(found) }
   }
 
   // IP-TAX-01: `tax: none` prints 0%, but does not say why no VAT is charged:
@@ -343,7 +432,7 @@
     for note in notes {
       if note.subject-code != none {
         import "rare.typ": note-subject-code
-        out += note-subject-code(note.subject-code)
+        out += note-subject-code(note.subject-code, profile)
       }
     }
   }
@@ -411,21 +500,24 @@
 
 // --- Parties --------------------------------------------------------------
 
-/// The country of a party (`rule`: missing) and its code list (BR-CL-14).
-/// `en16931`: whether the profile is checked with the rules of EN 16931,
-/// whose code list lacks South Sudan ("SS"), which the Factur-X profiles
-/// MINIMUM and BASIC WL accept.
+/// The country of a party (`rule`: missing) and its code list (BR-CL-14,
+/// see `code-rule`): the code list of EN 16931 lacks South Sudan ("SS"),
+/// which the Factur-X profiles MINIMUM and BASIC WL accept, the one of
+/// Factur-X the Netherlands Antilles ("AN"), which XRechnung accepts.
 ///
 /// -> array
-#let country(code, rule, field, term, en16931) = {
+#let country(code, rule, field, term, profile) = {
   if code == none { return ((key: rule, field: field, term: term),) }
-  let list = if en16931 { lists.country.every } else {
-    lists.country.factur-x
-  }
-  if not in-list(list, code) {
-    return ((key: "BR-CL-14", field: field, term: term, code: code),)
-  }
-  ()
+  let found = code-finding(
+    "country",
+    code,
+    profile,
+    "BR-CL-14",
+    "FX-SCH-A-000036",
+    (field: field, term: term, code: code),
+    term,
+  )
+  if found == none { () } else { (found,) }
 }
 
 /// IP-COUNTRY-01: a party without `country` is in the country of the
@@ -496,6 +588,7 @@
   rules,
   field,
   term,
+  profile,
   represented: false,
   reference: none,
 ) = {
@@ -525,17 +618,17 @@
       ),
     )
   }
-  if not in-list(lists.eas.every, address.scheme) {
-    return (
-      (
-        key: "BR-CL-25",
-        field: field + ".electronic-address",
-        term: term,
-        scheme: address.scheme,
-      ),
-    )
-  }
-  ()
+  let found = code-finding(
+    "eas",
+    address.scheme,
+    profile,
+    "BR-CL-25",
+    "FX-SCH-A-000031",
+    (field: field + ".electronic-address", term: term, scheme: address.scheme),
+    term,
+    scheme: true,
+  )
+  if found == none { () } else { (found,) }
 }
 
 /// The input key a party identifier came from (see `id-keys` and
@@ -550,19 +643,20 @@
 /// seller, buyer and payee, BR-CL-26 for the ship-to party.
 ///
 /// -> array
-#let global-id(party, rule, field) = {
+#let global-id(party, rule, field, profile) = {
   let global-id = party.at("global-id", default: none)
   if global-id == none or global-id.scheme == none { return () }
-  if not in-list(lists.icd.every, global-id.scheme) {
-    return (
-      (
-        key: rule,
-        field: field + "." + id-key(party, "global-id"),
-        scheme: global-id.scheme,
-      ),
-    )
-  }
-  ()
+  let found = code-finding(
+    "icd",
+    global-id.scheme,
+    profile,
+    rule,
+    "FX-SCH-A-000031",
+    (field: field + "." + id-key(party, "global-id"), scheme: global-id.scheme),
+    "global identifier",
+    scheme: true,
+  )
+  if found == none { () } else { (found,) }
 }
 
 /// IP-ID-02: two different values for one identifier of a party, of which
@@ -642,22 +736,25 @@
 /// is.
 ///
 /// -> array
-#let legal-id(party, field, term, bt) = {
+#let legal-id(party, field, term, bt, profile) = {
   let legal-id = party.at("legal-id", default: none)
-  if (
-    legal-id == none
-      or legal-id.scheme == none
-      or in-list(lists.icd.every, legal-id.scheme)
-  ) { return () }
-  (
+  if legal-id == none or legal-id.scheme == none { return () }
+  let found = code-finding(
+    "icd",
+    legal-id.scheme,
+    profile,
+    "BR-CL-11",
+    "FX-SCH-A-000031",
     (
-      key: "BR-CL-11",
       field: field + ".legal-id",
       term: term,
       bt: bt,
       scheme: legal-id.scheme,
     ),
+    term + " legal registration identifier (" + bt + ")",
+    scheme: true,
   )
+  if found == none { () } else { (found,) }
 }
 
 #let _parties(model) = {
@@ -689,7 +786,7 @@
     "BR-09",
     "sender.country",
     "seller country code (BT-40)",
-    profile.en16931,
+    profile,
   )
   out += country-of-vat-id(seller, "sender", "seller", "BT-40")
   if profile.addresses {
@@ -698,7 +795,7 @@
       "BR-11",
       "recipient.country",
       "buyer country code (BT-55)",
-      profile.en16931,
+      profile,
     )
     out += country-of-vat-id(buyer, "recipient", "buyer", "BT-55")
     if ship-to != none {
@@ -707,7 +804,7 @@
         "BR-57",
         "delivery-address.country",
         "deliver-to country code (BT-80)",
-        profile.en16931,
+        profile,
       )
     }
     out += post-code(seller, "sender", "seller", "BT-37", "BT-38")
@@ -784,8 +881,8 @@
       out += typed-ids(party, field, term)
     }
   }
-  out += legal-id(seller, "sender", "seller", "BT-30")
-  out += legal-id(buyer, "recipient", "buyer", "BT-47")
+  out += legal-id(seller, "sender", "seller", "BT-30", profile)
+  out += legal-id(buyer, "recipient", "buyer", "BT-47", profile)
   for (party, key, field, term, carried, lowest) in (
     (
       seller,
@@ -830,8 +927,8 @@
   if profile.party-ids {
     out += identifiers(seller, "sender", "seller")
     out += identifiers(buyer, "recipient", "buyer")
-    out += global-id(seller, "BR-CL-10", "sender")
-    out += global-id(buyer, "BR-CL-10", "recipient")
+    out += global-id(seller, "BR-CL-10", "sender", profile)
+    out += global-id(buyer, "BR-CL-10", "recipient", profile)
     if profile.en16931 {
       out += single-identifier(
         buyer,
@@ -843,7 +940,7 @@
   }
   if profile.addresses and ship-to != none {
     out += identifiers(ship-to, "delivery-address", "delivery address")
-    out += global-id(ship-to, "BR-CL-26", "delivery-address")
+    out += global-id(ship-to, "BR-CL-26", "delivery-address", profile)
     if profile.en16931 {
       out += single-identifier(
         ship-to,
@@ -870,6 +967,7 @@
       (seller-rule, "BR-62"),
       "sender",
       "seller electronic address (BT-34)",
+      profile,
       represented: represented,
     )
     out += _electronic-address(
@@ -878,6 +976,7 @@
       (buyer-rule, "BR-63"),
       "recipient",
       "buyer electronic address (BT-49)",
+      profile,
       reference: model.invoice.at("buyer-reference", default: none),
     )
   }
@@ -1096,8 +1195,24 @@
       }
     }
 
-    if category == none or not in-list(lists.vat-category.every, category) {
-      out.push((key: "BR-CL-18", field: field, category: category))
+    // The split payment of Italy (B) is left to BR-CL-18 in XRechnung, whose
+    // code list has it, as invoice-pro does not check its rules (BR-B-01,
+    // BR-B-02).
+    let found = if category == "B" and model.profile.xrechnung {
+      (key: "BR-CL-18", id: "BR-CL-18", field: field, fx-only: false)
+    } else {
+      code-finding(
+        "vat-category",
+        category,
+        model.profile,
+        "BR-CL-18",
+        "FX-SCH-A-000179",
+        (field: field),
+        "VAT category code (BT-118)",
+      )
+    }
+    if found != none {
+      out.push(found + (category: category))
       continue
     }
     if tax.rate == none { continue }
@@ -1142,7 +1257,7 @@
     // The exemption reason codes (BT-121) the items give.
     if tax.at("codes", default: ()) != () {
       import "rare.typ": exemption-codes
-      out += exemption-codes(tax, field)
+      out += exemption-codes(tax, field, model.profile)
     }
   }
 
@@ -1339,9 +1454,16 @@
       import "rare.typ": payment-means-details
       out += payment-means-details(entry, payment, profile)
     }
-    if not in-list(lists.payment-means.every, entry.type-code) {
-      out.push((key: "BR-CL-16", field: "paid.method", code: entry.type-code))
-    }
+    let found = code-finding(
+      "payment-means",
+      entry.type-code,
+      profile,
+      "BR-CL-16",
+      "FX-SCH-A-000023",
+      (field: "paid.method", code: entry.type-code),
+      "payment means code (BT-81)",
+    )
+    if found != none { out.push(found) }
   }
 
   // The check digits of a SEPA creditor identifier (BT-90).

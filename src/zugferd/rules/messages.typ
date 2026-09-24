@@ -37,6 +37,23 @@
 
 #let _not-yet-hint = "Use another code while the validators of the Factur-X profiles do not know it yet."
 
+// A code that only the code list of the Factur-X validation lacks (`fx-only`
+// of a finding, see `code-rule` of engine.typ), which the validation of
+// XRechnung accepts: `subject` names the code, e.g. `The scheme "0219" of
+// the buyer electronic address (BT-49)`.
+#let _factur-x-only(subject, hint) = (
+  subject
+    + " is not in the code list of the Factur-X validation, although the code list of EN 16931 has it.",
+  hint
+    + " The \"xrechnung\" profile, whose validation applies the code lists of EN 16931 alone, accepts it.",
+)
+
+// The code list a code list rule applies: the Factur-X list in MINIMUM and
+// BASIC WL (a rule FX-SCH-A-*), else the one of EN 16931.
+#let _list-of(f) = if f.at("id", default: "").starts-with("FX-") {
+  "Factur-X"
+} else { "EN 16931" }
+
 // Why the e-invoice of a document states no date of the supply when nothing
 // dates it (see `supply-dated`): a credit note or a prepayment invoice.
 #let _undated-reason(document) = if (
@@ -374,7 +391,12 @@
     "The invoice currency code (BT-5) is missing.",
     "Set `currency` on the invoice, e.g. `currency: \"EUR\"`, or use a locale that defines `currency.code`, e.g. `locale.de-de`.",
   ),
-  "BR-CL-04": f => if "profile" in f {
+  "BR-CL-04": f => if f.fx-only {
+    _factur-x-only(
+      "The invoice currency code (BT-5) " + _quoted(f.code),
+      "Invoice in another currency.",
+    )
+  } else if f.at("profile", default: none) != none {
     (
       "The invoice currency code (BT-5) "
         + _quoted(f.code)
@@ -632,17 +654,26 @@
   "BR-11": _missing-country,
   "BR-57": _missing-country,
   "BR-20": _missing-country,
-  "BR-CL-14": f => (
-    "The "
-      + f.term
-      + " "
-      + _quoted(f.code)
-      + " is not in the ISO 3166-1 code list of EN 16931.",
-    _country-hints.at(
-      f.code,
-      default: "Use a country of the `country` module (e.g. `country.de`), an ISO code (e.g. \"DE\") or `country.custom(code: ..)`.",
-    ),
-  ),
+  "BR-CL-14": f => if f.fx-only {
+    _factur-x-only(
+      "The " + f.term + " " + _quoted(f.code),
+      "Use the country the code stands for today.",
+    )
+  } else {
+    (
+      "The "
+        + f.term
+        + " "
+        + _quoted(f.code)
+        + " is not in the ISO 3166-1 code list of "
+        + _list-of(f)
+        + ".",
+      _country-hints.at(
+        f.code,
+        default: "Use a country of the `country` module (e.g. `country.de`), an ISO code (e.g. \"DE\") or `country.custom(code: ..)`.",
+      ),
+    )
+  },
   "IP-COUNTRY-01": f => (
     "The "
       + f.term
@@ -892,7 +923,12 @@
   },
   "BR-62": _address-scheme,
   "BR-63": _address-scheme,
-  "BR-CL-25": f => if _newer(lists.eas, f.scheme) {
+  "BR-CL-25": f => if f.fx-only {
+    _factur-x-only(
+      "The scheme " + _quoted(f.scheme) + " of the " + f.term,
+      "Use another scheme, e.g. \"EM\" for an email address.",
+    )
+  } else if _newer(lists.eas, f.scheme) {
     (
       _not-yet("The scheme " + _quoted(f.scheme) + " of the " + f.term),
       _not-yet-hint,
@@ -1013,14 +1049,21 @@
   "PEPPOL-EN16931-R110": _item-outside-period,
   "PEPPOL-EN16931-R111": _item-outside-period,
   "IP-PERIOD-02": _item-outside-period,
-  "BR-CL-15": f => (
-    "The country of origin (BT-159) "
-      + _quoted(f.code)
-      + " is not in the ISO 3166-1 code list of EN 16931.",
-    if f.code == "EL" { _country-hints.EL } else {
-      "Give `origin` as a country of the `country` module (e.g. `country.de`) or an ISO 3166-1 code such as \"DE\"."
-    },
-  ),
+  "BR-CL-15": f => if f.fx-only {
+    _factur-x-only(
+      "The country of origin (BT-159) " + _quoted(f.code),
+      "Give `origin` as the country the code stands for today.",
+    )
+  } else {
+    (
+      "The country of origin (BT-159) "
+        + _quoted(f.code)
+        + " is not in the ISO 3166-1 code list of EN 16931.",
+      if f.code == "EL" { _country-hints.EL } else {
+        "Give `origin` as a country of the `country` module (e.g. `country.de`) or an ISO 3166-1 code such as \"DE\"."
+      },
+    )
+  },
 
   // VAT
   "BR-CO-18": f => (
@@ -1032,6 +1075,23 @@
       + _quoted(f.category)
       + " has no VAT category rate (BT-119), which every VAT breakdown but one not subject to VAT (O) has.",
     _bug-hint,
+  ),
+  // A code the newest EN 16931 code list has withdrawn (see `code-rule` of
+  // engine.typ).
+  "IP-CODE-01": f => (
+    (
+      if f.scheme {
+        "The scheme " + _quoted(f.code) + " of the " + f.term
+      } else { "The " + f.term + " " + _quoted(f.code) }
+    )
+      + " was withdrawn from the newest version of the EN 16931 code list (1.3.16). The validation of the "
+      + f.profile
+      + " profile still accepts it, but a receiver that validates with the current list rejects the e-invoice.",
+    if f.list == "currency" {
+      "Invoice in the currency that replaced it, e.g. \"EUR\" for \"BGN\" and \"HRK\"."
+    } else if f.scheme {
+      "Use a current scheme, e.g. \"EM\" for an email address."
+    } else { "Use a current code of the list." },
   ),
   "IP-DEC-01": f => (
     "The VAT rate "
@@ -1053,14 +1113,26 @@
   ),
   "BR-CL-18": f => {
     let default-hint = "Use a constructor of the `tax` module such as `tax.vat(..)`, `tax.zero()` or `tax.exempt(..)`."
-    (
-      "The VAT category "
-        + _quoted(f.category)
-        + " is not allowed in EN 16931 (allowed: S, Z, E, AE, K, G, O, L, M).",
-      if f.category == none { default-hint } else {
-        _category-hints.at(f.category, default: default-hint)
-      },
-    )
+    let hint = if f.category == none { default-hint } else {
+      _category-hints.at(f.category, default: default-hint)
+    }
+    if f.fx-only {
+      (
+        "The VAT category "
+          + _quoted(f.category)
+          + " is not in the code list of the Factur-X validation, although the code list of EN 16931 has it.",
+        hint,
+      )
+    } else {
+      (
+        "The VAT category "
+          + _quoted(f.category)
+          + " is not allowed in "
+          + _list-of(f)
+          + " (allowed: S, Z, E, AE, K, G, O, L, M).",
+        hint,
+      )
+    }
   },
   "vat-rate-positive": f => (
     (

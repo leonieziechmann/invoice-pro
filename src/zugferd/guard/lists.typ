@@ -392,28 +392,34 @@
 /// The code lists of the validator (src/zugferd/rules/); see VALIDATOR_LISTS
 /// of tools/zugferd/gen_guard.py.
 #let validator = (
-  country: (every: country-3, factur-x: country-2),
+  country: (every: country-3, factur-x: country-2, xrechnung: country),
   currency: (
     every: currency-3,
     factur-x: currency,
+    xrechnung: currency-2,
     newer: _codes("CNH VED XCG ZWG"),
+    withdrawn: _codes("ANG BGN CUC HRK MRO VEF ZWL"),
   ),
   eas: (
     every: eas-3,
+    xrechnung: eas,
     newer: _codes("0154 0158 0177 0235 0240 0242 0244 0245 0246 0248"),
+    withdrawn: _codes("9901"),
   ),
   icd: (
     every: icd,
+    xrechnung: icd,
     newer: _codes(
       "0231 0232 0233 0234 0235 0236 0237 0238 0239 0240 0241 0242 0243 0244",
       "0245 0246 0247 0248",
     ),
   ),
-  payment-means: (every: payment-means),
-  unit: (every: unit),
-  vat-category: (every: vat-category-2),
+  payment-means: (every: payment-means, xrechnung: payment-means),
+  unit: (every: unit, xrechnung: unit),
+  vat-category: (every: vat-category-2, xrechnung: vat-category),
   vatex: (
     every: vatex,
+    xrechnung: vatex,
     newer: _codes(
       "VATEX-EU-135-1 VATEX-EU-144 VATEX-EU-146-1E VATEX-EU-153 VATEX-EU-159",
       "VATEX-FR-298SEXDECIESA VATEX-FR-AE VATEX-FR-CGI261-1 VATEX-FR-CGI261-2",
