@@ -11,6 +11,8 @@
 #import "/src/zugferd/profile.typ": resolve-profile
 #import "/src/zugferd/rules/engine.typ": run-rules
 #import "/tests/data-test.typ": data-test, loom
+// `run-rules`, checking that the registry lists each rule for the profile.
+#import "/tests/zugferd/harness.typ": diagnostics as checked
 
 // --- 1. Electronic addresses (BT-34, BT-49) ---
 #{
@@ -295,9 +297,9 @@
 
 // --- 6. Validation of the parties ---
 #let rules(model, level: "error") = (
-  run-rules(model).filter(d => d.level == level).map(d => d.rule).sorted()
+  checked(model).filter(d => d.level == level).map(d => d.rule).sorted()
 )
-#let find(model, rule) = run-rules(model).find(d => d.rule == rule)
+#let find(model, rule) = checked(model).find(d => d.rule == rule)
 #let normalized(role, ..fields) = party-model(
   normalize-party(fields.named(), "de", is-recipient: role != "seller"),
   role: role,

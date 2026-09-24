@@ -11,14 +11,14 @@
 //   implements (`covers`, with their Factur-X aliases, e.g.
 //   FX-SCH-A-000011 for BR-02); `source` (EN16931, FACTUR-X, XRECHNUNG,
 //   PEPPOL, CII or IP) and the `versions` of the artefact it was compared
-//   with; the `profiles` it runs in; its `scope` (document, party, line,
-//   tax, allowance-charge, payment or printed); the business `terms` (BT,
-//   BG); its `level` ("error", "warning", or both, the first being the
-//   usual one); the input `field` it names; a `summary`; and the `legal`
-//   basis of a rule of invoice-pro. Typst reads it only for a diagnostic,
-//   for the level and the ids of the entry of a finding; JSON is the format
-//   Typst reads fastest (a TOML file of the same size takes about five times
-//   longer).
+//   with; the `profiles` in which it can report; its `scope` (document,
+//   party, line, tax, allowance-charge, payment or printed); the business
+//   `terms` (BT, BG); its `level` ("error", "warning", or both, the first
+//   being the usual one); the input `field` it names; a `summary`; and the
+//   `legal` basis of a rule of invoice-pro. Typst reads it only for a
+//   diagnostic, for the level and the ids of the entry of a finding; JSON is
+//   the format Typst reads fastest (a TOML file of the same size takes about
+//   five times longer).
 // - this module: the checks (`run-rules`). A check that fails records a
 //   finding: `(key: .., field: .., ..values)`, the key of the rule's entry,
 //   the input field to name, `id` where the entry reports several ids (e.g.

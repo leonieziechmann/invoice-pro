@@ -7,10 +7,12 @@
 #import "/src/zugferd/profile.typ": resolve-profile
 #import "/src/zugferd/rules/engine.typ": run-rules
 #import "/tests/data-test.typ": data-test, loom
+// `run-rules`, checking that the registry lists each rule for the profile.
+#import "/tests/zugferd/harness.typ": diagnostics as checked
 
 // Sorted rules of the diagnostics of `level`.
 #let rules(model, level: "error") = (
-  run-rules(model).filter(d => d.level == level).map(d => d.rule).sorted()
+  checked(model).filter(d => d.level == level).map(d => d.rule).sorted()
 )
 
 #let check(base) = {

@@ -5,6 +5,7 @@
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/profile.typ": resolve-profile
+#import "/src/zugferd/rules/messages.typ": registry
 #import "/tests/zugferd/harness.typ": (
   bank, buyer-de, buyer-fr, diagnostic, model-test, rules, seller,
 )
@@ -172,9 +173,18 @@
   #bank
 ]
 
-// --- 5. An invoice without items has no VAT breakdown (BR-CO-18) ---
+// --- 5. An invoice without items has no VAT breakdown (BR-CO-18). Only
+// BASIC WL, which has no lines, reports it: the profiles with lines report
+// the missing lines (BR-16) instead, so the rule registry lists BR-CO-18 for
+// BASIC WL only ---
 #model-test(zugferd: "basic-wl", model => {
   assert.eq(rules(model), ("BR-CO-18",))
+  for id in ("basic", "en16931") {
+    let m = model
+    m.profile = resolve-profile(id, "FR")
+    assert.eq(rules(m), ("BR-16",), message: id)
+  }
+  assert.eq(registry.at("BR-CO-18").profiles, ("basic-wl",))
 })[
   #line-items[]
   #payment-goal(days: 14)

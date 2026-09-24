@@ -170,7 +170,7 @@
       "covers": [],
       "source": "IP",
       "versions": [],
-      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "profiles": ["minimum", "basic-wl", "basic"],
       "scope": "document",
       "terms": [],
       "level": "warning",
@@ -952,13 +952,14 @@
       "covers": ["BR-CO-18", "FX-SCH-A-000135"],
       "source": "EN16931",
       "versions": ["1.3.12", "1.3.16"],
-      "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
+      "profiles": ["basic-wl"],
       "scope": "tax",
       "terms": ["BG-23"],
       "level": "error",
       "field": "line-items",
       "summary": "An invoice has at least one VAT breakdown (BG-23).",
-      "legal": null
+      "legal": null,
+      "note": "Only BASIC WL, which has no invoice lines: in the profiles with lines, an invoice without VAT breakdown has no lines, which BR-16 reports."
     },
     "BR-48": {
       "covers": ["BR-48", "FX-SCH-A-000050"],
