@@ -397,3 +397,11 @@
   "vat-category-2": vat-category-2,
   "vat-prefix": vat-prefix,
 )
+
+/// The rules of the VAT categories by name.
+#let vat-rules = (
+  "vat-allowance": vat-allowance,
+  "vat-breakdown": vat-breakdown,
+  "vat-charge": vat-charge,
+  "vat-line": vat-line,
+)

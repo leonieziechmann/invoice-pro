@@ -2429,6 +2429,13 @@ def emit_lists(names):
         wrap("#let lists = (", [f"{typ_str(name)}: {name}" for _, name in ordered], ")", 0),
         "",
     ]
+    if names.vat:
+        vat = sorted(names.vat.values())
+        out += [
+            "/// The rules of the VAT categories by name.",
+            wrap("#let vat-rules = (", [f"{typ_str(name)}: {name}" for name in vat], ")", 0),
+            "",
+        ]
     return "\n".join(out)
 
 
@@ -2556,8 +2563,8 @@ def emit_node(key, nodes, names, imports):
     list, decimals, date); a complex node as a dictionary (n: number of
     required children, z: further checks, c: children), one child per line;
     the dispatch of a family element (see `emit_dispatch`). The code lists
-    and tables of VAT category rules the node names are added to
-    `imports`."""
+    the actions of the children name are added to `imports`; the tables of
+    VAT category rules (`t`) are named by their name in lists.typ."""
     if key[0] == "D":
         return emit_dispatch(key, nodes)
     if key[0] == "L":
@@ -2625,8 +2632,7 @@ def emit_node(key, nodes, names, imports):
             for kind, refs, rule in xref
         ]))
     if categories:
-        imports.update(names.vat[table] for _, table in categories)
-        extras.append("t: " + typ_dict((tag, names.vat[table]) for tag, table in categories))
+        extras.append("t: " + typ_dict((tag, typ_str(names.vat[table])) for tag, table in categories))
     fields.append("z: " + ("(" + ", ".join(extras) + ")" if extras else "none"))
     if not specs:
         return "(" + ", ".join(fields) + ", c: (:))"

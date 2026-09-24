@@ -54,11 +54,11 @@
 // forbids an empty element, `v` minimum numbers of variants, `g` counts over
 // paths, `y` children of which one is required, `x` children that exclude
 // each other, `r` the currency cross references of the VAT total, `t` the
-// tax elements among the children, each with the table of the rules of the
-// VAT categories where it is (lists.typ): per category code, (check, value,
-// rule) of the rate, the VAT amount and the exemption reason. Besides its
-// `nodes`, the module of a profile has `empty`, the rule that forbids an
-// empty leaf (XRechnung), or none.
+// tax elements among the children, each with the name of the table of the
+// rules of the VAT categories where it is (`vat-rules` of lists.typ): per
+// category code, (check, value, rule) of the rate, the VAT amount and the
+// exemption reason. Besides its `nodes`, the module of a profile has
+// `empty`, the rule that forbids an empty leaf (XRechnung), or none.
 //
 // Performance (concept 6.4, budget 0.5 ms per invoice line): Typst memoizes
 // every call of a closure and spends about a microsecond on a call of a
@@ -72,7 +72,7 @@
 
 #import "../xml.typ": escaped-class, xml-escape
 #import "../../utils/text.typ": plain-text
-#import "lists.typ": lists as code-lists
+#import "lists.typ": lists as code-lists, vat-rules
 
 // A text written as it is: not blank, and nothing `xml-escape` changes.
 #let _plain = {
@@ -537,8 +537,7 @@
 
 // The rules of the VAT category of a tax element (`body`, the child `step`
 // of `tag`): the `checks` of its `category` (see lists.typ) on its rate
-// ("r"), its VAT amount ("a") and its exemption reason ("e"). Memoized on
-// the small tax element, so that lines of the same tax are checked once.
+// ("r"), its VAT amount ("a") and its exemption reason ("e").
 #let _category-checks(tag, step, body, category, checks) = {
   let found = ()
   for (check, expected, rule) in checks {
@@ -571,6 +570,30 @@
         value: _leaf-text(body.at(element, default: none)),
       ))
     }
+  }
+  found
+}
+
+// The rules of the VAT categories of the tax elements `value` (one, or an
+// array) of the child `child` of `tag`, each by the category code it
+// states: `rules` names their table in lists.typ (`t` of a node). One
+// memoized call on small arguments, so that the lines of one tax are
+// checked once.
+#let _vat-checks(tag, child, value, rules) = {
+  let table = vat-rules.at(rules)
+  let many = type(value) == array
+  let found = ()
+  let i = 0
+  for item in if many { value } else { (value,) } {
+    i += 1
+    if type(item) != dictionary { continue }
+    let code = _discriminator(item, ("ram:CategoryCode",))
+    let checks = if code == none { none } else {
+      table.at(code, default: none)
+    }
+    if checks == none { continue }
+    let step = if many { child + "[" + str(i) + "]" } else { child }
+    found += _category-checks(tag, step, item, code, checks)
   }
   found
 }
@@ -872,31 +895,20 @@
     let problems = structure(id, tag, body.keys(), skipped, counts)
     if problems != () { found += problems }
     let z = node.z
-    if z != none and "t" in z {
-      // The tax elements among the children, each by its VAT category.
-      for (child, table) in z.t {
-        let value = body.at(child, default: none)
-        let many = type(value) == array
-        let i = 0
-        for item in if many { value } else { (value,) } {
-          i += 1
-          if type(item) != dictionary { continue }
-          let code = item.at("ram:CategoryCode", default: none)
-          if type(code) != str {
-            code = _discriminator(item, ("ram:CategoryCode",))
+    if z != none {
+      if "t" in z {
+        // The tax elements among the children, by their VAT categories.
+        for (child, rules) in z.t {
+          let value = body.at(child, default: none)
+          if value != none {
+            let f = _vat-checks(tag, child, value, rules)
+            if f != () { found += f }
           }
-          let checks = if code == none { none } else {
-            table.at(code, default: none)
-          }
-          if checks == none { continue }
-          let step = if many { child + "[" + str(i) + "]" } else { child }
-          let f = _category-checks(tag, step, item, code, checks)
-          if f != () { found += f }
         }
       }
-    }
-    if z != none and ("v" in z or "g" in z or "r" in z) {
-      found += _further-checks(tag, body, z, variants)
+      if "v" in z or "g" in z or "r" in z {
+        found += _further-checks(tag, body, z, variants)
+      }
     }
     if "" in body and out.trim() == "" { return ("", found) }
     (

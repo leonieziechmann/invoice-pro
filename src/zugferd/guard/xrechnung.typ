@@ -7,7 +7,7 @@
 
 #import "lists.typ": (
   country, currency-2, document-type, note-subject, payment-means, tax-type,
-  vat-allowance, vat-breakdown, vat-category, vat-charge, vat-line,
+  vat-category,
 )
 
 // The rule that forbids an empty leaf, or none.
@@ -109,7 +109,7 @@
     "ram:BilledQuantity": (none, 0, 1, 1, 29, "BR-22"),
   )),
   ("d", ("unitCode": ("BR-23", none, ("unit", "BR-CL-23", none, false))), none, none, none, none),
-  (n: 2, z: (t: ("ram:ApplicableTradeTax": vat-line)), c: (
+  (n: 2, z: (t: ("ram:ApplicableTradeTax": "vat-line")), c: (
     "ram:ApplicableTradeTax": (31, 0, 1, 1, 31),
     "ram:BillingSpecifiedPeriod": (35, 1, 0, 1, 35),
     "ram:SpecifiedTradeAllowanceCharge": (none, 2, 0, none, 38),
@@ -369,7 +369,7 @@
     "ram:Name": ("CII-DT-021",),
     "ram:FormattedIssueDateTime": ("CII-DT-027",),
   )),
-  (n: 4, z: (g: ((("ram:ApplicableTradeTax", "ram:DueDateTypeCode"), 0, 1, "CII-SR-462"), (("ram:ApplicableTradeTax", "ram:TaxPointDate"), 0, 1, "CII-SR-461")), t: ("ram:ApplicableTradeTax": vat-breakdown)), c: (
+  (n: 4, z: (g: ((("ram:ApplicableTradeTax", "ram:DueDateTypeCode"), 0, 1, "CII-SR-462"), (("ram:ApplicableTradeTax", "ram:TaxPointDate"), 0, 1, "CII-SR-461")), t: ("ram:ApplicableTradeTax": "vat-breakdown")), c: (
     "ram:CreditorReferenceID": ("s", 0, 0, 1, 15),
     "ram:PaymentReference": ("s", 1, 0, 1, 10),
     "ram:InvoiceCurrencyCode": (currency-2, 3, 1, 1, 92, "BR-05"),
@@ -444,7 +444,7 @@
     "ram:EndDateTime": (36, 1, 0, 1, 36),
   )),
   (d: ("ram:ChargeIndicator", "udt:Indicator"), m: ("0": "PEPPOL-EN16931-R043-1", "1": "PEPPOL-EN16931-R043-1", "false": 107, "true": 111), o: 114, k: (:)),
-  (n: 2, z: (y: ((("ram:Reason", "ram:ReasonCode"), "BR-33"),), t: ("ram:CategoryTradeTax": vat-allowance)), c: (
+  (n: 2, z: (y: ((("ram:Reason", "ram:ReasonCode"), "BR-33"),), t: ("ram:CategoryTradeTax": "vat-allowance")), c: (
     "ram:ChargeIndicator": (40, 0, 1, 1, 40, "BR-66"),
     "ram:BasisAmount": ("d2", 2, 0, 1, 108),
     "ram:ActualAmount": ("d2", 3, 1, 1, 109, "BR-31"),
@@ -461,7 +461,7 @@
     "ram:CategoryCode": (vat-category, 4, 1, 1, 45),
     "ram:RateApplicablePercent": ("d", 8, 0, 1, 34),
   )),
-  (n: 2, z: (y: ((("ram:Reason", "ram:ReasonCode"), "BR-38"),), t: ("ram:CategoryTradeTax": vat-charge)), c: (
+  (n: 2, z: (y: ((("ram:Reason", "ram:ReasonCode"), "BR-38"),), t: ("ram:CategoryTradeTax": "vat-charge")), c: (
     "ram:ChargeIndicator": (40, 0, 1, 1, 40, "BR-66"),
     "ram:BasisAmount": ("d2", 2, 0, 1, 112),
     "ram:ActualAmount": ("d2", 3, 1, 1, 113, "BR-36"),
