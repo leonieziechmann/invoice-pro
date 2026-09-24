@@ -294,7 +294,8 @@
       "level": "error",
       "field": "sender.country",
       "summary": "The seller postal address has a country code (BT-40).",
-      "legal": null
+      "legal": null,
+      "note": "A safety net: an address without `country` gets the country of the locale."
     },
     "BR-11": {
       "covers": ["BR-11", "FX-SCH-A-000157"],
@@ -306,7 +307,8 @@
       "level": "error",
       "field": "recipient.country",
       "summary": "The buyer postal address has a country code (BT-55).",
-      "legal": null
+      "legal": null,
+      "note": "A safety net: an address without `country` gets the country of the locale."
     },
     "BR-57": {
       "covers": ["BR-57", "FX-SCH-A-000170"],
@@ -318,7 +320,8 @@
       "level": "error",
       "field": "delivery-address.country",
       "summary": "The deliver-to address has a country code (BT-80).",
-      "legal": null
+      "legal": null,
+      "note": "A safety net: an address without `country` gets the country of the locale."
     },
     "BR-20": {
       "covers": ["BR-20", "FX-SCH-A-000078"],
@@ -330,7 +333,8 @@
       "level": "error",
       "field": "sender.tax-representative.country",
       "summary": "The postal address of the seller tax representative has a country code (BT-69).",
-      "legal": null
+      "legal": null,
+      "note": "A safety net: an address without `country` gets the country of the locale."
     },
     "BR-CL-14": {
       "ids": ["BR-CL-14", "FX-SCH-A-000036"],
@@ -957,20 +961,8 @@
       "level": "error",
       "field": "item <id> (<name>)",
       "summary": "Every invoice line has a VAT category (BT-151).",
-      "legal": null
-    },
-    "PEPPOL-EN16931-R121": {
-      "covers": ["PEPPOL-EN16931-R121"],
-      "source": "PEPPOL",
-      "versions": ["3.0", "3.0.2"],
-      "profiles": ["basic", "en16931", "xrechnung"],
-      "scope": "line",
-      "terms": ["BT-149"],
-      "level": "error",
-      "field": "item <id> (<name>)",
-      "summary": "The price base quantity (BT-149) is greater than 0.",
       "legal": null,
-      "note": "The PEPPOL rule is part of the XRechnung Schematron; invoice-pro checks it in every profile with lines."
+      "note": "A safety net: every item has a VAT category (`tax: none` is written as zero rated, IP-TAX-01)."
     },
     "BR-30": {
       "covers": ["BR-30", "FX-SCH-A-000212"],
@@ -1510,7 +1502,8 @@
       "level": "error",
       "field": "direct-debit.creditor-id",
       "summary": "XRechnung requires the creditor identifier (BT-90) of a direct debit.",
-      "legal": null
+      "legal": null,
+      "note": "A safety net: `direct-debit` requires the creditor identifier."
     },
     "BR-DE-31": {
       "covers": ["BR-DE-31"],

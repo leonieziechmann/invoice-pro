@@ -500,10 +500,12 @@
 
 // --- Parties --------------------------------------------------------------
 
-/// The country of a party (`rule`: missing) and its code list (BR-CL-14,
-/// see `code-rule`): the code list of EN 16931 lacks South Sudan ("SS"),
-/// which the Factur-X profiles MINIMUM and BASIC WL accept, the one of
-/// Factur-X the Netherlands Antilles ("AN"), which XRechnung accepts.
+/// The country of a party (`rule`: missing, a safety net, as an address
+/// without `country` gets the country of the locale) and its code list
+/// (BR-CL-14, see `code-rule`): the code list of EN 16931 lacks South
+/// Sudan ("SS"), which the Factur-X profiles MINIMUM and BASIC WL accept,
+/// the one of Factur-X the Netherlands Antilles ("AN"), which XRechnung
+/// accepts.
 ///
 /// -> array
 #let country(code, rule, field, term, profile) = {
@@ -1042,13 +1044,11 @@
     } else if unit-issue != none and unit-issue.kind == "ambiguous" {
       out.push((key: "IP-UNIT-01", field: line-field(line), issue: unit-issue))
     }
+    // BR-CO-04, a safety net: every item has a VAT category (`tax: none` is
+    // written as zero rated, IP-TAX-01). (The price base quantity is above
+    // 0, PEPPOL-EN16931-R121: `item` and `bundle` stop on any other.)
     if line.key == none or line.category == none {
       out.push((key: "BR-CO-04", field: line-field(line)))
-    }
-    // The price refers to a positive quantity; `item` and `bundle` stop on
-    // any other already.
-    if line.base-quantity <= _zero {
-      out.push((key: "PEPPOL-EN16931-R121", field: line-field(line)))
     }
   }
   out

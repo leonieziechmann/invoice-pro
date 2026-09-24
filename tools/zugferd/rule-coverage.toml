@@ -622,14 +622,14 @@ compilation."""
 
 [[without-fixture]]
 ids = ["BR-09", "BR-11", "BR-20", "BR-57"]
-reason = """Cannot fire: a party or delivery address without `country` gets the country of the \
-locale, so the country code is never missing."""
+reason = """A safety net that cannot fire: a party or delivery address without `country` gets the \
+country of the locale, so the country code is never missing."""
 
 [[without-fixture]]
-ids = ["BR-CO-04", "BR-DE-30", "PEPPOL-EN16931-R121"]
-reason = """Cannot fire: every item has a VAT category (`tax: none` is written as zero rated, with \
-IP-TAX-01), `direct-debit` requires the creditor identifier, and `item` and `bundle` refuse a price \
-base quantity of 0 or less (see the construction entries of these rules)."""
+ids = ["BR-CO-04", "BR-DE-30"]
+reason = """A safety net that cannot fire: every item has a VAT category (`tax: none` is written as \
+zero rated, with IP-TAX-01), and `direct-debit` requires the creditor identifier (see the \
+construction entries of these rules)."""
 
 [[without-fixture]]
 ids = [

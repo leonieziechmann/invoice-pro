@@ -383,7 +383,8 @@
       }
     } else if xrechnung {
       // The direct debit component requires the mandate reference and
-      // the creditor identifier; the debited account is optional.
+      // the creditor identifier, so R061 and BR-DE-30 are safety nets
+      // here; the debited account is optional.
       if payment.at("mandate", default: none) == none {
         out.push((
           key: "PEPPOL-EN16931-R061",
