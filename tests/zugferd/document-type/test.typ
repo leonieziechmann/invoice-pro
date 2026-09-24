@@ -478,6 +478,24 @@
   #bank
 ]
 
+// The delivery address `invoice` adds to the recipient is the buyer's
+// delivery (BG-13), not an input of the seller the recipient of a
+// self-billed invoice is: no IP-KEY-01
+#model-test(
+  document-type: "self-billed",
+  sender: buyer-de,
+  recipient: seller,
+  delivery-address: (
+    name: "Buyer GmbH, Lager",
+    address: "Lagerweg 1",
+    city: "50667 Köln",
+  ),
+  model => {
+    assert.eq(model.ship-to.address.city, "Köln")
+    assert("IP-KEY-01" not in rules(model, level: "warning"))
+  },
+)[#paid-at-once]
+
 // The diagnostics name the inputs: the seller's are the recipient's
 #invoice(
   theme: themes.blank,

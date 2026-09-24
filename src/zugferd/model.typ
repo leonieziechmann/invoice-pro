@@ -1509,7 +1509,15 @@
   // The buyer issues a self-billed invoice: the sender of the document is
   // the buyer and its recipient the seller. From here on, `sender` is the
   // seller and `recipient` the buyer.
-  if document.self-billed { (sender, recipient) = (recipient, sender) }
+  if document.self-billed {
+    (sender, recipient) = (recipient, sender)
+    // `invoice` adds the delivery address to the recipient; it is the
+    // buyer's delivery (BG-13, `ctx.delivery-address`), not an input of the
+    // seller.
+    if type(sender) == dictionary {
+      let _ = sender.remove("delivery-address", default: none)
+    }
+  }
   let profile = resolve-profile(
     ctx.at("zugferd", default: "en16931"),
     country-code(recipient),
