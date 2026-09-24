@@ -6,8 +6,9 @@
 The registry, src/zugferd/rules/registry.json, is the one source of the
 metadata of every rule whose diagnostics invoice-pro reports: the checks of
 its validator (src/zugferd/rules/engine.typ, rare.typ, xrechnung.typ and
-equivalence.typ, the invariants that the XML states what the invoice
-prints, which report findings by the key of an entry) and the rules of the
+equivalence.typ with equivalence-line.typ, the invariants that the XML
+states what the invoice prints, which report findings by the key of an
+entry) and the rules of the
 XML write guard (IP-GUARD-*). The messages are in
 src/zugferd/rules/messages.typ, those of the rules of XRechnung that no
 other profile reports in
@@ -72,7 +73,13 @@ MESSAGES = RULES / "messages.typ"
 # `diagnostics` of engine.typ looks up first for a key starting with BR-DE-.
 XRECHNUNG_MESSAGES = RULES / "xrechnung-messages.typ"
 XRECHNUNG_PREFIX = "BR-DE-"
-MODULES = [RULES / "engine.typ", RULES / "rare.typ", RULES / "xrechnung.typ", RULES / "equivalence.typ"]
+MODULES = [
+    RULES / "engine.typ",
+    RULES / "rare.typ",
+    RULES / "xrechnung.typ",
+    RULES / "equivalence.typ",
+    RULES / "equivalence-line.typ",
+]
 GUARD_REPORT = REPO / "src" / "zugferd" / "guard" / "report.typ"
 DOCS = REPO / "docs" / "docs" / "e-invoicing.md"
 

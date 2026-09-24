@@ -31,9 +31,9 @@
 // Performance (concept 6.4): one call per invoice; a line costs a few
 // comparisons of its values in one loop, and only a line that has
 // allowances or charges, or whose values differ, is looked at in detail
-// (`_line`).
+// (equivalence-line.typ, which loads only for such a line).
 
-#import "engine.typ": line-field, tax-field
+#import "engine.typ": tax-field
 #import "../model.typ": text-or-none
 
 #let _zero = decimal("0")
@@ -43,10 +43,12 @@
 // `price-digits` of logic/net-amounts.typ): its tolerance.
 #let _price-tolerance = decimal("0.000001")
 
-// A finding of IP-PRINT-01: the `term` of `field` is `stated` in the XML and
-// `printed` on the invoice; with gross prices, `rate` is the VAT rate the
-// net amount `stated` is compared with the gross amount `printed` by.
-#let _differs(field, term, stated, printed, rate: none) = (
+/// A finding of IP-PRINT-01: the `term` of `field` is `stated` in the XML
+/// and `printed` on the invoice; with gross prices, `rate` is the VAT rate
+/// the net amount `stated` is compared with the gross amount `printed` by.
+///
+/// -> dictionary
+#let differs(field, term, stated, printed, rate: none) = (
   key: "IP-PRINT-01",
   field: field,
   term: term,
@@ -54,114 +56,6 @@
   printed: printed,
   rate: rate,
 )
-
-// The findings of a line of the model against its item: its values, its
-// allowances and charges (in the order the item prints them: its discounts,
-// then its surcharges) and, with `slack`, PEPPOL-EN16931-R120. `limit` is
-// the tolerance of its net amount with gross prices (`none`: net prices).
-#let _line(line, item, limit, unit, slack) = {
-  let out = ()
-  let divisor = _one + line.rate
-  // A negative price is stated as it is printed, or as a positive price of
-  // a negative quantity (BR-27).
-  let (price, quantity) = if item.price < _zero and line.price >= _zero {
-    (-item.price, -item.quantity)
-  } else { (item.price, item.quantity) }
-  let rate = if limit != none { line.rate }
-  // Each value: its term, what the XML states, what the invoice prints, and
-  // whether they differ.
-  for (term, stated, printed, off) in (
-    (
-      "invoiced quantity (BT-129)",
-      line.quantity,
-      quantity,
-      line.quantity != quantity,
-    ),
-    (
-      "price base quantity (BT-149)",
-      line.base-quantity,
-      item.base-quantity,
-      line.base-quantity != item.base-quantity,
-    ),
-    (
-      "item net price (BT-146)",
-      line.price,
-      price,
-      if limit == none { line.price != price } else {
-        calc.abs(line.price - price / divisor) > _price-tolerance
-      },
-    ),
-    (
-      "line net amount (BT-131)",
-      line.net,
-      item.total,
-      if limit == none { line.net != item.total } else {
-        calc.abs(line.net - item.total / divisor) > limit
-      },
-    ),
-  ) {
-    if off {
-      out.push(_differs(
-        line-field(line),
-        term,
-        stated,
-        printed,
-        rate: if term != "invoiced quantity (BT-129)" { rate },
-      ))
-    }
-  }
-  let stated = line.allowances + line.charges
-  let listed = ()
-  for adjustment in item.discounts + item.surcharge {
-    if adjustment.absolute != _zero { listed.push(adjustment) }
-  }
-  if listed.len() != stated.len() {
-    out.push(_differs(
-      line-field(line),
-      "number of allowances and charges of the line (BG-27, BG-28)",
-      stated.len(),
-      listed.len(),
-    ))
-  } else {
-    for (entry, adjustment) in stated.zip(listed) {
-      let amount = calc.abs(adjustment.absolute)
-      if (
-        if limit == none { entry.amount != amount } else {
-          calc.abs(entry.amount - amount / divisor) >= unit
-        }
-      ) {
-        out.push(_differs(
-          line-field(line),
-          if adjustment.absolute < _zero {
-            "line allowance amount (BT-136)"
-          } else { "line charge amount (BT-141)" },
-          entry.amount,
-          amount,
-          rate: rate,
-        ))
-      }
-    }
-  }
-  if slack != none {
-    let expected = line.quantity * line.price / line.base-quantity
-    for entry in line.charges { expected += entry.amount }
-    for entry in line.allowances { expected -= entry.amount }
-    let off = line.net - expected
-    if off > slack or off < -slack {
-      out.push((
-        key: "PEPPOL-EN16931-R120",
-        field: line-field(line),
-        net: line.net,
-        quantity: line.quantity,
-        price: line.price,
-        base-quantity: line.base-quantity,
-        expected: expected,
-        slack: slack,
-      ))
-    }
-  }
-  out
-}
 
 // The field of a document level allowance or charge, e.g. `discount
 // (Coupon)`.
@@ -215,7 +109,7 @@
   // the VAT groups (IP-CALC-02).
   let counted = lines.len() == items.len()
   if not counted {
-    out.push(_differs(
+    out.push(differs(
       "line-items",
       "number of invoice lines (BG-25)",
       lines.len(),
@@ -234,6 +128,9 @@
   // to cents (logic/calc-item.typ), so at most 0.005 off. Any other line is
   // checked.
   let r120 = slack != none and (inclusive or unit > decimal("0.01"))
+  // The detailed comparison of a line (equivalence-line.typ), loaded with
+  // the first line that needs it.
+  let detail = none
   for (line, item) in lines.zip(items) {
     let net = item.total
     total += net
@@ -244,18 +141,16 @@
     // net ones within the rounding). A line that differs, has allowances or
     // charges, or a negative price (stated as a positive price of a
     // negative quantity, BR-27) is looked at in detail.
-    if inclusive {
+    let detailed = if inclusive {
       if not single {
         limit = if line.key != none {
           tolerance.at(line.key, default: unit)
-        } else {
-          unit
-        }
+        } else { unit }
       }
       let divisor = _one + line.rate
       let off = line.net - net / divisor
       let price = line.price - item.price / divisor
-      if (
+      (
         (
           line.quantity,
           line.base-quantity,
@@ -269,31 +164,41 @@
           or off < -limit
           or price > _price-tolerance
           or price < -_price-tolerance
-      ) {
-        out += _line(line, item, limit, unit, slack)
-        continue
-      }
-    } else if (
-      (
-        line.net,
-        line.base-quantity,
-        line.price,
-        line.quantity,
-        line.allowances,
-        line.charges,
-        item.discounts,
-        item.surcharge,
       )
-        != (net, item.base-quantity, item.price, item.quantity, (), (), (), ())
-    ) {
-      out += _line(line, item, limit, unit, slack)
-      continue
+    } else {
+      (
+        (
+          line.net,
+          line.base-quantity,
+          line.price,
+          line.quantity,
+          line.allowances,
+          line.charges,
+          item.discounts,
+          item.surcharge,
+        )
+          != (
+            net,
+            item.base-quantity,
+            item.price,
+            item.quantity,
+            (),
+            (),
+            (),
+            (),
+          )
+      )
     }
-    if r120 {
+    if not detailed and r120 {
       let off = line.net - line.quantity * line.price / line.base-quantity
-      if off > slack or off < -slack {
-        out += _line(line, item, limit, unit, slack)
+      detailed = off > slack or off < -slack
+    }
+    if detailed {
+      if detail == none {
+        import "equivalence-line.typ": line-findings
+        detail = line-findings
       }
+      out += detail(line, item, limit, unit, slack)
     }
   }
   if single { sums.at(sums.keys().first()) += total }
@@ -326,7 +231,7 @@
             )
           } else { entry.amount != calc.abs(amount) }
       ) {
-        out.push(_differs(
+        out.push(differs(
           _modifier-field(modifier),
           if amount < _zero {
             "document level allowance amount (BT-92)"
@@ -347,7 +252,7 @@
     }
   }
   if next != entries.len() {
-    out.push(_differs(
+    out.push(differs(
       "line-items",
       "number of document level allowances and charges (BG-20, BG-21)",
       entries.len(),
@@ -357,7 +262,7 @@
 
   // --- VAT breakdown ----------------------------------------------------------
   if model.taxes.len() != taxes.len() {
-    out.push(_differs(
+    out.push(differs(
       "line-items",
       "number of VAT breakdowns (BG-23)",
       model.taxes.len(),
@@ -367,7 +272,7 @@
   for tax in model.taxes {
     let group = taxes.at(tax.key, default: none)
     if group == none {
-      out.push(_differs(tax-field(tax), "VAT breakdown (BG-23)", tax.key, none))
+      out.push(differs(tax-field(tax), "VAT breakdown (BG-23)", tax.key, none))
       continue
     }
     let basis = group.at("basis", default: _zero)
@@ -386,7 +291,7 @@
       ),
     ) {
       if stated != value {
-        out.push(_differs(tax-field(tax), term, stated, value))
+        out.push(differs(tax-field(tax), term, stated, value))
       }
     }
     // IP-CALC-02: the printed lines, allowances and charges of the group.
@@ -427,7 +332,7 @@
       net,
     ),
   ) {
-    if stated != value { out.push(_differs("line-items", term, stated, value)) }
+    if stated != value { out.push(differs("line-items", term, stated, value)) }
   }
   out
 }
