@@ -12,12 +12,12 @@
 ///
 /// -> regex
 #let invalid-xml-chars = regex("[" + invalid-xml-class + "]")
-// A text `plain-text` returns as it is: printable ASCII words with single
-// spaces between them, as most names, numbers and identifiers are. (Runs of
-// whitespace are collapsed without a regular expression: the class `\s` of
-// all Unicode whitespace takes more than a third of a millisecond to
-// compile, and this module is loaded for every invoice.)
-#let _plain-ascii = regex("^[!-~]+(?: [!-~]+)*$")
+/// A pattern of the texts `plain-text` returns as they are: printable ASCII
+/// words with single spaces between them, as most names, numbers and
+/// identifiers are. A string it matches needs no conversion.
+///
+/// -> regex
+#let plain-ascii = regex("^[!-~]+(?: [!-~]+)*$")
 // Typst sets a hyphen in front of a digit as minus sign (U+2212) after an
 // expression or styled text, e.g. in `[#{2026}-001]`. The hyphens U+2010 and
 // U+2011 look the same. In plain text, e.g. an identifier, all of them are
@@ -227,14 +227,16 @@
   }
   // Printable ASCII words with single spaces: there is nothing to remove,
   // replace or collapse.
-  if collected != none and _plain-ascii in collected { return collected }
+  if collected != none and plain-ascii in collected { return collected }
   if collected == none {
     collected = _collect-text(it, if keep-newlines { "\n" } else { " " })
   }
   let result = collected.replace(invalid-xml-chars, "").replace(_hyphens, "-")
   // `split()` splits at runs of whitespace and drops them at both ends: the
   // words joined by single spaces are the text with its whitespace collapsed
-  // and trimmed.
+  // and trimmed. (No pattern: the class `\s` of all Unicode whitespace takes
+  // more than a third of a millisecond to compile, and this module is loaded
+  // for every invoice.)
   if not keep-newlines { return result.split().join(" ", default: "") }
   let lines = ()
   for line in result.replace("\r\n", "\n").replace("\r", "\n").split("\n") {
