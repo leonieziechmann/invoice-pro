@@ -38,10 +38,14 @@ fi
 extract_dir="$tmp_dir/extracted"
 mkdir -p "$extract_dir"
 
+# In the strict mode of the write guard (`zugferd-strict`): the XML is read
+# back and compared with the data model line by line, and the arithmetic of
+# its amounts is checked, which an invoice outside CI skips for speed.
 echo "Compiling ZUGFeRD PDF for $src_file..."
 "$TYPST" compile \
   --root . \
   --pdf-standard=a-3b \
+  --input zugferd-strict=true \
   "$src_file" \
   "$pdf_path"
 

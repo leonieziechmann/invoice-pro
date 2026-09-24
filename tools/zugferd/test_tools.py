@@ -595,11 +595,14 @@ class Headers(unittest.TestCase):
                 run.load_cases([file])
 
     def test_the_profile_goes_to_typst(self):
+        # Every case compiles in the strict mode of the write guard.
         case = {"id": "rule-BR-01@basic", "file": "x.typ", "inputs": {"profile": "basic"}}
         with tempfile.TemporaryDirectory() as tmp, \
                 unittest.mock.patch.object(common, "typst_compile", return_value=(False, "error: x", 0.1)) as compile_:
             run.compile_case(case, tmp)
-        self.assertEqual(compile_.call_args.kwargs["inputs"], {"profile": "basic"})
+            self.assertEqual(compile_.call_args.kwargs["inputs"], {"profile": "basic", "zugferd-strict": "true"})
+            run.compile_case({"id": "regression-x", "file": "x.typ"}, tmp)
+            self.assertEqual(compile_.call_args.kwargs["inputs"], {"zugferd-strict": "true"})
 
 
 def fixture_case(name, *rules, warns=()):
