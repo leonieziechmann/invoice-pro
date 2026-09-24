@@ -27,7 +27,8 @@ For every case:
   6. Rule ids (rule_coverage.py): every error of invoice-pro names a rule the
      official validators of the case's profile have, or one of its own
      (O-RULE), and every diagnostic a rule the rule registry lists in the
-     profile (O-REGISTRY); a parity fixture (corpus/rules/<RULE>.typ), a
+     profile, or a warning of `zugferd: auto` one of a richer profile the
+     invoice missed (O-REGISTRY); a parity fixture (corpus/rules/<RULE>.typ), a
      case in each profile of its `// profiles:` header, is reported under
      its rule by each validator that has the rule in the profile
      (O-PARITY). A run with
@@ -284,7 +285,11 @@ def compile_case(case, out_dir, timestamp=common.DEFAULT_TIMESTAMP):
     res["pdf_text"] = text
     res["diagnostics"] = data.get("diagnostics", [])
     if data:
-        res["reported_profile"] = (data.get("profile") or {}).get("id")
+        profile = data.get("profile") or {}
+        res["reported_profile"] = profile.get("id")
+        # With `zugferd: auto`, the richer profiles the invoice missed, whose
+        # errors the chosen profile lists as warnings.
+        res["skipped_profiles"] = profile.get("skipped") or []
     name, xml = common.invoice_xml(attachments)
     if xml is not None:
         xml_path = Path(out_dir) / f"{case['id']}.xml"
@@ -742,11 +747,21 @@ def registry_rule_problems(res, reported):
     """The check of the tests' harness (tests/zugferd/harness.typ) in every
     case: each diagnostic names a rule that the rule registry reports in the
     case's profile (its `profiles` and `id-profiles`, see
-    registry.reported_in). `reported`: {profile: {rule id}}."""
+    registry.reported_in). With `zugferd: auto`, a warning may name a rule of
+    a richer profile the invoice missed (`skipped_profiles`, e.g. BR-DE-1 of
+    XRechnung on an EN 16931 invoice), whose errors the chosen profile lists
+    as warnings (src/zugferd/zugferd.typ). `reported`: {profile: {rule id}}."""
     profile = res.get("profile")
     if profile not in reported:
         return []
-    rules = {d.get("rule") for d in res.get("diagnostics", [])}
+    missed = set()
+    for other in res.get("skipped_profiles") or ():
+        missed |= reported.get(other, set())
+    rules = {
+        d.get("rule")
+        for d in res.get("diagnostics", [])
+        if not (d.get("level") == "warning" and d.get("rule") in missed)
+    }
     return [
         f"O-REGISTRY: invoice-pro reports {rule}, which the rule registry does not list in the {profile} profile"
         for rule in sorted(rules - reported[profile], key=str)

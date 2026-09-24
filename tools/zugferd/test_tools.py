@@ -697,6 +697,20 @@ class RuleChecks(unittest.TestCase):
         ])
         res["profile"] = None  # no profile (e.g. no e-invoice): no check
         self.assertEqual(run.registry_rule_problems(res, reported), [])
+        # With `zugferd: auto`, the errors of a richer profile the invoice
+        # missed are warnings of the chosen one, under the rules of the
+        # profile they belong to.
+        reported = {"en16931": {"IP-VAT-226"}, "xrechnung": {"BR-DE-1", "IP-VAT-226"}}
+        res = collected(ours=["IP-VAT-226"])
+        res["diagnostics"].append({"level": "warning", "rule": "BR-DE-1"})
+        res["profile"] = "en16931"
+        missing = "O-REGISTRY: invoice-pro reports BR-DE-1, which the rule registry does not list in the en16931 profile"
+        self.assertEqual(run.registry_rule_problems(res, reported), [missing])
+        res["skipped_profiles"] = ["xrechnung"]
+        self.assertEqual(run.registry_rule_problems(res, reported), [])
+        # ... as warnings only
+        res["diagnostics"].append({"level": "error", "rule": "BR-DE-1"})
+        self.assertEqual(run.registry_rule_problems(res, reported), [missing])
         # The registry lists the ids of its entries per profile.
         listed = registry.reported_in(registry.load(), "basic-wl")
         self.assertIn("FX-SCH-A-000040", listed)
