@@ -6,23 +6,25 @@
 // of the builder (build.typ), so that a mistake of the builder cannot hide
 // in both.
 //
-// The table maps the elements below an element, by their local names, to
-// bindings:
+// The table lists the bindings of the children of an element (`header`,
+// from the root element, and `line`, from an invoice line), each for the
+// child element of the local name `e`:
 //
-// - a leaf `(t: term, m: key, k: kind, p: level)` compares the text of the
-//   element with the value `m` (a key or an index) of the model part the
-//   walk is at, or of its part `g` if given; `a` maps attributes of the
+// - a leaf `(e, t: term, m: key, k: kind, p: level)` compares the text of
+//   the element with the value `m` (a key or an index) of the model part
+//   the walk is at, or of its part `g` if given; `a` maps attributes of the
 //   element to the paths of their values below that part;
-// - `(c: bindings)` is an element that occurs once and whose children the
-//   bindings `c` describe, at the model part `g` if given;
-// - `(r: path, t: term, p: level, c: bindings)` is a repeated group: one
-//   element per entry of the array at `path` (`n`: only their number);
-// - `(s: (scheme: leaf))` are the tax registrations of a party, an
+// - `(e, c: bindings)` is an element that occurs once and whose children
+//   the bindings `c` describe, at the model part `g` if given;
+// - `(e, r: path, t: term, p: level, c: bindings)` is a repeated group: one
+//   element per entry of the array at `path`;
+// - `(e, s: (scheme: leaf))` are the tax registrations of a party, an
 //   identifier per scheme.
 //
 // `p` is the first profile (by `levels`) whose schema has the element and
 // whose Factur-X Schematron uses it (tools/zugferd/test_roundtrip.py checks
-// every binding against the pinned XSDs and Schematrons). Findings:
+// every binding against the guard tables of every profile, which
+// gen_guard.py compiles from the pinned XSDs and Schematrons). Findings:
 //
 // - differs: the XML states another value than the model;
 // - dropped: the model has a value the XML does not state, although the
@@ -47,7 +49,7 @@
 // (`zugferd-strict: true`, strict.typ), which CI uses: comparing a line
 // takes about 1.6 million instructions (0.4 ms), twenty times the budget of
 // 0.02 ms for a check per line (tools/perf/README.md). The header takes
-// about 6 million, whatever the number of lines.
+// about 7.5 million, whatever the number of lines.
 //
 // Performance: one call walks the whole document, with a stack instead of a
 // call per element; an element and a binding cost a handful of operations

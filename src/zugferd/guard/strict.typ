@@ -108,7 +108,7 @@
       )
   )
 
-  // --- Every line against the model, and the sums of its amounts --------
+  // --- The lines --------------------------------------------------------
   // The sums of the line net amounts, allowances and charges per VAT
   // category and rate (for BR-x-08), rounded as the rules round them.
   let sums = (:)
