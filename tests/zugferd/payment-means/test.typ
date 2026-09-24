@@ -231,7 +231,9 @@
 
 // A method whose details are missing: EN 16931 states the payment means code
 // alone, XRechnung requires the details (BR-DE-23-a, BR-DE-24-a,
-// BR-DE-25-a); a credit transfer needs the account in any profile (BR-61)
+// BR-DE-25-a); a credit transfer needs the account in any profile: the CEN
+// Schematron 1.3.16 checks it as CII-SR-470, and in BASIC WL and BASIC,
+// whose BR-61 tests the debited account, invoice-pro as IP-PAY-04
 #model-test(..xrechnung, model => {
   assert.eq(model.payment.means, (means("48", "card", "paid"),))
   assert.eq(rules(model), ("BR-DE-24-a",))
@@ -247,7 +249,12 @@
   assert(d.hint.contains("`#bank-details(iban: ..)`"), message: d.hint)
   let m = model
   m.profile = en16931
-  assert.eq(rules(m), ("BR-61",))
+  assert.eq(rules(m), ("CII-SR-470",))
+  for id in ("basic-wl", "basic") {
+    m.profile = resolve-profile(id, "FR")
+    assert.eq(rules(m), ("IP-PAY-04",))
+    assert.eq(diagnostic(m, "IP-PAY-04").field, "paid.method")
+  }
 })[#items #paid(method: "transfer")]
 // Bank details without an IBAN (only with `zugferd-errors: "report"`, which
 // `bank-details` does not stop) ask for the IBAN
@@ -259,7 +266,7 @@
   assert.eq(d.field, "bank-details.iban")
   assert.eq(d.hint, "Set `iban` on `bank-details`.")
   m.profile = en16931
-  assert.eq(diagnostic(m, "BR-61").field, "bank-details.iban")
+  assert.eq(diagnostic(m, "CII-SR-470").field, "bank-details.iban")
 })[#items #goal #bank]
 #model-test(..xrechnung, model => {
   assert.eq(model.payment.means, (means("59", "direct-debit", "paid"),))

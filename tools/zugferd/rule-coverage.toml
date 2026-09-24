@@ -77,6 +77,13 @@ ids = [
 ]
 class = "fixture"
 
+# A credit transfer without account, a rule of the CEN Schematron 1.3.16
+# (KoSIT) only; XRechnung see below.
+[[rule]]
+ids = ["CII-SR-470"]
+class = "fixture"
+profiles = ["en16931"]
+
 # VAT: categories, exemption reasons and the VAT breakdown.
 [[rule]]
 ids = ["BR-CL-18", "BR-CL-22", "BR-E-10", "BR-O-02", "BR-O-09", "BR-O-11", "BR-IC-11", "BR-AG-05"]
@@ -151,6 +158,15 @@ reported-as = ["BR-O-11"]
 reason = """Other VAT categories next to "not subject to VAT" (O): invoice-pro reports the other VAT \
 breakdown (BR-O-11), which the validators report for the same invoice besides the line, allowance or \
 charge of the other category."""
+
+[[rule]]
+ids = ["CII-SR-470"]
+class = "fixture"
+profiles = ["xrechnung"]
+reported-as = ["BR-DE-23-a"]
+reason = """A credit transfer without account: KoSIT reports CII-SR-470 of the CEN Schematron 1.3.16 \
+next to BR-DE-23-a of the XRechnung Schematron, which Mustang reports as well and invoice-pro \
+reports."""
 
 [[rule]]
 ids = ["BR-O-03", "BR-O-04"]
@@ -261,8 +277,9 @@ ids = ["BR-50", "BR-61"]
 class = "construction"
 reason = """The builder writes the account of a credit transfer (BG-17) only with its IBAN, and the \
 debited account (BT-91) only in the payment means of a direct debit (59): Mustang's version \
-(debited account of a credit transfer) and KoSIT's (credited account) cannot fail. A credit transfer \
-without account is CII-SR-470 in KoSIT (open)."""
+(debited account of a credit transfer) and KoSIT's (credited account) cannot fail. invoice-pro \
+reports a credit transfer without account as CII-SR-470 in EN 16931, BR-DE-23-a in XRechnung and \
+IP-PAY-04 in BASIC WL and BASIC."""
 evidence = [
   "src/zugferd/build.typ: build-payment-means",
   "tools/zugferd/corpus/regression/payment-paid-transfer-without-bank.typ",
@@ -560,12 +577,6 @@ reason = """Payment means of different types: invoice-pro reports IP-PAY-03, KoS
 CII-SR-467."""
 
 [[rule]]
-ids = ["CII-SR-470"]
-class = "open"
-reason = """A credit transfer without account: invoice-pro reports BR-61, which neither validator \
-reports for it (the element BR-61 tests is not written); KoSIT reports CII-SR-470."""
-
-[[rule]]
 ids = ["PEPPOL-EN16931-R120"]
 class = "open"
 reason = """With `tax-mode: "inclusive"`, the net price (BT-146) is rounded, so the invoiced \
@@ -629,12 +640,6 @@ ids = ["BR-55"]
 reason = """Used for another condition: invoice-pro reports a preceding invoice date (BT-26) without \
 its number under this id, but the builder writes the preceding invoice reference (BG-3) only with its \
 number, so the validators accept the XML (the date is lost)."""
-
-[[without-fixture]]
-ids = ["BR-61"]
-reason = """Used for another condition: invoice-pro reports a credit transfer without account \
-outside XRechnung under this id, but the builder writes no account then, which BR-61 does not test; \
-KoSIT reports CII-SR-470 (open), Mustang nothing."""
 
 [[without-fixture]]
 ids = ["BR-IC-12", "BR-CO-16"]
@@ -824,6 +829,17 @@ level = "error"
 summary = "Two kinds of payment means that the official rules accept together."
 basis = "EN 16931 BG-16: an invoice states one payment means type (BT-81), so that the buyer does not pay twice."
 tests = ["tests/zugferd/payment-means/test.typ", "tools/zugferd/corpus/regression/payment-card-and-bank.typ"]
+
+[ip."IP-PAY-04"]
+level = "error"
+summary = "A credit transfer without the account it is paid to, in BASIC WL and BASIC."
+basis = """EN 16931 BR-61: a credit transfer states the payment account identifier (BT-84); the Factur-X \
+and CEN 1.3.12 versions of the rule test the debited account, so the validation of these profiles \
+does not check it."""
+tests = [
+  "tests/zugferd/payment-means/test.typ",
+  "tools/zugferd/corpus/regression/payment-paid-transfer-without-bank-basic.typ",
+]
 
 [ip."IP-GUARD-00"]
 level = "error"

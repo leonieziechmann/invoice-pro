@@ -125,7 +125,8 @@ rejected-by = "kosit"
 other = "nothing"
 reason = """A credit transfer names the account by its IBAN or a proprietary ID (BT-84). The rule is \
 newer than CEN Schematron 1.3.12 in Mustang, whose CII variant of BR-61 tests the debited account \
-instead; KoSIT (CEN 1.3.16) reports an error. invoice-pro reports BR-61."""
+instead; KoSIT (CEN 1.3.16) reports an error. invoice-pro reports CII-SR-470 (BR-DE-23-a in \
+XRechnung, which both validators report)."""
 
 # ---- Code lists: the lists of the validators differ, so either one may
 # ---- reject a code that the other one accepts without a message

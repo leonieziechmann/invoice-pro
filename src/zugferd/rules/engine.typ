@@ -1287,10 +1287,17 @@
       if entry.iban == none {
         // `paid(method: "transfer")` without bank details, or bank details
         // without an IBAN (with `zugferd-errors: "report"`; otherwise
-        // `bank-details` stops the compilation).
+        // `bank-details` stops the compilation): the builder writes no
+        // account (BG-17). XRechnung requires it (BR-DE-23-a), the CEN
+        // Schematron 1.3.16 of EN 16931 its IBAN or proprietary ID
+        // (CII-SR-470). BR-61 of the other CEN version and of Factur-X tests
+        // the debited account instead, so BASIC WL and BASIC accept it:
+        // IP-PAY-04.
         let paid = entry.field == "paid"
         out.push((
-          key: if xrechnung { "BR-DE-23-a" } else { "BR-61" },
+          key: if xrechnung { "BR-DE-23-a" } else if profile.id == "en16931" {
+            "CII-SR-470"
+          } else { "IP-PAY-04" },
           field: if paid { "paid.method" } else { "bank-details.iban" },
           type-code: entry.type-code,
           paid: paid,

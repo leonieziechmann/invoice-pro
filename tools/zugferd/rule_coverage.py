@@ -151,7 +151,6 @@ OPEN_WORK_LIST = {
     "BR-O-03": ("basic-wl",),
     "BR-O-04": ("basic-wl",),
     "CII-SR-467": ("en16931", "xrechnung"),
-    "CII-SR-470": ("en16931", "xrechnung"),
     "PEPPOL-EN16931-R120": ("xrechnung",),
 }
 

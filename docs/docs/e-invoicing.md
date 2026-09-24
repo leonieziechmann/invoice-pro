@@ -115,6 +115,7 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | `IP-PAY-01`     | error   | An IBAN with wrong check digits or format in `bank-details` or as `debtor-iban` of `direct-debit`, where `BR-DE-19` and `BR-DE-20` do not check it (outside XRechnung, or an invoice not in euro).                                                                                 |
 | `IP-PAY-02`     | error   | A SEPA creditor identifier (BT-90) of `direct-debit` with wrong check digits or format.                                                                                                                                                                                            |
 | `IP-PAY-03`     | error   | Two kinds of payment means that the official rules accept together, e.g. `bank-details` next to `card-payment`: an invoice states one payment means (BT-81), so that the buyer does not pay twice.                                                                                 |
+| `IP-PAY-04`     | error   | A credit transfer (`paid(method: "transfer")`, or `bank-details` without IBAN) without the account the buyer pays to (BT-84), which EN 16931 requires (`BR-61`); the Factur-X rules of `"basic-wl"` and `"basic"` test another account, so their validation accepts it.            |
 | `IP-PERIOD-01`  | error   | A printed service period that is not the one the XML states: another date, or a text of its own where the XML states the invoice date. A text of its own besides dated items or a `service-period` is a warning. See [Service Period](#10-service-period-bt-72--bg-14).            |
 | `IP-PERIOD-02`  | warning | The date of an item outside the `service-period` of the invoice. XRechnung checks it for an invoicing period (BG-14) as `PEPPOL-EN16931-R110` and `R111`. See [Item Notes, Periods and Country of Origin](#12-item-notes-periods-and-country-of-origin).                           |
 | `IP-PERIOD-03`  | error   | The printed invoice does not show the date of the supply, which German law requires on every invoice but a small-amount invoice; for a seller elsewhere a warning where it is not the invoice date. See [Printed Details](#printed-details).                                       |
@@ -167,10 +168,10 @@ The tests of `invoice-pro` account for every rule of the official validators, pr
 | MINIMUM   |       46 |                       6 |                    40 |                        0 |            0 |    0 |
 | BASIC WL  |      196 |                      56 |                   117 |                       14 |            7 |    2 |
 | BASIC     |      851 |                      72 |                   713 |                       41 |           23 |    2 |
-| EN 16931  |      905 |                      73 |                   734 |                       54 |           40 |    4 |
-| XRechnung |      885 |                     105 |                   646 |                       62 |           67 |    5 |
+| EN 16931  |      905 |                      74 |                   734 |                       54 |           40 |    3 |
+| XRechnung |      885 |                     106 |                   646 |                       62 |           67 |    4 |
 
-Open: `BR-B-01` (BASIC, EN 16931, XRechnung), `BR-B-02` (BASIC, EN 16931, XRechnung), `BR-O-03` (BASIC WL), `BR-O-04` (BASIC WL), `CII-SR-467` (EN 16931, XRechnung), `CII-SR-470` (EN 16931, XRechnung), `PEPPOL-EN16931-R120` (XRechnung).
+Open: `BR-B-01` (BASIC, EN 16931, XRechnung), `BR-B-02` (BASIC, EN 16931, XRechnung), `BR-O-03` (BASIC WL), `BR-O-04` (BASIC WL), `CII-SR-467` (EN 16931, XRechnung), `PEPPOL-EN16931-R120` (XRechnung).
 
 [//]: # "end of the rule-coverage table"
 
@@ -605,7 +606,7 @@ An invoice that is paid already, e.g. in cash or by card at the counter, uses [`
 #paid(method: "cash", date: datetime(year: 2026, month: 9, day: 1))
 ```
 
-A card payment or a direct debit adds its details with its own component. XRechnung requires them: the payment card for `"card"` (`BR-DE-24-a`), the direct debit for `"direct-debit"` (`BR-DE-25-a`, in another currency than euro its mandate reference, `PEPPOL-EN16931-R061`) and the bank details for `"transfer"` (`BR-DE-23-a`). The other profiles with payment means ask for the bank details of `"transfer"` as well, as EN 16931 requires the account of a credit transfer (`BR-61`), although its official validation does not check it in CII:
+A card payment or a direct debit adds its details with its own component. XRechnung requires them: the payment card for `"card"` (`BR-DE-24-a`), the direct debit for `"direct-debit"` (`BR-DE-25-a`, in another currency than euro its mandate reference, `PEPPOL-EN16931-R061`) and the bank details for `"transfer"` (`BR-DE-23-a`). The other profiles with payment means ask for the bank details of `"transfer"` as well, as EN 16931 requires the account of a credit transfer: `"en16931"` as `CII-SR-470` (a rule of the newer EN 16931 Schematron of KoSIT), `"basic-wl"` and `"basic"` as `IP-PAY-04`, since the version of `BR-61` that their validation applies tests another account:
 
 ```typst
 #paid(method: "card")

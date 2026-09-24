@@ -1286,16 +1286,29 @@
       "summary": "A credit transfer (BT-81 = 30, 58) states the account it is paid to (BT-84).",
       "legal": null
     },
-    "BR-61": {
-      "covers": ["BR-61", "FX-SCH-A-000134"],
-      "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
-      "profiles": ["basic-wl", "basic", "en16931"],
+    "CII-SR-470": {
+      "covers": ["CII-SR-470"],
+      "source": "CII",
+      "versions": ["1.3.16"],
+      "profiles": ["en16931"],
       "scope": "payment",
-      "terms": ["BT-84"],
+      "terms": ["BT-81", "BT-84"],
       "level": "error",
       "field": "bank-details.iban",
-      "summary": "A credit transfer (BT-81 = 30, 58) states the account it is paid to (BT-84).",
+      "summary": "A credit transfer (BT-81 = 30, 58) names the account it is paid to by its IBAN or a proprietary identifier (BT-84).",
+      "legal": null,
+      "note": "A rule of CEN 1.3.16 (KoSIT) only. XRechnung reports the missing account as BR-DE-23-a, BASIC WL and BASIC as IP-PAY-04."
+    },
+    "IP-PAY-04": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["basic-wl", "basic"],
+      "scope": "payment",
+      "terms": ["BT-81", "BT-84"],
+      "level": "error",
+      "field": "bank-details.iban",
+      "summary": "A credit transfer (`paid(method: \"transfer\")`, or `bank-details` without IBAN) without the account the buyer pays to (BT-84), which EN 16931 requires (`BR-61`); the Factur-X rules of `\"basic-wl\"` and `\"basic\"` test another account, so their validation accepts it.",
       "legal": null
     },
     "BR-DE-19": {

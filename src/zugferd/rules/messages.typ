@@ -277,7 +277,7 @@
   )
 }
 
-// A credit transfer without an account (BR-DE-23-a, BR-61).
+// A credit transfer without an account (BR-DE-23-a, CII-SR-470, IP-PAY-04).
 #let _transfer-account(f) = (
   "A credit transfer (BT-81 = "
     + f.type-code
@@ -1151,7 +1151,8 @@
   "BR-DE-24-b": _several-means,
   "IP-PAY-03": _several-means,
   "BR-DE-23-a": _transfer-account,
-  "BR-61": _transfer-account,
+  "CII-SR-470": _transfer-account,
+  "IP-PAY-04": _transfer-account,
   "BR-DE-19": _iban,
   "BR-DE-20": _iban,
   "IP-PAY-01": _iban,
