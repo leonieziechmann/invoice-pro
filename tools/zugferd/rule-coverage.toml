@@ -26,7 +26,8 @@
 #                 the guard covers it)
 #   construction  the builder cannot produce the violation
 #   unreachable   the rule cannot fire on an XML invoice-pro writes
-#   open          not handled yet (the target is none)
+#   open          not handled yet (the target is none; the work list
+#                 OPEN_WORK_LIST of rule_coverage.py can only become shorter)
 #
 # invoice-pro's own rules are listed at the end ([ip."IP-.."]) with their
 # level, what they check, their basis and their tests, and so are the

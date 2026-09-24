@@ -332,6 +332,17 @@ class Classification(unittest.TestCase):
         self.assertEqual(dict(summary["en16931"]), {"compiled": 2, "open": 2, "total": 4})
         self.assertEqual(rc.open_rules(decisions), {"BR-27": ["basic", "en16931"], "BR-61": ["en16931"]})
 
+    def test_the_open_rules_can_only_become_fewer(self):
+        decisions, _ = rc.classify(self.inv, [entry(["BR-27", "BR-61"], "open"),
+                                              entry(["BR-20"], "compiled", profiles=["en16931"], index=1)], [])
+        self.assertEqual(rc.check_open(decisions, {"BR-27": ("basic", "en16931"), "BR-61": ("en16931",)}), [])
+        # A rule open beyond the work list fails, and so does a rule of it
+        # that is no longer open (it must leave the list).
+        problems = rc.check_open(decisions, {"BR-27": ("basic",), "BR-20": ("en16931",)})
+        self.assertEqual([p.split(":")[0] for p in problems],
+                         ["NEW OPEN BR-27 in en16931", "NEW OPEN BR-61 in en16931", "OPEN BR-20 in en16931"])
+        self.assertIn("remove it from OPEN_WORK_LIST", problems[2])
+
 
 class ClassificationFile(unittest.TestCase):
     def load(self, text):

@@ -69,11 +69,13 @@ profiles, on an entry the guard makes redundant, on an IP rule of the
 source without an entry (or an entry without source or tests), on an
 official rule id of the source without a fixture or a [[without-fixture]]
 entry, and when the table in docs/docs/e-invoicing.md differs from the
-numbers (`--update-docs` writes it). Listed `open` rules do not fail it:
-they are the work list, and a new rule id fails as unclassified. run.py
-checks that every fixture passes in every profile it claims
-(`fixture_results`) and, in every case of the corpus, that invoice-pro
-names no rule the validators of the profile do not have (`foreign_rules`).
+numbers (`--update-docs` writes it). The `open` rules are the work list
+(OPEN_WORK_LIST), which can only become shorter: a rule open beyond it
+fails, like a new rule id without a class, and so does one of the list
+that is no longer open. run.py checks that every fixture passes in every
+profile it claims (`fixture_results`) and, in every case of the corpus,
+that invoice-pro names no rule the validators of the profile do not have
+(`foreign_rules`).
 
 Exit code: 0 all classified, 1 problems, 2 setup error.
 """
@@ -139,6 +141,18 @@ NEEDS = {
     "construction": ("reason", "evidence"),
     "unreachable": ("reason",),
     "open": ("reason",),
+}
+# The rules classified as open, by profile: the work list, which can only
+# become shorter. A rule open beyond it fails the gate (NEW OPEN), and one
+# that is no longer open must leave it (OPEN), like the known issues.
+OPEN_WORK_LIST = {
+    "BR-B-01": ("basic", "en16931", "xrechnung"),
+    "BR-B-02": ("basic", "en16931", "xrechnung"),
+    "BR-O-03": ("basic-wl",),
+    "BR-O-04": ("basic-wl",),
+    "CII-SR-467": ("en16931", "xrechnung"),
+    "CII-SR-470": ("en16931", "xrechnung"),
+    "PEPPOL-EN16931-R120": ("xrechnung",),
 }
 
 # The artefacts of KoSIT's XRechnung configuration 2026-08-31 the inventory
@@ -1008,6 +1022,25 @@ def open_rules(decisions):
     return dict(sorted(out.items()))
 
 
+def check_open(decisions, work_list=None):
+    """Problems of the open rules against the work list (OPEN_WORK_LIST): no
+    rule is open beyond it, and every rule of it is still open."""
+    work_list = OPEN_WORK_LIST if work_list is None else work_list
+    opened = open_rules(decisions)
+    problems = []
+    for rule, profiles in opened.items():
+        new = [p for p in profiles if p not in work_list.get(rule, ())]
+        if new:
+            problems.append(f"NEW OPEN {rule} in {', '.join(new)}: the open rules can only become fewer; classify it "
+                            "otherwise (tests/TESTING.md, \"Rule Coverage\")")
+    for rule, profiles in sorted(work_list.items()):
+        done = [p for p in profiles if p not in opened.get(rule, ())]
+        if done:
+            problems.append(f"OPEN {rule} in {', '.join(done)}: no longer open; remove it from OPEN_WORK_LIST in "
+                            "tools/zugferd/rule_coverage.py")
+    return problems
+
+
 def docs_block(decisions, summary):
     """The generated part of the documentation: the table of the classes per
     profile and the open rules."""
@@ -1156,6 +1189,7 @@ def main(argv=None):
         problems += found
         problems += check_ip(ip, ip_rules_in_source())
         problems += check_without_fixture(without, official_rules_in_source(), decisions)
+        problems += check_open(decisions)
         summary = summarize(decisions)
         if args.update_docs:
             update_docs(decisions, summary)

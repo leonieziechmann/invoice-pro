@@ -724,9 +724,10 @@ A **parity fixture** `tools/zugferd/corpus/rules/<ID>.typ` is the smallest invoi
 - a `fixture` without a fixture in each profile of its entry (one that lists the profile in its `// profiles:` header and names the rule in its `// expect:` or `// warns:` header, or with `reported-as`, one of those rules), a fixture of a rule that is not classified as `fixture` or `open` in one of its profiles, and a fixture without `// profiles:` or without `zugferd: fixture-profile(..)` (`FIXTURE`); evidence that names a file that does not exist (`EVIDENCE`);
 - an `IP-*` rule of `src/` without an entry, an entry without the rule in `src/`, and tests that do not exist or do not name the rule (`IP`; the rules of the guard, `IP-GUARD-*`, are tested by the kind of finding);
 - an official rule id that `src/` names outside the guard's tables without a fixture in any profile or an entry `[[without-fixture]]`, and such an entry for an id that `src/` no longer names or that a fixture shows (`NAMED`);
+- a rule classified as `open` beyond the work list `OPEN_WORK_LIST` of `rule_coverage.py`, and a rule of the list that is no longer open (`NEW OPEN`, `OPEN`): the list can only become shorter;
 - a table in `docs/docs/e-invoicing.md` that differs from the classification (`DOCS`).
 
-`run.py` fails when a rule classified as `fixture` has, in one of the profiles of its entry, no fixture that passed there (`RULE COVERAGE`, in a run of every fixture). The open rules do not fail the gate, but a new rule id does, as it has no class; the documentation states the numbers and the open rules, so it cannot claim more than the classification.
+`run.py` fails when a rule classified as `fixture` has, in one of the profiles of its entry, no fixture that passed there (`RULE COVERAGE`, in a run of every fixture). The listed open rules do not fail the gate, but a new one does, and so does a new rule id, as it has no class; the documentation states the numbers and the open rules, so it cannot claim more than the classification.
 
 ```bash
 python3 tools/zugferd/rule_coverage.py                   # the numbers per profile, the open rules, the problems
@@ -743,7 +744,7 @@ To classify a new rule id, e.g. after an update of Mustang, KoSIT or the XRechnu
 3. If the guard compiles Mustang's version of the rule but KoSIT's differs: `compiled`, with the reason why the guard covers KoSIT's version too.
 4. If the builder cannot produce the violation: `construction`, with the code path and a test that shows it (write one if there is none).
 5. If the rule cannot fire on invoice-pro's XML: `unreachable`, with the reason.
-6. Otherwise, the rule is `open`: implement it in `src/zugferd/validate.typ` under its id, and then write its fixture.
+6. Otherwise, implement it in `src/zugferd/validate.typ` under its id, and then write its fixture. Classifying it as `open` instead fails the gate (`NEW OPEN`) unless it is added to `OPEN_WORK_LIST`, a decision for the review.
 
 Then update the table of the documentation (`--update-docs`) and commit it with the classification. Likewise, when the validator names a new official rule id, the gate asks for its fixture (`NAMED`), and an id it no longer names must leave `[[without-fixture]]`.
 
