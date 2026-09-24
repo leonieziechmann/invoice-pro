@@ -14,6 +14,25 @@
 #import "logic/references.typ" as reference-builders
 #import "data/currency.typ": with-currency
 
+// The title the e-invoice compares with the document type (IP-DOC-01): the
+// subject the sender gives, else `none` when it cannot name another kind of
+// document. The default subject is the title the language of the locale
+// gives the document type, which names that type (tests/zugferd/
+// document-type); only a locale that titles an invoice otherwise than its
+// language (e.g. "Proforma") has it checked.
+#let _title-to-check(given, subject, document-type, lang) = {
+  if given != auto { return given }
+  if document-type != auto { return none }
+  // Imported here: a module a function refers to is hashed with it, and the
+  // languages are large.
+  import "locale/lang/lang.typ" as languages
+  let own = dictionary(languages)
+    .at(lang, default: (:))
+    .at("document", default: (:))
+    .at("invoice", default: none)
+  if subject != own { subject }
+}
+
 /// The main entry point for creating an invoice document.
 /// It orchestrates the theme, localization, and data calculation passes.
 ///
@@ -383,6 +402,7 @@
     normalized-recipient.insert("delivery-address", normalized-delivery-address)
   }
 
+  let given-subject = subject
   if subject == auto { subject = document-title(document, eval-locale.strings) }
 
   let document-subject = (subject, invoice-nr).join(" ")
@@ -492,8 +512,10 @@
     currency: currency,
     service-period: service-period,
     // The title of the document (the subject without the invoice number),
-    // which the e-invoice compares with the document type.
-    title: if zugferd != none { subject },
+    // which the e-invoice compares with the document type (IP-DOC-01).
+    title: if zugferd != none {
+      _title-to-check(given-subject, subject, document-type, eval-locale.lang)
+    },
     // The resolved `document-type`, see `resolve-document-type`.
     document-type: if document-type != auto { document },
     preceding-invoice-date: preceding-invoice-date,

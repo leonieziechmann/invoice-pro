@@ -7,6 +7,7 @@
 #import "/src/lib.typ": *
 #import "/src/logic/document-type.typ": resolve-document-type, sender-pays
 #import "/src/zugferd/document.typ": title-kind
+#import "/src/locale/lang/lang.typ" as languages
 #import "/src/zugferd/zugferd.typ": process-zugferd
 #import "/src/utils/text.typ": plain-text
 #import "/tests/zugferd/harness.typ": (
@@ -73,6 +74,13 @@
   assert.eq(kind("Angebotsnummer 5"), none)
   assert.eq(kind("Wartungsvertrag"), none)
   assert.eq(kind(""), none)
+  // The title of an invoice in each language of the package names an
+  // invoice: `invoice` passes a default subject to the e-invoice only when
+  // the locale titles an invoice otherwise (`given-title` in
+  // src/invoice.typ).
+  for (code, language) in dictionary(languages) {
+    assert.eq(kind(language.document.invoice), "invoice", message: code)
+  }
 }
 
 // --- 3. The printed title follows the document type ---
@@ -107,9 +115,27 @@
   })
 }
 
-// The e-invoice gets the title without the invoice number
+// The e-invoice gets the subject the sender gives, without the invoice
+// number, to compare it with the document type (IP-DOC-01), and a default
+// subject only when the locale titles an invoice otherwise than its
+// language (see section 6): the title of the type cannot contradict it.
 #model-test(document-type: "credit-note", model => {
-  assert.eq(model.invoice.title, "Rechnungskorrektur")
+  assert.eq(model.invoice.title, none)
+})[
+  #line-items[#item([Bonus], price: 500)]
+  #payment-goal(days: 14)
+  #bank
+]
+#model-test(document-type: "credit-note", subject: [Gutschrift], model => {
+  assert.eq(model.invoice.title, "Gutschrift")
+})[
+  #line-items[#item([Bonus], price: 500)]
+  #payment-goal(days: 14)
+  #bank
+]
+#model-test(model => {
+  assert.eq(model.invoice.title, none)
+  assert.eq(model.invoice.type-code, "380")
 })[
   #line-items[#item([Bonus], price: 500)]
   #payment-goal(days: 14)
