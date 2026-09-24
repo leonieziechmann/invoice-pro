@@ -65,6 +65,7 @@ EINVOICE_PREFIX = "/src/zugferd/"
 # reads a data file. A valid invoice without warnings, like the benchmark
 # invoices, needs none of them.
 LAZY_MODULES = (
+    "src/zugferd/rare.typ",  # a fallback of `zugferd: auto`, a self-billed invoice
     "src/zugferd/guard/rare.typ",  # the checked writer, for a document with findings
     "src/zugferd/guard/report.typ",  # the diagnostics of the write guard
     "src/zugferd/keys.typ",  # unknown keys of the parties

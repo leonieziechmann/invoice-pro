@@ -13,69 +13,8 @@
 
 #let _has-errors(diagnostics) = diagnostics.any(d => d.level == "error")
 
-// On a self-billed invoice, the sender of the document is the buyer and its
-// recipient the seller (see `build-model`). The validator names the inputs
-// of the seller as `sender` and those of the buyer as `recipient`, so they
-// change places in the field and the texts of each diagnostic.
-#let _other-party = (sender: "recipient", recipient: "sender")
-
-#let _swap-parties(text) = {
-  if type(text) != str { return text }
-  text
-    .replace("the sender", "\u{E000}")
-    .replace("the recipient", "the sender")
-    .replace("\u{E000}", "the recipient")
-}
-
-#let _self-billed-diagnostic(d) = {
-  let field = d.at("field", default: none)
-  if type(field) == str {
-    let (first, ..rest) = field.split(".")
-    if first in _other-party {
-      field = (_other-party.at(first), ..rest).join(".")
-    }
-  }
-  (
-    d
-      + (
-        field: field,
-        message: _swap-parties(d.at("message", default: none)),
-        hint: _swap-parties(d.at("hint", default: none)),
-      )
-  )
-}
-
-// The errors that kept a better candidate profile out of reach and that the
-// chosen profile does not report itself, as warnings of the chosen profile.
-// A problem the chosen profile reports as an error under a rule of its own
-// (e.g. two payment means: `BR-DE-23-b` in XRechnung, `IP-PAY-03` in
-// EN 16931) has the same field and message, and is not listed twice either.
-#let _skipped-warnings(skipped, diagnostics) = {
-  let reported = diagnostics.map(d => (d.rule, d.field))
-  let problems = diagnostics
-    .filter(d => d.level == "error")
-    .map(d => (d.field, d.message))
-  let warnings = ()
-  for candidate in skipped {
-    for d in candidate.diagnostics {
-      if (
-        d.level == "error"
-          and (d.rule, d.field) not in reported
-          and (d.field, d.message) not in problems
-      ) {
-        reported.push((d.rule, d.field))
-        warnings.push(
-          d
-            + (
-              level: "warning",
-              message: "Needed for " + candidate.name + ": " + d.message,
-            ),
-        )
-      }
-    }
-  }
-  warnings
-}
+// What only some invoices need (a fallback of `zugferd: auto`, a self-billed
+// invoice) is in rare.typ, which loads when an invoice needs it.
 
 /// Builds and checks the e-invoice of the computed invoice.
 ///
@@ -118,8 +57,9 @@
     diagnostics = run-rules(model)
   }
   if skipped.len() > 0 {
+    import "rare.typ": skipped-warnings
     model.profile.skipped = skipped.map(c => (id: c.id, name: c.name))
-    diagnostics += _skipped-warnings(skipped, diagnostics)
+    diagnostics += skipped-warnings(skipped, diagnostics)
   }
 
   // G1 + G2: the serializer checks every element while it writes it.
@@ -153,7 +93,8 @@
 
   let document = model.invoice.at("document", default: (:))
   if document.at("self-billed", default: false) {
-    diagnostics = diagnostics.map(_self-billed-diagnostic)
+    import "rare.typ": self-billed-diagnostic
+    diagnostics = diagnostics.map(self-billed-diagnostic)
   }
 
   (
