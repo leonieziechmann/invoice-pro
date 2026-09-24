@@ -46,12 +46,11 @@
 // when there are any). A child maps its name to [action, index in the
 // schema's sequence, minimum (0 or 1), maximum or null, node, rules]: the
 // rules of the minimum and the maximum, as far as there are any, or null.
-// The action is
-// the writer's fast path: the index of a complex node, which a dictionary
-// value is written as; the class of plain texts that pass every check of the
-// leaf by their form alone ("s" any text, "d" a decimal, "d2" a decimal with
-// at most two decimals, "b" an indicator); the name of the code list (of
-// lists.typ) of a leaf whose only check it is; or null. An element the
+// The action is the writer's fast path: the index of a complex node, which a
+// dictionary value is written as; the class of plain texts that pass every
+// check of the leaf by their form alone ("s" any text, "d" a decimal, "d2" a
+// decimal with at most two decimals, "b" an indicator); the name of the code
+// list (of lists.typ) of a leaf whose only check it is; or null. An element the
 // Schematron treats by the value of a discriminator (e.g. `ram:ID/@schemeID`
 // of a tax registration) has a dispatch as its node: {d: discriminator path,
 // m: value -> node or the rule that forbids it, o: node or rule of any other
