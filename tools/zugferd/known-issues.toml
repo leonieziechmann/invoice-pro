@@ -22,12 +22,3 @@
 #   note = "BG-14 counts undated items with the invoice date"
 #   features = { delivery = "dates-mixed" }
 #   signatures = ["AGREE_VALID oracle=O-BG14"]
-
-[[issue]]
-finding = "rule-id-br-o-02-basic-wl"
-note = """BASIC WL has no lines, so no BR-O-02: invoice-pro reports a seller tax representative on an \
-invoice not subject to VAT (O) as BR-O-02 in every profile, while the validators of BASIC WL accept \
-it, or report BR-O-03 or BR-O-04 with an allowance or charge (open in rule-coverage.toml). Random \
-invoices of the Swiss seller with its German fiscal representative (route ch-fr) show it."""
-features = { route = "ch-fr", tax = ["o", "smallbiz"], profile = "basic-wl" }
-signatures = ["FALSE_POSITIVE ours=BR-O-02 official=- oracle=O-RULE"]

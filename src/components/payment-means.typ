@@ -277,6 +277,7 @@
     (code: str, name: types.text-like),
   )
   types.require(date, "paid::date", none, datetime, str, content)
+  types.require-day(date, "paid::date")
 
   managed-motif(
     "paid",

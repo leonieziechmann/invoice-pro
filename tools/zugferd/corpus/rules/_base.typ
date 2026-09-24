@@ -41,6 +41,26 @@
   vat-id: "DE136695976",
 )
 
+/// The parties of a domestic Italian invoice, for the split payment of Italy
+/// (B, BR-B-01 and BR-B-02).
+#let seller-it = (
+  name: "Fornitore S.r.l.",
+  address: "Via del Corso 10",
+  city: (name: "Roma", post-code: "00186"),
+  country: country.it,
+  vat-id: "IT12345678903",
+  contact: contact,
+)
+#let buyer-it = (
+  name: "Cliente S.p.A.",
+  address: "Corso Buenos Aires 5",
+  city: (name: "Milano", post-code: "20124"),
+  country: country.it,
+  vat-id: "IT07654321004",
+  email: "fatture@cliente.example",
+  buyer-reference: "04011000-12345-34",
+)
+
 /// One item of 100 with the given tax.
 #let item-with(tax) = item([Leistung], price: 100, quantity: 1, tax: tax)
 

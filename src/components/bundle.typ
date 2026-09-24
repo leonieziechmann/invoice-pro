@@ -76,6 +76,7 @@
   )
 
   types.require(date, "bundle::date", none, auto, types.date-like)
+  types.require-day(date, "bundle::date")
 
   types.require(input-gross, "bundle::input-gross", auto, bool)
   types.require(tax, "bundle::tax", auto, types.tax-like)

@@ -82,7 +82,9 @@
   m.seller.id = "123/456/78901"
   assert.eq(rules(m), ("BR-CO-26",))
 
-  // Electronic addresses: required by XRechnung, recommended by EN 16931
+  // Electronic addresses: required by XRechnung (the Peppol rules), which
+  // EN 16931 leaves optional and does not check: a warning of invoice-pro's
+  // own there (IP-EADDR-01)
   let m = base
   m.seller.electronic-address = none
   m.buyer.electronic-address = none
@@ -90,9 +92,16 @@
   m.profile = resolve-profile("en16931", "FR")
   m.invoice.buyer-reference = none
   assert.eq(rules(m), ())
-  assert.eq(
-    rules(m, level: "warning"),
-    ("PEPPOL-EN16931-R010", "PEPPOL-EN16931-R020"),
+  assert.eq(rules(m, level: "warning"), ("IP-EADDR-01", "IP-EADDR-01"))
+  let found = checked(m)
+  assert.eq(found.map(d => d.field).sorted(), ("recipient", "sender"))
+  let seller = found.find(d => d.field == "sender")
+  assert.eq(seller.message, "The seller electronic address (BT-34) is missing.")
+  assert(
+    seller.hint.starts-with(
+      "EN 16931 leaves it optional, but a delivery over Peppol requires it, as XRechnung does. ",
+    ),
+    message: seller.hint,
   )
   m.profile = resolve-profile("basic", "FR")
   assert.eq(rules(m, level: "warning"), ())
@@ -188,7 +197,25 @@
     model
   }
   assert.eq(rules(with-tax(base, tax("AA", rate: "0.07"))), ("BR-CL-18",))
-  assert.eq(rules(with-tax(base, tax("B", rate: "0.22"))), ("BR-CL-18",))
+  // The split payment of Italy (B): a domestic Italian invoice (BR-B-01)
+  // without standard rated items (BR-B-02)
+  let split = with-tax(base, tax("B", rate: "0.22"))
+  assert.eq(rules(split), ("BR-B-01",))
+  let d = checked(split).first()
+  assert.eq(d.field, "sender.country")
+  assert.eq(
+    d.message,
+    "The split payment (B) is for domestic Italian invoices, but the seller country code (BT-40) is \"DE\".",
+  )
+  let italian = split
+  italian.seller.address.country = "IT"
+  italian.buyer.address.country = "IT"
+  assert.eq(rules(italian), ())
+  // (a standard rated VAT group next to it, whatever else it breaks)
+  italian.taxes.push(tax("S", rate: "0.22"))
+  let d = checked(italian).find(d => d.rule == "BR-B-02")
+  assert.ne(d, none, message: repr(rules(italian)))
+  assert.eq(d.field, "tax")
   assert.eq(rules(with-tax(base, tax("S"))), ("BR-S-05",))
   assert.eq(rules(with-tax(base, tax("L"))), ("BR-AF-05",))
   assert.eq(rules(with-tax(base, tax("E", rate: "0.19", reason: "x"))), (
@@ -243,22 +270,30 @@
   assert.eq(rules(m), ("BR-DE-19",))
   m.profile = resolve-profile("en16931", "FR")
   assert.eq(rules(m), ("IP-PAY-01",))
+  // Prepayments above the total: BR-CO-16 holds (the amount due is the total
+  // minus the prepaid amount), but it is negative (IP-PREPAID-01)
   let m = base
   m.totals.prepaid = m.totals.gross + 1
   m.totals.due = decimal("-1")
   assert.eq(rules(m), ())
-  assert.eq(rules(m, level: "warning"), ("BR-CO-16",))
+  assert.eq(rules(m, level: "warning"), ("IP-PREPAID-01",))
 
-  // --- Consistency with the printed invoice ---
+  // --- Consistency with the printed invoice (IP-PRINT-01) and in itself ---
   let m = base
   m.printed-totals.gross += decimal("0.01")
-  assert.eq(rules(m), ("BR-CO-15",))
+  assert.eq(rules(m), ("IP-PRINT-01",))
+  let d = checked(m).first()
+  assert.eq(d.field, "line-items")
+  assert(
+    d.message.starts-with("The e-invoice states the total with VAT (BT-112) "),
+    message: d.message,
+  )
   let m = base
   m.lines.at(0).net += decimal("0.01")
   assert.eq(rules(m), ("BR-S-08",))
   let m = base
   m.taxes.at(0).basis += decimal("0.01")
-  assert.eq(rules(m), ("BR-CO-13", "BR-S-08"))
+  assert.eq(rules(m), ("BR-S-08", "IP-PRINT-01"))
 
   // --- BR-48: a VAT breakdown without rate names its VAT group, which the
   // write guard can only name by the element of the XML ---
@@ -336,17 +371,22 @@
     category: "E",
   )
   assert.eq(diagnostics((rate,)).first().rule, "BR-E-05")
-  let address = (
-    key: "PEPPOL-EN16931-R020",
+  let period = (
+    key: "IP-PERIOD-01",
     level: "warning",
-    field: "sender",
-    term: "seller electronic address (BT-34)",
-    vat-id: none,
-    represented: false,
-    reference: none,
+    field: "references",
+    printed: "June 2026",
+    stated: "01.06.2026 - 30.06.2026",
+    source: none,
+    term: "BG-14",
+    contradicts: false,
+    document: none,
   )
-  assert.eq(diagnostics((address,)).first().level, "warning")
-  assert.eq(diagnostics((address + (level: "error"),)).first().level, "error")
+  assert.eq(diagnostics((period,)).first().level, "warning")
+  assert.eq(
+    diagnostics((period + (level: "error", contradicts: true),)).first().level,
+    "error",
+  )
   // Anything else stops the compilation: every diagnostic is in the registry.
   let fails(finding, expected) = {
     let message = catch(() => diagnostics((finding,)))
@@ -366,6 +406,19 @@
   fails(
     missing + (level: "warning"),
     "invoice-pro: the rule registry has no warning BR-02 for the entry BR-02",
+  )
+  // XRechnung requires the electronic addresses: a warning is IP-EADDR-01
+  fails(
+    (
+      key: "PEPPOL-EN16931-R020",
+      level: "warning",
+      field: "sender",
+      term: "seller electronic address (BT-34)",
+      vat-id: none,
+      represented: false,
+      reference: none,
+    ),
+    "invoice-pro: the rule registry has no warning PEPPOL-EN16931-R020 for the entry PEPPOL-EN16931-R020",
   )
 }
 

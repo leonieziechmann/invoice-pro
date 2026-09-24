@@ -58,7 +58,7 @@ def evaluate(case, features, work, checker, differences):
     doc = checker.submit(res)
     checker.validate_kosit([res])
     checker.collect(res)
-    row = run.make_row(trial, res, doc)
+    row = run.make_row(trial, res, doc, differences)
     return failure(row, differences)[0], row
 
 

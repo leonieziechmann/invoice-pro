@@ -84,6 +84,7 @@
   // (b) Profile en16931 (cross-border DE -> FR): without VAT ID, tax number and
   //     email, the seller can neither be identified (BR-CO-26) nor charge VAT
   //     (BR-S-02); the missing seller electronic address (BT-34) is a warning
+  //     of invoice-pro's own (IP-EADDR-01), which EN 16931 does not require
   let seller-without-ids = (
     recipient-overrides: (country: country.fr, email: "buyer@example.fr"),
     sender-overrides: (
@@ -99,7 +100,7 @@
   )
   assert.eq(
     reported-rules(level: "warning", zugferd: "en16931", ..seller-without-ids),
-    ("PEPPOL-EN16931-R020",),
+    ("IP-EADDR-01",),
   )
 
   // (c) Profile xrechnung (DE -> DE): every missing field is listed at

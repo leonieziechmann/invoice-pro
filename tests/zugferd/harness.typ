@@ -91,16 +91,20 @@
 
 /// The diagnostics the validator reports for a model (`run-rules`). Each
 /// must name a rule that an entry of the rule registry reports in the
-/// profile of the model (its `ids` and `profiles`), so that the tests check
+/// profile of the model (its `ids`, and the profiles of the id: its
+/// `id-profiles`, else the `profiles` of the entry), so that the tests check
 /// the metadata the proof tools read as well.
 #let diagnostics(model) = {
   let found = run-rules(model)
   for d in found {
     let listed = false
     for (key, entry) in rule-registry() {
+      let profiles = entry
+        .at("id-profiles", default: (:))
+        .at(d.rule, default: entry.profiles)
       if (
         d.rule in entry.at("ids", default: (key,))
-          and model.profile.id in entry.profiles
+          and model.profile.id in profiles
       ) {
         listed = true
         break

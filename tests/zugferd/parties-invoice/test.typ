@@ -155,7 +155,7 @@
   result => {
     assert.eq(rules(result), ("IP-ADDR-01", "IP-COUNTRY-01"))
     // Delivered to the seller's own country
-    assert.eq(rules(result, level: "warning"), ("BR-IC-12",))
+    assert.eq(rules(result, level: "warning"), ("IP-VAT-138",))
   },
 )
 

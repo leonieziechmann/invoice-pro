@@ -48,6 +48,10 @@
 }
 
 #let invoice-date(label: auto, value: auto) = {
+  if value != auto {
+    import "../utils/types.typ": require-day
+    require-day(value, "references.invoice-date::value")
+  }
   ctx => {
     let title = if label == auto {
       ctx.locale.strings.reference.invoice-date
@@ -80,6 +84,10 @@
 #let service-period-text-label = label("invoice-pro:service-period-text")
 
 #let service-time(label: auto, value: auto) = {
+  if value != auto {
+    import "../utils/types.typ": require-day
+    require-day(value, "references.service-time::value")
+  }
   ctx => {
     let title = if label == auto {
       ctx.locale.strings.reference.service-time
@@ -286,6 +294,10 @@
 }
 
 #let order-date(label: auto, value: auto) = {
+  if value != auto {
+    import "../utils/types.typ": require-day
+    require-day(value, "references.order-date::value")
+  }
   ctx => {
     let title = if label == auto {
       ctx.locale.strings.reference.order-date
@@ -417,6 +429,10 @@
 }
 
 #let preceding-invoice-date(label: auto, value: auto) = {
+  if value != auto {
+    import "../utils/types.typ": require-day
+    require-day(value, "references.preceding-invoice-date::value")
+  }
   ctx => {
     let title = if label == auto {
       ctx.locale.strings.reference.preceding-invoice-date
@@ -430,6 +446,10 @@
 }
 
 #let due-date(label: auto, value: auto) = {
+  if value != auto {
+    import "../utils/types.typ": require-day
+    require-day(value, "references.due-date::value")
+  }
   ctx => {
     let title = if label == auto {
       ctx.locale.strings.reference.due-date

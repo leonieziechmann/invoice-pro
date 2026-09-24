@@ -142,6 +142,65 @@ class Entries(unittest.TestCase):
         self.assertEqual(
             r.covering(loaded, "basic"), {"BR-Z-05": ["vat-rate-zero"], "BR-E-05": ["vat-rate-zero"]}
         )
+        self.assertEqual(r.reported_in(loaded, "basic"), r.covering(loaded, "basic"))
+
+    def test_the_profiles_of_each_id(self):
+        # The rule of the lines (-05) in the profiles with lines, the rule of
+        # the allowances (-06) in BASIC WL as well, and the aliases where the
+        # rules they implement count; no Factur-X rule counts in XRechnung.
+        rates = entry(
+            ids=["BR-S-05", "BR-S-06"],
+            covers=["BR-S-05", "BR-S-06", "FX-SCH-A-000090", "FX-SCH-A-000244"],
+            profiles=["basic-wl", "basic", "xrechnung"],
+            **{"id-profiles": {"BR-S-05": ["basic", "xrechnung"], "FX-SCH-A-000244": ["basic"]}},
+        )
+        loaded = registry(**{"vat-rate-positive": rates})
+        self.assertEqual(r.problems(loaded), [])
+        self.assertEqual(r.profiles_of(rates, "BR-S-05"), ["basic", "xrechnung"])
+        self.assertEqual(r.profiles_of(rates, "BR-S-06"), ["basic-wl", "basic", "xrechnung"])
+        self.assertEqual(r.profiles_of(rates, "FX-SCH-A-000090"), ["basic-wl", "basic"])
+        self.assertEqual(
+            sorted(r.covering(loaded, "basic-wl")), ["BR-S-06", "FX-SCH-A-000090"]
+        )
+        self.assertEqual(sorted(r.covering(loaded, "xrechnung")), ["BR-S-05", "BR-S-06"])
+        self.assertEqual(sorted(r.reported_in(loaded, "basic-wl")), ["BR-S-06"])
+        self.assertEqual(sorted(r.reported_in(loaded, "basic")), ["BR-S-05", "BR-S-06"])
+
+    def test_the_problems_of_id_profiles(self):
+        def problems(id_profiles, **changes):
+            value = entry(
+                ids=["BR-02", "FX-SCH-A-000040"],
+                covers=["BR-02", "FX-SCH-A-000011", "FX-SCH-A-000040"],
+                profiles=["minimum", "basic-wl", "xrechnung"],
+                **{"id-profiles": id_profiles},
+                **changes,
+            )
+            return r.problems(registry(**{"BR-02": value}))
+
+        fine = {"FX-SCH-A-000040": ["minimum", "basic-wl"]}
+        self.assertEqual(problems(fine), [])
+        cases = [
+            (dict(fine, **{"BR-03": ["minimum"]}), "rules.BR-02.id-profiles.BR-03: not a rule of `covers`"),
+            (dict(fine, **{"BR-02": ["basic"]}), "rules.BR-02.id-profiles.BR-02: ['basic'] is no list of profiles"),
+            (dict(fine, **{"BR-02": []}), "rules.BR-02.id-profiles.BR-02: [] is no list of profiles"),
+            (dict(fine, **{"BR-02": ["basic-wl", "minimum"]}), "rules.BR-02.id-profiles.BR-02: not in the order"),
+            (dict(fine, **{"BR-02": ["minimum", "basic-wl", "xrechnung"]}),
+             "rules.BR-02.id-profiles.BR-02: the profiles of the entry"),
+            ({"FX-SCH-A-000040": ["minimum", "xrechnung"]},
+             "rules.BR-02.id-profiles.FX-SCH-A-000040: a rule of the Factur-X Schematron does not count"),
+            ({}, "rules.BR-02.id-profiles: lacks FX-SCH-A-000040"),
+            (dict(fine, **{"BR-02": ["minimum"]}), "rules.BR-02.profiles: xrechnung, in which it reports none"),
+        ]
+        for id_profiles, problem in cases:
+            with self.subTest(problem=problem):
+                found = problems(id_profiles)
+                self.assertTrue(any(p.startswith(problem) for p in found), found)
+
+    def test_the_layout_of_id_profiles(self):
+        value = entry(covers=["BR-02"], **{"id-profiles": {"BR-02": ["minimum"]}}, profiles=["minimum", "basic"])
+        text = r.dump(registry(**{"BR-02": value}))
+        self.assertIn('      "id-profiles": {\n        "BR-02": ["minimum"]\n      }\n', text)
+        self.assertEqual(json.loads(text)["rules"]["BR-02"], value)
 
 
 class Sources(unittest.TestCase):
@@ -256,6 +315,26 @@ class Aliases(unittest.TestCase):
                 "rules.BR-02.covers: FX-SCH-A-000040 is no Factur-X alias of a rule it covers",
             ],
         )
+
+    def test_the_profiles_of_an_alias(self):
+        # An alias counts where the rule it implements does: FX-SCH-A-000011
+        # (BR-02) not in BASIC WL once BR-02 counts in MINIMUM only.
+        wrong = entry(profiles=["minimum", "basic-wl"], **{"id-profiles": {"BR-02": ["minimum"]}})
+        self.assertEqual(
+            r.alias_problems(registry(**{"BR-02": wrong}), self.aliases),
+            ["rules.BR-02.id-profiles: the alias FX-SCH-A-000011 counts in ['minimum', 'basic-wl'], "
+             "the rules it implements in ['minimum']"],
+        )
+        right = dict(wrong, **{"id-profiles": {"BR-02": ["minimum"], "FX-SCH-A-000011": ["minimum"]}})
+        self.assertEqual(r.alias_problems(registry(**{"BR-02": right}), self.aliases), [])
+        # A code list rule of the Factur-X Schematron the entry reports itself.
+        reported = entry(
+            ids=["BR-CL-04", "FX-SCH-A-000040"],
+            covers=["BR-CL-04", "FX-SCH-A-000040"],
+            profiles=["minimum", "basic"],
+            **{"id-profiles": {"BR-CL-04": ["basic"], "FX-SCH-A-000040": ["minimum", "basic"]}},
+        )
+        self.assertEqual(r.alias_problems(registry(**{"BR-CL-04": reported}), self.aliases), [])
 
 
 if __name__ == "__main__":

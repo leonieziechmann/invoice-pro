@@ -20,9 +20,13 @@ tools read it here:
   dump(registry)      the text of registry.json: one line per field of an
                       entry, a list on one line
   reported(registry)  the ids the rules report: {id: [key, ..]}
+  reported_in(registry, profile)
+                      the ids the rules report in a profile: {id: [key, ..]}
   covering(registry, profile)
                       the official rules the checks implement in a profile:
                       {official id: [key, ..]}
+  profiles_of(entry, rule)
+                      the profiles in which an id of `covers` counts
   docs_tables(..)     the tables of the rules of invoice-pro in
                       docs/docs/e-invoicing.md, generated from the registry
                       and sorted by rule id
@@ -37,6 +41,7 @@ An entry (see src/zugferd/rules/engine.typ for its meaning):
     "source": "EN16931",                  # EN16931 FACTUR-X XRECHNUNG PEPPOL CII IP
     "versions": ["1.3.12", "1.3.16"],     # of the source's artefacts
     "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
+    "id-profiles": {..},                  # optional, see below
     "scope": "payment",                   # document party line tax allowance-charge payment printed
     "terms": ["BT-9", "BT-20"],
     "level": "error",                     # or ["error", "warning"]: the first is the usual one
@@ -44,6 +49,19 @@ An entry (see src/zugferd/rules/engine.typ for its meaning):
     "summary": "...",                     # what it checks (the documentation of IP rules)
     "legal": null                         # the legal basis of a rule of invoice-pro
   }
+
+`profiles` are the profiles in which the check can report, `id-profiles`
+the profiles of each id of `covers` that applies in fewer of them, e.g.
+{"BR-S-05": ["basic", "en16931", "xrechnung"]} for the rule of the lines of
+an entry that BASIC WL (no lines) reports for allowances and charges only.
+A rule of the Factur-X Schematron (FX-SCH-*) counts in the Factur-X
+profiles only, never in XRechnung, which is not validated with it; one the
+entry reports has its profiles in `id-profiles`. So `covering` and
+`reported_in` are exact: an entry claims an id only in the profiles in which
+its check can report it (or, for an alias, the rule it implements).
+rule_coverage.py checks both against the rules of the validators of each
+profile (REGISTRY), and run.py every diagnostic of the corpus against
+`reported_in` (O-REGISTRY), as the helpers of the Typst tests do.
 
 --check reports every problem: of the entries, of the keys that have no
 message or no check (a key the rule modules do not name) and of the rule
@@ -83,6 +101,9 @@ GUARD_REPORT = REPO / "src" / "zugferd" / "guard" / "report.typ"
 DOCS = REPO / "docs" / "docs" / "e-invoicing.md"
 
 PROFILES = ("minimum", "basic-wl", "basic", "en16931", "xrechnung")
+# The profiles validated with the Factur-X Schematron (Mustang applies none
+# to XRechnung), in which its rules (FX-SCH-*) count.
+FACTUR_X_PROFILES = ("minimum", "basic-wl", "basic", "en16931")
 SOURCES = ("EN16931", "FACTUR-X", "XRECHNUNG", "PEPPOL", "CII", "IP")
 SCOPES = ("document", "party", "line", "tax", "allowance-charge", "payment", "printed")
 LEVELS = ("error", "warning")
@@ -90,7 +111,7 @@ FIELDS = {
     "covers": list, "source": str, "versions": list, "profiles": list, "scope": str, "terms": list,
     "level": (str, list), "field": str, "summary": str, "legal": (str, type(None)),
 }
-OPTIONAL = {"ids": list, "note": str}
+OPTIONAL = {"ids": list, "id-profiles": dict, "note": str}
 # A rule id has a number (the family prefixes of the VAT categories, e.g.
 # "BR-S", are no rule ids).
 RULE_ID = re.compile(r"^(?=.*\d)(?:BR|CII|PEPPOL|FX|IP)-[A-Z0-9]+(?:-[A-Za-z0-9]+)*$")
@@ -108,18 +129,25 @@ def load(path=REGISTRY):
 
 def dump(registry):
     """The text of registry.json: the entries in their order, one line per
-    field, a list on one line (so that a change of a rule is a change of
-    its lines)."""
+    field, a list on one line, and a field that is a dictionary
+    (`id-profiles`) with one line per key (so that a change of a rule is a
+    change of its lines)."""
 
     def value(v):
         return json.dumps(v, ensure_ascii=False)
 
     def members(items, indent):
         items = list(items)
-        return [
-            f"{indent}{json.dumps(key)}: {value(v)}" + ("," if i < len(items) - 1 else "")
-            for i, (key, v) in enumerate(items)
-        ]
+        out = []
+        for i, (key, v) in enumerate(items):
+            comma = "," if i < len(items) - 1 else ""
+            if isinstance(v, dict) and v:
+                out.append(f"{indent}{json.dumps(key)}: {{")
+                out += members(v.items(), indent + "  ")
+                out.append(f"{indent}}}{comma}")
+            else:
+                out.append(f"{indent}{json.dumps(key)}: {value(v)}{comma}")
+        return out
 
     lines = ["{", f'  "format": {value(registry["format"])},', '  "sources": {']
     lines += members(registry["sources"].items(), "    ")
@@ -202,7 +230,48 @@ def problems(registry):
                 out.append(f"{where}.terms: {term}")
         if not entry["summary"].strip() or not entry["field"].strip():
             out.append(f"{where}: empty summary or field")
+        out += _id_profile_problems(key, entry, where)
     return out
+
+
+def _id_profile_problems(key, entry, where):
+    """What is wrong with `id-profiles` of an entry, and with the profiles of
+    the ids it reports."""
+    out = []
+    id_profiles = entry.get("id-profiles", {})
+    if not isinstance(id_profiles, dict):
+        return out
+    for rule, profiles in id_profiles.items():
+        at = f"{where}.id-profiles.{rule}"
+        if rule not in entry["covers"]:
+            out.append(f"{at}: not a rule of `covers`")
+        if not isinstance(profiles, list) or not profiles or any(p not in entry["profiles"] for p in profiles):
+            out.append(f"{at}: {profiles} is no list of profiles of the entry")
+            continue
+        if profiles != [p for p in PROFILES if p in profiles]:
+            out.append(f"{at}: not in the order {PROFILES}")
+        if profiles == entry["profiles"]:
+            out.append(f"{at}: the profiles of the entry (leave it out)")
+        if rule.startswith("FX-") and "xrechnung" in profiles:
+            out.append(f"{at}: a rule of the Factur-X Schematron does not count in XRechnung")
+    for rule in ids(key, entry):
+        if rule.startswith("FX-") and rule not in id_profiles:
+            out.append(f"{where}.id-profiles: lacks {rule}, a rule of the Factur-X Schematron the entry reports")
+    reporting = {p for rule in ids(key, entry) for p in profiles_of(entry, rule)}
+    for profile in entry["profiles"]:
+        if profile not in reporting:
+            out.append(f"{where}.profiles: {profile}, in which it reports none of its ids")
+    return out
+
+
+def profiles_of(entry, rule):
+    """The profiles in which an id of `covers` (or one of `ids`) counts: its
+    `id-profiles`, else the profiles of the entry; a rule of the Factur-X
+    Schematron counts in the Factur-X profiles only."""
+    profiles = entry.get("id-profiles", {}).get(rule, entry["profiles"])
+    if rule.startswith("FX-"):
+        profiles = [p for p in profiles if p in FACTUR_X_PROFILES]
+    return list(profiles)
 
 
 def reported(registry):
@@ -215,13 +284,25 @@ def reported(registry):
     return dict(out)
 
 
+def reported_in(registry, profile):
+    """The ids the rules report in a profile, each with the keys of the
+    entries that report it there: {id: [key, ..]}."""
+    out = collections.defaultdict(list)
+    for key, entry in registry["rules"].items():
+        for rule in ids(key, entry):
+            if profile in profiles_of(entry, rule):
+                out[rule].append(key)
+    return dict(out)
+
+
 def covering(registry, profile):
-    """The official rules the checks of the registry implement in a profile:
+    """The official rules the checks of the registry implement in a profile,
+    each in the profiles of its `id-profiles` (see `profiles_of`):
     {official id: [key, ..]}."""
     out = collections.defaultdict(list)
     for key, entry in registry["rules"].items():
-        if profile in entry["profiles"]:
-            for rule in entry["covers"]:
+        for rule in entry["covers"]:
+            if profile in profiles_of(entry, rule):
                 out[rule].append(key)
     return dict(out)
 
@@ -414,21 +495,32 @@ def fx_aliases(jar_path):
 
 def alias_problems(registry, aliases):
     """Entries whose `covers` lacks a Factur-X alias of an official rule it
-    covers in a Factur-X profile, or names one of no rule it covers."""
+    covers in a Factur-X profile, or names one of no rule it covers; and
+    aliases that do not count in the Factur-X profiles of the rules they
+    implement (`id-profiles`). A rule of the Factur-X Schematron that the
+    entry reports itself (in `ids`, e.g. the code list rule FX-SCH-A-000040
+    of MINIMUM and BASIC WL) needs no rule it implements."""
     out = []
-    fx_profiles = {"minimum", "basic-wl", "basic", "en16931"}
+    fx_profiles = set(FACTUR_X_PROFILES)
     for key, entry in registry["rules"].items():
         covers = set(entry["covers"])
         official = {r for r in covers if not r.startswith("FX-")}
         wanted = set()
-        if fx_profiles & set(entry["profiles"]):
-            for rule in official:
+        for rule in official:
+            if fx_profiles & set(profiles_of(entry, rule)):
                 wanted |= aliases.get(rule, set())
         named = {r for r in covers if r.startswith("FX-")}
+        reported = set(ids(key, entry))
         for rule in sorted(wanted - named):
             out.append(f"rules.{key}.covers: lacks the Factur-X alias {rule}")
-        for rule in sorted(named - wanted):
+        for rule in sorted(named - wanted - reported):
             out.append(f"rules.{key}.covers: {rule} is no Factur-X alias of a rule it covers")
+        for rule in sorted(named & wanted - reported):
+            owners = [o for o in official if rule in aliases.get(o, set())]
+            expected = [p for p in FACTUR_X_PROFILES if any(p in profiles_of(entry, o) for o in owners)]
+            if profiles_of(entry, rule) != expected:
+                out.append(f"rules.{key}.id-profiles: the alias {rule} counts in {profiles_of(entry, rule)}, "
+                           f"the rules it implements in {expected}")
     return out
 
 

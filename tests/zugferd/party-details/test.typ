@@ -325,8 +325,8 @@
   }
   // A seller without VAT identifier of its own, e.g. from Switzerland,
   // dispatches the goods of an intra-community supply from the member state
-  // of its representative (BR-IC-12), and no hint takes the representative's
-  // VAT identifier for the seller's `vat-id`
+  // of its representative (IP-VAT-138), and no hint takes the
+  // representative's VAT identifier for the seller's `vat-id`
   let m = base
   m.taxes.at(0).category = "K"
   m.taxes.at(0).rate = decimal("0")
@@ -349,14 +349,15 @@
     role: "ship-to",
     use-vat-id: false,
   )
-  let dispatch = diagnostic(m, "BR-IC-12")
+  let dispatch = diagnostic(m, "IP-VAT-138")
   assert.ne(dispatch, none)
+  assert.eq(dispatch.field, "delivery-address.country")
   assert(
     dispatch.message.contains("seller's tax representative \"DE\""),
     message: dispatch.message,
   )
   m.seller.electronic-address = none
-  let address = diagnostic(m, "PEPPOL-EN16931-R020")
+  let address = diagnostic(m, "IP-EADDR-01")
   assert(
     address.hint.contains("not the one of its tax representative"),
     message: address.hint,
@@ -393,7 +394,8 @@
   )
   m.tax-representative = representative(email: "f@fiskal.de")
   assert.eq(rules(m, level: "warning"), ("IP-KEY-01",))
-  // Not subject to VAT: no VAT identifiers at all (BR-O-02)
+  // Not subject to VAT: no VAT identifiers at all (BR-O-02, see the
+  // invoices not subject to VAT below)
   let m = base
   m.outside-scope = true
   m.tax-representative = representative()
@@ -422,13 +424,20 @@
   let minimum = with-profile(m, "minimum")
   assert.eq(diagnostic(minimum, "IP-PROFILE-01").field, "payee")
   assert.eq(xml-elements(minimum, "ram:PayeeTradeParty"), ())
-  // Only a payee other than the seller, with a name (BR-17)
+  // Only a payee other than the seller, with a name (BR-17). BASIC WL
+  // checks the name only, so there a payee that is the seller is
+  // invoice-pro's own rule (IP-PAY-05)
   m.payee = payee(id: "F-1")
   assert.eq(rules(m), ("BR-17",))
   assert.eq(diagnostic(m, "BR-17").field, "payee.name")
+  assert.eq(rules(with-profile(m, "basic-wl")), ("BR-17",))
   m.payee = payee(name: base.seller.name)
   assert.eq(rules(m), ("BR-17",))
   assert.eq(diagnostic(m, "BR-17").field, "payee")
+  assert.eq(rules(with-profile(m, "basic")), ("BR-17",))
+  let basic-wl = with-profile(m, "basic-wl")
+  assert.eq(rules(basic-wl), ("IP-PAY-05",))
+  assert.eq(diagnostic(basic-wl, "IP-PAY-05").field, "payee")
   // One identifier (CII-SR-451) of a known scheme (BR-CL-10, BR-CL-11)
   m.payee = payee(
     name: "Factor AG",
@@ -462,3 +471,64 @@
     bic: "SOLADEST600",
   )
 ]
+
+// --- 8. An invoice not subject to VAT (O) names no tax representative ---
+// It states no VAT identifiers, so no tax representative, whose VAT
+// identifier (BT-63) it would state: the validators report the line
+// (BR-O-02), else the document level allowance (BR-O-03) or charge
+// (BR-O-04). BASIC WL states no lines, so there only an allowance or charge
+// breaks an official rule, and invoice-pro reports the items alone as its
+// own rule (IP-TAX-05). Without its VAT identifier, the representative breaks
+// BR-56 only, whose hint says to leave it out.
+#let fiscal = (
+  name: "Fiskal GmbH",
+  address: "Steuerweg 1",
+  city: (name: "Berlin", post-code: "10115"),
+  country: country.de,
+  vat-id: "DE123456788",
+)
+#let outside-scope-test(test, body) = model-test(
+  test,
+  sender: seller + (tax-representative: fiscal),
+  recipient: buyer-fr,
+)[
+  #line-items[
+    #item([Consulting], price: 100, tax: tax.outside-scope())
+    #body
+  ]
+  #payment-goal(days: 14)
+]
+#outside-scope-test(
+  model => {
+    assert.eq(rules(model), ("BR-O-02",))
+    assert.eq(rules(with-profile(model, "basic")), ("BR-O-02",))
+    let basic-wl = with-profile(model, "basic-wl")
+    assert.eq(rules(basic-wl), ("IP-TAX-05",))
+    assert.eq(
+      diagnostic(basic-wl, "IP-TAX-05").field,
+      "sender.tax-representative",
+    )
+    let m = model
+    m.tax-representative.vat-id = none
+    for m in (m, with-profile(m, "basic-wl")) {
+      assert.eq(rules(m), ("BR-56",))
+      let hint = diagnostic(m, "BR-56").hint
+      assert(hint.contains("leave out `tax-representative`"), message: hint)
+    }
+  },
+  none,
+)
+#outside-scope-test(
+  model => {
+    assert.eq(rules(model), ("BR-O-02",))
+    assert.eq(rules(with-profile(model, "basic-wl")), ("BR-O-03",))
+  },
+  discount([Rabatt], amount: 10%),
+)
+#outside-scope-test(
+  model => {
+    assert.eq(rules(model), ("BR-O-02",))
+    assert.eq(rules(with-profile(model, "basic-wl")), ("BR-O-04",))
+  },
+  surcharge([Versand], amount: 5),
+)

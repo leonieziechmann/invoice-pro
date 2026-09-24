@@ -14,6 +14,7 @@ import json
 import os
 import sys
 import tempfile
+import types
 import unittest
 import zipfile
 from pathlib import Path
@@ -593,14 +594,17 @@ class ListsOutput(unittest.TestCase):
     def test_validator_layout(self):
         text = g.emit_validator({
             "currency": {"every": "currency-3", "factur-x": "currency", "newer": ["CNH", "XCG"]},
-            "icd": {"every": "icd", "newer": [f"02{i:02}" for i in range(31, 49)]},
+            "eas": {"every": "eas-3", "xrechnung": "eas", "withdrawn": ["9901"]},
+            "icd": {"every": "icd", "xrechnung": "icd", "newer": [f"02{i:02}" for i in range(31, 49)]},
             "unit": {"every": "unit"},
         })
         self.assertEqual(text, (
             "#let validator = (\n"
             '  currency: (every: currency-3, factur-x: currency, newer: _codes("CNH XCG")),\n'
+            '  eas: (every: eas-3, xrechnung: eas, withdrawn: _codes("9901")),\n'
             "  icd: (\n"
             "    every: icd,\n"
+            "    xrechnung: icd,\n"
             "    newer: _codes(\n"
             '      "0231 0232 0233 0234 0235 0236 0237 0238 0239 0240 0241 0242 0243 0244",\n'
             '      "0245 0246 0247 0248",\n'
@@ -609,6 +613,138 @@ class ListsOutput(unittest.TestCase):
             "  unit: (every: unit),\n"
             ")"
         ))
+
+
+class ValidatorLists(unittest.TestCase):
+    """The lists of the validator per profile (VALIDATOR_LISTS), from the
+    code lists at a position of each profile: Factur-X (FX), CEN 1.3.12 and
+    CEN 1.3.16 (newest)."""
+
+    PATH = "rsm:X/ram:Code"
+
+    def lists(self, fx, cen, newest, factur_x=False, every_only=False, own=None, name="x",
+              newest_xrechnung_only=False):
+        """`own`: the Factur-X list of MINIMUM and BASIC WL, if not `fx`;
+        `newest_xrechnung_only`: BASIC and EN 16931 do not apply the newest
+        CEN list (as for the currencies, NEWEST_XRECHNUNG_ONLY)."""
+        fx, cen, newest = frozenset(fx), frozenset(cen), frozenset(newest)
+        lists = {
+            "fx": g.CodeList(fx, "FX-1", "FX"),
+            "own": g.CodeList(fx if own is None else frozenset(own), "FX-1", "FX"),
+            "cen": g.CodeList(cen, "BR-CL-1", "CEN"),
+            "newest": g.CodeList(newest, "BR-CL-1", "CEN", newest=True),
+        }
+        applied = {
+            "minimum": ["own"],
+            "basic-wl": ["own"],
+            "basic": ["fx", "cen"] if newest_xrechnung_only else ["fx", "cen", "newest"],
+            "en16931": ["fx", "cen"] if newest_xrechnung_only else ["fx", "cen", "newest"],
+            "xrechnung": ["cen", "newest"],
+        }
+        path = self.PATH
+
+        class Position:
+            leaf = True
+
+            def __init__(self, names):
+                self.lists = [lists[name] for name in names]
+
+            def path(self):
+                return path
+
+        class Compiler:
+            def __init__(self, names):
+                self.positions = [Position(names)]
+
+        compilers = {p: Compiler(names) for p, names in applied.items()}
+        sets = {frozenset.intersection(*(lists[n].codes for n in names)) for names in applied.values()}
+
+        class Names:
+            names = {codes: "list-" + "".join(sorted(codes)) for codes in sets}
+
+            def name(self, codes):
+                return self.names[codes]
+
+            def add(self, codes, base):
+                return self.names.setdefault(codes, "list-" + "".join(sorted(codes)))
+
+        saved = g.VALIDATOR_LISTS, g.VALIDATOR_EVERY_ONLY
+        g.VALIDATOR_LISTS = {name: (path, None, factur_x)}
+        g.VALIDATOR_EVERY_ONLY = (name,) if every_only else ()
+        try:
+            return g.validator_lists(compilers, Names())[name]
+        finally:
+            g.VALIDATOR_LISTS, g.VALIDATOR_EVERY_ONLY = saved
+
+    def test_the_lists_of_each_validation(self):
+        # A and B everywhere, C in both CEN lists (XRechnung only), W
+        # withdrawn from the newest CEN list, N only there.
+        entry = self.lists(fx="ABW", cen="ABCW", newest="ABCN")
+        self.assertEqual(entry, {
+            "every": "list-AB",
+            "xrechnung": "list-ABC",
+            "newer": ["N"],
+            "withdrawn": ["W"],
+        })
+        # MINIMUM and BASIC WL may accept the Factur-X list as it is.
+        entry = self.lists(fx="ABWX", cen="ABCW", newest="ABCN", factur_x=True)
+        self.assertEqual(entry["factur-x"], "list-ABWX")
+        # The list of XRechnung is stated only where it is not `every`.
+        entry = self.lists(fx="ABW", cen="ABW", newest="AB")
+        self.assertEqual(entry, {"every": "list-AB", "withdrawn": ["W"]})
+        self.assertEqual(self.lists(fx="AB", cen="AB", newest="AB", every_only=True), {"every": "list-AB"})
+        # The currencies: BASIC and EN 16931 accept the withdrawn W, which
+        # only XRechnung checks with the newest list; `every` is of no
+        # position then, but it names the codes every profile accepts.
+        entry = self.lists(fx="ABW", cen="ABCW", newest="ABCN", factur_x=True, name="currency",
+                           newest_xrechnung_only=True)
+        self.assertEqual(entry, {
+            "every": "list-AB",
+            "factur-x": "list-ABW",
+            "xrechnung": "list-ABC",
+            "newer": ["N"],
+            "withdrawn": ["W"],
+        })
+
+    def test_lists_the_validator_cannot_use(self):
+        # Without `factur-x`, MINIMUM and BASIC WL accept `every`: a code of
+        # their list beyond it and the withdrawn codes fails, and so does a
+        # withdrawn code their list lacks (it would not be IP-CODE-01).
+        with self.assertRaises(g.GenError) as caught:
+            self.lists(fx="ABWX", cen="ABCW", newest="ABCN")
+        self.assertIn("give it `factur-x`", str(caught.exception))
+        with self.assertRaises(g.GenError) as caught:
+            self.lists(fx="AB", cen="ABCW", newest="ABCN")
+        self.assertIn("withdrawn codes that the Factur-X list lacks", str(caught.exception))
+        # A code of the list of XRechnung beyond `every`, where the validator
+        # checks `every` in every profile (the unit codes).
+        with self.assertRaises(g.GenError) as caught:
+            self.lists(fx="ABW", cen="ABCW", newest="ABCN", every_only=True)
+        self.assertIn("the list of XRechnung is not `every`", str(caught.exception))
+        # The validator accepts a code of `every` in every profile without a
+        # look at the list of the profile: each holds them.
+        with self.assertRaises(g.GenError) as caught:
+            self.lists(fx="ABX", cen="ABX", newest="ABX", factur_x=True, own="AB")
+        self.assertIn("lacks codes of `every`", str(caught.exception))
+        # Only a withdrawn currency may be accepted in BASIC and EN 16931
+        # beyond `every`: the validator warns of it as IP-CODE-01.
+        with self.assertRaises(g.GenError) as caught:
+            self.lists(fx="ABW", cen="ABCW", newest="ABCN", factur_x=True, newest_xrechnung_only=True)
+        self.assertIn("no withdrawn currencies", str(caught.exception))
+
+    def test_the_newest_currency_lists_apply_to_xrechnung_only(self):
+        rules = [types.SimpleNamespace(id=rule) for rule in ("BR-CL-03", "BR-CL-04", "BR-CL-14", "BR-CL-25")]
+        self.assertEqual([r.id for r in g.newest_code_lists("xrechnung", rules)],
+                         ["BR-CL-03", "BR-CL-04", "BR-CL-14", "BR-CL-25"])
+        for profile in ("basic", "en16931"):
+            self.assertEqual([r.id for r in g.newest_code_lists(profile, rules)], ["BR-CL-14", "BR-CL-25"])
+
+    def test_a_list_of_the_validator_only(self):
+        names = g.ListNames([])
+        names.names = {frozenset("ABC"): "currency", frozenset("AB"): "currency-2"}
+        self.assertEqual(names.add(frozenset("AB"), "currency"), "currency-2")
+        self.assertEqual(names.add(frozenset("A"), "currency"), "currency-3")
+        self.assertEqual(names.name(frozenset("A")), "currency-3")
 
 
 JAR = os.environ.get("MUSTANG_JAR")
@@ -679,12 +815,21 @@ class Tables(unittest.TestCase):
         text = (self.fresh / "lists.typ").read_text(encoding="utf-8")
         validator = text[text.index("#let validator = ("):]
         self.assertIn('newer: _codes("CNH VED XCG ZWG")', validator)
-        currency = validator[validator.index("currency: ("):].split("),", 1)[0]
+        currency = validator[validator.index("currency: ("):].split("\n  ),", 1)[0]
         every = currency.split("every: ")[1].split(",")[0]
         derived = text[text.index(f"#let {every} = _derive("):].split("\n)", 1)[0]
         for code in ("ANG", "BGN", "CUC", "HRK", "MRU", "STN", "UYW", "VES", "ZWL"):
             self.assertIn(f'"{code}"', derived.split("remove:")[1])
         self.assertIn("0231 0232", validator)
+        # The withdrawn codes, which the validator names as such, and the
+        # lists of XRechnung, which lack no code of both CEN lists (e.g. the
+        # scheme 0219, which the Factur-X list lacks).
+        self.assertIn('withdrawn: _codes("ANG BGN CUC HRK MRO VEF ZWL")', currency)
+        eas = validator[validator.index("eas: ("):].split("\n  ),", 1)[0]
+        self.assertIn('withdrawn: _codes("9901")', eas)
+        xrechnung = eas.split("xrechnung: ")[1].split(",")[0]
+        codes = text[text.index(f"#let {xrechnung} = _codes("):].split("\n)", 1)[0]
+        self.assertIn("0219", codes)
         disposition = {
             (p, r["id"]): d
             for p, info in self.stats["profiles"].items()

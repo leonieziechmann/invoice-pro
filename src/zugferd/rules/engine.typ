@@ -45,12 +45,11 @@
 //
 // Code lists: the checks look codes up (`in-list`) in the lists of the
 // write guard (../guard/lists.typ, `validator`), which
-// tools/zugferd/gen_guard.py generates from every official validation of a
-// profile: `every` holds the codes all of them accept (Factur-X 1.0.07 and
-// the CEN Schematron 1.3.12 of Mustang and 1.3.16 of KoSIT), `factur-x` the
-// codes of the Factur-X validation of MINIMUM and BASIC WL, and `newer` the
-// codes only the newest CEN list has, which messages.typ names as codes the
-// validation of the profile does not know yet.
+// tools/zugferd/gen_guard.py generates from the official validations of the
+// profiles: `every` holds the codes all of them accept (Factur-X 1.0.07 and
+// the CEN Schematron 1.3.12 of Mustang and 1.3.16 of KoSIT), and the lists
+// of each profile hold at least these. `code-finding` of rare.typ names the
+// rule a code outside `every` breaks in the profile, if any.
 //
 // Performance (concept 6.4): a valid invoice parses this module and, for
 // XRechnung, xrechnung.typ, but none of the messages; the code lists are
@@ -82,6 +81,17 @@
     and not code.contains(" ")
     and (" " + code + " ") in list
 )
+
+// The lists of the checks, one by one: a check captures (and Typst hashes)
+// only the lists it names.
+#let _countries = lists.country.every
+#let _currencies = lists.currency.every
+#let _factur-x-currencies = lists.currency.factur-x
+#let _eas-codes = lists.eas.every
+#let _icd-codes = lists.icd.every
+#let _units = lists.unit.every
+#let _vat-categories = lists.vat-category.every
+#let _means-codes = lists.payment-means.every
 
 // A rate in percent as the XML states it, e.g. "19%" or "9.975%".
 #let _percent(rate) = (
@@ -144,17 +154,9 @@
   let currency = model.currency
   if currency == none {
     out.push((key: "BR-05", field: "locale"))
-  } else if not in-list(lists.currency.factur-x, currency) {
-    out.push((key: "BR-CL-04", field: currency-field, code: currency))
-  } else if (
-    model.profile.en16931 and not in-list(lists.currency.every, currency)
-  ) {
-    out.push((
-      key: "BR-CL-04",
-      field: currency-field,
-      code: currency,
-      profile: model.profile.name,
-    ))
+  } else if not in-list(_currencies, currency) {
+    import "rare.typ": currency-code
+    out += currency-code(currency, currency-field, model.profile)
   }
 
   // IP-TAX-01: `tax: none` prints 0%, but does not say why no VAT is charged:
@@ -180,7 +182,7 @@
   let printed = model.at("printed-currency", default: none)
   if (
     type(currency) == str
-      and in-list(lists.currency.factur-x, currency)
+      and in-list(_factur-x-currencies, currency)
       and type(printed) == dictionary
   ) {
     for (kind, sample) in (
@@ -245,19 +247,18 @@
     out += document-type(code)
   }
 
-  // The preceding invoice reference (BG-3), from BASIC WL on: its number
-  // (BT-25) is required (BR-55), and a corrected invoice replaces the
-  // invoice it names. A document that amends an invoice must refer to it
-  // (Art. 219 of the VAT Directive), which XRechnung checks as BR-DE-26.
-  // XRechnung only warns about BR-DE-26, but validators such as Mustang
-  // reject the invoice.
+  // The preceding invoice reference (BG-3), from BASIC WL on, is written
+  // with its number (BT-25) only: a date (BT-26) without it would be lost
+  // (IP-DOC-05). A document that amends an invoice must refer to it (Art.
+  // 219 of the VAT Directive): XRechnung checks it as BR-DE-26, which it
+  // only warns about, but validators such as Mustang reject the invoice.
   if model.profile.document-references {
     let number = invoice.at("preceding-invoice-nr", default: none)
     if (
       number == none
         and invoice.at("preceding-invoice-date", default: none) != none
     ) {
-      out.push((key: "BR-55", field: "preceding-invoice-nr"))
+      out.push((key: "IP-DOC-05", field: "preceding-invoice-nr"))
     } else if number == none and code == "384" {
       out.push((
         key: if model.profile.xrechnung { "BR-DE-26" } else { "IP-DOC-02" },
@@ -342,7 +343,7 @@
     for note in notes {
       if note.subject-code != none {
         import "rare.typ": note-subject-code
-        out += note-subject-code(note.subject-code)
+        out += note-subject-code(note.subject-code, profile)
       }
     }
   }
@@ -410,21 +411,16 @@
 
 // --- Parties --------------------------------------------------------------
 
-/// The country of a party (`rule`: missing) and its code list (BR-CL-14).
-/// `en16931`: whether the profile is checked with the rules of EN 16931,
-/// whose code list lacks South Sudan ("SS"), which the Factur-X profiles
-/// MINIMUM and BASIC WL accept.
+/// The country of a party (`rule`: missing, a safety net: an address
+/// without `country` has the one of the locale) and its code list
+/// (BR-CL-14, see `country-code` of rare.typ).
 ///
 /// -> array
-#let country(code, rule, field, term, en16931) = {
+#let country(code, rule, field, term, profile) = {
   if code == none { return ((key: rule, field: field, term: term),) }
-  let list = if en16931 { lists.country.every } else {
-    lists.country.factur-x
-  }
-  if not in-list(list, code) {
-    return ((key: "BR-CL-14", field: field, term: term, code: code),)
-  }
-  ()
+  if in-list(_countries, code) { return () }
+  import "rare.typ": country-code
+  country-code(code, field, term, profile)
 }
 
 /// IP-COUNTRY-01: a party without `country` is in the country of the
@@ -495,6 +491,7 @@
   rules,
   field,
   term,
+  profile,
   represented: false,
   reference: none,
 ) = {
@@ -524,17 +521,9 @@
       ),
     )
   }
-  if not in-list(lists.eas.every, address.scheme) {
-    return (
-      (
-        key: "BR-CL-25",
-        field: field + ".electronic-address",
-        term: term,
-        scheme: address.scheme,
-      ),
-    )
-  }
-  ()
+  if in-list(_eas-codes, address.scheme) { return () }
+  import "rare.typ": address-scheme
+  address-scheme(address.scheme, field, term, profile)
 }
 
 /// The input key a party identifier came from (see `id-keys` and
@@ -549,19 +538,16 @@
 /// seller, buyer and payee, BR-CL-26 for the ship-to party.
 ///
 /// -> array
-#let global-id(party, rule, field) = {
+#let global-id(party, rule, field, profile) = {
   let global-id = party.at("global-id", default: none)
-  if global-id == none or global-id.scheme == none { return () }
-  if not in-list(lists.icd.every, global-id.scheme) {
-    return (
-      (
-        key: rule,
-        field: field + "." + id-key(party, "global-id"),
-        scheme: global-id.scheme,
-      ),
-    )
-  }
-  ()
+  if (
+    global-id == none
+      or global-id.scheme == none
+      or in-list(_icd-codes, global-id.scheme)
+  ) { return () }
+  import "rare.typ": global-id-scheme
+  let field = field + "." + id-key(party, "global-id")
+  global-id-scheme(global-id.scheme, rule, field, profile)
 }
 
 /// IP-ID-02: two different values for one identifier of a party, of which
@@ -628,7 +614,7 @@
   if (
     prefix != none
       and (
-        in-list(lists.country.every, prefix) or prefix in ("EL", "1A", "AN")
+        in-list(_countries, prefix) or prefix in ("EL", "1A", "AN")
       )
   ) {
     return ()
@@ -641,22 +627,15 @@
 /// is.
 ///
 /// -> array
-#let legal-id(party, field, term, bt) = {
+#let legal-id(party, field, term, bt, profile) = {
   let legal-id = party.at("legal-id", default: none)
   if (
     legal-id == none
       or legal-id.scheme == none
-      or in-list(lists.icd.every, legal-id.scheme)
+      or in-list(_icd-codes, legal-id.scheme)
   ) { return () }
-  (
-    (
-      key: "BR-CL-11",
-      field: field + ".legal-id",
-      term: term,
-      bt: bt,
-      scheme: legal-id.scheme,
-    ),
-  )
+  import "rare.typ": legal-id-scheme
+  legal-id-scheme(legal-id.scheme, field, term, bt, profile)
 }
 
 #let _parties(model) = {
@@ -688,7 +667,7 @@
     "BR-09",
     "sender.country",
     "seller country code (BT-40)",
-    profile.en16931,
+    profile,
   )
   out += country-of-vat-id(seller, "sender", "seller", "BT-40")
   if profile.addresses {
@@ -697,7 +676,7 @@
       "BR-11",
       "recipient.country",
       "buyer country code (BT-55)",
-      profile.en16931,
+      profile,
     )
     out += country-of-vat-id(buyer, "recipient", "buyer", "BT-55")
     if ship-to != none {
@@ -706,7 +685,7 @@
         "BR-57",
         "delivery-address.country",
         "deliver-to country code (BT-80)",
-        profile.en16931,
+        profile,
       )
     }
     out += post-code(seller, "sender", "seller", "BT-37", "BT-38")
@@ -783,8 +762,8 @@
       out += typed-ids(party, field, term)
     }
   }
-  out += legal-id(seller, "sender", "seller", "BT-30")
-  out += legal-id(buyer, "recipient", "buyer", "BT-47")
+  out += legal-id(seller, "sender", "seller", "BT-30", profile)
+  out += legal-id(buyer, "recipient", "buyer", "BT-47", profile)
   for (party, key, field, term, carried, lowest) in (
     (
       seller,
@@ -829,8 +808,8 @@
   if profile.party-ids {
     out += identifiers(seller, "sender", "seller")
     out += identifiers(buyer, "recipient", "buyer")
-    out += global-id(seller, "BR-CL-10", "sender")
-    out += global-id(buyer, "BR-CL-10", "recipient")
+    out += global-id(seller, "BR-CL-10", "sender", profile)
+    out += global-id(buyer, "BR-CL-10", "recipient", profile)
     if profile.en16931 {
       out += single-identifier(
         buyer,
@@ -842,7 +821,7 @@
   }
   if profile.addresses and ship-to != none {
     out += identifiers(ship-to, "delivery-address", "delivery address")
-    out += global-id(ship-to, "BR-CL-26", "delivery-address")
+    out += global-id(ship-to, "BR-CL-26", "delivery-address", profile)
     if profile.en16931 {
       out += single-identifier(
         ship-to,
@@ -854,24 +833,29 @@
   }
 
   if profile.addresses {
-    // Required by XRechnung, recommended for EN 16931 (Peppol).
-    let required = if profile.xrechnung { "error" } else if (
-      profile.id == "en16931"
-    ) { "warning" } else { none }
+    // Required by XRechnung (PEPPOL-EN16931-R020, R010); EN 16931 leaves
+    // them optional, but a delivery over Peppol needs them (IP-EADDR-01).
+    let (required, seller-rule, buyer-rule) = if profile.xrechnung {
+      ("error", "PEPPOL-EN16931-R020", "PEPPOL-EN16931-R010")
+    } else if profile.id == "en16931" {
+      ("warning", "IP-EADDR-01", "IP-EADDR-01")
+    } else { (none, none, none) }
     out += _electronic-address(
       seller,
       required,
-      ("PEPPOL-EN16931-R020", "BR-62"),
+      (seller-rule, "BR-62"),
       "sender",
       "seller electronic address (BT-34)",
+      profile,
       represented: represented,
     )
     out += _electronic-address(
       buyer,
       required,
-      ("PEPPOL-EN16931-R010", "BR-63"),
+      (buyer-rule, "BR-63"),
       "recipient",
       "buyer electronic address (BT-49)",
+      profile,
       reference: model.invoice.at("buyer-reference", default: none),
     )
   }
@@ -918,7 +902,7 @@
     let known = if type(code) == str and code != "" {
       let seen = units.at(code, default: none)
       if seen == none {
-        seen = in-list(lists.unit.every, code)
+        seen = in-list(_units, code)
         units.insert(code, seen)
       }
       seen
@@ -927,23 +911,20 @@
     if not known {
       out.push((key: "BR-CL-23", field: line-field(line), code: code))
     } else if unit-issue != none and unit-issue.kind == "unknown" {
-      // The unit is written as a code, and a text invoice-pro does not know
-      // has none: writing "one" (C62) for it would be a guess.
+      // IP-UNIT-02: a text invoice-pro does not know has no unit code, and
+      // "one" (C62) would be a guess.
       out.push((
-        key: "BR-CL-23",
+        key: "IP-UNIT-02",
         field: line-field(line),
         text: unit-issue.text,
       ))
     } else if unit-issue != none and unit-issue.kind == "ambiguous" {
       out.push((key: "IP-UNIT-01", field: line-field(line), issue: unit-issue))
     }
+    // BR-CO-04, a safety net: `tax: none` is zero rated (IP-TAX-01). (A
+    // price base quantity is above 0: `item` and `bundle` stop on any other.)
     if line.key == none or line.category == none {
       out.push((key: "BR-CO-04", field: line-field(line)))
-    }
-    // The price refers to a positive quantity; `item` and `bundle` stop on
-    // any other already.
-    if line.base-quantity <= _zero {
-      out.push((key: "PEPPOL-EN16931-R121", field: line-field(line)))
     }
   }
   out
@@ -1090,17 +1071,28 @@
       }
     }
 
-    if category == none or not in-list(lists.vat-category.every, category) {
-      out.push((key: "BR-CL-18", field: field, category: category))
-      continue
+    // The VAT category, e.g. the split payment of Italy (B), which only
+    // XRechnung accepts (see `category-code` of rare.typ).
+    if not in-list(_vat-categories, category) {
+      import "rare.typ": category-code
+      let found = category-code(category, field, model.profile)
+      if found != () {
+        out += found
+        continue
+      }
     }
     if tax.rate == none { continue }
 
     // The rate of the lines (BR-x-05), allowances (BR-x-06) and charges
     // (BR-x-07) of the group. In BASIC WL, a group of lines only is left to
-    // the rules of the VAT breakdown (BR-x-09).
+    // the rules of the VAT breakdown (BR-x-09). The split payment (B) has no
+    // rules of its rate.
     let rate-rule = offset(tax.key)
-    if rate-rule != none { rate-rule = category-rule(category, 5 + rate-rule) }
+    if rate-rule != none {
+      rate-rule = if category in _category-rules {
+        category-rule(category, 5 + rate-rule)
+      }
+    }
     if category in ("S", "L", "M") and tax.rate <= _zero and rate-rule != none {
       out.push((
         key: "vat-rate-positive",
@@ -1136,7 +1128,7 @@
     // The exemption reason codes (BT-121) the items give.
     if tax.at("codes", default: ()) != () {
       import "rare.typ": exemption-codes
-      out += exemption-codes(tax, field)
+      out += exemption-codes(tax, field, model.profile)
     }
   }
 
@@ -1188,9 +1180,10 @@
     }
   }
   // The buyer VAT identifier (BT-48) of K and AE: see `buyer-vat-id` of
-  // rare.typ.
+  // rare.typ. BR-IC-12 is a safety net: the model states the buyer's country
+  // as the deliver-to country (BT-80) of K.
   if "K" in categories and model.ship-to == none {
-    out.push((key: "BR-IC-12", level: "error", field: "delivery-address"))
+    out.push((key: "BR-IC-12", field: "delivery-address"))
   }
   // BR-IC-11: an intra-community supply states the date of the supply
   // (BT-72) or the invoicing period (BG-14). A credit note or a prepayment
@@ -1214,6 +1207,12 @@
       if category != "O" { others.push(category) }
     }
     out.push((key: "BR-O-11", field: "tax", others: others))
+  }
+  // The split payment of Italy (B), which only XRechnung accepts; the
+  // validation of BASIC and EN 16931 checks its rules as well.
+  if "B" in categories and model.profile.en16931 {
+    import "rare.typ": split-payment
+    out += split-payment(model, categories)
   }
   out
 }
@@ -1252,8 +1251,10 @@
   // An invoice states one payment means code (BT-81). XRechnung forbids the
   // details of a direct debit (BG-19: the mandate reference, the creditor
   // identifier or a debited account) next to a credit transfer (BR-DE-23-b)
-  // or a payment card (BR-DE-24-b); the other combinations are conflicting
-  // instructions as well, which could make the buyer pay twice.
+  // or a payment card (BR-DE-24-b). Kinds of payment means have different
+  // codes (see `code-kind`), which break CII-SR-467 of CEN 1.3.16 in EN 16931
+  // and XRechnung; BASIC WL and BASIC accept them, but the buyer could pay
+  // twice (IP-PAY-03).
   let kinds = ()
   let conflicting = ()
   let debit-details = (
@@ -1275,7 +1276,9 @@
         "BR-DE-23-b"
       } else if xrechnung and debit-details and "card" in kinds {
         "BR-DE-24-b"
-      } else { "IP-PAY-03" },
+      } else if xrechnung or profile.id == "en16931" { "CII-SR-467" } else {
+        "IP-PAY-03"
+      },
       field: fields.join(", "),
       means: conflicting,
       paid: "paid" in fields,
@@ -1287,10 +1290,15 @@
       if entry.iban == none {
         // `paid(method: "transfer")` without bank details, or bank details
         // without an IBAN (with `zugferd-errors: "report"`; otherwise
-        // `bank-details` stops the compilation).
+        // `bank-details` stops the compilation): no account (BG-17) is
+        // written. XRechnung: BR-DE-23-a; EN 16931: CII-SR-470 (CEN 1.3.16);
+        // BASIC WL and BASIC accept it, as their BR-61 tests the debited
+        // account: IP-PAY-04.
         let paid = entry.field == "paid"
         out.push((
-          key: if xrechnung { "BR-DE-23-a" } else { "BR-61" },
+          key: if xrechnung { "BR-DE-23-a" } else if profile.id == "en16931" {
+            "CII-SR-470"
+          } else { "IP-PAY-04" },
           field: if paid { "paid.method" } else { "bank-details.iban" },
           type-code: entry.type-code,
           paid: paid,
@@ -1317,8 +1325,9 @@
       import "rare.typ": payment-means-details
       out += payment-means-details(entry, payment, profile)
     }
-    if not in-list(lists.payment-means.every, entry.type-code) {
-      out.push((key: "BR-CL-16", field: "paid.method", code: entry.type-code))
+    if not in-list(_means-codes, entry.type-code) {
+      import "rare.typ": means-code
+      out += means-code(entry.type-code, profile)
     }
   }
 
@@ -1357,25 +1366,26 @@
 
   out += _payment-means(model)
 
+  // IP-PREPAID-01: prepayments above the total leave a negative amount due.
   if model.totals.prepaid > model.totals.gross and model.totals.gross >= _zero {
-    out.push((key: "BR-CO-16", field: "prepayment"))
+    out.push((key: "IP-PREPAID-01", field: "prepayment"))
   }
   out
 }
 
 // --- Consistency ----------------------------------------------------------
 
-// Whether an amount has more than the 2 decimals the XML states (BR-DEC-*).
+// Whether an amount has more than the 2 decimals the XML states.
 #let _cents-exceeded(amount) = calc.round(amount, digits: 2) != amount
 
 // The first amount the XML cannot state because it has more than 2 decimals,
-// in the order of the XML, and how many there are: (count: .., rule: ..,
-// term: .., place: .., value: ..). Only the amounts the profile writes count.
+// in the order of the XML, and how many there are: (count: .., term: ..,
+// place: .., value: ..). Only the amounts the profile writes count.
 #let _excess-decimals(model) = {
   let found = (count: 0)
-  let note(found, rule, term, place, value) = {
+  let note(found, term, place, value) = {
     if found.count == 0 {
-      found += (rule: rule, term: term, place: place, value: value)
+      found += (term: term, place: place, value: value)
     }
     found.count += 1
     found
@@ -1386,7 +1396,6 @@
       if _cents-exceeded(line.net) {
         found = note(
           found,
-          "BR-DEC-23",
           "line net amount (BT-131)",
           line-field(line),
           line.net,
@@ -1396,7 +1405,6 @@
         if _cents-exceeded(entry.amount) {
           found = note(
             found,
-            "BR-DEC-24",
             "line allowance (BT-136)",
             line-field(line),
             entry.amount,
@@ -1407,7 +1415,6 @@
         if _cents-exceeded(entry.amount) {
           found = note(
             found,
-            "BR-DEC-27",
             "line charge (BT-141)",
             line-field(line),
             entry.amount,
@@ -1421,36 +1428,37 @@
   if profile.settlement {
     for entry in model.allowance-charges {
       amounts.push(if entry.charge {
-        ("BR-DEC-05", "document level charge (BT-99)", entry.amount)
+        ("document level charge (BT-99)", entry.amount)
       } else {
-        ("BR-DEC-01", "document level allowance (BT-92)", entry.amount)
+        ("document level allowance (BT-92)", entry.amount)
       })
     }
     for tax in model.taxes {
-      amounts.push(("BR-DEC-19", "VAT taxable amount (BT-116)", tax.basis))
-      amounts.push(("BR-DEC-20", "VAT amount (BT-117)", tax.amount))
+      amounts.push(("VAT taxable amount (BT-116)", tax.basis))
+      amounts.push(("VAT amount (BT-117)", tax.amount))
     }
     amounts += (
-      ("BR-DEC-09", "sum of the line net amounts (BT-106)", totals.line),
-      ("BR-DEC-10", "sum of the allowances (BT-107)", totals.allowance),
-      ("BR-DEC-11", "sum of the charges (BT-108)", totals.charge),
-      ("BR-DEC-16", "prepaid amount (BT-113)", totals.prepaid),
+      ("sum of the line net amounts (BT-106)", totals.line),
+      ("sum of the allowances (BT-107)", totals.allowance),
+      ("sum of the charges (BT-108)", totals.charge),
+      ("prepaid amount (BT-113)", totals.prepaid),
     )
   }
   amounts += (
-    ("BR-DEC-12", "total without VAT (BT-109)", totals.net),
-    ("BR-DEC-13", "total VAT amount (BT-110)", totals.tax),
-    ("BR-DEC-14", "total with VAT (BT-112)", totals.gross),
-    ("BR-DEC-18", "amount due (BT-115)", totals.due),
+    ("total without VAT (BT-109)", totals.net),
+    ("total VAT amount (BT-110)", totals.tax),
+    ("total with VAT (BT-112)", totals.gross),
+    ("amount due (BT-115)", totals.due),
   )
-  for (rule, term, value) in amounts {
+  for (term, value) in amounts {
     if _cents-exceeded(value) {
-      found = note(found, rule, term, none, value)
+      found = note(found, term, none, value)
     }
   }
   found
 }
 
+// BR-x-08 (the taxable amount of a VAT group) by VAT category.
 #let _basis-rules = (
   S: "BR-S-08",
   Z: "BR-Z-08",
@@ -1464,13 +1472,15 @@
 )
 
 // The XML must state what the invoice prints and add up in itself. A failure
-// here is a bug in invoice-pro, not in the invoice data.
+// here is a bug in invoice-pro, not in the invoice data, except for amounts
+// with more decimals than the XML states (IP-DEC-02).
 #let _consistency(model) = {
   let out = ()
 
-  // BR-DEC-*: the XML states amounts with 2 decimals. Rounded there, amounts
-  // with more (from a locale that rounds money more finely) would no longer
-  // add up (BR-CO-10, BR-S-08, ...), so they cannot be written at all.
+  // IP-DEC-02: the XML states amounts with 2 decimals (BR-DEC-*). Amounts
+  // with more (e.g. of KWD, or of a locale that rounds money more finely)
+  // would be written rounded, other than printed, and would no longer add
+  // up (BR-CO-10, BR-S-08, ...).
   let excess = _excess-decimals(model)
   if excess.count > 0 {
     // A currency with more decimals (e.g. KWD, `invoice(currency: ..)`)
@@ -1478,8 +1488,7 @@
     let decimals = model.at("currency-decimals", default: 2)
     let by-currency = type(decimals) == int and decimals > 2
     out.push((
-      key: "decimals",
-      id: excess.rule,
+      key: "IP-DEC-02",
       field: if by-currency {
         model.at("currency-field", default: "locale")
       } else { "locale" },
@@ -1494,25 +1503,36 @@
     return out
   }
 
+  // IP-PRINT-01: the XML states the printed totals (BT-109, BT-112), and
+  // its VAT breakdown (BT-116) adds up to them.
   let totals = model.totals
   let printed = model.printed-totals
-  if totals.net != printed.net or totals.gross != printed.gross {
-    out.push((
-      key: "BR-CO-15",
-      field: "line-items",
-      totals: totals,
-      printed: printed,
-    ))
+  for (term, stated, shown) in (
+    ("total without VAT (BT-109)", totals.net, printed.net),
+    ("total with VAT (BT-112)", totals.gross, printed.gross),
+  ) {
+    if stated != shown {
+      out.push((
+        key: "IP-PRINT-01",
+        field: "line-items",
+        term: term,
+        stated: stated,
+        printed: shown,
+        rate: none,
+      ))
+    }
   }
   if model.profile.settlement {
     let basis = _zero
     for tax in model.taxes { basis += tax.basis }
-    if basis != totals.net {
+    if basis != printed.net {
       out.push((
-        key: "BR-CO-13",
+        key: "IP-PRINT-01",
         field: "line-items",
-        basis: basis,
-        net: totals.net,
+        term: "sum of the VAT taxable amounts (BT-116)",
+        stated: basis,
+        printed: printed.net,
+        rate: none,
       ))
     }
     // BR-CO-17: the VAT amount is the taxable amount times the rate the XML
@@ -1550,16 +1570,16 @@
         sums.insert(e.key, sums.at(e.key, default: _zero) + amount)
       }
     }
+    // BR-x-08 of each VAT category that has one (not B).
     for tax in model.taxes {
-      let amount = if type(tax.key) == str {
-        sums.at(tax.key, default: _zero)
-      } else { _zero }
+      if type(tax.key) != str or type(tax.category) != str { continue }
+      let rule = _basis-rules.at(tax.category, default: none)
+      if rule == none { continue }
+      let amount = sums.at(tax.key, default: _zero)
       if amount != tax.basis {
         out.push((
           key: "vat-basis",
-          id: if tax.category == none { "BR-CO-13" } else {
-            _basis-rules.at(tax.category, default: "BR-CO-13")
-          },
+          id: rule,
           field: tax-field(tax),
           amount: amount,
           basis: tax.basis,

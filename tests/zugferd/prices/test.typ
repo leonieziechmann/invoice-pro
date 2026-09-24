@@ -144,13 +144,14 @@
   #bank
 ]
 
-// --- 4. The price base quantity is above 0 (PEPPOL-EN16931-R121) ---
+// --- 4. The price base quantity (BT-149) is the quantity the price refers
+// to. It is above 0 (PEPPOL-EN16931-R121 of XRechnung), as `item` and
+// `bundle` refuse any other (tests/line-items/base-quantity), so the rules
+// do not check it ---
 #model-test(model => {
-  let m = model
-  m.lines.at(0).base-quantity = decimal("0")
-  assert.eq(rules(m), ("PEPPOL-EN16931-R121",))
-  m.lines.at(0).base-quantity = decimal("-100")
-  assert.eq(rules(m), ("PEPPOL-EN16931-R121",))
+  assert.eq(model.lines.at(0).base-quantity, decimal("100"))
+  assert.eq(xml-values(model, "ram:BasisQuantity"), ("100.00",))
+  assert.eq(rules(model), ())
 })[
   #line-items[#item(
     [Schrauben],

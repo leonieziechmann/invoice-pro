@@ -27,15 +27,41 @@
     and (" " + code + " ") in list.newer
 )
 
-// The sentence for such a code, e.g. XCG (the Caribbean guilder, 2025):
-// `subject` names the code, e.g. `The scheme "0240" of the global
-// identifier`.
-#let _not-yet(subject) = (
+// The message and the hint for such a code, e.g. XCG (the Caribbean
+// guilder, 2025): `subject` names the code, e.g. `The scheme "0240" of the
+// global identifier`. XRechnung is validated with the lists of EN 16931
+// alone (`xrechnung` of the finding, see `code-finding` of rare.typ).
+#let _not-yet(f, subject) = {
+  let (validation, validators) = if f.at("xrechnung", default: false) {
+    ("every validator of XRechnung", "the validators of XRechnung")
+  } else {
+    ("the Factur-X validation", "the validators of the Factur-X profiles")
+  }
+  (
+    subject
+      + " is not in the code list of "
+      + validation
+      + " yet: only the newest version of the EN 16931 code list has it.",
+    "Use another code while " + validators + " do not know it yet.",
+  )
+}
+
+// A code that only the code list of the Factur-X validation lacks (`fx-only`
+// of a finding, see `code-finding` of rare.typ), which the validation of
+// XRechnung accepts: `subject` names the code, e.g. `The scheme "0219" of
+// the buyer electronic address (BT-49)`.
+#let _factur-x-only(subject, hint) = (
   subject
-    + " is not in the code list of the Factur-X validation yet: only the newest version of the EN 16931 code list has it."
+    + " is not in the code list of the Factur-X validation, although the code list of EN 16931 has it.",
+  hint
+    + " The \"xrechnung\" profile, whose validation applies the code lists of EN 16931 alone, accepts it.",
 )
 
-#let _not-yet-hint = "Use another code while the validators of the Factur-X profiles do not know it yet."
+// The code list a code list rule applies: the Factur-X list in MINIMUM and
+// BASIC WL (a rule FX-SCH-A-*), else the one of EN 16931.
+#let _list-of(f) = if f.at("id", default: "").starts-with("FX-") {
+  "Factur-X"
+} else { "EN 16931" }
 
 // Why the e-invoice of a document states no date of the supply when nothing
 // dates it (see `supply-dated`): a credit note or a prepayment invoice.
@@ -149,10 +175,7 @@
 )
 
 #let _global-id-scheme(f) = if _newer(lists.icd, f.scheme) {
-  (
-    _not-yet("The scheme " + _quoted(f.scheme) + " of the global identifier"),
-    _not-yet-hint,
-  )
+  _not-yet(f, "The scheme " + _quoted(f.scheme) + " of the global identifier")
 } else {
   (
     "The scheme "
@@ -179,7 +202,7 @@
     + ".",
 )
 
-// A missing electronic address (PEPPOL-EN16931-R020, R010).
+// A missing electronic address (PEPPOL-EN16931-R020, R010, IP-EADDR-01).
 #let _electronic-address(f) = {
   // Name only the inputs that can still provide the address.
   let vat-id = f.vat-id
@@ -257,7 +280,7 @@
   )
 }
 
-// Several payment means (BR-DE-23-b, BR-DE-24-b, IP-PAY-03).
+// Several payment means (BR-DE-23-b, BR-DE-24-b, CII-SR-467, IP-PAY-03).
 #let _several-means(f) = {
   let names = f.means.map(_means-description)
   (
@@ -277,7 +300,7 @@
   )
 }
 
-// A credit transfer without an account (BR-DE-23-a, BR-61).
+// A credit transfer without an account (BR-DE-23-a, CII-SR-470, IP-PAY-04).
 #let _transfer-account(f) = (
   "A credit transfer (BT-81 = "
     + f.type-code
@@ -328,6 +351,26 @@
   "Set `service-period` on the invoice to a period that includes the dates of all items, or leave it out: the dates of the items are the service period then.",
 )
 
+// A payee without a name, or that is the seller (BR-17, IP-PAY-05).
+#let _payee(f) = if f.kind == "name" {
+  (
+    "The name of the payee (BT-59) is missing.",
+    "Set `name` on the payee, e.g. the name of the factoring company that receives the payment.",
+  )
+} else {
+  (
+    "The payee (BG-10) is stated when someone other than the seller receives the payment, but its name, identifier or legal registration identifier is the seller's.",
+    "Leave out `payee` when the seller receives the payment itself.",
+  )
+}
+
+// A seller tax representative on an invoice not subject to VAT (BR-O-02,
+// BR-O-03, BR-O-04, IP-TAX-05).
+#let _outside-scope-representative(f) = (
+  "An invoice not subject to VAT (O) states no VAT identifiers, so it cannot name the seller tax representative (BG-11), whose VAT identifier (BT-63) it would state.",
+  "Leave out `tax-representative` on invoices of items not subject to VAT.",
+)
+
 // A corrected invoice without the invoice it corrects (BR-DE-26 in
 // XRechnung, IP-DOC-02 in the other profiles).
 #let _uncorrected(f) = (
@@ -354,20 +397,26 @@
     "The invoice currency code (BT-5) is missing.",
     "Set `currency` on the invoice, e.g. `currency: \"EUR\"`, or use a locale that defines `currency.code`, e.g. `locale.de-de`.",
   ),
-  "BR-CL-04": f => if "profile" in f {
+  "BR-CL-04": f => if f.fx-only {
+    _factur-x-only(
+      "The invoice currency code (BT-5) " + _quoted(f.code),
+      "Invoice in another currency.",
+    )
+  } else if f.at("profile", default: none) != none {
     (
       "The invoice currency code (BT-5) "
         + _quoted(f.code)
         + " is missing in the code list of the EN 16931 validation, so no e-invoice in the "
         + f.profile
         + " profile can use it.",
-      "Invoice in another currency, or use the \"minimum\" or \"basic-wl\" profile, whose validation knows the code.",
+      if in-list(lists.currency.at("withdrawn", default: ""), f.code) {
+        "Invoice in the currency that replaced it, e.g. \"EUR\" for \"BGN\" and \"HRK\", or use a profile of Factur-X, whose validation accepts the code (with a warning in \"basic\" and \"en16931\")."
+      } else {
+        "Invoice in another currency, or use the \"minimum\" or \"basic-wl\" profile, whose validation knows the code."
+      },
     )
   } else if _newer(lists.currency, f.code) {
-    (
-      _not-yet("The invoice currency code (BT-5) " + _quoted(f.code)),
-      _not-yet-hint,
-    )
+    _not-yet(f, "The invoice currency code (BT-5) " + _quoted(f.code))
   } else {
     (
       "The invoice currency code (BT-5) "
@@ -456,8 +505,8 @@
       )
     }
   },
-  "BR-55": f => (
-    "The date of the preceding invoice (BT-26) is given, but not its number (BT-25), which a preceding invoice reference must have.",
+  "IP-DOC-05": f => (
+    "The date of the preceding invoice (BT-26) is given, but not its number (BT-25): the e-invoice states a preceding invoice by its number, so the date would be lost.",
     "Set `preceding-invoice-nr` on the invoice.",
   ),
   "BR-DE-26": _uncorrected,
@@ -612,17 +661,26 @@
   "BR-11": _missing-country,
   "BR-57": _missing-country,
   "BR-20": _missing-country,
-  "BR-CL-14": f => (
-    "The "
-      + f.term
-      + " "
-      + _quoted(f.code)
-      + " is not in the ISO 3166-1 code list of EN 16931.",
-    _country-hints.at(
-      f.code,
-      default: "Use a country of the `country` module (e.g. `country.de`), an ISO code (e.g. \"DE\") or `country.custom(code: ..)`.",
-    ),
-  ),
+  "BR-CL-14": f => if f.fx-only {
+    _factur-x-only(
+      "The " + f.term + " " + _quoted(f.code),
+      "Use the country the code stands for today.",
+    )
+  } else {
+    (
+      "The "
+        + f.term
+        + " "
+        + _quoted(f.code)
+        + " is not in the ISO 3166-1 code list of "
+        + _list-of(f)
+        + ".",
+      _country-hints.at(
+        f.code,
+        default: "Use a country of the `country` module (e.g. `country.de`), an ISO code (e.g. \"DE\") or `country.custom(code: ..)`.",
+      ),
+    )
+  },
   "IP-COUNTRY-01": f => (
     "The "
       + f.term
@@ -759,17 +817,15 @@
     )
   },
   "BR-CL-11": f => if _newer(lists.icd, f.scheme) {
-    (
-      _not-yet(
-        "The scheme "
-          + _quoted(f.scheme)
-          + " of the "
-          + f.term
-          + " legal registration identifier ("
-          + f.bt
-          + ")",
-      ),
-      _not-yet-hint,
+    _not-yet(
+      f,
+      "The scheme "
+        + _quoted(f.scheme)
+        + " of the "
+        + f.term
+        + " legal registration identifier ("
+        + f.bt
+        + ")",
     )
   } else {
     (
@@ -783,17 +839,19 @@
       "Use the constructor of the `id` module for the register, e.g. `id.siret(..)`, `id.register(..)` for a register without a scheme, or `id.custom(..)` with the ICD code of the register, e.g. \"0208\" for a Belgian enterprise number.",
     )
   },
-  "BR-O-02": f => (
-    "An invoice not subject to VAT (O) states no VAT identifiers, so it cannot name the seller tax representative (BG-11), whose VAT identifier (BT-63) it would have to state (BR-56).",
-    "Leave out `tax-representative` on invoices of items not subject to VAT.",
-  ),
+  "vat-outside-scope": _outside-scope-representative,
+  "IP-TAX-05": _outside-scope-representative,
   "BR-18": f => (
     "The name of the seller tax representative (BT-62) is missing.",
     "Set `name` on the tax representative.",
   ),
   "BR-56": f => (
     "The VAT identifier of the seller tax representative (BT-63) is missing.",
-    "Set `vat-id` on the tax representative, the VAT identifier it holds for the seller, e.g. `vat-id: \"DE123456789\"`.",
+    if f.at("outside-scope", default: false) {
+      "An invoice not subject to VAT (O) states no VAT identifiers: leave out `tax-representative` on invoices of items not subject to VAT."
+    } else {
+      "Set `vat-id` on the tax representative, the VAT identifier it holds for the seller, e.g. `vat-id: \"DE123456789\"`."
+    },
   ),
   "IP-VAT-226": f => if f.kind == "address" {
     (
@@ -814,17 +872,8 @@
       "Set `vat-id` on the recipient. The BASIC WL profile has no invoice lines, so its validators do not check this.",
     )
   },
-  "BR-17": f => if f.kind == "name" {
-    (
-      "The name of the payee (BT-59) is missing.",
-      "Set `name` on the payee, e.g. the name of the factoring company that receives the payment.",
-    )
-  } else {
-    (
-      "The payee (BG-10) is stated when someone other than the seller receives the payment, but its name, identifier or legal registration identifier is the seller's.",
-      "Leave out `payee` when the seller receives the payment itself.",
-    )
-  },
+  "BR-17": _payee,
+  "IP-PAY-05": _payee,
   "IP-ID-02": f => if f.kind == "id" {
     (
       if f.second == "global-id" {
@@ -869,13 +918,25 @@
   "CII-SR-451": _single-identifier,
   "PEPPOL-EN16931-R020": _electronic-address,
   "PEPPOL-EN16931-R010": _electronic-address,
+  // The message of the Peppol rules, so that `zugferd: auto` does not list
+  // the missing address of a skipped XRechnung once more (see zugferd.typ).
+  "IP-EADDR-01": f => {
+    let (message, hint) = _electronic-address(f)
+    (
+      message,
+      "EN 16931 leaves it optional, but a delivery over Peppol requires it, as XRechnung does. "
+        + hint,
+    )
+  },
   "BR-62": _address-scheme,
   "BR-63": _address-scheme,
-  "BR-CL-25": f => if _newer(lists.eas, f.scheme) {
-    (
-      _not-yet("The scheme " + _quoted(f.scheme) + " of the " + f.term),
-      _not-yet-hint,
+  "BR-CL-25": f => if f.fx-only {
+    _factur-x-only(
+      "The scheme " + _quoted(f.scheme) + " of the " + f.term,
+      "Use another scheme, e.g. \"EM\" for an email address.",
     )
+  } else if _newer(lists.eas, f.scheme) {
+    _not-yet(f, "The scheme " + _quoted(f.scheme) + " of the " + f.term)
   } else {
     (
       "The scheme "
@@ -909,12 +970,11 @@
       } else { "Set `vat-id` on the recipient." },
     )
   },
-  "BR-IC-12": f => if f.level == "error" {
-    (
-      "An intra-community supply (K) requires the deliver-to country (BT-80).",
-      "Set `country` on the recipient or pass a `delivery-address`.",
-    )
-  } else {
+  "BR-IC-12": f => (
+    "An intra-community supply (K) requires the deliver-to country (BT-80).",
+    "Set `country` on the recipient or pass a `delivery-address`.",
+  ),
+  "IP-VAT-138": f => if f.kind == "deliver-to" {
     (
       "The intra-community supply (K) states "
         + if f.whose == "representative" {
@@ -924,13 +984,14 @@
         + " as the deliver-to country (BT-80), but the goods must be dispatched to another member state.",
       "Set `country` on the delivery address or the recipient to the member state the goods are delivered to.",
     )
+  } else {
+    (
+      "The buyer VAT identifier "
+        + _quoted(f.vat-id)
+        + " was not issued by an EU member state, so the supply is not an intra-community supply (K).",
+      "Use `tax.export()` for supplies to countries outside the EU. Goods for Northern Ireland are intra-community supplies to an \"XI\" VAT identifier.",
+    )
   },
-  "IP-VAT-138": f => (
-    "The buyer VAT identifier "
-      + _quoted(f.vat-id)
-      + " was not issued by an EU member state, so the supply is not an intra-community supply (K).",
-    "Use `tax.export()` for supplies to countries outside the EU. Goods for Northern Ireland are intra-community supplies to an \"XI\" VAT identifier.",
-  ),
 
   // Lines
   "BR-16": f => (
@@ -941,23 +1002,20 @@
     "The item name (BT-153) has no text.",
     "Give the item a name that contains text.",
   ),
-  "BR-CL-23": f => if f.at("text", default: none) != none {
-    (
-      "The unit "
-        + _quoted(f.text)
-        + " has no UN/ECE Recommendation 20 code (BT-130) invoice-pro knows.",
-      "Use a unit from the `unit` module, e.g. `unit.hour` or `unit.square-metre`, or give its code: `(display: "
-        + _quoted(f.text)
-        + ", code: \"..\")`, e.g. \"C62\" for a number of units.",
-    )
-  } else {
-    (
-      "The unit code (BT-130) "
-        + _quoted(f.code)
-        + " is not a UN/ECE Recommendation 20 code.",
-      "Use a unit from the `unit` module, e.g. `unit.hour`, or a dictionary such as `(display: \"Std.\", code: \"HUR\")`.",
-    )
-  },
+  "BR-CL-23": f => (
+    "The unit code (BT-130) "
+      + _quoted(f.code)
+      + " is not a UN/ECE Recommendation 20 code.",
+    "Use a unit from the `unit` module, e.g. `unit.hour`, or a dictionary such as `(display: \"Std.\", code: \"HUR\")`.",
+  ),
+  "IP-UNIT-02": f => (
+    "The unit "
+      + _quoted(f.text)
+      + " has no UN/ECE Recommendation 20 code (BT-130) invoice-pro knows.",
+    "Use a unit from the `unit` module, e.g. `unit.hour` or `unit.square-metre`, or give its code: `(display: "
+      + _quoted(f.text)
+      + ", code: \"..\")`, e.g. \"C62\" for a number of units.",
+  ),
   "IP-UNIT-01": f => {
     let issue = f.issue
     (
@@ -979,10 +1037,6 @@
     "The item has no VAT category (BT-151).",
     "Set `tax` on the item, e.g. `tax.vat(19%)`.",
   ),
-  "PEPPOL-EN16931-R121": f => (
-    "The price base quantity (BT-149) must be greater than 0.",
-    "Set `base-quantity` to the quantity the price refers to, e.g. 100 for a price per 100 pieces.",
-  ),
   "BR-30": f => (
     "The period of the item (BG-26) ends before it starts: "
       + _span(f.period)
@@ -992,14 +1046,21 @@
   "PEPPOL-EN16931-R110": _item-outside-period,
   "PEPPOL-EN16931-R111": _item-outside-period,
   "IP-PERIOD-02": _item-outside-period,
-  "BR-CL-15": f => (
-    "The country of origin (BT-159) "
-      + _quoted(f.code)
-      + " is not in the ISO 3166-1 code list of EN 16931.",
-    if f.code == "EL" { _country-hints.EL } else {
-      "Give `origin` as a country of the `country` module (e.g. `country.de`) or an ISO 3166-1 code such as \"DE\"."
-    },
-  ),
+  "BR-CL-15": f => if f.fx-only {
+    _factur-x-only(
+      "The country of origin (BT-159) " + _quoted(f.code),
+      "Give `origin` as the country the code stands for today.",
+    )
+  } else {
+    (
+      "The country of origin (BT-159) "
+        + _quoted(f.code)
+        + " is not in the ISO 3166-1 code list of EN 16931.",
+      if f.code == "EL" { _country-hints.EL } else {
+        "Give `origin` as a country of the `country` module (e.g. `country.de`) or an ISO 3166-1 code such as \"DE\"."
+      },
+    )
+  },
 
   // VAT
   "BR-CO-18": f => (
@@ -1011,6 +1072,23 @@
       + _quoted(f.category)
       + " has no VAT category rate (BT-119), which every VAT breakdown but one not subject to VAT (O) has.",
     _bug-hint,
+  ),
+  // A code the newest EN 16931 code list has withdrawn (see `code-finding`
+  // of rare.typ).
+  "IP-CODE-01": f => (
+    (
+      if f.scheme {
+        "The scheme " + _quoted(f.code) + " of the " + f.term
+      } else { "The " + f.term + " " + _quoted(f.code) }
+    )
+      + " was withdrawn from the newest version of the EN 16931 code list (1.3.16). The Factur-X validation of the "
+      + f.profile
+      + " profile still accepts it, but a validator with the current list, such as KoSIT, rejects the e-invoice.",
+    if f.list == "currency" {
+      "Invoice in the currency that replaced it, e.g. \"EUR\" for \"BGN\" and \"HRK\"."
+    } else if f.scheme {
+      "Use a current scheme, e.g. \"EM\" for an email address."
+    } else { "Use a current code of the list." },
   ),
   "IP-DEC-01": f => (
     "The VAT rate "
@@ -1032,14 +1110,28 @@
   ),
   "BR-CL-18": f => {
     let default-hint = "Use a constructor of the `tax` module such as `tax.vat(..)`, `tax.zero()` or `tax.exempt(..)`."
-    (
-      "The VAT category "
-        + _quoted(f.category)
-        + " is not allowed in EN 16931 (allowed: S, Z, E, AE, K, G, O, L, M).",
-      if f.category == none { default-hint } else {
-        _category-hints.at(f.category, default: default-hint)
-      },
-    )
+    let hint = if f.category == none { default-hint } else {
+      _category-hints.at(f.category, default: default-hint)
+    }
+    if f.fx-only {
+      (
+        "The VAT category "
+          + _quoted(f.category)
+          + " is not in the code list of the Factur-X validation, although the code list of EN 16931 has it.",
+        hint,
+      )
+    } else {
+      (
+        "The VAT category "
+          + _quoted(f.category)
+          + " is not allowed in "
+          + _list-of(f)
+          + " (allowed: S, Z, E, AE, K, G, O, L, M"
+          + if f.at("xrechnung", default: false) { ", B" }
+          + ").",
+        hint,
+      )
+    }
   },
   "vat-rate-positive": f => (
     (
@@ -1063,10 +1155,7 @@
     "State the legal reason, e.g. `tax.exempt(grounds: \"Steuerfrei nach § 4 Nr. 21 UStG\")`, and its VATEX code if you know it, e.g. `code: \"VATEX-EU-132-1G\"`.",
   ),
   "BR-CL-22": f => if _newer(lists.vatex, f.code) {
-    (
-      _not-yet("The VAT exemption reason code (BT-121) " + _quoted(f.code)),
-      _not-yet-hint,
-    )
+    _not-yet(f, "The VAT exemption reason code (BT-121) " + _quoted(f.code))
   } else {
     (
       "The VAT exemption reason code (BT-121) "
@@ -1075,6 +1164,18 @@
       "Use a code of the CEF VATEX list, e.g. \"VATEX-EU-132-1A\" for an exemption of Art. 132 (1) (a) of the VAT Directive, or leave out `code`: the grounds are stated as text (BT-120).",
     )
   },
+  "BR-B-01": f => (
+    "The split payment (B) is for domestic Italian invoices, but the "
+      + f.term
+      + " is "
+      + _quoted(f.country)
+      + ".",
+    "Use split payment (`tax.special.transferred(..)`) only between parties in Italy, and `tax.vat(..)` otherwise.",
+  ),
+  "BR-B-02": f => (
+    "An invoice with split payment (B) cannot have standard rated (S) items, allowances or charges.",
+    "Invoice the standard rated items in an invoice of their own.",
+  ),
   "IP-TAX-02": f => {
     let taxed = f.category in ("S", "Z", "L", "M")
     (
@@ -1149,9 +1250,11 @@
   ),
   "BR-DE-23-b": _several-means,
   "BR-DE-24-b": _several-means,
+  "CII-SR-467": _several-means,
   "IP-PAY-03": _several-means,
   "BR-DE-23-a": _transfer-account,
-  "BR-61": _transfer-account,
+  "CII-SR-470": _transfer-account,
+  "IP-PAY-04": _transfer-account,
   "BR-DE-19": _iban,
   "BR-DE-20": _iban,
   "IP-PAY-01": _iban,
@@ -1174,13 +1277,13 @@
       + " is not a valid SEPA creditor identifier (wrong check digits or format).",
     "Check the creditor identifier for typos, e.g. \"DE98ZZZ09999999999\".",
   ),
-  "BR-CO-16": f => (
+  "IP-PREPAID-01": f => (
     "The prepaid amount (BT-113) exceeds the invoice total, so the amount due (BT-115) is negative.",
     none,
   ),
 
   // Consistency
-  "decimals": f => {
+  "IP-DEC-02": f => {
     let excess = f.excess
     (
       "An e-invoice states amounts with 2 decimals, but "
@@ -1214,26 +1317,6 @@
       },
     )
   },
-  "BR-CO-15": f => (
-    "The totals of the XML ("
-      + str(f.totals.net)
-      + " net, "
-      + str(f.totals.gross)
-      + " gross) differ from the printed totals ("
-      + str(f.printed.net)
-      + " net, "
-      + str(f.printed.gross)
-      + " gross).",
-    _bug-hint,
-  ),
-  "BR-CO-13": f => (
-    "The VAT breakdown ("
-      + str(f.basis)
-      + ") does not add up to the total without VAT ("
-      + str(f.net)
-      + ").",
-    _bug-hint,
-  ),
   "BR-CO-17": f => (
     "The VAT amount "
       + str(f.amount)
@@ -1252,7 +1335,8 @@
       + ".",
     _bug-hint,
   ),
-  // The e-invoice states what the invoice prints (equivalence.typ).
+  // The e-invoice states what the invoice prints (equivalence.typ, and the
+  // totals of the consistency checks of engine.typ).
   "IP-PRINT-01": f => {
     let shown(value) = if value == none { "(none)" } else { str(value) }
     let stated = shown(f.stated)

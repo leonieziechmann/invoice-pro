@@ -262,7 +262,7 @@
 {"n":4,"z":{"g":[[["ram:ApplicableTradeTax","ram:DueDateTypeCode"],0,1,"CII-SR-462"],[["ram:ApplicableTradeTax","ram:TaxPointDate"],0,1,"CII-SR-461"]],"r":[["count",["ram:InvoiceCurrencyCode"],"PEPPOL-EN16931-R053"]],"t":{"ram:ApplicableTradeTax":"vat-breakdown"}},"c":{
  "ram:CreditorReferenceID":["s",0,0,1,16,null],
  "ram:PaymentReference":["s",1,0,1,11,null],
- "ram:InvoiceCurrencyCode":["currency-2",3,1,1,94,["BR-05"]],
+ "ram:InvoiceCurrencyCode":["currency-4",3,1,1,94,["BR-05"]],
  "ram:PayeeTradeParty":[95,4,0,1,95,null],
  "ram:SpecifiedTradeSettlementPaymentMeans":[98,5,1,null,98,["BR-DE-1"]],
  "ram:ApplicableTradeTax":[104,6,1,null,104,null],
@@ -271,7 +271,7 @@
  "ram:SpecifiedTradePaymentTerms":[117,9,0,1,117,null],
  "ram:SpecifiedTradeSettlementHeaderMonetarySummation":[118,10,1,1,118,null],
  "ram:InvoiceReferencedDocument":[127,11,0,null,127,null]}},
-["s",null,["currency-2","BR-CL-04",null,false],null,null,null],
+["s",null,["currency-4","BR-CL-04",null,false],null,null,null],
 {"n":0,"z":{"e":"PEPPOL-EN16931-R008","x":[[["ram:ID","ram:GlobalID"],"CII-SR-451"]]},"u":{"ram:Description":"CII-SR-353","ram:DefinedTradeContact":"CII-SR-359","ram:PostalTradeAddress":"CII-SR-360","ram:URIUniversalCommunication":"CII-SR-361","ram:SpecifiedTaxRegistration":"CII-SR-362"},"c":{
  "ram:ID":["s",0,0,null,3,null],
  "ram:GlobalID":["s",1,0,null,56,null],
@@ -363,7 +363,7 @@
 ["d",{"currencyID":[false,"CII-DT-031",null]},null,null,[2,true,"BR-DEC-11"],null],
 ["d",{"currencyID":[false,"CII-DT-031",null]},null,null,[2,true,"BR-DEC-10"],null],
 ["d",{"currencyID":[false,"CII-DT-031",null]},null,null,[2,true,"BR-DEC-12"],null],
-["d",{"currencyID":[false,null,["currency-2","BR-CL-03",null,false]]},null,null,[2,false,"BR-DEC-13"],null],
+["d",{"currencyID":[false,null,["currency-4","BR-CL-03",null,false]]},null,null,[2,false,"BR-DEC-13"],null],
 ["d",{"currencyID":[false,"CII-DT-031",null]},null,null,[2,true,"BR-DEC-14"],null],
 ["d",{"currencyID":[false,"CII-DT-031",null]},null,null,[2,true,"BR-DEC-16"],null],
 ["d",{"currencyID":[false,"CII-DT-031",null]},null,null,[2,true,"BR-DEC-18"],null],

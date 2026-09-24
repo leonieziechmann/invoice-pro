@@ -32,6 +32,7 @@
 ) = {
   types.require(days, "payment-goal::days", none, int)
   types.require(date, "payment-goal::date", none, datetime, str, content)
+  types.require-day(date, "payment-goal::date")
   types.require(discount, "payment-goal::discount", none, dictionary, array)
   let discounts = cash-discount.normalize(discount)
 

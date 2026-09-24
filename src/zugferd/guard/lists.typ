@@ -48,11 +48,19 @@
 
 #let currency-2 = _derive(
   currency,
+  add: ("MRO", "STD", "VEF"),
+  remove: ("MRU", "STN", "UYW", "VES"),
+)
+
+#let currency-3 = _derive(currency, remove: ("MRU", "STN", "UYW", "VES"))
+
+#let currency-4 = _derive(
+  currency,
   add: ("STD",),
   remove: ("ANG", "BGN", "CUC", "HRK", "MRU", "STN", "UYW", "VES", "ZWL"),
 )
 
-#let currency-3 = _derive(
+#let currency-5 = _derive(
   currency,
   remove: ("ANG", "BGN", "CUC", "HRK", "MRU", "STN", "UYW", "VES", "ZWL"),
 )
@@ -357,6 +365,8 @@
   "currency": currency,
   "currency-2": currency-2,
   "currency-3": currency-3,
+  "currency-4": currency-4,
+  "currency-5": currency-5,
   "date-format": date-format,
   "document-type": document-type,
   "eas": eas,
@@ -392,15 +402,19 @@
 /// The code lists of the validator (src/zugferd/rules/); see VALIDATOR_LISTS
 /// of tools/zugferd/gen_guard.py.
 #let validator = (
-  country: (every: country-3, factur-x: country-2),
+  country: (every: country-3, factur-x: country-2, xrechnung: country),
   currency: (
-    every: currency-3,
+    every: currency-5,
     factur-x: currency,
+    xrechnung: currency-4,
     newer: _codes("CNH VED XCG ZWG"),
+    withdrawn: _codes("ANG BGN CUC HRK MRO VEF ZWL"),
   ),
   eas: (
     every: eas-3,
+    xrechnung: eas,
     newer: _codes("0154 0158 0177 0235 0240 0242 0244 0245 0246 0248"),
+    withdrawn: _codes("9901"),
   ),
   icd: (
     every: icd,
@@ -411,7 +425,7 @@
   ),
   payment-means: (every: payment-means),
   unit: (every: unit),
-  vat-category: (every: vat-category-2),
+  vat-category: (every: vat-category-2, xrechnung: vat-category),
   vatex: (
     every: vatex,
     newer: _codes(

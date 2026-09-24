@@ -34,7 +34,9 @@ The proof criteria, each must hold for every mutant:
       list rule of that position or the code is missing from the list of the
       newest CEN Schematron there (KoSIT's CEN 1.3.16, which the tables apply
       as well), and KoSIT reports one of EN 16931 or XRechnung (with
-      --kosit);
+      --kosit); except a currency that CEN 1.3.16 has withdrawn and the
+      Factur-X validation accepts, which the tables allow outside XRechnung
+      (NEWEST_XRECHNUNG_ONLY of gen_guard.py, a maintainer decision);
   C4  for a tax mutant or a mutated category code, the guard reports
       exactly the rules of the VAT categories (rate, VAT amount, exemption
       reason) that Mustang reports;
@@ -621,6 +623,15 @@ def main(argv=None):
                     official_rules = {r for r, source in known_rules.items() if source in ("CEN", "XR")}
                     guard_cen = any(f[1] in official_rules for f in at)
                     kosit_rejects = bool(kosit[m["file"]] & official_rules)
+                    if (
+                        kosit_rejects and not guard_rejects and not mustang_rejects
+                        and m["profile"] != "xrechnung"
+                        and set(known_rules) & gen_guard.NEWEST_XRECHNUNG_ONLY
+                    ):
+                        # A withdrawn currency the Factur-X validation
+                        # accepts: allowed outside XRechnung.
+                        stats[("code", "withdrawn currency allowed outside XRechnung")] += 1
+                        continue
                     stats[("code", "compared with KoSIT")] += 1
                     if guard_cen != kosit_rejects:
                         failures["C3 (KoSIT)"].append(entry | {"kosit": sorted(kosit[m["file"]])[:8]})

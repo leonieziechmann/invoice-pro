@@ -223,6 +223,17 @@
     none,
     types.date-like,
   )
+  // Every date names its day (not a time only).
+  for (value, name) in (
+    (date, "invoice::date"),
+    (service-period, "invoice::service-period"),
+    (order-date, "invoice::order-date"),
+    (recipient.at("order-date", default: none), "recipient.order-date"),
+    (preceding-invoice-date, "invoice::preceding-invoice-date"),
+    (due-date, "invoice::due-date"),
+  ) {
+    if value != none { types.require-day(value, name) }
+  }
   if (
     type(service-period) == array
       and service-period.last() < service-period.first()
