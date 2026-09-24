@@ -23,14 +23,14 @@
 )
 #import "../logic/printed.typ": shows-identifier, shows-text
 #import "../logic/currency.typ": currency-code
+#import "../utils/helper.typ": first-given
 #import "xml.typ": fmt-number
 
 #let _zero = decimal("0")
 
-// The first value that is set, or `none`.
-#let first-of(..values) = (
-  values.pos().find(value => value not in (none, auto, "", []))
-)
+// The first value that is set, or `none`: the same fallbacks as the printed
+// invoice takes (see `first-given`).
+#let first-of = first-given
 
 // The plain text of a value, or `none` if it has no visible text.
 #let text-or-none(value) = {
