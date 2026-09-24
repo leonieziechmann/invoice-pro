@@ -227,8 +227,10 @@
   // IP-DOC-01: the title of a document without `document-type` names another
   // kind of document than the invoice (BT-3 = 380) the e-invoice states,
   // e.g. "Gutschrift": the e-invoice would ask the buyer to pay a credit
-  // note.
-  if document.input == auto {
+  // note. Without a title (the sender sets no `subject`, and the locale
+  // titles an invoice as its language does) there is nothing to check, and
+  // document.typ does not load.
+  if document.input == auto and invoice.title != none {
     import "../document.typ": title-kind
     let named = title-kind(invoice.title)
     if named != none and named.kind != "invoice" {

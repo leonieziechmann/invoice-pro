@@ -76,6 +76,8 @@ LAZY_MODULES = (
     "src/zugferd/rules/rare.typ",  # checks of inputs most invoices do not give
     "src/zugferd/rules/messages.typ",  # the messages of failed checks
     "src/zugferd/rules/xrechnung-messages.typ",
+    "src/zugferd/document.typ",  # a title that may name another document type
+    "src/zugferd/guard/strict.typ",  # `zugferd-strict`
 )
 LAZY_CALLS = (
     ("src/zugferd/rules/engine.typ", "rule-registry"),  # reads registry.json

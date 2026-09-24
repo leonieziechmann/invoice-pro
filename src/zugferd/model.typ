@@ -12,7 +12,7 @@
 // compared with it once more after it is written (guard/roundtrip.typ), so
 // all three agree on what ends up in the XML.
 
-#import "../utils/text.typ": plain-text
+#import "../utils/text.typ": plain-ascii, plain-text
 #import "guard/lists.typ": validator as lists
 #import "profile.typ": resolve-profile
 #import "../utils/coercion.typ": to-decimal, to-ratio
@@ -48,10 +48,11 @@
 // invoice takes (see `first-given`).
 #let first-of = first-given
 
-// A string that `plain-text` returns as it is: printable ASCII words with
-// single spaces between them, as most names, numbers and codes are. The
-// test is cheaper than `plain-text`, which runs three replacements.
-#let _plain-ascii = regex("^[!-~]+(?: [!-~]+)*$")
+// A string that `plain-text` returns as it is (`plain-ascii`): printable
+// ASCII words with single spaces between them, as most names, numbers and
+// codes are. The test is cheaper than `plain-text`, which runs three
+// replacements.
+#let _plain-ascii = plain-ascii
 
 // The plain text of a value, or `none` if it has no visible text. A text
 // element of such a string, e.g. the name `[Consulting]` of an item, is
