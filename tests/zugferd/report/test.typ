@@ -6,7 +6,7 @@
 #import "/src/lib.typ": *
 #import "/src/zugferd/profile.typ": resolve-profile, switch-profile
 #import "/src/zugferd/report.typ": format-report, render-zugferd-report
-#import "/src/zugferd/rules/messages.typ": diagnostic
+#import "/src/zugferd/rules/engine.typ": diagnostic
 
 #let error(..args) = diagnostic("error", ..args)
 #let warning(..args) = diagnostic("warning", ..args)

@@ -3,8 +3,7 @@
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/model.typ": build-model
-#import "/src/zugferd/rules/engine.typ": run-rules
-#import "/src/zugferd/rules/messages.typ": registry
+#import "/src/zugferd/rules/engine.typ": rule-registry, run-rules
 #import "/src/zugferd/build.typ": build-xml
 #import "/src/logic/payment-means.typ": resolve as resolve-payment-means
 #import "/tests/data-test.typ": data-test, loom
@@ -98,7 +97,7 @@
   let found = run-rules(model)
   for d in found {
     let listed = false
-    for (key, entry) in registry {
+    for (key, entry) in rule-registry() {
       if (
         d.rule in entry.at("ids", default: (key,))
           and model.profile.id in entry.profiles

@@ -155,6 +155,21 @@ class Sources(unittest.TestCase):
         self.assertIn("BR-02", keys)
         self.assertIn("vat-rate-zero", keys)
         self.assertEqual(len(keys), len(set(keys)))
+        # The rules only XRechnung reports have their messages apart.
+        xrechnung = r.message_keys(r.XRECHNUNG_MESSAGES)
+        self.assertIn("BR-DE-15", xrechnung)
+        self.assertNotIn("BR-DE-15", keys)
+        self.assertFalse(set(keys) & set(xrechnung))
+
+    def test_the_messages_of_xrechnung(self):
+        # xrechnung-messages.typ holds the messages of the rules only
+        # XRechnung reports, which engine.typ looks up there by their prefix.
+        loaded = r.load()
+        loaded["rules"]["BR-DE-15"]["profiles"] = ["en16931", "xrechnung"]
+        self.assertIn(
+            "BR-DE-15: xrechnung-messages.typ holds the rules BR-DE-* that only XRechnung reports",
+            r.source_problems(loaded),
+        )
 
     def test_the_rule_ids_of_the_modules(self):
         literals = r.module_literals()

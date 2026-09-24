@@ -277,14 +277,26 @@
 
 // --- The rule registry: every finding of a check has an entry and a
 // message, and a diagnostic takes its level and id from the entry ---
-#import "/src/zugferd/rules/messages.typ": diagnostics, messages, registry
+#import "/src/zugferd/rules/engine.typ": diagnostics, rule-registry
+#import "/src/zugferd/rules/messages.typ": messages
+#import "/src/zugferd/rules/xrechnung-messages.typ": (
+  messages as xrechnung-messages,
+)
 #{
+  let registry = rule-registry()
   // The rules of the write guard (IP-GUARD-*) build their messages in
-  // guard/report.typ.
+  // guard/report.typ. Every other rule has one message, in messages.typ or,
+  // for a rule of XRechnung that no other profile reports (BR-DE-*), in
+  // xrechnung-messages.typ, which `diagnostics` loads for such a rule.
   assert.eq(
     registry.keys().filter(key => not key.starts-with("IP-GUARD-")).sorted(),
-    messages.keys().sorted(),
+    (messages.keys() + xrechnung-messages.keys()).sorted(),
   )
+  for key in xrechnung-messages.keys() {
+    assert(key.starts-with("BR-DE-"), message: key)
+    assert(key not in messages, message: key)
+    assert.eq(registry.at(key).profiles, ("xrechnung",), message: key)
+  }
   // `profiles` lists the profiles in which a check can report its rule:
   // EN 16931 and XRechnung state every input IP-PROFILE-01 looks for.
   assert.eq(registry.at("IP-PROFILE-01").profiles, (

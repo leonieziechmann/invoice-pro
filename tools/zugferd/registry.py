@@ -7,9 +7,11 @@ The registry, src/zugferd/rules/registry.json, is the one source of the
 metadata of every rule whose diagnostics invoice-pro reports: the checks of
 its validator (src/zugferd/rules/engine.typ, rare.typ, xrechnung.typ, which
 report findings by the key of an entry) and the rules of the XML write
-guard (IP-GUARD-*). The messages are in src/zugferd/rules/messages.typ.
-Typst reads the file only when a check fails (JSON is the format it reads
-fastest); the tools read it here:
+guard (IP-GUARD-*). The messages are in src/zugferd/rules/messages.typ,
+those of the rules of XRechnung that no other profile reports in
+xrechnung-messages.typ (engine.typ loads it for a finding of a BR-DE-* rule,
+messages.typ only for another rule). Typst reads the file only when a check
+fails (JSON is the format it reads fastest); the tools read it here:
 
   load()              the registry, checked (`problems`): {"format": 1,
                       "sources": {source: artefact}, "rules": {key: entry}}
@@ -64,6 +66,10 @@ REPO = HERE.parents[1]
 RULES = REPO / "src" / "zugferd" / "rules"
 REGISTRY = RULES / "registry.json"
 MESSAGES = RULES / "messages.typ"
+# The messages of the rules of XRechnung that no other profile reports, which
+# `diagnostics` of engine.typ looks up first for a key starting with BR-DE-.
+XRECHNUNG_MESSAGES = RULES / "xrechnung-messages.typ"
+XRECHNUNG_PREFIX = "BR-DE-"
 MODULES = [RULES / "engine.typ", RULES / "rare.typ", RULES / "xrechnung.typ"]
 GUARD_REPORT = REPO / "src" / "zugferd" / "guard" / "report.typ"
 DOCS = REPO / "docs" / "docs" / "e-invoicing.md"
@@ -216,7 +222,7 @@ def covering(registry, profile):
 
 
 def message_keys(path=MESSAGES):
-    """The keys of the `messages` dictionary of messages.typ."""
+    """The keys of the `messages` dictionary of messages.typ (or `path`)."""
     text = Path(path).read_text(encoding="utf-8")
     start = text.index("#let messages = (")
     end = text.index("\n)\n", start)
@@ -242,18 +248,30 @@ def source_problems(registry):
     out = []
     rules = registry["rules"]
     guard = guard_ids()
-    messages = message_keys()
+    xrechnung = message_keys(XRECHNUNG_MESSAGES)
+    messages = message_keys() + xrechnung
     literals = module_literals()
     for key in rules:
         if key in guard:
             continue
         if key not in messages:
-            out.append(f"{key}: no message in {MESSAGES.relative_to(REPO)}")
+            out.append(f"{key}: no message in {MESSAGES.relative_to(REPO)} or {XRECHNUNG_MESSAGES.name}")
         if key not in literals:
             out.append(f"{key}: no check names it in src/zugferd/rules/")
+    for key in sorted({key for key in messages if messages.count(key) > 1}):
+        out.append(f"{key}: more than one message in src/zugferd/rules/")
     for key in messages:
         if key not in rules:
-            out.append(f"{key}: a message of {MESSAGES.relative_to(REPO)} without an entry")
+            out.append(f"{key}: a message of src/zugferd/rules/ without an entry")
+    # engine.typ looks a message up in xrechnung-messages.typ only for a key
+    # starting with BR-DE-, and the module holds the messages of the rules
+    # that only XRechnung reports, so that only a finding of XRechnung loads
+    # it.
+    for key in xrechnung:
+        if not key.startswith(XRECHNUNG_PREFIX) or rules.get(key, {}).get("profiles") != ["xrechnung"]:
+            out.append(
+                f"{key}: {XRECHNUNG_MESSAGES.name} holds the rules {XRECHNUNG_PREFIX}* that only XRechnung reports"
+            )
     known = set(reported(registry)) | set(rules)
     for literal in sorted(literals):
         if RULE_ID.match(literal) and literal not in known:

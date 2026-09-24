@@ -5,7 +5,7 @@
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/profile.typ": resolve-profile
-#import "/src/zugferd/rules/messages.typ": registry
+#import "/src/zugferd/rules/engine.typ": rule-registry
 #import "/tests/zugferd/harness.typ": (
   bank, buyer-de, buyer-fr, diagnostic, model-test, rules, seller,
 )
@@ -184,7 +184,7 @@
     m.profile = resolve-profile(id, "FR")
     assert.eq(rules(m), ("BR-16",), message: id)
   }
-  assert.eq(registry.at("BR-CO-18").profiles, ("basic-wl",))
+  assert.eq(rule-registry().at("BR-CO-18").profiles, ("basic-wl",))
 })[
   #line-items[]
   #payment-goal(days: 14)

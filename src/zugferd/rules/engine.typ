@@ -26,9 +26,13 @@
 //   and the values its message needs. The checks of inputs most invoices
 //   do not give are in rare.typ, those of XRechnung in xrechnung.typ, both
 //   loaded when an invoice needs them.
-// - messages.typ: the message and the hint of every rule, and `diagnostics`,
-//   which turns the findings into diagnostics. It is loaded only when a
-//   check fails, so a valid invoice parses none of the texts.
+// - messages.typ: the message and the hint of every rule, but those of the
+//   rules of XRechnung that no other profile reports, which are in
+//   xrechnung-messages.typ. `diagnostics` (this module) turns the findings
+//   into diagnostics and loads the module of the messages it needs: a valid
+//   invoice parses none of the texts, and one whose XRechnung checks fail
+//   (e.g. `zugferd: auto` for a buyer without buyer reference) only those of
+//   XRechnung.
 //
 // A diagnostic is `(level: "error" | "warning", rule: .., field: ..,
 // message: .., hint: .. | none)`, errors first, each level in the order of
@@ -60,6 +64,13 @@
 #import "../../utils/iban.typ": iban-valid
 
 #let _zero = decimal("0")
+
+/// A value in quotes for a message, e.g. `"DE"`, or "(none)".
+///
+/// -> str
+#let quoted(value) = if value == none { "(none)" } else {
+  "\"" + str(value) + "\""
+}
 
 /// Whether `code` is in a code list of lists.typ: a string of codes, each
 /// between two spaces.
@@ -1575,6 +1586,74 @@
     + _consistency(model)
 )
 
+// --- Diagnostics ------------------------------------------------------------
+
+/// The rules of the registry by key (registry.json), read for the first
+/// diagnostic of a compilation.
+///
+/// -> dictionary
+#let rule-registry() = json("registry.json").rules
+
+/// A diagnostic, e.g. for a report hook or a test: the form of the
+/// diagnostics of `run-rules`, without the metadata of the registry.
+///
+/// -> dictionary
+#let diagnostic(level, rule, field, message, hint: none) = (
+  level: level,
+  rule: rule,
+  field: field,
+  message: message,
+  hint: hint,
+)
+
+/// Turns the findings of the checks into diagnostics, errors first. The
+/// messages load only now, and only the module of the rules found: the rules
+/// of XRechnung that no other profile reports are in xrechnung-messages.typ,
+/// every other rule in messages.typ. A finding of a key without an entry in
+/// the registry or without a message, or of an id or a level the entry does
+/// not have, stops the compilation: every diagnostic comes from the
+/// registry.
+///
+/// -> array
+#let diagnostics(findings) = {
+  let registry = rule-registry()
+  let errors = ()
+  let warnings = ()
+  for f in findings {
+    let build = none
+    if f.key.starts-with("BR-DE-") {
+      import "xrechnung-messages.typ": messages as xrechnung-messages
+      build = xrechnung-messages.at(f.key, default: none)
+    }
+    if build == none {
+      import "messages.typ": messages
+      build = messages.at(f.key, default: none)
+    }
+    let entry = registry.at(f.key, default: none)
+    if entry == none or build == none {
+      panic("invoice-pro: the rule " + f.key + " is not in the rule registry")
+    }
+    let id = f.at("id", default: f.key)
+    let levels = entry.level
+    if type(levels) == str { levels = (levels,) }
+    let level = f.at("level", default: levels.first())
+    if id not in entry.at("ids", default: (f.key,)) or level not in levels {
+      panic(
+        "invoice-pro: the rule registry has no "
+          + level
+          + " "
+          + id
+          + " for the entry "
+          + f.key,
+      )
+    }
+    let (message, hint) = build(f)
+    let d = diagnostic(level, id, f.field, message, hint: hint)
+    if level == "error" { errors.push(d) } else { warnings.push(d) }
+  }
+  errors + warnings
+}
+
 /// Checks an e-invoice data model against the rules of the registry and
 /// returns every diagnostic, errors first (see the top of this file).
 ///
@@ -1582,7 +1661,5 @@
 #let run-rules(model) = {
   let found = findings(model)
   if found == () { return () }
-  // The messages, the hints and the metadata load only now.
-  import "messages.typ": diagnostics
   diagnostics(found)
 }
