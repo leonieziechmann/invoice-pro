@@ -11,6 +11,9 @@
   vat-category,
 )
 
+// The rule that forbids an empty leaf, or none.
+#let empty = "PEPPOL-EN16931-R008"
+
 // @typstyle off
 #let nodes = (
   (n: 3, z: none, c: (

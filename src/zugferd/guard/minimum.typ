@@ -8,6 +8,9 @@
 
 #import "lists.typ": country-2, currency, document-type, guideline-4
 
+// The rule that forbids an empty leaf, or none.
+#let empty = none
+
 // @typstyle off
 #let nodes = (
   (n: 3, z: none, c: (
@@ -97,7 +100,7 @@
     "ram:DuePayableAmount": ("d2", 3, 1, 1, 33, "BR-15"),
   )),
   ("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-12"), none),
-  ("d", ("currencyID": ("FX-SCH-A-000046", none, ("currency", "FX-SCH-A-000045", none, false))), none, none, (2, false, "BR-DEC-13"), none),
+  ("d", ("currencyID": ("FX-SCH-A-000046", none, none)), none, none, (2, false, "BR-DEC-13"), none),
   ("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-14"), none),
   ("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-18"), none),
 )

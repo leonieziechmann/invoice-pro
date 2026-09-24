@@ -142,22 +142,23 @@
 // child the profile does not use there.
 #let _unknown = (none,)
 
-// The node tables of a profile. Only the profile an invoice uses is loaded.
+// The tables of a profile: its nodes, and the rule that forbids an empty
+// leaf (or none). Only the profile an invoice uses is loaded.
 #let _tables(profile) = if profile == "minimum" {
-  import "minimum.typ": nodes
-  nodes
+  import "minimum.typ" as tables
+  tables
 } else if profile == "basic-wl" {
-  import "basic-wl.typ": nodes
-  nodes
+  import "basic-wl.typ" as tables
+  tables
 } else if profile == "basic" {
-  import "basic.typ": nodes
-  nodes
+  import "basic.typ" as tables
+  tables
 } else if profile == "en16931" {
-  import "en16931.typ": nodes
-  nodes
+  import "en16931.typ" as tables
+  tables
 } else if profile == "xrechnung" {
-  import "xrechnung.typ": nodes
-  nodes
+  import "xrechnung.typ" as tables
+  tables
 } else { none }
 
 // A problem the guard found: its kind, the official rule (or `none`, for
@@ -327,7 +328,9 @@
     let (spec, when) = prefix
     if when == none or attrs.at(when.at(0), default: none) == when.at(1) {
       let characters = text.codepoints()
-      let first = characters.slice(0, calc.min(2, characters.len())).join()
+      let first = if characters == () { "" } else {
+        characters.slice(0, calc.min(2, characters.len())).join()
+      }
       let rule = _code-rule(first, spec)
       if rule != none {
         found.push(_finding(
@@ -384,8 +387,9 @@
 }
 
 // A leaf: the element `tag` with its text and attributes, checked against
-// its node (a kind or an array). Returns (XML, findings).
-#let _leaf(tag, body, node) = {
+// its node (a kind or an array); `empty` is the rule of the profile that
+// forbids an empty leaf, or none. Returns (XML, findings).
+#let _leaf(tag, body, node, empty) = {
   if type(node) == str { node = (node, none, none, none, none, none) }
   if type(body) != dictionary {
     let text = if type(body) == str { body } else { plain-text(body) }
@@ -442,8 +446,10 @@
   if "" in body and children.trim() == "" { return ("", ()) }
   found += _check-attributes(tag, node, attrs)
   if children == "" {
-    // An element without text: no leaf of the schema is empty.
-    found.push(_finding("empty", none, (tag,)))
+    // An element without text: its text is checked as empty (no decimal,
+    // no code), and a rule of the profile may forbid empty elements.
+    if empty != none { found.push(_finding("empty", empty, (tag,))) }
+    found += _check-text(tag, "", node, attrs)
     return ("<" + tag + written + " />", found)
   }
   if text != none { found += _check-text(tag, text, node, attrs) }
@@ -570,10 +576,12 @@
 ///
 /// -> dictionary
 #let write(data, profile) = {
-  let nodes = _tables(profile)
-  if nodes == none {
+  let tables = _tables(profile)
+  if tables == none {
     panic("no guard tables for the profile " + repr(profile))
   }
+  let nodes = tables.nodes
+  let empty = tables.empty
   if data == none { data = (:) }
   if type(data) != dictionary {
     panic(
@@ -719,7 +727,7 @@
               )
             }
           } else if type(nodes.at(child)) != dictionary {
-            _leaf(key, item, nodes.at(child))
+            _leaf(key, item, nodes.at(child), empty)
           } else if type(item) == dictionary {
             element(key, item, child)
           } else {

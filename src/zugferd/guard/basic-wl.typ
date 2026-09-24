@@ -11,6 +11,9 @@
   tax-type, vat-category-2,
 )
 
+// The rule that forbids an empty leaf, or none.
+#let empty = none
+
 // @typstyle off
 #let nodes = (
   (n: 3, z: none, c: (
@@ -287,7 +290,7 @@
   ("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-11"), none),
   ("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-10"), none),
   ("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-12"), none),
-  ("d", ("currencyID": ("FX-SCH-A-000046", none, ("currency", "FX-SCH-A-000045", none, false))), none, none, (2, false, "BR-DEC-13"), none),
+  ("d", ("currencyID": ("FX-SCH-A-000046", none, none)), none, none, (2, false, "BR-DEC-13"), none),
   ("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-14"), none),
   ("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-16"), none),
   ("d", ("currencyID": (false, "IP-GUARD-05", none)), none, none, (2, true, "BR-DEC-18"), none),

@@ -324,7 +324,7 @@ class Schema:
                 if inline:
                     raise GenError(f"{where}: {ref}: both a type and an inline type")
                 named = self._qname(prefix, el.get("type"))
-                if named.startswith("xs:"):
+                if named.startswith("xs:") or named in self.simple:
                     self.types[ref] = XType(ref, False, base=self._builtin(where, named))
                 else:
                     ref = named
@@ -919,6 +919,8 @@ class Compiler:
         self.known_tags = known_tags  # element names of every Factur-X profile
         self.dispositions = []  # (rule, disposition, detail)
         self.deferred = []  # path constraints resolved after the direct ones
+        self.xref_lists = []  # (rule, currency element, list) of the VAT total
+        self.empty_leaf = None  # the rule that forbids empty leaves, if any
         self.variants = self._variant_values()
         self.root = unfold(schema, self.variants)
         self.positions = list(walk(self.root))
@@ -1001,7 +1003,24 @@ class Compiler:
         for r in self.rules:
             self.compile_rule(r)
         self.resolve_deferred()
+        self.check_xref_lists()
         return self
+
+    def check_xref_lists(self):
+        """The list of the VAT total's currency where it equals a currency
+        element of the settlement is left to that element's list: they
+        must be the same codes of the same validator."""
+        for r, ref, code_list in self.xref_lists:
+            targets = [
+                c for p in self.positions if p.tag == "ram:ApplicableHeaderTradeSettlement"
+                for c in p.child_positions("ram:" + ref)
+            ]
+            same = [
+                t for t in targets
+                if any(cl.codes == code_list.codes and cl.source == code_list.source for cl in t.lists)
+            ]
+            if not targets or same != targets:
+                raise GenError(f"the currency list of the VAT total differs from the list of ram:{ref}: {r.label()}")
 
     def compile_rule(self, r):
         test = strip_parens(r.test)
@@ -1012,8 +1031,13 @@ class Compiler:
             if test != "false()":
                 raise GenError(f"unsupported test of an empty-element rule: {r.label()}")
             for pos in self.positions:
-                if not pos.leaf and pos.tag != empty.group(1):
-                    pos.no_empty = r.ref
+                if pos.tag != empty.group(1):
+                    if pos.leaf:
+                        self.empty_leaf = r.ref
+                    else:
+                        pos.no_empty = r.ref
+                elif pos.leaf:
+                    raise GenError(f"an empty-element rule that excepts the leaf {pos.tag}: {r.label()}")
             return self.record(r, "compiled", "no empty element")
         pattern = self.patterns[r.context]
         matched, maybe = [], []
@@ -1505,6 +1529,21 @@ class Compiler:
         return None
 
     def add_list(self, r, pos, conds, target, code_list, prefix):
+        xrefs = [d for i, p, d in conds if d.kind == "xref"]
+        if xrefs:
+            # The list of the VAT total's currency where it is the invoice
+            # (or VAT accounting) currency: then the list of that element
+            # checks the same value (`check_xref_lists` makes sure it is the
+            # same list), and another currency is a cross reference check.
+            refs, negated = xrefs[0].data
+            others = [
+                d for i, p, d in conds
+                if d.kind != "xref" and not (d.kind == "attr" and p is pos and d.data == ("currencyID", None))
+            ]
+            if len(xrefs) > 1 or negated or target != "@currencyID" or others:
+                raise GenError(f"unsupported condition of a code list at {pos.path()}: {r.label()}")
+            self.xref_lists.append((r, refs, code_list))
+            return
         condition = None
         for i, p, d in conds:
             if d.kind == "attr" and p is pos:
@@ -1514,8 +1553,6 @@ class Compiler:
                 if value is not None and target == ".":
                     condition = (name, value)
                     continue
-            if d.kind == "xref":
-                continue  # the VAT total: its currency list holds for every variant
             raise GenError(f"unsupported condition {d} of a code list at {pos.path()}: {r.label()}")
         if not pos.leaf:
             raise GenError(f"code list on complex element {pos.path()}: {r.label()}")
@@ -2178,7 +2215,15 @@ def emit_profile(profile, nodes, names, digests):
     if imports:
         out.append(import_line("lists.typ", sorted(imports)))
         out.append("")
-    out += ["// @typstyle off", "#let nodes = (", *body, ")"]
+    out += [
+        "// The rule that forbids an empty leaf, or none.",
+        f"#let empty = {typ_value(nodes.compiler.empty_leaf)}",
+        "",
+        "// @typstyle off",
+        "#let nodes = (",
+        *body,
+        ")",
+    ]
     return "\n".join(out) + "\n"
 
 
@@ -2457,29 +2502,36 @@ def explain(result):
                 print(f"     {r['source']:3} {r['id'] or '(report)':22} {r['detail'][:60]:60} [{r['context'][:90]}]")
 
 
+def compare(fresh_dir, committed_dir=OUT):
+    """The differences between freshly generated tables and the committed
+    ones, as unified diffs (empty when there are none), including generated
+    files the generator no longer writes."""
+    fresh_dir, committed_dir = Path(fresh_dir), Path(committed_dir)
+    diffs = []
+    for name in OUTPUT_FILES:
+        fresh = (fresh_dir / name).read_text(encoding="utf-8")
+        committed_path = committed_dir / name
+        committed = committed_path.read_text(encoding="utf-8") if committed_path.exists() else ""
+        if fresh != committed:
+            diffs.append("".join(difflib.unified_diff(
+                committed.splitlines(keepends=True), fresh.splitlines(keepends=True),
+                f"committed/{name}", f"generated/{name}", n=1,
+            )))
+    stale = sorted(
+        p.name for p in committed_dir.glob("*.typ")
+        if p.name not in OUTPUT_FILES and p.read_text(encoding="utf-8").startswith(HEADER)
+    )
+    if stale:
+        diffs.append(f"generated files in {committed_dir} the generator no longer writes: {', '.join(stale)}\n")
+    return diffs
+
+
 def check(jar_path):
-    """Regenerates into a temporary directory; the differences to the
-    committed tables, as unified diffs (empty when there are none)."""
+    """Regenerates into a temporary directory and compares with the
+    committed tables (see `compare`)."""
     with tempfile.TemporaryDirectory() as tmp:
         generate(jar_path, tmp)
-        diffs = []
-        for name in OUTPUT_FILES:
-            fresh = (Path(tmp) / name).read_text(encoding="utf-8")
-            committed_path = OUT / name
-            committed = committed_path.read_text(encoding="utf-8") if committed_path.exists() else ""
-            if fresh != committed:
-                diffs.append("".join(difflib.unified_diff(
-                    committed.splitlines(keepends=True), fresh.splitlines(keepends=True),
-                    f"committed/{name}", f"generated/{name}", n=1,
-                )))
-        # A generated file the generator no longer writes is stale.
-        stale = sorted(
-            p.name for p in OUT.glob("*.typ")
-            if p.name not in OUTPUT_FILES and p.read_text(encoding="utf-8").startswith(HEADER)
-        )
-        if stale:
-            diffs.append(f"generated files in {OUT} the generator no longer writes: {', '.join(stale)}\n")
-        return diffs
+        return compare(tmp)
 
 
 def main(argv=None):
