@@ -25,14 +25,14 @@
 # ---------------------------------------------------------------- Invoice (BG-0)
 "BT-1" = { name = "Invoice number", disposition = "input", input = "invoice-nr" }
 "BT-2" = { name = "Invoice issue date", disposition = "input", input = "date" }
-"BT-3" = { name = "Invoice type code", disposition = "derived", source = "always 380 (commercial invoice)", note = "credited lines and negative totals are written as an invoice; there is no input for other document types yet" }
-"BT-5" = { name = "Invoice currency code", disposition = "derived", source = "the currency code of the locale (`locale`, region currency)" }
+"BT-3" = { name = "Invoice type code", disposition = "input", input = "document-type (a named type such as \"credit-note\", or a UNTDID 1001 code)", note = "380 (commercial invoice) without document-type" }
+"BT-5" = { name = "Invoice currency code", disposition = "input", input = "currency, else the currency code of the locale (`locale`, region currency)" }
 "BT-6" = { name = "VAT accounting currency code", disposition = "unsupported", reason = "the VAT is stated in the invoice currency; a separate VAT accounting currency is not supported" }
 "BT-7" = { name = "Value added tax point date", disposition = "unsupported", reason = "the tax point is stated by the actual delivery date (BT-72) or the invoicing period (BG-14)" }
 "BT-8" = { name = "Value added tax point date code", disposition = "unsupported", reason = "the tax point is stated by the actual delivery date (BT-72) or the invoicing period (BG-14)" }
 "BT-9" = { name = "Payment due date", disposition = "input", input = "due-date (a date), payment-goal(date:) or payment-goal(days:)" }
 "BT-10" = { name = "Buyer reference", disposition = "input", input = "recipient.buyer-reference or recipient.leitweg-id (text or id.leitweg(..))" }
-"BT-11" = { name = "Project reference", disposition = "unsupported", reason = "`project` is printed, but not written into the e-invoice yet" }
+"BT-11" = { name = "Project reference", disposition = "input", input = "project", note = "EN 16931 and XRechnung only" }
 "BT-12" = { name = "Contract reference", disposition = "input", input = "contract-nr (or recipient.contract-nr)" }
 "BT-13" = { name = "Purchase order reference", disposition = "input", input = "order-nr (or recipient.order-nr, po-nr)" }
 "BT-14" = { name = "Sales order reference", disposition = "unsupported", reason = "no input for the seller's own order number" }
@@ -43,9 +43,9 @@
 "BT-19" = { name = "Buyer accounting reference", disposition = "unsupported", reason = "no input for the buyer's booking account" }
 "BT-20" = { name = "Payment terms", disposition = "input", input = "payment-goal (its text), due-date (a text) or paid (the printed sentence)" }
 # ---------------------------------------------------------------- BG-1 Invoice note
-"BG-1" = { name = "INVOICE NOTE", disposition = "unsupported", reason = "no input for notes of the e-invoice yet" }
-"BT-21" = { name = "Invoice note subject code", disposition = "unsupported", reason = "no input for notes of the e-invoice yet" }
-"BT-22" = { name = "Invoice note", disposition = "unsupported", reason = "no input for notes of the e-invoice yet" }
+"BG-1" = { name = "INVOICE NOTE", disposition = "input", input = "notes" }
+"BT-21" = { name = "Invoice note subject code", disposition = "input", input = "notes (subject-code of a note)" }
+"BT-22" = { name = "Invoice note", disposition = "input", input = "notes (the text of a note)" }
 # ---------------------------------------------------------------- BG-2 Process control
 "BG-2" = { name = "PROCESS CONTROL", disposition = "derived", source = "the profile (`zugferd`)" }
 "BT-23" = { name = "Business process type", disposition = "derived", source = "the Peppol billing process for the EN 16931 and XRechnung profiles" }
@@ -53,7 +53,7 @@
 # ---------------------------------------------------------------- BG-3 Preceding invoice reference
 "BG-3" = { name = "PRECEDING INVOICE REFERENCE", disposition = "input", input = "preceding-invoice-nr" }
 "BT-25" = { name = "Preceding Invoice reference", disposition = "input", input = "preceding-invoice-nr" }
-"BT-26" = { name = "Preceding Invoice issue date", disposition = "unsupported", reason = "no input for the date of the preceding invoice yet" }
+"BT-26" = { name = "Preceding Invoice issue date", disposition = "input", input = "preceding-invoice-date" }
 # ---------------------------------------------------------------- BG-4 Seller
 "BG-4" = { name = "SELLER", disposition = "input", input = "sender" }
 "BT-27" = { name = "Seller name", disposition = "input", input = "sender.name" }
@@ -122,9 +122,9 @@
 "BG-13" = { name = "DELIVERY INFORMATION", disposition = "input", input = "delivery-address (or recipient.delivery-address)", note = "an intra-community supply without delivery address states the buyer's address (BR-IC-12)" }
 "BT-70" = { name = "Deliver to party name", disposition = "input", input = "delivery-address.name" }
 "BT-71" = { name = "Deliver to location identifier", disposition = "input", input = "delivery-address.id, .location-id or .global-id" }
-"BT-72" = { name = "Actual delivery date", disposition = "derived", source = "the date of the items (`date` of `item`) when they share one, otherwise the invoice date" }
+"BT-72" = { name = "Actual delivery date", disposition = "derived", source = "service-period (a date), else the date of the items (`date` of `item`, `bundle`, `group`) when they share one, else the invoice date", note = "a credit note without service-period and dates states none: its own date is not the date of the supply" }
 # ---------------------------------------------------------------- BG-14 Invoicing period
-"BG-14" = { name = "DELIVERY OR INVOICE PERIOD", disposition = "derived", source = "the dates of the items (`date` of `item`) when they span a period" }
+"BG-14" = { name = "DELIVERY OR INVOICE PERIOD", disposition = "derived", source = "service-period (a period), else the dates of the items (`date` of `item`, `bundle`, `group`) when they span a period" }
 "BT-73" = { name = "Invoicing period start date", disposition = "derived", source = "the earliest date of the items" }
 "BT-74" = { name = "Invoicing period end date", disposition = "derived", source = "the latest date of the items" }
 # ---------------------------------------------------------------- BG-15 Deliver to address
@@ -202,7 +202,7 @@
 # ---------------------------------------------------------------- BG-25 Invoice line
 "BG-25" = { name = "INVOICE LINE", disposition = "input", input = "item and bundle (in line-items)", note = "a bundle with several VAT groups is stated as one line per group" }
 "BT-126" = { name = "Invoice line identifier", disposition = "derived", source = "the printed position of the item (`pos`), otherwise its number" }
-"BT-127" = { name = "Invoice line note", disposition = "unsupported", reason = "no input for notes of the lines yet" }
+"BT-127" = { name = "Invoice line note", disposition = "input", input = "item(note:)" }
 "BT-128" = { name = "Invoice line object identifier", disposition = "unsupported", reason = "no input for invoiced objects of the lines" }
 "BT-129" = { name = "Invoiced quantity", disposition = "input", input = "item(quantity:)" }
 "BT-130" = { name = "Invoiced quantity unit of measure code", disposition = "input", input = "item(unit:) (the `unit` module, a code or a known unit text)" }
@@ -210,9 +210,9 @@
 "BT-132" = { name = "Referenced purchase order line reference", disposition = "unsupported", reason = "no input for order line references" }
 "BT-133" = { name = "Invoice line Buyer accounting reference", disposition = "unsupported", reason = "no input for the buyer's booking accounts" }
 # ---------------------------------------------------------------- BG-26 Invoice line period
-"BG-26" = { name = "INVOICE LINE PERIOD", disposition = "unsupported", reason = "the dates of the items are stated for the invoice (BT-72, BG-14), not per line yet" }
-"BT-134" = { name = "Invoice line period start date", disposition = "unsupported", reason = "the dates of the items are stated for the invoice (BT-72, BG-14), not per line yet" }
-"BT-135" = { name = "Invoice line period end date", disposition = "unsupported", reason = "the dates of the items are stated for the invoice (BT-72, BG-14), not per line yet" }
+"BG-26" = { name = "INVOICE LINE PERIOD", disposition = "input", input = "item(date:), or the date of its bundle or group" }
+"BT-134" = { name = "Invoice line period start date", disposition = "input", input = "item(date:), the date or the start of the period" }
+"BT-135" = { name = "Invoice line period end date", disposition = "input", input = "item(date:), the date or the end of the period" }
 # ---------------------------------------------------------------- BG-27 Invoice line allowances
 "BG-27" = { name = "INVOICE LINE ALLOWANCES", disposition = "input", input = "item(modifier: discount(..))" }
 "BT-136" = { name = "Invoice line allowance amount", disposition = "derived", source = "the amount of the item discount" }
@@ -246,7 +246,7 @@
 "BT-156" = { name = "Item Buyer's identifier", disposition = "input", input = "item(item-id: (buyer: ..))" }
 "BT-157" = { name = "Item standard identifier", disposition = "input", input = "item(item-id: (standard: ..)) (a GTIN, scheme 0160)" }
 "BT-158" = { name = "Item classification identifier", disposition = "unsupported", reason = "no input for item classifications" }
-"BT-159" = { name = "Item country of origin", disposition = "unsupported", reason = "no input for the origin of items yet" }
+"BT-159" = { name = "Item country of origin", disposition = "input", input = "item(origin:)", note = "EN 16931 and XRechnung only" }
 # ---------------------------------------------------------------- BG-32 Item attributes
 "BG-32" = { name = "ITEM ATTRIBUTES", disposition = "unsupported", reason = "no input for item attributes" }
 "BT-160" = { name = "Item attribute name", disposition = "unsupported", reason = "no input for item attributes" }
