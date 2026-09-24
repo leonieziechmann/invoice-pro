@@ -2,7 +2,7 @@
 """Measure the compile time of invoices and the cost of the e-invoice path.
 
 Compiles every document several times, round-robin (so that load from other
-processes hits all documents alike), and reports medians. Two methods:
+processes hits all documents alike), and reports medians. Three methods:
 
   trace (default)  `typst compile --timings`: the whole compile (`compile
                    once`: evaluation, layout, PDF export) and the time spent
@@ -11,12 +11,22 @@ processes hits all documents alike), and reports medians. Two methods:
                    times, and they attribute the time, so they are the basis
                    of the budget.
   --wall           Wall-clock time of untraced compiles, for comparison.
+  --instructions   The instructions one compile executes (valgrind's
+                   cachegrind, `typst compile --jobs 1`, a fixed creation
+                   timestamp): reproducible to a few thousand, so one run per
+                   document tells changes far below the noise of a trace
+                   apart. It misses what the CPU waits for (page faults,
+                   cache misses): confirm a change with traces as well.
 
 Documents named `<name>-zf.typ` and `<name>-plain.typ` (see gen_bench.py) form
 a pair. For a pair, the cost of the e-invoice path is
 
-  trace:  e-invoice time of the zf compile / total time of the plain compile
-  wall:   wall time of the zf compile / wall time of the plain compile - 1
+  trace:         e-invoice time of the zf compile / total time of the plain
+                 compile
+  wall:          wall time of the zf compile / wall time of the plain
+                 compile - 1
+  instructions:  instructions of the zf compile / those of the plain
+                 compile - 1 (the e-invoice path and embedding its XML)
 
 The plain compile must not run any e-invoice code: its e-invoice time is
 reported as well and should be 0.
@@ -28,9 +38,9 @@ Limits turn the measurement into a check (exit status 1 when exceeded):
                         code (trace method only)
 
 Usage:
-  tools/perf/measure.py [--root DIR] [--runs 5] [--wall] [--json FILE]
-                        [--limit NAME=PERCENT ...] [--plain-limit-ms MS]
-                        documents...
+  tools/perf/measure.py [--root DIR] [--runs 5] [--wall | --instructions]
+                        [--jobs N] [--json FILE] [--limit NAME=PERCENT ...]
+                        [--plain-limit-ms MS] documents...
 
 Example (budget of the concept, section 6):
   tools/perf/gen_bench.py --sizes 5,50,300 --kinds b
@@ -38,12 +48,20 @@ Example (budget of the concept, section 6):
       --limit b-5=25 --limit b-50=15 --limit b-300=15 --plain-limit-ms 0.5
 
 Only the Python standard library is needed; `typst` must be on the PATH (or
-given with --typst).
+given with --typst), and `valgrind` for --instructions.
+
+Example (the difference a change makes, e.g. against the commit before it
+in a second checkout; see tools/perf/README.md):
+  tools/perf/measure.py --instructions --jobs 2 tools/perf/out/bench/b-5-*.typ
+  tools/perf/measure.py --instructions --jobs 2 --root /tmp/base \\
+      /tmp/base/tools/perf/out/bench/b-5-*.typ
 """
 
 import argparse
+import concurrent.futures
 import json
 import os
+import shutil
 import statistics
 import subprocess
 import sys
@@ -78,11 +96,73 @@ def compile_once(typst, root, document, out_dir, trace):
     return seconds, trace_path
 
 
+# The creation timestamp of the counted compiles, so that a document that
+# uses the date of the day compiles alike on every day (1980-01-01, as
+# tytanic's runs of the tests).
+TIMESTAMP = "315532800"
+
+
+def count_instructions(typst, root, document, out_dir):
+    """The instructions one compile of `document` executes (cachegrind's
+    "I refs"), with one thread, so that the count is reproducible."""
+    command = [
+        "valgrind", "--tool=cachegrind", "--cache-sim=no", "--cachegrind-out-file=/dev/null",
+        typst, "compile", "--jobs", "1", "--creation-timestamp", TIMESTAMP, "--root", root,
+        document, os.path.join(out_dir, _name(document) + ".pdf"),
+    ]
+    process = subprocess.run(command, capture_output=True, text=True)
+    for line in process.stderr.splitlines():
+        if "I refs" in line:
+            return int(line.split()[-1].replace(",", ""))
+    sys.stderr.write(process.stderr)
+    raise SystemExit(f"compilation failed: {document}")
+
+
+def measure_instructions(args, documents, names):
+    """The report of --instructions: one count per document, as the counts
+    do not vary between runs, and for every pair the instructions the
+    e-invoice adds."""
+    if shutil.which("valgrind") is None:
+        raise SystemExit("--instructions needs valgrind on the PATH")
+    with tempfile.TemporaryDirectory(prefix="invoice-pro-perf-") as out_dir:
+        with concurrent.futures.ThreadPoolExecutor(args.jobs) as pool:
+            counts = list(
+                pool.map(
+                    lambda document: count_instructions(
+                        args.typst, args.root, document, out_dir
+                    ),
+                    documents,
+                )
+            )
+    report = {
+        "method": "instructions",
+        "typst": subprocess.run(
+            [args.typst, "--version"], capture_output=True, text=True
+        ).stdout.strip(),
+        "documents": {name: {"instructions": n} for name, n in zip(names, counts)},
+        "pairs": {},
+    }
+    for name in names:
+        plain = report["documents"].get(name[: -len("-zf")] + "-plain")
+        if not name.endswith("-zf") or plain is None:
+            continue
+        zf = report["documents"][name]["instructions"]
+        report["pairs"][name[: -len("-zf")]] = {
+            "plain_instructions": plain["instructions"],
+            "zf_instructions": zf,
+            "einvoice_instructions": zf - plain["instructions"],
+            "overhead_pct": 100 * (zf / plain["instructions"] - 1),
+        }
+    return report
+
+
 def measure(args):
     documents = [os.path.abspath(d) for d in args.documents]
     names = [_name(d) for d in documents]
     if len(set(names)) != len(names):
         raise SystemExit("documents must have distinct file names")
+    if args.instructions:
+        return measure_instructions(args, documents, names)
     samples = {name: [] for name in names}
 
     with tempfile.TemporaryDirectory(prefix="invoice-pro-perf-") as out_dir:
@@ -146,6 +226,20 @@ def measure(args):
 
 
 def print_report(report):
+    if report["method"] == "instructions":
+        print(f"{report['typst']}, instructions of one compile (--jobs 1), in millions")
+        for name, entry in report["documents"].items():
+            print(f"{name:16s} {entry['instructions'] / 1e6:12.3f}")
+        if report["pairs"]:
+            print()
+        for pair, entry in report["pairs"].items():
+            print(
+                f"{pair:10s} e-invoice cost {entry['overhead_pct']:+6.2f} %"
+                f"  (plain {entry['plain_instructions'] / 1e6:.3f},"
+                f" zf {entry['zf_instructions'] / 1e6:.3f},"
+                f" e-invoice {entry['einvoice_instructions'] / 1e6:.3f})"
+            )
+        return
     print(f"{report['typst']}, {report['method']}, median of {report['runs']} runs")
     trace = report["method"] == "trace"
     header = f"{'document':16s} {'total':>10s}"
@@ -203,7 +297,16 @@ def main(argv=None):
         "--root", default=REPO, help="project root (default: the repository)"
     )
     parser.add_argument("--runs", type=int, default=5, help="compiles per document")
-    parser.add_argument("--wall", action="store_true", help="measure wall-clock time")
+    method = parser.add_mutually_exclusive_group()
+    method.add_argument("--wall", action="store_true", help="measure wall-clock time")
+    method.add_argument(
+        "--instructions",
+        action="store_true",
+        help="count the instructions of one compile per document (valgrind)",
+    )
+    parser.add_argument(
+        "--jobs", type=int, default=1, help="compiles counted in parallel (--instructions)"
+    )
     parser.add_argument("--typst", default="typst", help="typst executable")
     parser.add_argument("--json", help="also write the results to this file")
     parser.add_argument(

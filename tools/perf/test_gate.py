@@ -12,9 +12,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gate  # noqa: E402
 
 
-def row(lines, share, import_ms=5.0, serializer_ms=None, plain_einvoice_ms=0.0):
+def row(lines, share, import_ms=5.0, serializer_ms=None, plain_einvoice_ms=0.0, lazy_loaded=()):
     plain = 100.0 * lines
     return {
+        "lazy_loaded": list(lazy_loaded),
         "lines": lines,
         "plain_total_ms": plain,
         "zf_total_ms": plain * (1 + share / 100),
@@ -63,6 +64,12 @@ class Thresholds(unittest.TestCase):
         red, _ = gate.verdict(rows, None, False)
         self.assertTrue(any("1000 / 300" in m for m in red))
 
+    def test_lazy_loading(self):
+        red, _ = gate.verdict([row(5, 10.0, lazy_loaded=["src/zugferd/guard/rare.typ"])], None, False)
+        self.assertEqual(len(red), 1)
+        self.assertIn("src/zugferd/guard/rare.typ", red[0])
+        self.assertEqual(gate.verdict([row(5, 10.0)], None, False), ([], []))
+
     def test_missing_measurements_are_noted(self):
         self.assertEqual(gate.notes([row(50, 10.0, serializer_ms=20.0)]), [])
         self.assertEqual(len(gate.notes([row(50, 10.0)])), 1)
@@ -94,6 +101,22 @@ class Trace(unittest.TestCase):
         self.assertEqual(result["total"], 100)
         self.assertEqual(result["einvoice"], 40)  # 10 import + 30 call
         self.assertEqual(result["einvoice_import"], 10)
+        self.assertEqual(gate.lazy_loads(result["inclusive"]), [])
+
+    def test_lazy_loads_are_found_by_module_and_by_call(self):
+        registry = gate.function_key(*gate.LAZY_CALLS[0])
+        self.assertIsNotNone(registry, "LAZY_CALLS names a function that does not exist")
+        inclusive = {
+            "eval /src/zugferd/zugferd.typ:1": 5.0,
+            "eval /src/zugferd/guard/rare.typ:1": 1.0,
+            registry: 1.0,
+        }
+        self.assertEqual(
+            gate.lazy_loads(inclusive),
+            ["src/zugferd/guard/rare.typ", f"{gate.LAZY_CALLS[0][0]} ({gate.LAZY_CALLS[0][1]})"],
+        )
+        for module in gate.LAZY_MODULES:
+            self.assertTrue((gate.REPO / module).exists(), module)
 
 
 if __name__ == "__main__":

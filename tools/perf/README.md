@@ -15,7 +15,7 @@ e-invoice cost = time spent in code of src/zugferd/ (zf compile)
 
 "Time in code of `src/zugferd/`" counts every trace event of a file in `src/zugferd/` that is not nested in another one: the import of the e-invoice modules and the calls from outside, i.e. `process-zugferd` (model, validation, XML) and, in `"report"` mode, the report. It does not depend on line numbers. The total time is the `compile once` span: evaluation, layout and PDF export.
 
-A plain invoice (`zugferd: none`) must not run e-invoice code at all: the e-invoice modules are only loaded when `zugferd` is set.
+A plain invoice (`zugferd: none`) must not run e-invoice code at all: the e-invoice modules are only loaded when `zugferd` is set. An e-invoice loads the modules that only some invoices need (`LAZY_MODULES` and `LAZY_CALLS` of `gate.py`: the checked writer of the guard, the messages of failed checks, `registry.json`, ...) only when it needs them; the benchmark invoices are valid and have no warnings, so the gate fails when their compile loads one of them.
 
 Where the time goes is measured in the [budget table](#budget-table) below.
 
@@ -24,8 +24,8 @@ Where the time goes is measured in the [budget table](#budget-table) below.
 | Script               | Purpose                                                                                                                                                                           |
 | :------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `gen_bench.py`       | Writes the benchmark invoices `<kind>-<lines>-plain.typ` and `<kind>-<lines>-zf.typ` to `tools/perf/out/bench/` (ignored by git).                                                 |
-| `measure.py`         | Compiles documents several times (round-robin), prints medians and the e-invoice cost of each plain/zf pair, optionally checks limits.                                            |
-| `gate.py`            | The performance gate of CI (`scripts/perf-gate`, see `tests/TESTING.md`).                                                                                                         |
+| `measure.py`         | Compiles documents several times (round-robin), prints medians and the e-invoice cost of each plain/zf pair, optionally checks limits; `--instructions` counts instructions.      |
+| `gate.py`            | The performance gate of CI (`scripts/perf-gate`, see `tests/TESTING.md`), including the check that the benchmark invoices load no module they do not need.                        |
 | `trace_agg.py`       | Profile of a single `--timings` trace: phases, e-invoice time, inclusive and self time per function, module and loop; with `--modules`, what loading each e-invoice module costs. |
 | `compare_outputs.py` | Compiles documents in two checkouts and compares diagnostics, PDF bytes and, if they differ, the attachments (the XML) and the page text.                                         |
 
@@ -83,14 +83,15 @@ tools/perf/compare_outputs.py --base /tmp/base --head . --mode report --mode ign
 
 Timings of the same checkout vary from run to run, and part of the variation is systematic: the page faults of the allocator depend on the layout of the memory, which any change of the sources shifts. Two identical copies of the checkout measured up to about 1 ms apart in the median of the paired differences of 21 interleaved runs of the 5-line invoice, and removing an unused function measured 1 to 3 ms slower while it executed fewer instructions. A trace comparison therefore only resolves effects of more than about 1 ms at 5 lines. Compare A and B interleaved (A B, B A, ...), 21 runs or more, and take the median of the paired differences.
 
-Smaller effects show in the number of instructions a compile executes, which with `--jobs 1` is reproducible to a few thousand (with parallel jobs it varies by about 0.05 %):
+Smaller effects show in the number of instructions a compile executes, which with `--jobs 1` is reproducible to a few thousand (with parallel jobs it varies by about 0.05 %). `measure.py --instructions` compiles each document once with `valgrind --tool=cachegrind` (on the `PATH`), `typst compile --jobs 1` and a fixed creation timestamp, and prints the counts in millions and, for each plain/zf pair, the instructions the e-invoice adds; `--jobs N` counts N documents at a time:
 
 ```bash
-valgrind --tool=cachegrind --cache-sim=no --cachegrind-out-file=/dev/null \
-  typst compile --jobs 1 --root . tools/perf/out/bench/b-5-zf.typ /tmp/b.pdf 2>&1 | grep "I refs"
+tools/perf/measure.py --instructions --jobs 2 tools/perf/out/bench/b-5-*.typ
+# the same documents in a checkout of the commit before, for an A/B comparison
+tools/perf/measure.py --instructions --jobs 2 --root /tmp/base /tmp/base/tools/perf/out/bench/b-5-*.typ
 ```
 
-The count of the zf invoice minus that of the plain invoice is the work the e-invoice adds: the e-invoice path and embedding the XML in the PDF. Instructions miss what the CPU waits for (page faults, cache misses), so confirm a change with a trace as well.
+The count of the zf invoice minus that of the plain invoice is the work the e-invoice adds: the e-invoice path and embedding the XML in the PDF. A comment or an unused binding moves the count by less than 0.1 M, but other small changes can move it by a few hundred thousand instructions for reasons outside the change (removing six comment lines from the body of `invoice` measured +0.26 M), so treat differences below about 0.5 M at 5 lines with care. Instructions miss what the CPU waits for (page faults, cache misses), so confirm a change with a trace as well.
 
 ## Budget table
 

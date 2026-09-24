@@ -835,9 +835,10 @@ where the time in e-invoice code is every trace event of a file in `src/zugferd/
 | Level  | Condition                                                                                                                                     | Effect                                    |
 | :----- | :-------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------- |
 | red    | share above 25 % at any size, above 15 % at 50 or 300 lines; nightly: `process-zugferd` at 1000 lines more than 4 times the time at 300 lines | the job fails                             |
+| red    | a benchmark invoice with e-invoice loads a module or data file that only some invoices need (`LAZY_MODULES`, `LAZY_CALLS` of `gate.py`)       | the job fails                             |
 | yellow | share above 15 % at 5 lines; module import above 12 ms; serializer above 0.5 ms per line                                                      | a warning; `--yellow-fails` for a release |
 
-`--plain-limit-ms 0.5` turns a plain invoice that spends time in e-invoice code into a red result; it becomes part of the CI job once the e-invoice modules are only loaded when `zugferd` is set. The benchmark generator and the trace aggregation are those of the performance tools in `tools/perf/` when they are present.
+The benchmark invoices are valid and have no warnings, so they need none of the modules the e-invoice path loads only when an invoice needs them (e.g. the checked writer of the guard, the messages of failed checks, `registry.json`); the gate reads which modules each compile evaluated from its trace, so that lazy loading cannot regress unnoticed. `--plain-limit-ms 0.5` turns a plain invoice that spends time in e-invoice code into a red result; it becomes part of the CI job once the e-invoice modules are only loaded when `zugferd` is set. The benchmark generator and the trace aggregation are those of the performance tools in `tools/perf/` when they are present. For a comparison of two checkouts below the noise of traces, `tools/perf/measure.py --instructions` counts the instructions of one compile (see `tools/perf/README.md`).
 
 #### Factur-X PDF Check (Expected Failure)
 
