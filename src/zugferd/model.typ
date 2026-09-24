@@ -83,31 +83,37 @@
   if result == "" { none } else { result }
 }
 
-#let _sum(values) = values.fold(_zero, (total, value) => total + value)
-
-// The value of `key` in `dict`. The root context fills missing values with
-// placeholders such as "#invoice-nr" or "#sender.city-name" for the visual
-// invoice; those count as missing here.
-#let _field(dict, key) = {
-  let value = dict.at(key, default: none)
-  if (
-    type(value) == str
-      and (
-        value == "#" + key
-          or (value.starts-with("#") and value.ends-with("." + key))
-      )
-  ) { none } else { value }
+// A loop rather than `fold`, which would call a closure per value.
+#let _sum(values) = {
+  let total = _zero
+  for value in values { total += value }
+  total
 }
 
-// ISO 3166-1 alpha-2 code of a party's country.
-#let country-code(party) = {
-  let country = party.at("country", default: none)
+// The value of the key `key` of a party or the root context, `none` for the
+// placeholder the root context fills a missing value with for the visual
+// invoice, e.g. "#invoice-nr" or "#sender.city-name". Called with the value
+// rather than the dictionary, which Typst would hash on every call.
+#let _unset(value, key) = if (
+  type(value) == str
+    and (
+      value == "#" + key
+        or (value.starts-with("#") and value.ends-with("." + key))
+    )
+) { none } else { value }
+
+// ISO 3166-1 alpha-2 code of a country: a country of the `country` module or
+// its code.
+#let _country-code(country) = {
   let code = if type(country) == dictionary {
     country.at("code", default: none)
   } else { country }
   let code = if type(code) in (str, content) { compact(code) } else { none }
   if code == none { none } else { upper(code) }
 }
+
+// ISO 3166-1 alpha-2 code of a party's country.
+#let country-code(party) = _country-code(party.at("country", default: none))
 
 // Electronic address schemes (EAS) for national VAT identification numbers,
 // keyed by the VAT ID prefix (Greece uses "EL"). Only schemes of the EAS code
@@ -175,21 +181,26 @@
   let nested = if type(contact) == dictionary { contact } else if (
     contact != none
   ) { (name: contact) } else { (:) }
-  let result = (
-    name: text-or-none(first-of(
-      nested.at("name", default: none),
-      party.at("contact-name", default: none),
-    )),
-    phone: text-or-none(first-of(
-      nested.at("phone", default: none),
-      party.at("phone", default: none),
-    )),
-    email: compact(first-of(
-      nested.at("email", default: none),
-      party.at("email", default: none),
-    )),
+  let name = first-of(
+    nested.at("name", default: none),
+    party.at("contact-name", default: none),
   )
-  if result.values().all(value => value == none) { none } else { result }
+  let phone = first-of(
+    nested.at("phone", default: none),
+    party.at("phone", default: none),
+  )
+  let email = first-of(
+    nested.at("email", default: none),
+    party.at("email", default: none),
+  )
+  let result = (
+    name: if name != none { text-or-none(name) },
+    phone: if phone != none { text-or-none(phone) },
+    email: if email != none { compact(email) },
+  )
+  if result.name == none and result.phone == none and result.email == none {
+    none
+  } else { result }
 }
 
 /// Retrieves the electronic address (BT-34, BT-49) of a party: the explicit
@@ -218,7 +229,7 @@
       }
       return (scheme: scheme, id: id)
     }
-  } else if explicit != auto {
+  } else if explicit != auto and explicit != none {
     let id = compact(explicit)
     if id != none {
       return (scheme: if id.contains("@") { "EM" }, id: id)
@@ -271,7 +282,9 @@
   let global-ids = ()
   let global-id-keys = ()
   for key in keys {
-    let value = _scheme-id(party.at(key, default: none))
+    let value = party.at(key, default: none)
+    if value == none { continue }
+    value = _scheme-id(value)
     if value == none { continue }
     if value.scheme == none {
       if value.id not in ids {
@@ -420,7 +433,10 @@
   // A key standing for the city or post code loses nothing next to a city
   // line whose post code was recognized, one standing for the country (e.g.
   // `county`) nothing next to a `country` the party states.
-  let has-post-code = text-or-none(_field(party, "post-code")) != none
+  let has-post-code = (
+    text-or-none(_unset(party.at("post-code", default: none), "post-code"))
+      != none
+  )
   let has-country = party.at(
     "country-explicit",
     default: not _is-unset(party.at("country", default: none)),
@@ -470,40 +486,53 @@
 
 // --- Parties -------------------------------------------------------------------
 
+// The plain text of the value of the key `key` of a party (see `_unset`), or
+// `none`.
+#let _key-text(value, key) = if value == none { none } else {
+  text-or-none(_unset(value, key))
+}
+
 #let _address-model(party) = {
   let raw-lines = party.at("address-lines", default: ())
-  let lines = if type(raw-lines) == array { raw-lines } else { (raw-lines,) }
+  let lines = ()
+  for line in if type(raw-lines) == array { raw-lines } else { (raw-lines,) } {
+    let text = if line != none { text-or-none(line) }
+    if text != none { lines.push(text) }
+  }
   (
-    lines: lines.map(text-or-none).filter(line => line != none),
-    city: text-or-none(_field(party, "city-name")),
-    post-code: text-or-none(_field(party, "post-code")),
-    state: text-or-none(_field(party, "state")),
-    country: country-code(party),
+    lines: lines,
+    city: _key-text(party.at("city-name", default: none), "city-name"),
+    post-code: _key-text(party.at("post-code", default: none), "post-code"),
+    state: _key-text(party.at("state", default: none), "state"),
+    country: _country-code(party.at("country", default: none)),
     // Whether the party states its country (`country` or `region`); otherwise
     // it is the country of the locale or, for a delivery address, the buyer's.
     country-explicit: party.at("country-explicit", default: true) != false,
   )
 }
 
-// The name of a party (BT-27, BT-44, BT-70). A name given as several lines is
-// one name, its lines joined by ", " as in the inline sender line.
-#let _party-name(party) = {
-  let name = first-of(_field(party, "name-inline"), _field(party, "name"))
-  if type(name) == array {
-    name = name.map(text-or-none).filter(line => line != none).join(", ")
-  }
-  text-or-none(name)
-}
-
 // The text of a party detail that may be given as several lines, e.g.
 // `legal-info: ("Sitz: München", "Amtsgericht München, HRB 98765")`: its
 // lines joined by ", ", as `info` prints them.
 #let _lines-text(value) = {
+  if value == none { return none }
   if type(value) == array {
-    value = value.map(text-or-none).filter(line => line != none).join(", ")
+    let lines = ()
+    for line in value {
+      let text = if line != none { text-or-none(line) }
+      if text != none { lines.push(text) }
+    }
+    value = lines.join(", ")
   }
   text-or-none(value)
 }
+
+// The name of a party (BT-27, BT-44, BT-70). A name given as several lines is
+// one name, its lines joined by ", " as in the inline sender line.
+#let _party-name(party) = _lines-text(first-of(
+  _unset(party.at("name-inline", default: none), "name-inline"),
+  _unset(party.at("name", default: none), "name"),
+))
 
 // A typed identifier of the `id` module (e.g. `id.siret(..)`): a dictionary
 // with the `kind` of the identifier and the `problems` found when it was made.
@@ -564,22 +593,32 @@
 /// -> dictionary
 #let party-model(party, role: none, use-vat-id: true) = {
   if type(party) != dictionary { party = (:) }
-  let vat-id = compact(party.at("vat-id", default: none))
+  let vat-id = party.at("vat-id", default: none)
+  if vat-id != none { vat-id = compact(vat-id) }
   if vat-id != none { vat-id = upper(vat-id) }
   let id-keys = if role == "ship-to" {
     ("id", "location-id", "global-id")
   } else {
     ("id", "global-id")
   }
+  // The details most parties do not give.
+  let trading-name = party.at("trading-name", default: none)
+  let legal-id = party.at("legal-id", default: none)
+  let legal-info = party.at("legal-info", default: none)
+  let tax-nr = party.at("tax-nr", default: none)
   (
     (
       name: _party-name(party),
-      trading-name: _lines-text(_field(party, "trading-name")),
-      legal-id: _scheme-id(party.at("legal-id", default: none)),
-      legal-info: _lines-text(_field(party, "legal-info")),
+      trading-name: if trading-name != none {
+        _lines-text(_unset(trading-name, "trading-name"))
+      },
+      legal-id: if legal-id != none { _scheme-id(legal-id) },
+      legal-info: if legal-info != none {
+        _lines-text(_unset(legal-info, "legal-info"))
+      },
       vat-id: if use-vat-id { vat-id } else { none },
       stated-vat-id: vat-id,
-      tax-nr: _identifier(party.at("tax-nr", default: none)),
+      tax-nr: if tax-nr != none { _identifier(tax-nr) },
       address: _address-model(party),
       electronic-address: get-electronic-address(party),
       contact: if role != "buyer" or _states-contact(party) {
@@ -870,6 +909,11 @@
 // With gross prices, `round-price` rounds the net price as the invoice
 // rounds unit prices (the `money-fine` rounding of the locale). `unit` is the
 // unit of the item as `resolve-unit` resolves it, resolved here when `auto`.
+//
+// It runs once per line, so it calls other functions only where there is
+// something to convert: the numbers of a computed item are decimals already,
+// and most of its texts are not given (each call of a function costs a few
+// microseconds).
 #let line-model(
   item,
   index,
@@ -881,10 +925,18 @@
   if type(tax) != dictionary { tax = (:) }
   let rate = to-ratio(tax.at("rate", default: 0))
 
-  let quantity = to-decimal(item.at("quantity", default: 1))
-  let base-quantity = to-decimal(item.at("base-quantity", default: 1))
-  let price = to-decimal(item.at("price", default: 0))
+  let quantity = item.at("quantity", default: 1)
+  if type(quantity) != decimal { quantity = to-decimal(quantity) }
+  let base-quantity = item.at("base-quantity", default: 1)
+  if type(base-quantity) != decimal {
+    base-quantity = to-decimal(base-quantity)
+  }
+  let price = item.at("price", default: 0)
+  if type(price) != decimal { price = to-decimal(price) }
+  let net = item.at("total", default: 0)
+  if type(net) != decimal { net = to-decimal(net) }
   if inclusive {
+    net = _net(net, rate, inclusive)
     price = round-price(price / (1 + rate))
   }
   // BR-27: the item net price must not be negative, the quantity carries the
@@ -914,14 +966,25 @@
 
   if unit == auto { unit = resolve-unit(item.at("unit", default: none)) }
 
+  // The texts of the item, most of them not given.
+  let pos = item.at("pos", default: none)
+  let id = if pos != none { text-or-none(pos) }
+  let description = item.at("description", default: none)
+  let standard-id = item-id.at("standard", default: none)
+  let seller-id = item-id.at("seller", default: none)
+  let buyer-id = item-id.at("buyer", default: none)
+  let note = item.at("note", default: none)
+  if note != none { note = plain-text(note, keep-newlines: true) }
+  let date = item.at("date", default: none)
+
   (
     index: index,
-    id: first-of(text-or-none(item.at("pos", default: none)), str(index + 1)),
+    id: if id != none { id } else { str(index + 1) },
     name: text-or-none(item.at("name", default: none)),
-    description: text-or-none(item.at("description", default: none)),
-    standard-id: compact(item-id.at("standard", default: none)),
-    seller-id: text-or-none(item-id.at("seller", default: none)),
-    buyer-id: text-or-none(item-id.at("buyer", default: none)),
+    description: if description != none { text-or-none(description) },
+    standard-id: if standard-id != none { compact(standard-id) },
+    seller-id: if seller-id != none { text-or-none(seller-id) },
+    buyer-id: if buyer-id != none { text-or-none(buyer-id) },
     quantity: quantity,
     base-quantity: base-quantity,
     unit-code: unit.code,
@@ -929,7 +992,7 @@
     // something else (see `resolve-unit`).
     unit-issue: unit.issue,
     price: price,
-    net: _net(to-decimal(item.at("total", default: 0)), rate, inclusive),
+    net: net,
     key: _tax-key(tax),
     category: text-or-none(tax.at("category", default: none)),
     rate: rate,
@@ -938,13 +1001,9 @@
     allowances: allowances,
     charges: charges,
     // BT-127: the note of the item, with its line breaks.
-    note: {
-      let note = item.at("note", default: none)
-      if note != none { note = plain-text(note, keep-newlines: true) }
-      if note == "" { none } else { note }
-    },
+    note: if note == "" { none } else { note },
     // BG-26: the date or period of the item as `(start, end)`.
-    period: _line-period(item.at("date", default: none)),
+    period: if date != none { _line-period(date) },
     // BT-159: the country of origin, an ISO 3166-1 code.
     origin: item.at("origin", default: none),
   )
@@ -1179,7 +1238,10 @@
 
   // BR-O-02: an invoice not subject to VAT carries no VAT identifiers. MINIMUM
   // has no VAT breakdown; there the seller VAT ID is needed for BR-CO-26.
-  let categories = taxes.values().map(tax => tax.at("category", default: none))
+  let categories = ()
+  for tax in taxes.values() {
+    categories.push(tax.at("category", default: none))
+  }
   let outside-scope = profile.id != "minimum" and "O" in categories
 
   let seller = seller-model(sender, use-vat-id: not outside-scope)
@@ -1258,15 +1320,19 @@
       )
     })
 
-  let line-total = _sum(lines.map(line => line.net))
-  let allowance-total = _sum(
-    allowance-charges.filter(e => not e.charge).map(e => e.amount),
-  )
-  let charge-total = _sum(
-    allowance-charges.filter(e => e.charge).map(e => e.amount),
-  )
+  // Loops rather than `map` and `filter`, which call a closure per line.
+  let line-total = _zero
+  for line in lines { line-total += line.net }
+  let allowance-total = _zero
+  let charge-total = _zero
+  for entry in allowance-charges {
+    if entry.charge { charge-total += entry.amount } else {
+      allowance-total += entry.amount
+    }
+  }
   let net-total = line-total - allowance-total + charge-total
-  let tax-total = _sum(breakdown.map(tax => tax.amount))
+  let tax-total = _zero
+  for tax in breakdown { tax-total += tax.amount }
   let gross-total = net-total + tax-total
   let means = if payment-means != none { payment-means } else {
     resolve-payment-means(
@@ -1299,7 +1365,7 @@
   }
 
   // The service period and the date format the invoice prints it with.
-  let service-period = _service-period(ctx, items)
+  let service-period = service-period-of(ctx, items)
   let format-date = locale.at("format", default: (:)).at("date", default: none)
   let period-text = if type(format-date) == function {
     text-or-none(format-service-period(service-period, format-date))
@@ -1392,7 +1458,7 @@
     currency-decimals: currency-meta.at("decimals", default: 2),
     printed-currency: printed-currency,
     invoice: (
-      number: text-or-none(_field(ctx, "invoice-nr")),
+      number: _key-text(ctx.at("invoice-nr", default: none), "invoice-nr"),
       type-code: document.code,
       // The resolved `document-type`, and the title printed on the document
       // (the subject without the invoice number), which must not name
