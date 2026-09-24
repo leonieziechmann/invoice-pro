@@ -39,8 +39,11 @@ tests/
 └── zugferd/               # Unit tests of the e-invoice (ZUGFeRD) pipeline
     ├── xml/               # Plain text, number formatting, XML serialization
     ├── guard/             # XML write guard: structure, values, names, diagnostics
+    ├── roundtrip/         # Round trip of the write guard (G3) and the strict mode
     ├── codelists/         # Code lists of the rules, codes of the newest lists
     ├── model/             # E-invoice data model built from an invoice
+    ├── equivalence/       # The XML states what the invoice prints (IP-PRINT-01, IP-CALC-*)
+    ├── prices/            # Unit prices: net prices of gross prices, base quantity
     ├── validate/          # Business rule checks (diagnostics), the rule registry
     ├── parties/           # Parties: electronic addresses, identifiers, keys
     ├── parties-invoice/   # Party inputs of whole invoices, XML and diagnostics
