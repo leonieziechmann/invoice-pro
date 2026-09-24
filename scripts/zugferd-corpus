@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # E-invoice conformance corpus: checks that every business term of EN 16931
-# has a disposition (tools/zugferd/bt_disposition.py), generates the corpus of
-# invoices (tools/zugferd/corpus/gen.py), then compiles every case once and
-# compares invoice-pro's own verdict and the XML with the official validators
-# (XSD, Mustang and KoSIT) and the semantic oracles (tools/zugferd/run.py).
+# has a disposition (tools/zugferd/bt_disposition.py) and every rule id of the
+# official validators a class (tools/zugferd/rule_coverage.py), generates the
+# corpus of invoices (tools/zugferd/corpus/gen.py), then compiles every case
+# once and compares invoice-pro's own verdict and the XML with the official
+# validators (XSD, Mustang and KoSIT) and the semantic oracles
+# (tools/zugferd/run.py).
 # See tests/TESTING.md, "E-invoice conformance and performance (CI)".
 #
 # Usage: zugferd-corpus [--population pr|nightly|legal] [run.py options ...]
@@ -49,8 +51,18 @@ done
 "$PYTHON" tools/zugferd/bt_disposition.py
 # The tables of the XML write guard are those the generator compiles from the
 # pinned artefacts and src/zugferd/build.typ (drift test), and the guard
-# passes the mutation test against the XSD and Mustang (tests/TESTING.md).
+# passes the mutation test against the XSD and Mustang (tests/TESTING.md);
+# the nightly run takes more mutants and compares them with KoSIT as well.
 "$PYTHON" tools/zugferd/gen_guard.py --check
-"$PYTHON" tools/zugferd/mutate.py
+if [ "$population" = "nightly" ]; then
+  "$PYTHON" tools/zugferd/mutate.py --per-operator 4 --kosit
+else
+  "$PYTHON" tools/zugferd/mutate.py
+fi
+# Every rule id of the official validators has a class in
+# tools/zugferd/rule-coverage.toml, every IP rule its basis and tests, and
+# the table in docs/docs/e-invoicing.md the numbers; run.py then checks that
+# the parity fixtures (tools/zugferd/corpus/rules/) pass.
+"$PYTHON" tools/zugferd/rule_coverage.py --json build/zugferd/rule-coverage.json
 "$PYTHON" tools/zugferd/corpus/gen.py --population "$population"
 exec "$PYTHON" tools/zugferd/run.py ${run_args[@]+"${run_args[@]}"}

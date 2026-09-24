@@ -10,6 +10,8 @@ on:
       - "template/**"
       - "tools/**"
       - "scripts/**"
+      # The table of the rule coverage (tools/zugferd/rule_coverage.py).
+      - "docs/docs/e-invoicing.md"
       - "flake.nix"
       - "flake.lock"
   pull_request:
@@ -22,6 +24,8 @@ on:
       - "template/**"
       - "tools/**"
       - "scripts/**"
+      # The table of the rule coverage (tools/zugferd/rule_coverage.py).
+      - "docs/docs/e-invoicing.md"
       - "flake.nix"
       - "flake.lock"
   # Nightly: a larger corpus with random invoices outside the legal
@@ -78,8 +82,10 @@ jobs:
   # FALSE_NEGATIVE, FALSE_POSITIVE or CRASH on the legal population, no
   # failure outside tools/zugferd/known-issues.toml, no known issue that no
   # longer occurs, no undocumented disagreement of Mustang and KoSIT
-  # (tools/zugferd/validator-differences.toml). Pull requests run the PR
-  # population, the nightly run the larger one with random invoices.
+  # (tools/zugferd/validator-differences.toml), no official rule id without
+  # a class and no failing parity fixture (tools/zugferd/rule-coverage.toml).
+  # Pull requests run the PR population, the nightly run the larger one with
+  # random invoices and more mutants of the write guard, also against KoSIT.
   corpus:
     name: Conformance corpus
     runs-on: ubuntu-latest
@@ -116,6 +122,7 @@ jobs:
           name: zugferd-corpus
           path: |
             build/zugferd/results.json
+            build/zugferd/rule-coverage.json
             build/zugferd/corpus/
             build/zugferd/out/*.xml
             build/zugferd/kosit.log

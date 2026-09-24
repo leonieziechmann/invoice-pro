@@ -977,8 +977,9 @@ def main(argv=None):
     if args.explain or args.id:
         print(explain(decisions, set(args.id.split(",")) if args.id else None))
     if args.json:
-        Path(args.json).write_text(json.dumps(as_json(inventory, decisions, summary), indent=1) + "\n",
-                                   encoding="utf-8")
+        out = Path(args.json)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(as_json(inventory, decisions, summary), indent=1) + "\n", encoding="utf-8")
     print(report(inventory, decisions, summary, problems, ip))
     return 1 if problems else 0
 
