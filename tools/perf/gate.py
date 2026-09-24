@@ -24,9 +24,11 @@ Thresholds (concept 6.5)
           an e-invoice loads a module or data that only some invoices need
           (LAZY_MODULES, LAZY_CALLS): the benchmark invoices are valid and
           need none of them, so lazy loading cannot regress unnoticed
-  YELLOW  share > 15 % at 5 lines (blocks a release, not a PR; --yellow-fails
-          turns it red); component budgets: module import > 12 ms,
-          serializer > 0.5 ms per line
+  YELLOW  share > 15 % at 5 lines (informational: the maintainer accepts it
+          as long as the live preview stays comfortable, which
+          `measure.py --watch` measures; --yellow-fails turns it red);
+          component budgets: module import > 12 ms, serializer > 0.5 ms per
+          line
 
 Exit status: 1 when a threshold is red, 0 otherwise.
 

@@ -4,7 +4,7 @@ Scripts to measure what the e-invoice (ZUGFeRD / Factur-X) path costs and to che
 
 ## Budget
 
-The e-invoice path of an invoice may cost at most **15 %** (target) and never more than **25 %** (hard ceiling) of the compile time of the same invoice without e-invoice, measured on the benchmark invoices with 5, 50 and 300 lines, median of at least 5 runs.
+The e-invoice path of an invoice may cost at most **15 %** (target) and never more than **25 %** (hard ceiling) of the compile time of the same invoice without e-invoice, measured on the benchmark invoices with 5, 50 and 300 lines, median of at least 5 runs. At 5 lines, the target is informational: the maintainer accepts a share above 15 % there as long as the live preview stays comfortable (see [Live preview](#live-preview)); the hard ceiling and the targets at 50 and 300 lines hold.
 
 The cost is measured with `typst compile --timings` rather than with a stopwatch: traces vary by a few percent between runs, wall-clock times of a 300-line invoice on a shared machine by 100 ms and more, and a trace shows where the time goes. The metric is
 
@@ -24,7 +24,7 @@ Where the time goes is measured in the [budget table](#budget-table) below.
 | Script               | Purpose                                                                                                                                                                           |
 | :------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `gen_bench.py`       | Writes the benchmark invoices `<kind>-<lines>-plain.typ` and `<kind>-<lines>-zf.typ` to `tools/perf/out/bench/` (ignored by git).                                                 |
-| `measure.py`         | Compiles documents several times (round-robin), prints medians and the e-invoice cost of each plain/zf pair, optionally checks limits; `--instructions` counts instructions.      |
+| `measure.py`         | Compiles documents round-robin, prints medians and the e-invoice cost of each plain/zf pair, checks limits; `--instructions` counts instructions, `--watch` times a live preview. |
 | `gate.py`            | The performance gate of CI (`scripts/perf-gate`, see `tests/TESTING.md`), including the check that the benchmark invoices load no module they do not need.                        |
 | `trace_agg.py`       | Profile of a single `--timings` trace: phases, e-invoice time, inclusive and self time per function, module and loop; with `--modules`, what loading each e-invoice module costs. |
 | `compare_outputs.py` | Compiles documents in two checkouts and compares diagnostics, PDF bytes and, if they differ, the attachments (the XML) and the page text.                                         |
@@ -54,6 +54,14 @@ tools/perf/measure.py --runs 5 tools/perf/out/bench/b-*.typ \
 ```
 
 `--wall` measures wall-clock time instead (untraced compiles), for comparison.
+
+`--watch` measures the live preview, as an editor runs it with `typst watch`: it starts `typst watch` on a copy of each document (a hidden file next to it), changes the price of the first item to a new value before each round, as someone typing it, and reads the recompile time Typst reports. The two documents of a pair recompile one after the other, so the median of the differences of the rounds is what the e-invoice adds to a recompile:
+
+```bash
+tools/perf/measure.py --watch --runs 21 tools/perf/out/bench/[br]-*.typ
+```
+
+A recompile reuses what the edit does not touch (Typst memoizes the evaluation and the layout, and parses a module only once), so it takes less time than a cold compile; on a shared machine, its time varies by about 10 %.
 
 Profile a single compile:
 
@@ -107,7 +115,7 @@ Instructions executed (millions, `measure.py --instructions`, see [above](#measu
 | `r`: e-invoice path          |   154.6 → 141.5 |    284.4 → 260.2 |  1 024.2 → 938.8 |
 | Change of the e-invoice path | −8.7 % / −8.5 % | −10.0 % / −8.5 % | −10.7 % / −8.3 % |
 
-The plain compiles changed by −0.9 M (`b`) and −0.7 M (`r`) instructions at 5 lines, −9 M (`r`) at 300 lines, and less than 0.01 % otherwise.
+The plain compiles changed by −0.9 M (`b`) and −0.7 M (`r`) instructions at 5 lines, −9 M (`r`) at 300 lines, and less than 0.01 % otherwise. The IBAN and BIC helpers (`utils/iban.typ`, `utils/bic.typ`) then stopped compiling a whitespace pattern, which saved about 2 M instructions more on every compile at 5 lines, with or without e-invoice (plain: −2.2 M `b`, −1.9 M `r`), and leaves the e-invoice path as it is.
 
 What each change saved at 5 lines (`b-5`, e-invoice path, each against the commit before it):
 
@@ -136,11 +144,26 @@ Loading the modules of the serializer, before and after (KiB): `guard/write.typ`
 
 The first pass (6125e79 → 7a631be) cut the e-invoice path from 196.6 to 162.7 M instructions at 5 lines: the guard tables became JSON (0.8 ms to load instead of 2.4 ms), the elements that occur once no longer had a memoized check of their structure, and the modules of rare cases loaded only when needed.
 
+### Live preview
+
+The maintainer accepts an e-invoice share above 15 % at 5 lines as long as the live preview stays comfortable. A preview (`typst watch`, the preview of an editor) recompiles the document after each edit and reuses what the edit leaves alone: the parsed modules and the results of the calls whose inputs stay the same, such as the lines of the invoice that did not change. `measure.py --watch --runs 21` changed the price of the first item before each recompile. The times are medians of 21 recompiles, as ranges over the runs on the shared machine (one at 300 lines, two to six otherwise); the instructions are those of one recompile (cachegrind on `typst watch --jobs 1`, three edits against none):
+
+| Invoice        | Recompile without e-invoice | Recompile with e-invoice | Instructions per recompile, without → with |
+| :------------- | --------------------------: | -----------------------: | -----------------------------------------: |
+| `b`, 5 lines   |                  105–111 ms |               114–118 ms |                                531 → 550 M |
+| `r`, 5 lines   |                  122–132 ms |               135–142 ms |                                596 → 625 M |
+| `b`, 50 lines  |                  317–337 ms |               326–338 ms |                            1 480 → 1 528 M |
+| `r`, 50 lines  |                  345–381 ms |               366–415 ms |                            1 663 → 1 725 M |
+| `b`, 300 lines |                      1.73 s |                   1.79 s |                                          – |
+| `r`, 300 lines |                      2.10 s |                   2.10 s |                                          – |
+
+After an edit, the preview of an e-invoice with 5 lines is up to date in about an eighth of a second, some 10 ms later than without e-invoice: the e-invoice adds 19 to 29 M instructions (3 to 5 %) to a recompile, while it adds 125 to 142 M (11 %) to a cold compile. At 50 lines it adds 3 to 4 %, less than the times vary between runs; at 300 lines, the invoice itself takes about 2 s per recompile.
+
 ## Keeping the e-invoice path cheap
 
 These rules come from measurements of the e-invoice path. They apply to all code that runs for every invoice or for every line. Instruction counts are from `cachegrind` (see above); on the test machine, the e-invoice path executes about 4 000 instructions per microsecond.
 
-1. Compile regular expressions once at module level, never inside a function: `regex(..)` costs 0.05 to 0.4 ms per call.
+1. Compile regular expressions once at module level, never inside a function: `regex(..)` costs 0.05 to 0.4 ms per call. Prefer a string method where one does the job: a class of all Unicode characters of a kind, such as `\s`, takes about 1 M instructions to compile, which a module pays for every compile that loads it, while `split()` splits at the same whitespace (`normalize-iban`, `plain-text`).
 2. A function called per line gets the line (and small flags), never the whole model or `ctx`. Typst hashes the arguments of every closure call to memoize it; for a 300-line model that is about 70 µs per call.
 3. Use `for` loops instead of `.map(..)`, `.filter(..)` or `.find(..)` with a closure in code that runs per line or per element (a few µs per closure call, plus hashing).
 4. Look codes up in a dictionary (a hash lookup, about 500 instructions) or in a string of codes between spaces (`" " + code + " " in list`, about 6 000 instructions in a list of 2 000 codes), never in an array (about 60 000). A dictionary costs about 4 400 instructions per code to build when its module loads, a string little more than reading it; the code lists that every e-invoice loads are strings for that reason (`guard/lists.json`, whose lines of codes `guard/lists.typ` joins).
