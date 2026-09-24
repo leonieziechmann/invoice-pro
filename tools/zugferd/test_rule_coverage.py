@@ -590,10 +590,11 @@ class WithoutFixture(unittest.TestCase):
         # The registry names the official ids its rules cover, but not their
         # Factur-X aliases, which the inventory counts under the rule itself
         # (FX-SCH-A-000011 of BR-02). The rule modules name the Factur-X ids
-        # they report, e.g. the one of the currency code list in MINIMUM.
+        # they report, e.g. the one of the currency code list in MINIMUM,
+        # which rare.typ builds for a code not every validation accepts.
         self.assertIn(rc.REPO / "src" / "zugferd" / "rules" / "registry.json", found["BR-02"])
         self.assertNotIn("FX-SCH-A-000011", found)
-        self.assertEqual(found["FX-SCH-A-000040"], [rc.REPO / "src" / "zugferd" / "rules" / "engine.typ"])
+        self.assertEqual(found["FX-SCH-A-000040"], [rc.REPO / "src" / "zugferd" / "rules" / "rare.typ"])
         # The guard's tables name the rules it compiles: they do not count.
         self.assertNotIn("BR-01", found)
         # A prefix the source completes is no rule id.
