@@ -3,9 +3,9 @@
 
 // The code lists of the XML guard. Each is the intersection of the
 // lists of every validator that applies where a profile uses it (see
-// the profile modules next to this file). A list is a string of its
-// codes, each between two spaces: a code without spaces is in a list
-// when `" " + code + " "` is in the string.
+// the tables of the profiles, <profile>.json next to this file). A
+// list is a string of its codes, each between two spaces: a code
+// without spaces is in a list when `" " + code + " "` is in the string.
 
 #let _codes(..parts) = " " + parts.pos().join(" ") + " "
 
