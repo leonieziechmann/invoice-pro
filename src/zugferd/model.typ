@@ -24,6 +24,7 @@
   service-period-label, service-period-text-label,
 )
 #import "../logic/printed.typ": shows-identifier, shows-text
+#import "../logic/currency.typ": currency-code
 #import "xml.typ": fmt-number
 
 #let _zero = decimal("0")
@@ -1610,8 +1611,7 @@
 
   let locale = ctx.at("locale", default: (:))
   let currency-meta = locale.at("currency", default: (:))
-  let currency = compact(currency-meta.at("code", default: none))
-  if currency != none { currency = upper(currency) }
+  let currency = currency-code(locale)
   // How the invoice prints an amount (`format.currency`) and a unit price
   // (`format.currency-fine`), to check that it prints the currency the XML
   // states (BT-5).

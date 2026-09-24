@@ -97,6 +97,19 @@
   #debit
   #bank-details(iban: "DE89370400440532013000", qr-code: (display: true))
 ]
+// The currency code of the locale is read as the e-invoice reads it (BT-5):
+// "eur" is the euro, so the direct debit is a SEPA direct debit
+#let lower-case-euro = locale.de-de.with((region: (currency: (code: "eur"))))
+#test-invoice("debit-eur", lang: lower-case-euro)[
+  #items
+  #payment-goal(days: 14)
+  #debit
+]
+#test-invoice("bank-eur", lang: lower-case-euro)[
+  #items
+  #payment-goal(days: 14)
+  #bank
+]
 #test-invoice(
   "custom",
   lang: locale.en-de.with({
@@ -182,6 +195,17 @@
     "Der Gesamtbetrag in Höhe von 119,00 € wurde bezahlt.\nFälliger Betrag: 0,00 €",
   )
 
+  // "eur": a SEPA direct debit, and the bank details show the EPC-QR code
+  assert(
+    printed
+      .at("debit-eur/direct-debit")
+      .starts-with(
+        "Zahlungsart: SEPA-Lastschrift\n",
+      ),
+    message: repr(printed.at("debit-eur/direct-debit")),
+  )
+  expect("bank-eur/bank", "QR")
+
   // A direct debit does not ask for a transfer: no EPC-QR code, unless it is
   // asked for
   expect("direct-debit-bank/bank", "no QR")
@@ -201,6 +225,14 @@
   assert.eq(
     error[#items #payment-goal(days: 14) #paid(method: "cash")],
     "assertion failed: An invoice that is `paid` has no `payment-goal`: nothing is left to pay. Remove the `payment-goal`.",
+  )
+  // "eur" is the euro: the creditor identifier of a SEPA direct debit is
+  // checked
+  assert(
+    catch(() => test-invoice("error", lang: lower-case-euro)[
+      #items
+      #direct-debit(mandate: "M-1", creditor-id: "DE00ZZZ09999999999")
+    ]).contains("is not a valid SEPA creditor identifier"),
   )
   assert.eq(
     error[#items #payment-goal(days: 14) #debit #debit],

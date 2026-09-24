@@ -12,6 +12,7 @@
   method-kind, method-kinds, of-context, report-problems,
 )
 #import "../logic/document-type.typ": sender-pays
+#import "../logic/currency.typ": currency-code
 
 // The scope of every payment means component: the layout that draws it.
 #let _scope(ctx) = loom.mutator.batch(ctx, {
@@ -97,7 +98,7 @@
       let strings = ctx.locale.strings.payment-means
       // SEPA direct debits are in euro; their creditor identifiers have
       // check digits.
-      let sepa = ctx.locale.currency.at("code", default: none) == "EUR"
+      let sepa = currency-code(ctx.locale) == "EUR"
       let creditor = normalize-creditor-id(creditor-id)
       let creditor-valid = not sepa or creditor-id-valid(creditor)
       let iban = if not _is-missing(debtor-iban) {
@@ -306,7 +307,7 @@
       let method-name = if detailed or method == auto { none } else if (
         type(method) == dictionary
       ) { method.name } else if method == "direct-debit" {
-        if ctx.locale.currency.at("code", default: none) == "EUR" {
+        if currency-code(ctx.locale) == "EUR" {
           names.sepa-direct-debit
         } else { names.direct-debit }
       } else { names.at(_method-names.at(method)) }
