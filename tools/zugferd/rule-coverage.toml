@@ -459,8 +459,8 @@ reason = "The builder never writes the payment means text (BT-82, ram:Informatio
 [[rule]]
 ids = ["CII-SR-471"]
 class = "unreachable"
-reason = """The schema has no ram:RateApplicablePercent as a child of an allowance or charge (it \
-belongs to ram:CategoryTradeTax), so the count is always 0."""
+reason = """The builder writes the rate of an allowance or charge in its ram:CategoryTradeTax, never \
+as a ram:RateApplicablePercent of the allowance or charge itself, so the count is always 0."""
 
 [[rule]]
 ids = [
