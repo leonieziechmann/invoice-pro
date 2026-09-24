@@ -194,6 +194,7 @@ class Watcher:
         self.copy = os.path.join(os.path.dirname(document), "." + _name(document) + ".watch.typ")
         self.text = self.source
         self._write(self.text)
+        self.reported = time.monotonic()
         self.lines = queue.Queue()
         self.process = subprocess.Popen(
             [typst, "watch", "--root", root, self.copy, os.path.join(out_dir, _name(document) + ".pdf")],
@@ -239,10 +240,16 @@ class Watcher:
                 continue
             if match.group(1) == "with errors":
                 raise SystemExit(f"the live preview does not compile: {self.copy}")
+            self.reported = time.monotonic()
             return float(match.group(2)) * _MILLISECONDS[match.group(3)]
 
     def edit(self, n):
-        """Changes the price of the first item to its `n`-th new value."""
+        """Changes the price of the first item to its `n`-th new value.
+        `typst watch` reports a compile before it watches the files of the
+        next one, so an edit right after the report can go unnoticed: it
+        comes at least 50 ms after it (with a pair, the other document's
+        recompile is in between anyway)."""
+        time.sleep(max(0.0, self.reported + 0.05 - time.monotonic()))
         self.text = _PRICE.sub(
             lambda m: f"price: {int(m.group(1)) + 1000 + n}.{n % 100:02d}", self.source, count=1
         )
