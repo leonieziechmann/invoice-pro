@@ -57,6 +57,9 @@ profiles only, never in XRechnung, which is not validated with it; one the
 entry reports has its profiles in `id-profiles`. So `covering` and
 `reported_in` are exact: an entry claims an id only in the profiles in which
 its check can report it (or, for an alias, the rule it implements).
+rule_coverage.py checks both against the rules of the validators of each
+profile (REGISTRY), and run.py every diagnostic of the corpus against
+`reported_in` (O-REGISTRY), as the helpers of the Typst tests do.
 
 --check reports every problem: of the entries, of the keys that have no
 message or no check (a key the rule modules do not name) and of the rule
