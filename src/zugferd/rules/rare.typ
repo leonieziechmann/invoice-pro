@@ -88,11 +88,34 @@
   out
 }
 
+// The rule of a VAT identifier on an invoice not subject to VAT (O), by where
+// the category O occurs: on a line (BR-O-02), a document level allowance
+// (BR-O-03) or charge (BR-O-04), in this order; `none` if on none of them the
+// XML states, i.e. on the items of BASIC WL, which states no lines.
+#let _outside-scope-rule(model) = {
+  let lines = model.profile.lines
+  if lines {
+    for line in model.lines {
+      if line.category == "O" { return "BR-O-02" }
+    }
+  }
+  let found = none
+  for entry in model.allowance-charges {
+    if entry.category != "O" { continue }
+    if not entry.charge { return "BR-O-03" }
+    found = "BR-O-04"
+  }
+  // A profile with lines states the items not subject to VAT on them.
+  if found == none and lines { "BR-O-02" } else { found }
+}
+
 /// The seller tax representative (BG-11): its name (BR-18), country (BR-20)
 /// and VAT identifier (BR-56, BR-CO-09), and the address the VAT Directive
 /// requires on the invoice (Art. 226 No. 15). An invoice not subject to VAT
-/// states no VAT identifiers, so it cannot name a tax representative
-/// (BR-O-02).
+/// states no VAT identifiers, so it cannot name a tax representative, whose
+/// VAT identifier it would state (BR-O-02, BR-O-03, BR-O-04 by where the
+/// category occurs; IP-TAX-05 for the items of BASIC WL, which it states on
+/// no line).
 ///
 /// -> array
 #let tax-representative(model) = {
@@ -110,14 +133,21 @@
     ))
     return out
   }
-  if model.outside-scope {
-    out.push((key: "BR-O-02", field: field))
+  if model.outside-scope and representative.vat-id != none {
+    let rule = _outside-scope-rule(model)
+    out.push(if rule == none { (key: "IP-TAX-05", field: field) } else {
+      (key: "vat-outside-scope", id: rule, field: field)
+    })
   }
   if representative.name == none {
     out.push((key: "BR-18", field: field + ".name"))
   }
   if representative.vat-id == none {
-    out.push((key: "BR-56", field: field + ".vat-id"))
+    out.push((
+      key: "BR-56",
+      field: field + ".vat-id",
+      outside-scope: model.outside-scope,
+    ))
   } else {
     out += vat-id-prefix-check(representative.vat-id, field + ".vat-id")
   }

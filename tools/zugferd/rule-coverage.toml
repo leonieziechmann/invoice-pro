@@ -177,6 +177,15 @@ reason = """A VAT identifier on an invoice not subject to VAT (O), e.g. of the s
 representative: invoice-pro reports BR-O-02, which the validators report for the lines of the same \
 invoice besides the allowance or charge."""
 
+# BASIC WL has no lines, so a VAT identifier on an invoice not subject to VAT
+# breaks the rule of its document level allowance or charge only
+# (BR-O-03--basic-wl.typ, BR-O-04--basic-wl.typ); invoice-pro reports the
+# items alone as IP-TAX-05.
+[[rule]]
+ids = ["BR-O-03", "BR-O-04"]
+class = "fixture"
+profiles = ["basic-wl"]
+
 # ======================================================================
 # compiled: the guard enforces Mustang's version, KoSIT's differs
 # ======================================================================
@@ -563,14 +572,6 @@ BR-CL-18, whose CEN code list contains B: the validators report BR-B-01 or BR-B-
 FX-SCH-A-000179) instead."""
 
 [[rule]]
-ids = ["BR-O-03", "BR-O-04"]
-class = "open"
-profiles = ["basic-wl"]
-reason = """BASIC WL: a VAT identifier on an invoice not subject to VAT (O) with an allowance or \
-charge is reported as BR-O-02, which BASIC WL does not have (no lines); the validators report BR-O-03 \
-or BR-O-04."""
-
-[[rule]]
 ids = ["PEPPOL-EN16931-R120"]
 class = "open"
 reason = """With `tax-mode: "inclusive"`, the net price (BT-146) is rounded, so the invoiced \
@@ -681,6 +682,16 @@ level = "error"
 summary = "An exemption (E) with an exemption reason code but without `grounds` for the printed invoice."
 basis = "§ 14 Abs. 4 Satz 1 Nr. 8 UStG; Art. 226 No. 11 of the VAT Directive 2006/112/EC."
 tests = ["tests/zugferd/exemption-codes/test.typ"]
+
+[ip."IP-TAX-05"]
+level = "error"
+summary = "A seller tax representative with a VAT identifier on an invoice not subject to VAT (O), in BASIC WL."
+basis = """EN 16931 BR-O-02: items not subject to VAT exclude the seller tax representative VAT \
+identifier (BT-63); BASIC WL states no lines, so its validation does not check it."""
+tests = [
+  "tests/zugferd/party-details/test.typ",
+  "tools/zugferd/corpus/regression/tax-representative-outside-scope-basic-wl.typ",
+]
 
 [ip."IP-PRINT-02"]
 level = "error"

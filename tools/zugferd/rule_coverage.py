@@ -148,8 +148,6 @@ NEEDS = {
 OPEN_WORK_LIST = {
     "BR-B-01": ("basic", "en16931", "xrechnung"),
     "BR-B-02": ("basic", "en16931", "xrechnung"),
-    "BR-O-03": ("basic-wl",),
-    "BR-O-04": ("basic-wl",),
     "PEPPOL-EN16931-R120": ("xrechnung",),
 }
 

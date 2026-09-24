@@ -393,7 +393,8 @@
   )
   m.tax-representative = representative(email: "f@fiskal.de")
   assert.eq(rules(m, level: "warning"), ("IP-KEY-01",))
-  // Not subject to VAT: no VAT identifiers at all (BR-O-02)
+  // Not subject to VAT: no VAT identifiers at all (BR-O-02, see the
+  // invoices not subject to VAT below)
   let m = base
   m.outside-scope = true
   m.tax-representative = representative()
@@ -462,3 +463,64 @@
     bic: "SOLADEST600",
   )
 ]
+
+// --- 8. An invoice not subject to VAT (O) names no tax representative ---
+// It states no VAT identifiers, so no tax representative, whose VAT
+// identifier (BT-63) it would state: the validators report the line
+// (BR-O-02), else the document level allowance (BR-O-03) or charge
+// (BR-O-04). BASIC WL states no lines, so there only an allowance or charge
+// breaks an official rule, and invoice-pro reports the items alone as its
+// own rule (IP-TAX-05). Without its VAT identifier, the representative breaks
+// BR-56 only, whose hint says to leave it out.
+#let fiscal = (
+  name: "Fiskal GmbH",
+  address: "Steuerweg 1",
+  city: (name: "Berlin", post-code: "10115"),
+  country: country.de,
+  vat-id: "DE123456788",
+)
+#let outside-scope-test(test, body) = model-test(
+  test,
+  sender: seller + (tax-representative: fiscal),
+  recipient: buyer-fr,
+)[
+  #line-items[
+    #item([Consulting], price: 100, tax: tax.outside-scope())
+    #body
+  ]
+  #payment-goal(days: 14)
+]
+#outside-scope-test(
+  model => {
+    assert.eq(rules(model), ("BR-O-02",))
+    assert.eq(rules(with-profile(model, "basic")), ("BR-O-02",))
+    let basic-wl = with-profile(model, "basic-wl")
+    assert.eq(rules(basic-wl), ("IP-TAX-05",))
+    assert.eq(
+      diagnostic(basic-wl, "IP-TAX-05").field,
+      "sender.tax-representative",
+    )
+    let m = model
+    m.tax-representative.vat-id = none
+    for m in (m, with-profile(m, "basic-wl")) {
+      assert.eq(rules(m), ("BR-56",))
+      let hint = diagnostic(m, "BR-56").hint
+      assert(hint.contains("leave out `tax-representative`"), message: hint)
+    }
+  },
+  none,
+)
+#outside-scope-test(
+  model => {
+    assert.eq(rules(model), ("BR-O-02",))
+    assert.eq(rules(with-profile(model, "basic-wl")), ("BR-O-03",))
+  },
+  discount([Rabatt], amount: 10%),
+)
+#outside-scope-test(
+  model => {
+    assert.eq(rules(model), ("BR-O-02",))
+    assert.eq(rules(with-profile(model, "basic-wl")), ("BR-O-04",))
+  },
+  surcharge([Versand], amount: 5),
+)

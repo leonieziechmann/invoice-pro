@@ -126,6 +126,7 @@ Besides the official rules (`BR-*`, `BR-DE-*`, `PEPPOL-*`, `CII-SR-*`), `invoice
 | `IP-TAX-02`     | error   | A VAT exemption reason code (BT-121, `code` of the `tax` module) of another VAT category, e.g. `"VATEX-EU-IC"` on an exemption (`E`), or on a taxed category (`S`, `Z`, `L`, `M`). See [Tax Category Codes](#3-tax-category-codes).                                                                             |
 | `IP-TAX-03`     | warning | Items of one VAT category and rate with different exemption reason codes: EN 16931 states one code per VAT group, so the reasons are stated as text (BT-120) only.                                                                                                                                              |
 | `IP-TAX-04`     | error   | An exemption (`E`) with an exemption reason code but without `grounds`: the printed invoice must state why no VAT is charged (§ 14 Abs. 4 Satz 1 Nr. 8 UStG, Art. 226 No. 11 of the VAT Directive).                                                                                                             |
+| `IP-TAX-05`     | error   | A seller tax representative (BG-11) with a VAT identifier on an invoice not subject to VAT (`O`) in `"basic-wl"`: EN 16931 excludes that identifier for items not subject to VAT (`BR-O-02`), which the validation of the profile does not check, as it states no lines.                                        |
 | `IP-UNIT-01`    | warning | A unit code used verbatim that is also a common German abbreviation of another unit (`STK`, `PAL`, `FL`, `GL`, `KT`).                                                                                                                                                                                           |
 | `IP-VAT-138`    | warning | An intra-community supply (`K`) to a buyer whose VAT identifier was not issued by an EU member state (or "XI" for Northern Ireland).                                                                                                                                                                            |
 | `IP-VAT-226`    | error   | An intra-community supply (`K`) or a cross-border reverse charge (`AE`) without the buyer VAT identifier (Art. 226 No. 4 VAT Directive), which the official rules miss: in BASIC WL (no invoice lines) and with a buyer `legal-id`; a tax representative without address (No. 15).                              |
@@ -166,12 +167,12 @@ The tests of `invoice-pro` account for every rule of the official validators, pr
 | Profile   | Rule ids | Reported by invoice-pro | Enforced by the guard | Excluded by construction | Cannot occur | Open |
 | :-------- | -------: | ----------------------: | --------------------: | -----------------------: | -----------: | ---: |
 | MINIMUM   |       46 |                       6 |                    40 |                        0 |            0 |    0 |
-| BASIC WL  |      196 |                      56 |                   117 |                       14 |            7 |    2 |
+| BASIC WL  |      196 |                      58 |                   117 |                       14 |            7 |    0 |
 | BASIC     |      851 |                      72 |                   713 |                       41 |           23 |    2 |
 | EN 16931  |      905 |                      75 |                   734 |                       54 |           40 |    2 |
 | XRechnung |      885 |                     107 |                   646 |                       62 |           67 |    3 |
 
-Open: `BR-B-01` (BASIC, EN 16931, XRechnung), `BR-B-02` (BASIC, EN 16931, XRechnung), `BR-O-03` (BASIC WL), `BR-O-04` (BASIC WL), `PEPPOL-EN16931-R120` (XRechnung).
+Open: `BR-B-01` (BASIC, EN 16931, XRechnung), `BR-B-02` (BASIC, EN 16931, XRechnung), `PEPPOL-EN16931-R120` (XRechnung).
 
 [//]: # "end of the rule-coverage table"
 
@@ -386,7 +387,7 @@ Both the `sender` and `recipient` dictionaries must include:
   )
   ```
 
-  The representative's VAT identifier (BT-63) satisfies the rules that ask for a seller VAT identifier, e.g. for standard rated items (`BR-S-02`) or an intra-community supply (`BR-IC-02`): never give it as the seller's own `vat-id`. It does not identify the seller, so the seller still needs its `id`, `legal-id` or `vat-id` (`BR-CO-26`). The representative needs a name (`BR-18`), a VAT identifier (`BR-56`) and an address, which the law requires on the invoice (`IP-VAT-226`, Art. 226 No. 15 of the VAT Directive). An invoice not subject to VAT (`O`) states no VAT identifiers, so it cannot name a tax representative (`BR-O-02`). The profiles from `"basic-wl"` on state it; the built-in themes do not print it, so state it on the printed invoice as well, e.g. in its text.
+  The representative's VAT identifier (BT-63) satisfies the rules that ask for a seller VAT identifier, e.g. for standard rated items (`BR-S-02`) or an intra-community supply (`BR-IC-02`): never give it as the seller's own `vat-id`. It does not identify the seller, so the seller still needs its `id`, `legal-id` or `vat-id` (`BR-CO-26`). The representative needs a name (`BR-18`), a VAT identifier (`BR-56`) and an address, which the law requires on the invoice (`IP-VAT-226`, Art. 226 No. 15 of the VAT Directive). An invoice not subject to VAT (`O`) states no VAT identifiers, so it cannot name a tax representative with a VAT identifier (`BR-O-02` for its lines; in `"basic-wl"`, which states no lines, `BR-O-03` or `BR-O-04` for a document level allowance or charge, else `IP-TAX-05`). The profiles from `"basic-wl"` on state it; the built-in themes do not print it, so state it on the printed invoice as well, e.g. in its text.
 
 - **Payee (BG-10):** When someone other than the seller receives the payment, e.g. a factoring company, name it with `payee` on the invoice (from the `"basic-wl"` profile on):
 

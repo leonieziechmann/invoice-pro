@@ -430,16 +430,33 @@
       "summary": "The scheme of a legal registration identifier (BT-30, BT-47, BT-61) is an ISO/IEC 6523 code of every validation.",
       "legal": null
     },
-    "BR-O-02": {
-      "covers": ["BR-O-02", "FX-SCH-A-000247"],
+    "vat-outside-scope": {
+      "ids": ["BR-O-02", "BR-O-03", "BR-O-04"],
+      "covers": ["BR-O-02", "BR-O-03", "BR-O-04", "FX-SCH-A-000093", "FX-SCH-A-000111", "FX-SCH-A-000247"],
       "source": "EN16931",
       "versions": ["1.3.12", "1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
+      "id-profiles": {
+        "BR-O-02": ["basic", "en16931", "xrechnung"],
+        "FX-SCH-A-000247": ["basic", "en16931"]
+      },
       "scope": "party",
       "terms": ["BT-63"],
       "level": "error",
       "field": "sender.tax-representative",
-      "summary": "An invoice not subject to VAT (O) states no VAT identifiers, so it names no seller tax representative (BG-11).",
+      "summary": "An invoice not subject to VAT (O) states no VAT identifiers, so it names no seller tax representative (BG-11) with a VAT identifier (BT-63): by where the category occurs, on a line (BR-O-02), a document level allowance (BR-O-03) or charge (BR-O-04).",
+      "legal": null
+    },
+    "IP-TAX-05": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
+      "profiles": ["basic-wl"],
+      "scope": "party",
+      "terms": ["BT-63"],
+      "level": "error",
+      "field": "sender.tax-representative",
+      "summary": "A seller tax representative (BG-11) with a VAT identifier on an invoice not subject to VAT (`O`) in `\"basic-wl\"`: EN 16931 excludes that identifier for items not subject to VAT (`BR-O-02`), which the validation of the profile does not check, as it states no lines.",
       "legal": null
     },
     "BR-18": {

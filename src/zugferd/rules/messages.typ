@@ -328,6 +328,13 @@
   "Set `service-period` on the invoice to a period that includes the dates of all items, or leave it out: the dates of the items are the service period then.",
 )
 
+// A seller tax representative on an invoice not subject to VAT (BR-O-02,
+// BR-O-03, BR-O-04, IP-TAX-05).
+#let _outside-scope-representative(f) = (
+  "An invoice not subject to VAT (O) states no VAT identifiers, so it cannot name the seller tax representative (BG-11), whose VAT identifier (BT-63) it would state.",
+  "Leave out `tax-representative` on invoices of items not subject to VAT.",
+)
+
 // A corrected invoice without the invoice it corrects (BR-DE-26 in
 // XRechnung, IP-DOC-02 in the other profiles).
 #let _uncorrected(f) = (
@@ -783,17 +790,19 @@
       "Use the constructor of the `id` module for the register, e.g. `id.siret(..)`, `id.register(..)` for a register without a scheme, or `id.custom(..)` with the ICD code of the register, e.g. \"0208\" for a Belgian enterprise number.",
     )
   },
-  "BR-O-02": f => (
-    "An invoice not subject to VAT (O) states no VAT identifiers, so it cannot name the seller tax representative (BG-11), whose VAT identifier (BT-63) it would have to state (BR-56).",
-    "Leave out `tax-representative` on invoices of items not subject to VAT.",
-  ),
+  "vat-outside-scope": _outside-scope-representative,
+  "IP-TAX-05": _outside-scope-representative,
   "BR-18": f => (
     "The name of the seller tax representative (BT-62) is missing.",
     "Set `name` on the tax representative.",
   ),
   "BR-56": f => (
     "The VAT identifier of the seller tax representative (BT-63) is missing.",
-    "Set `vat-id` on the tax representative, the VAT identifier it holds for the seller, e.g. `vat-id: \"DE123456789\"`.",
+    if f.at("outside-scope", default: false) {
+      "An invoice not subject to VAT (O) states no VAT identifiers: leave out `tax-representative` on invoices of items not subject to VAT."
+    } else {
+      "Set `vat-id` on the tax representative, the VAT identifier it holds for the seller, e.g. `vat-id: \"DE123456789\"`."
+    },
   ),
   "IP-VAT-226": f => if f.kind == "address" {
     (
