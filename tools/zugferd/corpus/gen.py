@@ -335,6 +335,11 @@ def allowed(f):
             return False
         if b == "us" and pay and pay != "nobank+days":
             return False
+    # The own date of a credit note is not the date of the supply, so it
+    # states one only with dates; an intra-community supply needs it
+    # (BR-IC-11).
+    if doc == "credit-note" and tax == "k" and g("delivery") in ("none", "addr"):
+        return False
     # A self-billed invoice swaps the parties (the recipient is the seller):
     # at home, with VAT IDs, not in XRechnung (its seller contact and buyer
     # reference would change places too), goods delivered to the issuer.

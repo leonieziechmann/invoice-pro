@@ -2429,6 +2429,25 @@
       hint: "Set `country` on the recipient or pass a `delivery-address`.",
     ))
   }
+  // BR-IC-11: an intra-community supply states the date of the supply
+  // (BT-72) or the invoicing period (BG-14). A credit note or a prepayment
+  // invoice, whose own date is not the date of the supply, states none
+  // without a `service-period` or dated items (see `service-period-of`).
+  let delivery = model.at("delivery", default: (:))
+  if (
+    "K" in categories
+      and delivery.at("date", default: none) == none
+      and delivery.at("period", default: none) == none
+  ) {
+    out.push(error(
+      "BR-IC-11",
+      "service-period",
+      "An intra-community supply (K) requires the date of the supply (BT-72) or the invoicing period (BG-14), which the e-invoice does not state without dates, as "
+        + _undated-reason(model.invoice.at("document", default: none))
+        + ".",
+      hint: "Set `service-period` to the date or period of the supply the document refers to, e.g. the one of the preceding invoice, or give the items their `date`.",
+    ))
+  }
   if "O" in categories and categories.len() > 1 {
     out.push(error(
       "BR-O-11",

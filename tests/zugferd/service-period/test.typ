@@ -181,6 +181,14 @@
     m.profile = resolve-profile("xrechnung", "DE")
     assert("BR-DE-TMP-32" in rules(m, level: "warning"))
     assert.eq(diagnostic(m, "BR-DE-TMP-32").field, "service-period")
+    // An intra-community supply (K) requires the date of the supply
+    // (BR-IC-11), which an undated credit note does not state
+    m.profile = resolve-profile("en16931", "DE")
+    m.taxes = m.taxes.map(tax => tax + (category: "K"))
+    assert("BR-IC-11" in rules(m))
+    assert.eq(diagnostic(m, "BR-IC-11").field, "service-period")
+    m.delivery.date = day(8, 15)
+    assert("BR-IC-11" not in rules(m))
   },
 )[#undated]
 #printed-test(
