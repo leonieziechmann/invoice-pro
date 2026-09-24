@@ -373,7 +373,7 @@ ZUGFeRD tests verify that generated invoices comply with the **EN 16931** Europe
 
 #### How It Works
 
-1. Compiles the Typst invoice document to **PDF/A-3b** (`--pdf-standard=a-3b`).
+1. Compiles the Typst invoice document to **PDF/A-3b** (`--pdf-standard=a-3b`), in the strict mode of the write guard (`--input zugferd-strict=true`), which compares every line of the written XML with the invoice and checks the arithmetic of its amounts.
 2. Extracts the embedded `factur-x.xml` attachment (or `xrechnung.xml`, the name ZUGFeRD gives the XML of its XRECHNUNG profile) using `pdfdetach` (from `poppler-utils`).
 3. Validates the XML syntax and Schematron business rules (including XRechnung / EN16931 rules) using the **Mustangproject CLI validator** (`mustang-cli`).
 4. `validate-all-zugferd` then validates the XML of all EN 16931 and XRechnung documents once more with **KoSIT**, the reference validator for XRechnung (validator 1.6.3 with the XRechnung configuration 2026-08-31), in a single JVM (`tools/zugferd/kosit.py`). KoSIT has no scenario for MINIMUM, BASIC WL and BASIC; it lists these documents as skipped. The step needs `KOSIT_JAR`, `KOSIT_CONFIG` and Python with `lxml` and `pypdf` (see [Running Without Nix](#running-without-nix)); `nix run .#validate-all-zugferd` provides them. Without `KOSIT_JAR` and `KOSIT_CONFIG`, a local run skips KoSIT with a notice, and a run in CI (`CI=true`) fails.
@@ -514,7 +514,7 @@ export KOSIT_CONFIG=~/Downloads/xrechnung-configuration   # the unpacked zip
 
 `tools/zugferd/corpus/gen.py` writes the generated invoices and their `manifest.json` to `build/zugferd/corpus/`; `tools/zugferd/corpus/regression/` holds the committed regression cases and `tools/zugferd/corpus/rules/` the parity fixtures (see [Rule Coverage](#rule-coverage)). `tools/zugferd/run.py` then handles every case in six steps:
 
-1. **Typst, once per case.** The cases use `zugferd-errors: "report"` and the harness theme `tools/zugferd/harness.typ`, which attaches invoice-pro's diagnostics to the PDF as `invoice-pro-diagnostics.json`. One compilation yields the XML, invoice-pro's verdict and the printed text.
+1. **Typst, once per case.** The cases use `zugferd-errors: "report"` and the harness theme `tools/zugferd/harness.typ`, which attaches invoice-pro's diagnostics to the PDF as `invoice-pro-diagnostics.json`. One compilation yields the XML, invoice-pro's verdict and the printed text. Every case compiles in the strict mode of the write guard (`--input zugferd-strict=true`, see [The XML Write Guard](#the-xml-write-guard)).
 2. **XSD** of the profile with lxml. The Factur-X 1.0.07 XSDs are read from the Mustang jar.
 3. **Mustang 2.14** (EN 16931, Factur-X and XRechnung Schematron) in a single JVM for the whole run, validating while Typst still compiles. The XRechnung Schematron reports its rules (BR-DE-\*, PEPPOL-\*) with message type 27: as errors for an XRechnung, as notices for the other profiles. The runner counts every error, whatever its type.
 4. **KoSIT 1.6.3** with the XRechnung configuration 2026-08-31 (CEN Schematron 1.3.16, XRechnung Schematron 2.6.0), the reference validator for XRechnung: one JVM validates the EN 16931 and XRechnung cases of the run as a batch after Typst is done (about 15 s for the some 500 files of a PR run). KoSIT has no scenario for MINIMUM, BASIC WL and BASIC.
@@ -713,6 +713,10 @@ python3 tools/zugferd/mutate.py --only 'zugferd-basic*'  # from some golden file
 ```
 
 A failure lists the mutant, what was changed, the guard's findings and Mustang's rules; `build/zugferd/mutate/` holds the mutants and `mutate-report.json`. A mutant the builder's element tree cannot express as it is (for example a repeated element with another one between) is left out and counted.
+
+The round trip of the guard (G3, `src/zugferd/guard/roundtrip.typ`) reads the written XML back and compares it with the data model through its own binding table, `src/zugferd/guard/bindings.json`: for every element, the business term, the model value, how the two compare and the first profile that can state it. `tools/zugferd/test_roundtrip.py` checks every binding against the guard tables of every profile: an element is stated from its profile on and in no poorer one, so that the round trip calls a value lost exactly where the profile could have stated it. `tests/zugferd/roundtrip/test.typ` changes the element tree or the model after the XML is written and expects the findings `differs`, `dropped`, `extra` and `count` (`IP-GUARD-10` to `IP-GUARD-13`); it also tests the strict mode (`zugferd-strict`), which compares every line and checks the arithmetic of the written amounts (`src/zugferd/guard/strict.typ`: `BR-CO-10` to `BR-CO-17` and the taxable amount of each VAT category). The corpus and `validate-zugferd` compile in the strict mode.
+
+The model is a projection of the computed invoice; `src/zugferd/rules/equivalence.typ` checks that it states what the invoice prints (`IP-PRINT-01`, `IP-CALC-01`, `IP-CALC-02`, and `PEPPOL-EN16931-R120` of XRechnung). `tests/zugferd/equivalence/test.typ` changes the model or the computed invoice after the computation and expects each rule to report it.
 
 #### Rule Coverage
 

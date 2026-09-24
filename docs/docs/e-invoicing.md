@@ -140,6 +140,7 @@ The validator checks the invoice data; a second check, the write guard, checks t
 
 - **Structure (G1):** every element is known to the profile's schema at its position and not marked as not used there by the Factur-X Schematron; the elements are in schema order and number (`maxOccurs` and the counts of the Schematron); every element the schema or a rule of the Schematron without a condition on values requires is there with its text (an element without text counts as missing), e.g. for `"xrechnung"` the city and post code of the addresses, the contact of the seller, the buyer reference and the rate of each VAT breakdown; every required attribute is there, and no other attribute.
 - **Values (G2):** decimals, indicators and dates have their lexical form, and dates in the format `102` name a day of the calendar; amounts have at most the decimals the `BR-DEC-*` rules allow; every code is in the code list of its position. Where several validators apply, the code must be in the list of each of them, e.g. a country code in the list of the Factur-X Schematron and in the one of EN 16931. Every tax element (the VAT of a line, of an allowance or charge, and each VAT breakdown) has what its VAT category requires: a rate above 0 for `S`, `L` and `M`, the rate 0 for `Z`, `E`, `AE`, `K` and `G`, and none for `O` (`BR-S-05` and the like); a VAT breakdown has a rate unless its category is `O` (`BR-48`), the VAT amount 0 for `Z`, `E`, `AE`, `K`, `G` and `O`, an exemption reason for `E`, `AE`, `K`, `G` and `O`, and none for `S`, `Z`, `L` and `M` (`BR-E-09`, `BR-E-10` and the like).
+- **Round trip (G3):** the XML as Typst's parser reads it back states exactly what the invoice data states, through a table of its own that maps every element to its business term (independent of the code that writes the XML): no value differs, none is left out that the profile can state, none is added, and every repeated group (notes, payment means, VAT breakdown, allowances and charges, lines) has as many entries as the invoice. Amounts, quantities and rates are compared as numbers (`19.00` is 19 %), dates in the format `102`. This covers the header of the document (the document, the parties, references, delivery, payment, VAT breakdown, allowances and charges, and the totals) and the number of lines; the [strict mode](#the-strict-mode) compares every line as well.
 - **Well-formed (G4):** Typst's XML parser reads the bytes that are attached as one `CrossIndustryInvoice` document.
 
 The guard does not change the XML: the file is the same with or without it. What it finds is added to the diagnostics, as errors, and `zugferd-errors` treats them like the validator's. A problem the validator reports already (the same rule or the same input) is not listed twice. Since the validator checks every input before, a finding of the guard is a bug of `invoice-pro`: if the guard finds something the validator does not, each finding is listed with the hint to report it; if the validator reports errors, the guard's other findings are one entry, as they may follow from those errors. A finding names the official rule of the check where there is one (e.g. `BR-CL-14` for a country code), and otherwise a rule of the guard:
@@ -164,6 +165,23 @@ The guard does not change the XML: the file is the same with or without it. What
 | `IP-GUARD-13` | An element, or the entries of a repeated group (e.g. the lines), occur more or less often than the data model has.      |
 
 The guard checks what the schema, the code lists and the rules of the VAT categories say about each element, not the business rules (sums, conditions between different parts of the invoice, and elements required only under such a condition, e.g. an identifier of the seller in `BR-CO-26`), which remain the validator's. It is stricter than the official validators in a few documented places: it rejects the elements the Factur-X Schematron marks as not used (Mustang ignores those reports), dates that name no day, a required element without text also where a rule only asks for the element, and any element `invoice-pro` never writes; and where a rule of the CEN Schematron may be taken over by a rule of higher priority only under a condition on values, it applies the rule anyway. Its tables follow the artefacts of the Mustang CLI 2.14.0, which `invoice-pro` pins: IPSI (`M`) at 0 % is rejected there (`BR-AG-05` tests a rate above 0), while the newer EN 16931 Schematron of KoSIT's XRechnung configuration accepts it.
+
+### The Strict Mode
+
+With `zugferd-strict: true` on the invoice, or `--input zugferd-strict=true` for every invoice of a compilation (`typst compile --input zugferd-strict=true invoice.typ`), the write guard checks more:
+
+- the round trip (G3) of every invoice line: the name, identifiers, note, quantity, unit, price, VAT category and rate, period, allowances and charges and the net amount of each line in the XML are those of the invoice;
+- the arithmetic of the amounts the XML states, computed from the XML alone, with the tolerances of the official rules: the sums of the lines, allowances and charges and the totals (`BR-CO-10` to `BR-CO-16`), the VAT amount of each VAT category from its taxable amount and rate, within 1 (`BR-CO-17`), and the taxable amount of each VAT category from its lines, allowances and charges (`BR-S-08` and the like: exactly for `S`, `O`, `L` and `M`, within 1 for `Z`, `E`, `AE`, `K` and `G`). A finding names the official rule the XML breaks.
+
+The standard checks already cover the header, and the invoice data behind the lines is checked before the XML is written, so the strict mode is a second opinion on the written lines. It takes about half a millisecond per line, more than writing the line, so it is off by default. The tests of `invoice-pro` and its conformance corpus compile every e-invoice in the strict mode, and so does `scripts/validate-zugferd`; turn it on in your own CI as well.
+
+```typst
+#show: invoice.with(
+  zugferd: "en16931",
+  zugferd-strict: true, // compare every line of the XML, and check its sums
+  // ...
+)
+```
 
 ### Coverage of the Official Rules
 
@@ -533,7 +551,9 @@ To state another note or category, override the scheme of the region, e.g. `loca
 
 ### 4. Gross Prices
 
-With `tax-mode: "inclusive"`, the invoice prints gross prices, while the XML states net amounts as EN 16931 requires. The net unit prices are rounded with the fine precision of the locale (`normalize.money-fine`), like every unit price. Every line and allowance is converted on its own, and rounding differences of a cent are assigned to the largest line of the VAT category, so the XML adds up exactly to the net and gross totals printed on the invoice.
+With `tax-mode: "inclusive"`, the invoice prints gross prices, while the XML states net amounts as EN 16931 requires. They are derived from what the invoice prints: the net amounts of the lines and of the allowances and charges of each VAT category are its printed gross amounts divided by 1 plus the rate, rounded to the currency so that they add up exactly to the taxable amount the invoice prints for the category (the cents the rounding lacks or exceeds go to the amounts that were rounded furthest the other way). The net unit price (BT-146) keeps at least 6 decimals, more for a large quantity (3 more than the integer digits of the quantity), so that the quantity times the price gives the net amount of the line within 0.02, as XRechnung requires (`PEPPOL-EN16931-R120`): for 1000 screws at 9.99 € including 19 % VAT, the XML states the net price 8.394958 and the net amount 8394.96. Earlier versions rounded the net price to the fine precision of the locale (4 decimals: 8.3950, which is 0.04 off).
+
+In XRechnung, the same rule applies to net prices: a price with more decimals than the currency, which the line total rounds, can break it (e.g. 100.40 yen for a currency without decimals). `invoice-pro` reports that as a warning, as KoSIT does.
 
 ### 5. Payment Terms and Instructions
 
