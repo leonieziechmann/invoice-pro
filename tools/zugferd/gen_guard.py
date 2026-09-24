@@ -2630,9 +2630,13 @@ def emit_lists(names, validator=None):
     codes, each between two spaces (a lookup is one substring search); the
     tables of the rules of the VAT categories (see TAX_ELEMENTS) by name;
     and `validator` (see `validator_lists`): per name, the names of its
-    lists and the codes of `newer`. One code list, table or validator list
-    per line or lines of its own, so that a change reads as a diff."""
-    for codes in names.names:
+    lists (e.g. `every`) and, for a kind that is a set of codes of its own
+    (e.g. `newer`), the codes in lines as those of a list. One code list,
+    table or validator list per line or lines of its own, so that a change
+    reads as a diff."""
+    validator = validator or {}
+    own = [codes for entry in validator.values() for codes in entry.values() if isinstance(codes, (list, tuple))]
+    for codes in list(names.names) + own:
         bad = sorted(c for c in codes if not c or re.search(r"\s", c))
         if bad:
             raise GenError(f"codes that are empty or contain whitespace cannot be listed: {bad}")
@@ -2650,8 +2654,8 @@ def emit_lists(names, validator=None):
     )
     lines += ["},", '"validator":{']
     lines += json_members(
-        (name, json_value({kind: chunks(v, 75) if kind == "newer" else v for kind, v in entry.items()}))
-        for name, entry in (validator or {}).items()
+        (name, json_value({kind: chunks(v, 75) if isinstance(v, (list, tuple)) else v for kind, v in entry.items()}))
+        for name, entry in validator.items()
     )
     lines += ["}", "}"]
     return "\n".join(lines) + "\n"

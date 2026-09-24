@@ -585,6 +585,9 @@ class ListsOutput(unittest.TestCase):
         validator = {
             "country": {"every": "country-2", "factur-x": "country"},
             "icd": {"every": "country", "newer": [f"02{i:02}" for i in range(31, 49)]},
+            # Any other set of codes of an entry (e.g. codes a newer list has
+            # withdrawn) takes lines as well.
+            "eas": {"every": "country", "withdrawn": [f"99{i:02}" for i in range(20)]},
         }
         text = g.emit_lists(Names(), validator)
         data = json.loads(text)
@@ -601,6 +604,10 @@ class ListsOutput(unittest.TestCase):
             "0231 0232 0233 0234 0235 0236 0237 0238 0239 0240 0241 0242 0243 0244 0245",
             "0246 0247 0248",
         ])
+        self.assertEqual(data["validator"]["eas"], {"every": "country", "withdrawn": [
+            "9900 9901 9902 9903 9904 9905 9906 9907 9908 9909 9910 9911 9912 9913 9914",
+            "9915 9916 9917 9918 9919",
+        ]})
         # A list takes lines of its own, so that a change of a code reads as
         # a diff of its line.
         self.assertIn('"country":[\n"C00 C01 ', text)
@@ -617,6 +624,16 @@ class ListsOutput(unittest.TestCase):
 
         with self.assertRaises(g.GenError):
             g.emit_lists(Names())
+
+        class Valid:
+            names = {frozenset({"A"}): "good"}
+            vat = {}
+
+        # The codes of a validator entry as well: lists.typ joins them with
+        # spaces.
+        with self.assertRaises(g.GenError):
+            g.emit_lists(Valid(), {"good": {"every": "good", "newer": ["B C"]}})
+        g.emit_lists(Valid(), {"good": {"every": "good", "newer": ["B"]}})
 
 
 JAR = os.environ.get("MUSTANG_JAR")

@@ -35,9 +35,10 @@
 #let vat-rules = _data.vat-rules
 
 /// The code lists of the validator (src/zugferd/rules/); see VALIDATOR_LISTS
-/// of tools/zugferd/gen_guard.py. Per name, the lists of `lists` the entry
-/// names (`every`, `factur-x`), and `newer`, the codes only the newest
-/// version of the EN 16931 code list has.
+/// of tools/zugferd/gen_guard.py. Per name and kind, a list of `lists` the
+/// entry names (e.g. `every`, `factur-x`) or codes of the entry's own (e.g.
+/// `newer`, the codes only the newest version of the EN 16931 code list
+/// has), as a string of codes like a list of `lists`.
 ///
 /// -> dictionary
 #let validator = {
