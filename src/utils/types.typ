@@ -21,6 +21,28 @@
   }
 }
 
+/// Stops the compilation if `value` is a date without a day: a `datetime` of
+/// a time only (e.g. `datetime(hour: 9, minute: 0, second: 0)`), alone or in
+/// a period `(start, end)`. Such a date can be neither printed as a date nor
+/// written into the e-invoice. Any other value passes; `require` checks the
+/// type.
+#let require-day(value, value-name) = {
+  let dates = if type(value) == datetime { (value,) } else if (
+    type(value) == array
+  ) { value } else { () }
+  for date in dates {
+    if type(date) == datetime and date.day() == none {
+      panic(
+        "`"
+          + value-name
+          + "` is a time without a day: "
+          + repr(date)
+          + ". Give a date, e.g. `datetime(year: 2026, month: 9, day: 1)`.",
+      )
+    }
+  }
+}
+
 // --- Primitive Unions ---
 #let decimal-like = _matcher.choice(decimal, int, float, str)
 #let ratio-like = _matcher.choice(ratio, float, decimal, int)

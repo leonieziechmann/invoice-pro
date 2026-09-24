@@ -155,6 +155,7 @@
   )
 
   types.require(date, "item::date", none, auto, types.date-like)
+  types.require-day(date, "item::date")
 
   types.require(price, "item::price", auto, types.decimal-like)
   types.require(total, "item::total", auto, types.decimal-like)
