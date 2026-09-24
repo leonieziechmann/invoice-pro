@@ -6,7 +6,6 @@
 
 #import "xml.typ": (
   dict-to-xml, fmt-amount, fmt-date, fmt-price, fmt-quantity, fmt-rate,
-  xml-escape,
 )
 #import "model.typ": (
   build-model, determine-delivery-dates, first-of, get-electronic-address,

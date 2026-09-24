@@ -349,7 +349,6 @@
         // without an e-invoice do not load the e-invoice modules (code lists,
         // validator, serializer) at all.
         import "../zugferd/zugferd.typ": process-zugferd
-        import "../zugferd/report.typ": format-report, render-zugferd-report
         import "../logic/printed.typ": printed-record
 
         // What the printed invoice shows besides the components, for the
@@ -369,7 +368,9 @@
           payment-means: view.payment-means,
         )
         let errors = result.diagnostics.filter(d => d.level == "error")
+        // The report module loads only when there is something to report.
         if errors.len() > 0 and ctx.zugferd-errors == "panic" {
+          import "../zugferd/report.typ": format-report
           assert(false, message: format-report(result))
         }
 
@@ -396,6 +397,7 @@
         )
 
         if ctx.zugferd-errors == "report" and result.diagnostics.len() > 0 {
+          import "../zugferd/report.typ": format-report, render-zugferd-report
           let render-report = ctx.theme.at(
             "zugferd-report",
             default: render-zugferd-report,

@@ -418,6 +418,11 @@
   _text(value)
 }
 
+// Whether a text is written: not blank once escaped.
+#let _written(text) = (
+  type(text) == str and _plain in text or xml-escape(text).trim() != ""
+)
+
 // Whether a subtree is written (the serializer leaves out `none`, blank text
 // and elements with a blank value).
 #let _present(value) = {
@@ -433,9 +438,9 @@
       for item in text.values() { if _present(item) { return true } }
       return false
     }
-    return text != none and xml-escape(text).trim() != ""
+    return text != none and _written(text)
   }
-  xml-escape(value).trim() != ""
+  _written(value)
 }
 
 // The written elements at a path of child elements below a tree.
@@ -650,7 +655,10 @@
         if value == none { continue }
         // The namespace declarations of the root, its only attributes.
         if id == 0 and key.starts-with("@") and key.slice(1) in _declarations {
-          attrs += " " + key.slice(1) + "=\"" + xml-escape(value) + "\""
+          let v = if type(value) == str and _plain in value { value } else {
+            xml-escape(value)
+          }
+          attrs += " " + key.slice(1) + "=\"" + v + "\""
           continue
         }
         // Another attribute, text, or an element the profile does not use

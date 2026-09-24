@@ -7,14 +7,17 @@
 /// class so that the two cannot drift apart.
 #let escaped-class = "&<>\"'" + invalid-xml-class
 
-// Most values contain none of them.
-#let _needs-escape = regex("[" + escaped-class + "]")
+// Most values contain none of them. Compiled on first use (a call without
+// arguments is memoized): the serializer writes the common texts without
+// calling `xml-escape` (see guard/write.typ), so a valid e-invoice mostly
+// does not need it.
+#let _needs-escape() = regex("[" + escaped-class + "]")
 
 // Escape a value for safe embedding in XML text/attribute content.
 #let xml-escape(s) = {
   let value = if type(s) == str { s } else { plain-text(s) }
   // One scan instead of six replacements for the common case.
-  if not value.contains(_needs-escape) { return value }
+  if not value.contains(_needs-escape()) { return value }
   value
     .replace(invalid-xml-chars, "")
     .replace("&", "&amp;")

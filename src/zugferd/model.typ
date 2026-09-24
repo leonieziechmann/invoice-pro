@@ -9,8 +9,6 @@
 #import "profile.typ": resolve-profile
 #import "../utils/coercion.typ": to-decimal, to-ratio
 #import "../data/tax.typ": default-grounds, to-tax-key
-#import "../data/unit.typ": unit-db
-#import "../locale/lang/lang.typ" as languages
 #import "../logic/payment-reference.typ": resolve-payment-reference
 #import "../logic/document-type.typ": resolve-document-type
 #import "../logic/service-period.typ": format-service-period, service-period-of
@@ -403,236 +401,20 @@
   state: true,
 )
 
-#let _post-code-hint = "Write the post code into `city`, e.g. `city: \"10115 Berlin\"` or `city: (name: \"Berlin\", post-code: \"10115\")`."
-
-// Other names of party keys, as normalized by `_normalize-key`: the key they
-// stand for, or the key and a hint where renaming alone does not fit.
-#let _key-aliases = (
-  vat: "vat-id",
-  vatid: "vat-id",
-  vat-nr: "vat-id",
-  vat-no: "vat-id",
-  vat-number: "vat-id",
-  ust-id: "vat-id",
-  ustid: "vat-id",
-  ust-idnr: "vat-id",
-  ustidnr: "vat-id",
-  ust-id-nr: "vat-id",
-  uid: "vat-id",
-  uid-nr: "vat-id",
-  tva: "vat-id",
-  numero-tva: "vat-id",
-  tva-intracom: "vat-id",
-  iva: "vat-id",
-  partita-iva: "vat-id",
-  p-iva: "vat-id",
-  piva: "vat-id",
-  nif-iva: "vat-id",
-  btw: "vat-id",
-  btw-nr: "vat-id",
-  mwst: "vat-id",
-  mwst-nr: "vat-id",
-  taxnr: "tax-nr",
-  tax-no: "tax-nr",
-  tax-number: "tax-nr",
-  tax-id: (
-    "tax-nr",
-    "Rename it to `tax-nr` for the national tax number, or to `vat-id` for the VAT identification number.",
-  ),
-  steuernummer: "tax-nr",
-  steuer-nr: "tax-nr",
-  st-nr: "tax-nr",
-  stnr: "tax-nr",
-  mail: "email",
-  e-mail: "email",
-  email-address: "email",
-  tel: "phone",
-  tel-nr: "phone",
-  tel-no: "phone",
-  telnr: "phone",
-  telephone: "phone",
-  telefon: "phone",
-  telefon-nr: "phone",
-  phone-nr: "phone",
-  phone-no: "phone",
-  phone-number: "phone",
-  endpoint: "electronic-address",
-  endpoint-id: "electronic-address",
-  peppol-id: "electronic-address",
-  gln: (
-    "global-id",
-    "Pass the GLN as `global-id: id.gln(..)`.",
-  ),
-  // The legal registration identifier (BT-30, BT-47) and the constructors of
-  // the `id` module for its schemes.
-  siret: ("legal-id", "Pass the SIRET as `legal-id: id.siret(..)`."),
-  siren: ("legal-id", "Pass the SIREN as `legal-id: id.siren(..)`."),
-  handelsregister: (
-    "legal-id",
-    "Pass the register number as `legal-id: id.register(\"HRB ..\", court: \"Amtsgericht ..\")`.",
-  ),
-  hrb: (
-    "legal-id",
-    "Pass the register number as `legal-id: id.register(\"HRB ..\", court: \"Amtsgericht ..\")`.",
-  ),
-  register-number: "legal-id",
-  registration-number: "legal-id",
-  company-number: "legal-id",
-  company-registration-number: "legal-id",
-  trade-name: "trading-name",
-  business-name: "trading-name",
-  legal-information: "legal-info",
-  fiscal-representative: "tax-representative",
-  tax-rep: "tax-representative",
-  vat-representative: "tax-representative",
-  fiskalvertreter: "tax-representative",
-  leitweg: "leitweg-id",
-  order: "order-nr",
-  po: "po-nr",
-  contract: "contract-nr",
-  delivery-note: "delivery-note-nr",
-  strasse: "street",
-  straße: "street",
-  ort: "city",
-  zip: ("city", _post-code-hint),
-  zip-code: ("city", _post-code-hint),
-  zipcode: ("city", _post-code-hint),
-  postcode: ("city", _post-code-hint),
-  postal-code: ("city", _post-code-hint),
-  postalcode: ("city", _post-code-hint),
-  plz: ("city", _post-code-hint),
-  land: "country",
-  country-code: "country",
-  // A missing "r" of `country`, or the county of a British or Irish address.
-  county: (
-    "country",
-    "Rename it to `country` if it states the country. The e-invoice has no field for a county; write it into `address` to print it.",
-  ),
-)
-
-// Keys invoices often carry that `invoice-pro` does not read, but which look
-// like misspellings of keys it knows ("fax-nr" and "tax-nr"). Like any
-// unknown key, they are not written into the e-invoice, but they are never
-// taken for a misspelling.
-#let _other-keys = (
-  fax-nr: true,
-  fax-no: true,
-  faxnr: true,
-)
-
-// Patterns for unknown keys, compiled once on first use: unknown keys are rare.
-#let _key-patterns() = (
-  camel-case: regex("([a-z0-9])([A-Z])"),
-  separators: regex("[\\s_.-]+"),
-  numbered: regex("[0-9]$"),
-)
-
-// A key in lower case with `-` between its words: "vatId", "vat_id" and
-// "VAT-ID" all become "vat-id".
-#let _normalize-key(key) = {
-  let patterns = _key-patterns()
-  let key = key.replace(patterns.camel-case, m => (
-    m.captures.at(0) + "-" + m.captures.at(1)
-  ))
-  lower(key).replace(patterns.separators, "-").trim("-")
-}
-
-// The optimal string alignment distance of `a` and `b` (edits and swaps of
-// neighboring characters), or `limit + 1` as soon as it exceeds `limit`.
-#let _edit-distance(a, b, limit) = {
-  let a = a.clusters()
-  let b = b.clusters()
-  if calc.abs(a.len() - b.len()) > limit { return limit + 1 }
-  let before = none
-  let previous = range(b.len() + 1)
-  for i in range(1, a.len() + 1) {
-    let current = (i,)
-    let lowest = i
-    for j in range(1, b.len() + 1) {
-      let cost = if a.at(i - 1) == b.at(j - 1) { 0 } else { 1 }
-      let value = calc.min(
-        previous.at(j) + 1,
-        current.at(j - 1) + 1,
-        previous.at(j - 1) + cost,
-      )
-      if (
-        i > 1
-          and j > 1
-          and a.at(i - 1) == b.at(j - 2)
-          and a.at(i - 2) == b.at(j - 1)
-      ) {
-        value = calc.min(value, before.at(j - 2) + 1)
-      }
-      current.push(value)
-      lowest = calc.min(lowest, value)
-    }
-    if lowest > limit { return limit + 1 }
-    before = previous
-    previous = current
-  }
-  calc.min(previous.last(), limit + 1)
-}
-
-// The known key a misspelled `key` most likely stands for: within an edit
-// distance of 1 for keys of up to 4 characters and of 2 for longer ones,
-// preferring keys the e-invoice reads.
-#let _closest-key(key, known) = {
-  let best = none
-  let best-distance = none
-  for (candidate, einvoice) in known.pairs() {
-    let limit = if candidate.len() <= 4 { 1 } else { 2 }
-    let distance = _edit-distance(key, candidate, limit)
-    if distance > limit { continue }
-    if (
-      best == none
-        or distance < best-distance
-        or (distance == best-distance and einvoice and not known.at(best))
-    ) {
-      best = candidate
-      best-distance = distance
-    }
-  }
-  best
-}
-
-// An input key a party does not know: the known key it looks like (`like`),
-// whether the e-invoice reads that key, and a hint where renaming alone does
-// not fit. A key ending in a number (e.g. "email2") and the keys of
-// `_other-keys` are taken as deliberate.
+// An input key a party does not know, described by `unknown-key` of
+// keys.typ, which loads only for the first unknown key: invoices rarely have
+// one.
 #let _unknown-key(key, known, path: none) = {
-  let normalized = _normalize-key(key)
-  let like = none
-  let hint = none
-  if normalized in _key-aliases {
-    let alias = _key-aliases.at(normalized)
-    if type(alias) == str { like = alias } else { (like, hint) = alias }
-  } else if normalized in known {
-    like = normalized
-  } else if (
-    normalized not in _other-keys
-      and normalized.match(_key-patterns().numbered) == none
-  ) {
-    like = _closest-key(normalized, known)
-  }
-  if like != none and like not in known {
-    like = none
-    hint = none
-  }
-  (
-    key: key,
-    path: if path == none { key } else { path + "." + key },
-    within: path,
-    like: like,
-    einvoice: like != none and known.at(like),
-    hint: hint,
-  )
+  import "keys.typ": unknown-key
+  unknown-key(key, known, path: path)
 }
 
 // Whether an input value states nothing: the keys of such values are ignored.
 #let _is-unset(value) = value in (none, auto, "", [], ())
 
 // The keys of a party dictionary, of its `contact` and of its identifiers that
-// the role does not know (see `party-keys`), each described by `_unknown-key`.
+// the role does not know (see `party-keys`), each described by `unknown-key`
+// of keys.typ, which loads only for the first unknown key.
 #let _input-keys(party, role) = {
   let known = party-keys.at(role)
   // A key standing for the city or post code loses nothing next to a city
@@ -874,182 +656,28 @@
   from-buyer: true,
 )
 
-// The UN/ECE Recommendation 20 codes of the units of the `unit` module, by
-// their key in the language files.
-#let _unit-codes = (
-  piece: "H87",
-  "set": "SET",
-  pair: "PR",
-  "lump-sum": "LS",
-  hour: "HUR",
-  day: "DAY",
-  month: "MON",
-  year: "ANN",
-  kilogram: "KGM",
-  gram: "GRM",
-  tonne: "TNE",
-  metre: "MTR",
-  "square-metre": "MTK",
-  millimetre: "MMT",
-  centimetre: "CMT",
-  kilometre: "KMT",
-  litre: "LTR",
-  "cubic-metre": "MTQ",
-)
-
-/// Unit texts and the UN/ECE Recommendation 20 codes they stand for, by the
-/// text in lower case without a trailing ".": the symbols and names of the
-/// unit database, the unit names of every language of invoice-pro and common
-/// abbreviations. Only whole texts match, never a part of one.
-///
-/// It is built when called, so an invoice without e-invoice does not build
-/// it: `build-model` builds it once for all lines (see `unit-resolver`).
+/// The UN/ECE Recommendation 20 code of a unit (BT-130, BT-150) as `(code:
+/// .., issue: ..)`. A unit of the `unit` module or a dictionary carries its
+/// code; without a unit, the quantity is a number of "one" (C62). A unit
+/// given as text is resolved by `resolve-text-unit` (units.typ, which loads
+/// only for such a unit): a code as it is, or the code of a unit name or
+/// abbreviation invoice-pro knows, else C62 with the issue that the text is
+/// unknown or ambiguous.
 ///
 /// -> dictionary
-#let unit-aliases() = {
-  let table = (:)
-  for (code, texts) in (
-    HUR: ("hr", "hrs", "std", "stunde", "stunden"),
-    MIN: ("min", "mins", "minute", "minutes", "minuten"),
-    SEC: ("s", "sec", "sek", "second", "seconds", "sekunde", "sekunden"),
-    WEE: ("wk", "wks", "week", "weeks", "woche", "wochen"),
-    MON: ("mon",),
-    ANN: ("yr", "yrs"),
-    KGM: ("kilo", "kilos"),
-    TNE: ("to", "tonnen"),
-    MTR: ("meter", "meters", "lfm"),
-    MTK: ("m2", "qm", "sqm", "square meter", "square meters"),
-    MTQ: ("m3", "cbm", "cubic meter", "cubic meters"),
-    LTR: ("ltr", "liter", "liters"),
-    MLT: ("ml",),
-    KWH: ("kwh",),
-    MWH: ("mwh",),
-    H87: ("st", "stk", "stck", "pc", "pcs", "pce"),
-    LS: ("psch", "pausch", "pauschal", "flat", "flat rate", "lumpsum"),
-    IE: ("person", "persons", "pers", "personen"),
-    ZP: ("page", "pages", "seite", "seiten"),
-    P1: ("%", "percent", "prozent"),
-  ).pairs() {
-    for text in texts { table.insert(text, code) }
-  }
-  // Plurals that the languages list no own form for and that are no singular
-  // with "s" (French, Italian and Spanish).
-  for (code, texts) in (
-    H87: ("pezzi", "unidades"),
-    PR: ("paia", "pares"),
-    HUR: ("ore",),
-    DAY: ("giorni",),
-    MON: ("mesi",),
-    ANN: ("anni", "année", "années"),
-    KGM: ("chilogrammi",),
-    GRM: ("grammi",),
-    TNE: ("tonnellate",),
-    MTR: ("metri",),
-    MTK: ("mètres carrés", "metri quadrati", "metros cuadrados"),
-    MMT: ("millimetri",),
-    CMT: ("centimetri",),
-    KMT: ("chilometri",),
-    LTR: ("litri",),
-    MTQ: ("mètres cubes", "metri cubi", "metros cúbicos"),
-  ).pairs() {
-    for text in texts { table.insert(text, code) }
-  }
-  for unit in unit-db {
-    if unit.symbol != none { table.insert(lower(unit.symbol), unit.code) }
-    table.insert(lower(unit.name), unit.code)
-  }
-  for strings in (
-    languages.de,
-    languages.en,
-    languages.fr,
-    languages.it,
-    languages.es,
-  ) {
-    for (key, names) in strings.units.pairs() {
-      let code = _unit-codes.at(key, default: none)
-      if code == none { continue }
-      // A name, or its singular and plural.
-      let names = if type(names) == dictionary { names.values() } else {
-        (names,)
-      }
-      for name in names { table.insert(lower(name), code) }
-    }
-  }
-  table
-}
-
-// Unit codes that are also common German abbreviations of other units, with
-// what the code means and what the abbreviation stands for. Taken verbatim,
-// they most likely do not mean what the code says.
-#let _ambiguous-unit-codes = (
-  STK: ("stick", "Stück"),
-  PAL: ("pascal", "Palette"),
-  FL: ("flake ton", "Flasche"),
-  GL: ("gram per litre", "Glas"),
-  KT: ("kit", "Karton"),
-)
-
-/// A function that returns the UN/ECE Recommendation 20 code of a unit
-/// (BT-130, BT-150) as `(code: .., issue: ..)`. It builds the table of
-/// `unit-aliases` once for all units it resolves, and keeps it to itself: a
-/// function argument is hashed on every call.
-///
-/// A unit of the `unit` module or a dictionary carries its code. A text that
-/// is exactly a code (e.g. "H87") is taken as it is, but a code that is also a
-/// common abbreviation of another unit (e.g. "STK", the code of sticks) has
-/// the issue `(kind: "ambiguous", ..)`. Any other text is looked up in the
-/// unit names and abbreviations invoice-pro knows ("Std.", "m²", "qm",
-/// "Stück", "pauschal", ...). A text it does not know has the issue
-/// `(kind: "unknown", text: ..)` and the code C62 ("one") as placeholder:
-/// invoice-pro does not guess what it means. Without a unit, the quantity
-/// is a number of "one" (C62).
-///
-/// -> function
-#let unit-resolver() = {
-  let aliases = unit-aliases()
-  unit => {
-    if type(unit) == dictionary {
-      let code = compact(unit.at("code", default: none))
-      if code != none { return (code: code, issue: none) }
-      unit = unit.at("display", default: none)
-    }
-    let text = plain-text(unit)
-    if text == "" { return (code: "C62", issue: none) }
-    // A unit written exactly as a code; case-sensitive, so that "min" is not
-    // looked up as the code "MIN" but as an abbreviation (which gives the
-    // same).
-    if text in codelists.units {
-      let ambiguous = _ambiguous-unit-codes.at(text, default: none)
-      return (
-        code: text,
-        issue: if ambiguous != none {
-          (
-            kind: "ambiguous",
-            text: text,
-            meaning: ambiguous.first(),
-            abbreviation: ambiguous.last(),
-          )
-        },
-      )
-    }
-    let key = lower(text).trim(".", at: end)
-    let code = aliases.at(key, default: none)
-    // A plural with "s" ("heures", "kgs"), but not "ms" for "m".
-    if code == none and key.ends-with("s") and key.clusters().len() > 2 {
-      code = aliases.at(key.slice(0, -1), default: none)
-    }
+#let resolve-unit(unit) = {
+  if type(unit) == dictionary {
+    let code = compact(unit.at("code", default: none))
     if code != none { return (code: code, issue: none) }
-    (code: "C62", issue: (kind: "unknown", text: text))
+    unit = unit.at("display", default: none)
   }
+  let text = plain-text(unit)
+  if text == "" { return (code: "C62", issue: none) }
+  import "units.typ": resolve-text-unit
+  resolve-text-unit(text)
 }
 
-/// The UN/ECE Recommendation 20 code of a unit as `(code: .., issue: ..)`,
-/// see `unit-resolver`.
-///
-/// -> dictionary
-#let resolve-unit(unit) = unit-resolver()(unit)
-
-/// The UN/ECE Recommendation 20 code of a unit, see `unit-resolver`.
+/// The UN/ECE Recommendation 20 code of a unit, see `resolve-unit`.
 ///
 /// -> str
 #let map-unit-code(unit) = resolve-unit(unit).code
@@ -1241,7 +869,7 @@
 // An invoice line (BG-25) with net amounts.
 // With gross prices, `round-price` rounds the net price as the invoice
 // rounds unit prices (the `money-fine` rounding of the locale). `unit` is the
-// unit of the item as `unit-resolver` resolves it, resolved here when `auto`.
+// unit of the item as `resolve-unit` resolves it, resolved here when `auto`.
 #let line-model(
   item,
   index,
@@ -1298,7 +926,7 @@
     base-quantity: base-quantity,
     unit-code: unit.code,
     // A unit text without a known code, or a code that most likely means
-    // something else (see `unit-resolver`).
+    // something else (see `resolve-unit`).
     unit-issue: unit.issue,
     price: price,
     net: _net(to-decimal(item.at("total", default: 0)), rate, inclusive),
@@ -1587,7 +1215,6 @@
     _ship-to-buyer(buyer.address)
   } else { none }
 
-  let resolve = unit-resolver()
   let lines = ()
   for (i, item) in items.enumerate() {
     lines.push(line-model(
@@ -1595,7 +1222,7 @@
       i,
       inclusive: inclusive,
       round-price: round-price,
-      unit: resolve(item.at("unit", default: none)),
+      unit: resolve-unit(item.at("unit", default: none)),
     ))
   }
   let allowance-charges = document-allowance-charges(
