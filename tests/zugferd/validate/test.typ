@@ -285,6 +285,13 @@
     registry.keys().filter(key => not key.starts-with("IP-GUARD-")).sorted(),
     messages.keys().sorted(),
   )
+  // `profiles` lists the profiles in which a check can report its rule:
+  // EN 16931 and XRechnung state every input IP-PROFILE-01 looks for.
+  assert.eq(registry.at("IP-PROFILE-01").profiles, (
+    "minimum",
+    "basic-wl",
+    "basic",
+  ))
   let missing = (key: "BR-02", field: "invoice-nr")
   let negative = (
     key: "IP-DOC-04",
