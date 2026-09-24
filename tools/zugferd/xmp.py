@@ -108,7 +108,7 @@ def facts(xmp):
                             etree.XMLParser(resolve_entities=False, no_network=True))
     # Every value as a list, so that a missing or repeated property shows.
     values = {name: [e.text for e in root.xpath(f"//fx:{name}", namespaces=NS)] for name in FX_PROPERTIES}
-    schemas =[li for li in root.xpath("//pdfaExtension:schemas/rdf:Bag/rdf:li", namespaces=NS)
+    schemas = [li for li in root.xpath("//pdfaExtension:schemas/rdf:Bag/rdf:li", namespaces=NS)
                if li.findtext("pdfaSchema:schema", namespaces=NS) == SCHEMA_NAME]
     schema = None
     if len(schemas) == 1:
