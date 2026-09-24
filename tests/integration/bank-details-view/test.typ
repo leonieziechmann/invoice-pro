@@ -10,6 +10,7 @@
 #import "/src/locale/region/base.typ": base-region
 #import "/src/logic/epc.typ"
 #import "/src/utils/bic.typ": bic-valid, normalize-bic
+#import "/src/utils/text.typ": plain-text
 #import "/src/themes/base-theme/bank-details.typ": render-bank-details
 #import "/tests/integration/payment-reference/harness.typ": find-all, plain
 
@@ -21,6 +22,18 @@
   assert.eq(normalize-bic("sola dest 600"), "SOLADEST600")
   assert.eq(normalize-bic([sola *dest* 600]), "SOLADEST600")
   assert.eq(normalize-bic(none), "")
+  // Every whitespace character goes, as with the class `\s`.
+  let reference(value) = upper(plain-text(value).replace(regex("\\s"), ""))
+  for value in (
+    "sola\u{00A0}dest\t600",
+    "sola\u{2028}dest\u{3000}6\u{0085}00\r\n",
+    [sola #linebreak() dest #h(1em) 600],
+    "  SOLADEST600  ",
+    "",
+  ) {
+    assert.eq(normalize-bic(value), reference(value), message: repr(value))
+  }
+  assert.eq(normalize-bic("sola\u{00A0}dest\t600"), "SOLADEST600")
   assert(bic-valid("SOLADEST"))
   assert(bic-valid("SOLADEST600"))
   assert(not bic-valid("COBA22XXX"), message: "9 characters")

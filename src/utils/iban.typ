@@ -3,9 +3,8 @@
 
 #import "text.typ": plain-text
 
-// The patterns are compiled once: compiling a regex costs far more than
+// The pattern is compiled once: compiling a regex costs far more than
 // matching it.
-#let _whitespace = regex("\\s")
 #let _iban-format = regex("^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$")
 
 /// The electronic format of an IBAN: its plain text without whitespace, in
@@ -13,7 +12,12 @@
 /// all derive from it. `none` becomes `""`.
 ///
 /// -> str
-#let normalize-iban(iban) = upper(plain-text(iban).replace(_whitespace, ""))
+#let normalize-iban(iban) = upper(
+  // `split()` splits at every Unicode whitespace character, as the class
+  // `\s` does, without a pattern: compiling `\s` when this module loads cost
+  // every compile about 1 M instructions.
+  plain-text(iban).split().join(default: ""),
+)
 
 /// The remainder of an alphanumeric text in upper case, read as a number
 /// with the letters A to Z standing for 10 to 35, divided by 97: the check
