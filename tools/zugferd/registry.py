@@ -6,15 +6,14 @@
 The registry, src/zugferd/rules/registry.json, is the one source of the
 metadata of every rule whose diagnostics invoice-pro reports: the checks of
 its validator (src/zugferd/rules/engine.typ, rare.typ, xrechnung.typ and
-equivalence.typ with equivalence-line.typ, the invariants that the XML
+equivalence.typ with equivalence-detail.typ, the invariants that the XML
 states what the invoice prints, which report findings by the key of an
-entry) and the rules of the
-XML write guard (IP-GUARD-*). The messages are in
-src/zugferd/rules/messages.typ, those of the rules of XRechnung that no
-other profile reports in
-xrechnung-messages.typ (engine.typ loads it for a finding of a BR-DE-* rule,
-messages.typ only for another rule). Typst reads the file only when a check
-fails (JSON is the format it reads fastest); the tools read it here:
+entry) and the rules of the XML write guard (IP-GUARD-*). The messages are
+in src/zugferd/rules/messages.typ, those of the rules of XRechnung that no
+other profile reports in xrechnung-messages.typ (engine.typ loads it for a
+finding of a BR-DE-* rule, messages.typ only for another rule). Typst reads
+the file only when a check fails (JSON is the format it reads fastest); the
+tools read it here:
 
   load()              the registry, checked (`problems`): {"format": 1,
                       "sources": {source: artefact}, "rules": {key: entry}}
@@ -78,7 +77,7 @@ MODULES = [
     RULES / "rare.typ",
     RULES / "xrechnung.typ",
     RULES / "equivalence.typ",
-    RULES / "equivalence-line.typ",
+    RULES / "equivalence-detail.typ",
 ]
 GUARD_REPORT = REPO / "src" / "zugferd" / "guard" / "report.typ"
 DOCS = REPO / "docs" / "docs" / "e-invoicing.md"
