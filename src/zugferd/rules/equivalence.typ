@@ -8,9 +8,9 @@
 // the same values. Every e-invoice compares them here in one pass; the
 // detailed check loads only when a value differs, or for the invoices that
 // need it anyway: with gross prices (the net amounts are derived from the
-// printed gross ones), with document level allowances or charges (split per
-// VAT group), and an XRechnung in a currency without cents (whose lines
-// PEPPOL-EN16931-R120 checks).
+// printed gross ones), with allowances or charges (of a line, or of the
+// document, split per VAT group), and an XRechnung in a currency without
+// cents (whose lines PEPPOL-EN16931-R120 checks).
 
 #let _zero = decimal("0")
 
