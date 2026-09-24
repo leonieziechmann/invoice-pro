@@ -16,7 +16,7 @@ A professional, compliant, and automated invoice template for [Typst](https://ty
 - **EPC QR-Code (GiroCode):** Automatically generates a scannable banking QR code for quick and easy payments using banking apps.
 - **Payment Means:** Besides bank details for a transfer, `#direct-debit` (SEPA direct debit with mandate reference and creditor identifier), `#card-payment` and `#paid` for invoices that are paid already, and cash discounts with `#payment-goal(discount: ..)`. The printed invoice and the e-invoice state the same payment means.
 - **Legal Content:** The default references print what the law requires on an invoice, such as the seller's tax number or VAT ID and the date of the supply, and an e-invoice checks that the printed invoice shows them. Credit notes, corrected and self-billed invoices (`document-type`), notes, the payee and the VAT exemption reasons with their VATEX codes are stated as well.
-- **Identifiers:** Typed party identifiers, such as `id.gln(..)`, `id.siret(..)`, `id.leitweg(..)` or `id.register(..)` (commercial register), checked for their format and check digits, for the printed invoice and the e-invoice.
+- **Identifiers:** Typed party identifiers, such as `id.gln(..)`, `id.siret(..)`, `id.leitweg(..)` or `id.register(..)` (commercial register), stated in the e-invoice, which checks their format and check digits.
 - **Advanced Modifiers:** Apply specific discounts, surcharges, and custom tax rates at the item, bundle, or global level.
 - **Highly Customizable:** Easy configuration of sender, recipient, payment goals, bank details, and visual themes to match your corporate identity.
 

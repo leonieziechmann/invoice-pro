@@ -51,14 +51,32 @@ Labels indicating the address blocks.
 
 Designations for header metadata.
 
-| Key              | Type  | Description                                                                                           |
-| :--------------- | :---- | :---------------------------------------------------------------------------------------------------- |
-| `tax-number`     | `str` | Label for the sender's tax identification (e.g., `"Tax ID"`).                                         |
-| `invoice-number` | `str` | Label for the document identifier (e.g., `"Invoice Number"`).                                         |
-| `vat-id`         | `str` | Label for the Value Added Tax identifier (e.g., `"VAT ID"`).                                          |
-| `invoice-date`   | `str` | Label for the date of the invoice (e.g., `"Invoice Date"`).                                           |
-| `service-time`   | `str` | Label for the period of service (e.g., `"Period of Service"`).                                        |
-| `payee`          | `str` | Label for who receives the payment instead of the sender, e.g. a factoring company (e.g., `"Payee"`). |
+| Key                        | Type  | Description                                                                                           |
+| :------------------------- | :---- | :---------------------------------------------------------------------------------------------------- |
+| `tax-number`               | `str` | Label for the sender's tax identification (e.g., `"Tax ID"`).                                         |
+| `invoice-number`           | `str` | Label for the document identifier (e.g., `"Invoice Number"`).                                         |
+| `vat-id`                   | `str` | Label for the Value Added Tax identifier (e.g., `"VAT ID"`).                                          |
+| `invoice-date`             | `str` | Label for the date of the invoice (e.g., `"Invoice Date"`).                                           |
+| `service-time`             | `str` | Label for the period of service (e.g., `"Period of Service"`).                                        |
+| `customer-number`          | `str` | Label for the customer number (e.g., `"Customer No."`).                                               |
+| `buyer-reference`          | `str` | Label for the buyer reference or Leitweg-ID (e.g., `"Buyer Reference"`).                              |
+| `recipient-vat-id`         | `str` | Label for the buyer's VAT identifier (e.g., `"Buyer VAT ID"`).                                        |
+| `recipient-tax-number`     | `str` | Label for the buyer's tax number (e.g., `"Buyer Tax ID"`).                                            |
+| `order-number`             | `str` | Label for the order number (e.g., `"Order No."`).                                                     |
+| `order-date`               | `str` | Label for the date of the order (e.g., `"Order Date"`).                                               |
+| `project`                  | `str` | Label for the project (e.g., `"Project"`).                                                            |
+| `contract-number`          | `str` | Label for the contract number (e.g., `"Contract No."`).                                               |
+| `quote-number`             | `str` | Label for the quote number (e.g., `"Quote No."`).                                                     |
+| `delivery-note-number`     | `str` | Label for the delivery note number (e.g., `"Delivery Note No."`).                                     |
+| `delivery-address`         | `str` | Label for the delivery address (e.g., `"Delivery Address"`).                                          |
+| `preceding-invoice-number` | `str` | Label for the number of the preceding invoice (e.g., `"Preceding Invoice No."`).                      |
+| `preceding-invoice-date`   | `str` | Label for the date of the preceding invoice (e.g., `"Preceding Invoice Date"`).                       |
+| `due-date`                 | `str` | Label for the due date (e.g., `"Due Date"`).                                                          |
+| `payment-reference`        | `str` | Label for the payment reference (e.g., `"Payment Reference"`).                                        |
+| `contact-person`           | `str` | Label for the contact person (e.g., `"Contact Person"`).                                              |
+| `contact-phone`            | `str` | Label for the phone number of the contact (e.g., `"Phone"`).                                          |
+| `contact-email`            | `str` | Label for the email address of the contact (e.g., `"Email"`).                                         |
+| `payee`                    | `str` | Label for who receives the payment instead of the sender, e.g. a factoring company (e.g., `"Payee"`). |
 
 ### `line-items`
 

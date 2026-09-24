@@ -30,9 +30,11 @@
 /// -> content
 #let bank-details(
   /// The name of the account holder. Defaults to the name of the `payee` of
-  /// the invoice, else the sender's name on one line, as in the e-invoice
-  /// (BT-59, BT-27). A name given here is also the account name of the
-  /// e-invoice (BT-85).
+  /// the invoice (not on a credit note, which refunds the buyer), else the
+  /// sender's name on one line, as in the e-invoice (BT-59, BT-27), or the
+  /// recipient's on a credit note or a self-billed invoice, which the sender
+  /// pays. A name given here is also the account name of the e-invoice
+  /// (BT-85).
   /// -> auto | none | string
   name: auto,
 

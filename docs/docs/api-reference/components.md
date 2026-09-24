@@ -298,6 +298,7 @@ Invoiced to #info.recipient.name in #info.recipient.city.
 | `#info.quote-nr`                       | Quotation number                                                                                                                                 |
 | `#info.delivery-note-nr`               | Delivery note number: the invoice's `delivery-note-nr`, else the recipient's, as in the e-invoice (BT-16)                                        |
 | `#info.preceding-invoice-nr`           | Preceding / original invoice number                                                                                                              |
+| `#info.preceding-invoice-date`         | Date of the preceding invoice, formatted like the invoice date                                                                                   |
 | `#info.payment-reference`              | Payment reference (Verwendungszweck), resolved like [`bank-details`](#bank-details)                                                              |
 | `#info.buyer-reference`                | Buyer reference / Leitweg-ID                                                                                                                     |
 | `#info.subject`                        | Document subject line                                                                                                                            |

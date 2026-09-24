@@ -101,7 +101,7 @@ The package provides three ways to pass the `unit` parameter:
    - `name` (`str`, optional): The internal name of the unit. If not provided, it defaults to the `display` value.
 
 3. **Plain String:**
-   A simple fallback string (e.g., `"hrs"` or `"pcs"`). The package performs a best-effort mapping to map it to standard codes (e.g., `"hrs"` to `"HUR"`), and falls back to `"C62"` (one/unit) if unrecognized.
+   A simple string (e.g., `"hrs"` or `"Stk."`), printed as given. For the e-invoice, the package maps it to a standard code by the unit names of its languages and common abbreviations (e.g., `"hrs"` to `"HUR"`). A string it does not recognize stops the e-invoice (`IP-UNIT-02`) rather than being written as a guessed code: give such a unit as a dictionary with its code (see above). Without an e-invoice, any string is fine.
 
 For a full list of predefined units and aliases, see the [Unit API Reference](./unit.md) subpage.
 
