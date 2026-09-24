@@ -159,6 +159,28 @@ The maintainer accepts an e-invoice share above 15 % at 5 lines as long as the l
 
 After an edit, the preview of an e-invoice with 5 lines is up to date in about an eighth of a second, some 10 ms later than without e-invoice: the e-invoice adds 19 to 29 M instructions (3 to 5 %) to a recompile, while it adds 125 to 142 M (11 %) to a cold compile. At 50 lines it adds 3 to 4 %, less than the times vary between runs; at 300 lines, the invoice itself takes about 2 s per recompile.
 
+### The merged branch
+
+The second pass over the fixed costs was merged with the checks that the XML states what the invoice prints (`rules/equivalence.typ`, and G3, which reads back the written header: `guard/roundtrip.typ` with `guard/bindings.json`) and with the corrections of the rule ids. Measured on the merged branch (3deaf94), same machine:
+
+| Gate metric (`scripts/perf-gate --runs 5`) | 5 lines | 50 lines | 300 lines |
+| :----------------------------------------- | ------: | -------: | --------: |
+| Share of the plain compile                 |  16.5 % |    9.2 % |     5.4 % |
+| E-invoice path                             | 37.2 ms |  66.1 ms |  192.9 ms |
+| Module import (budget 12 ms)               | 17.8 ms |  18.0 ms |   17.0 ms |
+| Serializer per line (budget 0.5 ms)        | 1.73 ms |  0.45 ms |   0.31 ms |
+
+The gate is yellow at 5 lines (the share and the module import) and never red; the checks of the printed amounts and G3 on the header take about 3 ms of the e-invoice path at 5 lines. The live preview (`measure.py --watch --runs 21`, median of 21 recompiles after an edit of the first price; the difference is the median of the paired differences of the rounds):
+
+| Invoice       | Recompile without e-invoice | Recompile with e-invoice | Difference |
+| :------------ | --------------------------: | -----------------------: | ---------: |
+| `b`, 5 lines  |                      107 ms |                   113 ms |    +7.8 ms |
+| `r`, 5 lines  |                      121 ms |                   132 ms |   +11.5 ms |
+| `b`, 50 lines |                      315 ms |                   322 ms |    +9.3 ms |
+| `r`, 50 lines |                      358 ms |                   384 ms |   +22.6 ms |
+
+After an edit, the preview of an e-invoice with 5 lines is up to date in about an eighth of a second, about 10 ms later than without e-invoice.
+
 ## Keeping the e-invoice path cheap
 
 These rules come from measurements of the e-invoice path. They apply to all code that runs for every invoice or for every line. Instruction counts are from `cachegrind` (see above); on the test machine, the e-invoice path executes about 4 000 instructions per microsecond.
