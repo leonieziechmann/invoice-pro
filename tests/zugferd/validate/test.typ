@@ -95,9 +95,13 @@
   assert.eq(rules(m, level: "warning"), ("IP-EADDR-01", "IP-EADDR-01"))
   let found = checked(m)
   assert.eq(found.map(d => d.field).sorted(), ("recipient", "sender"))
-  assert.eq(
-    found.find(d => d.field == "sender").message,
-    "The seller electronic address (BT-34) is missing: EN 16931 leaves it optional, but a delivery over Peppol requires it, as XRechnung does.",
+  let seller = found.find(d => d.field == "sender")
+  assert.eq(seller.message, "The seller electronic address (BT-34) is missing.")
+  assert(
+    seller.hint.starts-with(
+      "EN 16931 leaves it optional, but a delivery over Peppol requires it, as XRechnung does. ",
+    ),
+    message: seller.hint,
   )
   m.profile = resolve-profile("basic", "FR")
   assert.eq(rules(m, level: "warning"), ())

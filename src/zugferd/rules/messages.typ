@@ -913,12 +913,14 @@
   "CII-SR-451": _single-identifier,
   "PEPPOL-EN16931-R020": _electronic-address,
   "PEPPOL-EN16931-R010": _electronic-address,
+  // The message of the Peppol rules, so that `zugferd: auto` does not list
+  // the missing address of a skipped XRechnung once more (see zugferd.typ).
   "IP-EADDR-01": f => {
     let (message, hint) = _electronic-address(f)
     (
-      message.trim(".", at: end)
-        + ": EN 16931 leaves it optional, but a delivery over Peppol requires it, as XRechnung does.",
-      hint,
+      message,
+      "EN 16931 leaves it optional, but a delivery over Peppol requires it, as XRechnung does. "
+        + hint,
     )
   },
   "BR-62": _address-scheme,

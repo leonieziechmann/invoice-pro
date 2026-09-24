@@ -164,3 +164,12 @@
     #bank-details(bank: "Musterbank", iban: "DE89370400440532013000")
   ],
 )
+
+// 7. A problem that EN 16931 reports as a warning of its own is listed once
+//    as well: a buyer without electronic address (PEPPOL-EN16931-R010 in
+//    XRechnung, IP-EADDR-01 in EN 16931)
+#auto-test(recipient: buyer + (email: none), result => {
+  assert.eq(result.profile.id, "en16931")
+  assert.eq(rules(result, "error"), ())
+  assert.eq(rules(result, "warning"), ("IP-EADDR-01",))
+})
