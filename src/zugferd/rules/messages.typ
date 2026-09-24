@@ -409,7 +409,11 @@
         + " is missing in the code list of the EN 16931 validation, so no e-invoice in the "
         + f.profile
         + " profile can use it.",
-      "Invoice in another currency, or use the \"minimum\" or \"basic-wl\" profile, whose validation knows the code.",
+      if in-list(lists.currency.at("withdrawn", default: ""), f.code) {
+        "Invoice in the currency that replaced it, e.g. \"EUR\" for \"BGN\" and \"HRK\", or use a profile of Factur-X, whose validation accepts the code (with a warning in \"basic\" and \"en16931\")."
+      } else {
+        "Invoice in another currency, or use the \"minimum\" or \"basic-wl\" profile, whose validation knows the code."
+      },
     )
   } else if _newer(lists.currency, f.code) {
     _not-yet(f, "The invoice currency code (BT-5) " + _quoted(f.code))
@@ -1077,9 +1081,9 @@
         "The scheme " + _quoted(f.code) + " of the " + f.term
       } else { "The " + f.term + " " + _quoted(f.code) }
     )
-      + " was withdrawn from the newest version of the EN 16931 code list (1.3.16). The validation of the "
+      + " was withdrawn from the newest version of the EN 16931 code list (1.3.16). The Factur-X validation of the "
       + f.profile
-      + " profile still accepts it, but a receiver that validates with the current list rejects the e-invoice.",
+      + " profile still accepts it, but a validator with the current list, such as KoSIT, rejects the e-invoice.",
     if f.list == "currency" {
       "Invoice in the currency that replaced it, e.g. \"EUR\" for \"BGN\" and \"HRK\"."
     } else if f.scheme {

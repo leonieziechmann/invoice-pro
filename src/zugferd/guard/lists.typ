@@ -48,11 +48,19 @@
 
 #let currency-2 = _derive(
   currency,
+  add: ("MRO", "STD", "VEF"),
+  remove: ("MRU", "STN", "UYW", "VES"),
+)
+
+#let currency-3 = _derive(currency, remove: ("MRU", "STN", "UYW", "VES"))
+
+#let currency-4 = _derive(
+  currency,
   add: ("STD",),
   remove: ("ANG", "BGN", "CUC", "HRK", "MRU", "STN", "UYW", "VES", "ZWL"),
 )
 
-#let currency-3 = _derive(
+#let currency-5 = _derive(
   currency,
   remove: ("ANG", "BGN", "CUC", "HRK", "MRU", "STN", "UYW", "VES", "ZWL"),
 )
@@ -357,6 +365,8 @@
   "currency": currency,
   "currency-2": currency-2,
   "currency-3": currency-3,
+  "currency-4": currency-4,
+  "currency-5": currency-5,
   "date-format": date-format,
   "document-type": document-type,
   "eas": eas,
@@ -394,9 +404,9 @@
 #let validator = (
   country: (every: country-3, factur-x: country-2, xrechnung: country),
   currency: (
-    every: currency-3,
+    every: currency-5,
     factur-x: currency,
-    xrechnung: currency-2,
+    xrechnung: currency-4,
     newer: _codes("CNH VED XCG ZWG"),
     withdrawn: _codes("ANG BGN CUC HRK MRO VEF ZWL"),
   ),

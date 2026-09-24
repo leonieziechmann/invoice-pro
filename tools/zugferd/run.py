@@ -82,6 +82,8 @@ CLASSES = {
     "AGREE_INVALID": "invoice-pro error, officially invalid, the rules match",
     "WRONG_RULE_ID": "both reject the invoice, but invoice-pro names none of the official rules",
     "FALSE_NEGATIVE": "no invoice-pro error, but officially invalid (silently invalid XML)",
+    "WARNED": "no invoice-pro error, and only one validator rejects the XML, under rules invoice-pro warns about "
+              "as decided (`warned-as` in validator-differences.toml)",
     "FALSE_POSITIVE": "invoice-pro error, but officially valid",
     "STRICTER": "only invoice-pro's own rules (IP-*) reject an officially valid invoice",
     "GUARD_ONLY": "only the XML guard objects: no rule of the registry explains it",
@@ -335,9 +337,9 @@ def classify(res, official=None):
 # Expectations that accept several classes.
 UNIONS = {
     # invoice-pro and the official validators agree, invoice-pro applies one
-    # of its own documented rules, or it stops with its own message about the
-    # input (random population).
-    "AGREE": ("AGREE_VALID", "AGREE_INVALID", "STRICTER", "INPUT_ERROR"),
+    # of its own documented rules or warns as decided, or it stops with its
+    # own message about the input (random population).
+    "AGREE": ("AGREE_VALID", "AGREE_INVALID", "STRICTER", "WARNED", "INPUT_ERROR"),
     # invoice-pro stops the invoice, whatever the official verdict: for input
     # that must not produce an e-invoice although its XML would be valid.
     "REJECTED": ("AGREE_INVALID", "WRONG_RULE_ID", "STRICTER", "FALSE_POSITIVE"),
@@ -346,6 +348,25 @@ UNIONS = {
 
 def warning_rules(res):
     return sorted({d.get("rule", "?") for d in res.get("diagnostics", []) if d.get("level") != "error"})
+
+
+def warned_as_decided(res, differences):
+    """Whether an XML invoice-pro accepts is officially invalid only because
+    one validator rejects it under rules that invoice-pro, as the maintainer
+    decided, reports as a warning (`warned-as` of validator-differences.toml),
+    e.g. a currency that only the newest EN 16931 code list of KoSIT has
+    withdrawn: the XSD accepts it, the other validator accepts it, and
+    invoice-pro warns of every rule behind the disagreement."""
+    official = res.get("official") or {}
+    dis = official.get("disagreement")
+    if not dis or not dis["rules"] or res.get("xsd_errors"):
+        return False
+    warned = set(warning_rules(res))
+    for rule in dis["rules"]:
+        entry = (differences or {}).get(rule)
+        if not entry or dis["rejected_by"] not in entry["rejected-by"] or entry.get("warned-as") not in warned:
+            return False
+    return True
 
 
 def expectation_met(case, cls, ours, warned=()):
@@ -498,6 +519,11 @@ def load_differences(path):
         entry["other"] = others
         if not entry.get("reason"):
             raise common.ToolError(f"{path}: [{rule}] needs a `reason`")
+        # The rule invoice-pro warns of instead, where the maintainer decided
+        # that it accepts what only the rejecting validator rejects.
+        warned = entry.get("warned-as")
+        if warned is not None and not (isinstance(warned, str) and warned.startswith("IP-")):
+            raise common.ToolError(f"{path}: [{rule}] `warned-as` must name a rule of invoice-pro (IP-*)")
     return data
 
 
@@ -629,9 +655,11 @@ class Checker:
             self.mustang.close()
 
 
-def make_row(case, res, doc):
+def make_row(case, res, doc, differences=None):
     """Classification, expectation and oracles of one evaluated case."""
     cls = classify(res)
+    if cls == "FALSE_NEGATIVE" and warned_as_decided(res, differences):
+        cls = "WARNED"
     # A deliberate stop on invalid input is not a crash: when it is the
     # message the case expects, or, for random input, any message of a
     # `panic` or `assert` of invoice-pro (not a runtime error of Typst).
@@ -815,7 +843,7 @@ def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass, use_kosit
     finally:
         checker.close()
 
-    rows = [make_row(case, results[case["id"]], docs.get(case["id"])) for case in cases]
+    rows = [make_row(case, results[case["id"]], docs.get(case["id"]), differences) for case in cases]
     metamorphic(rows, docs, {c["id"]: c for c in cases})
     try:
         rules_registry = registry.load()
@@ -853,9 +881,10 @@ def run(cases, jobs, out_dir, use_mustang, known, strict, check_xpass, use_kosit
 
 def breaks_hard_gate(row):
     """A legal invoice that is not AGREE_VALID (silently invalid, blocked by
-    invoice-pro, crashed, no XML): never excused by known issues. Oracle
-    failures of valid legal invoices can be known issues."""
-    return row.get("population") == "legal" and row["cls"] != "AGREE_VALID"
+    invoice-pro, crashed, no XML), or WARNED as decided: never excused by
+    known issues. Oracle failures of valid legal invoices can be known
+    issues."""
+    return row.get("population") == "legal" and row["cls"] not in ("AGREE_VALID", "WARNED")
 
 
 def triage(rows, known, strict=False, check_xpass=True, differences=None, check_stale=False):
@@ -929,14 +958,19 @@ def _disagreements(rows, differences):
         dis = row.get("disagreement")
         if not dis or dis.get("undocumented"):
             continue
-        key = (dis["rejected_by"], tuple(dis["rules"]), tuple(dis["other"][r] for r in dis["rules"]), bool(row["ours"]))
+        key = (dis["rejected_by"], tuple(dis["rules"]), tuple(dis["other"][r] for r in dis["rules"]), bool(row["ours"]),
+               row["cls"] == "WARNED")
         groups.setdefault(key, []).append(row["id"])
     lines = []
-    for (rejecting, rules, others, ours), ids in sorted(groups.items(), key=lambda kv: (kv[0][0], kv[0][1])):
+    for (rejecting, rules, others, ours, warned), ids in sorted(groups.items(), key=lambda kv: (kv[0][0], kv[0][1])):
         other = "KoSIT" if rejecting == "mustang" else "Mustang"
         said = ", ".join(sorted(set(others)))
-        verdict = (f"invoice-pro reports an error (stricter than {other})" if ours
-                   else "invoice-pro reports NO error (FALSE_NEGATIVE)")
+        if ours:
+            verdict = f"invoice-pro reports an error (stricter than {other})"
+        elif warned:
+            verdict = "invoice-pro warns, as decided (WARNED)"
+        else:
+            verdict = "invoice-pro reports NO error (FALSE_NEGATIVE)"
         lines.append(f"  [{len(ids):3d}] only {VALIDATOR_NAMES[rejecting]} rejects {', '.join(rules)} "
                      f"({other}: {said}); {verdict}")
         lines.append(f"        cases: {' '.join(ids[:8])}{' ...' if len(ids) > 8 else ''}")

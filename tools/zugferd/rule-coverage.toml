@@ -856,14 +856,17 @@ amounts that are not the printed ones and no longer add up."""
 tests = ["tests/zugferd/decimals/test.typ", "tools/zugferd/corpus/regression/money-three-decimals.typ"]
 
 [ip."IP-CODE-01"]
-level = "error"
-summary = "A code the newest EN 16931 code list has withdrawn, which the validation of BASIC WL or BASIC accepts."
-basis = """Deliberately stricter: the EN 16931 code lists 1.3.16 (KoSIT) have withdrawn the code (e.g. the \
-currency BGN, the scheme 9901); a receiver that validates with the current lists rejects the e-invoice, \
-as KoSIT does in EN 16931 and XRechnung (BR-CL-04, BR-CL-25)."""
+level = "error or warning"
+summary = "A code the newest EN 16931 code list has withdrawn, which the Factur-X validation of the profile accepts."
+basis = """The EN 16931 code lists 1.3.16 (KoSIT) have withdrawn the code; a receiver that validates with the \
+current lists rejects the e-invoice, as KoSIT does in EN 16931 and XRechnung (BR-CL-04, BR-CL-25). A \
+currency (e.g. BGN) is allowed wherever the Factur-X validation accepts it, with a warning in BASIC and \
+EN 16931 (maintainer decision of 2026-09-24); any other code (the scheme 9901) is deliberately rejected in \
+BASIC WL and BASIC."""
 tests = [
   "tests/zugferd/codelists/test.typ",
   "tools/zugferd/corpus/regression/currency-withdrawn-basic.typ",
+  "tools/zugferd/corpus/regression/currency-withdrawn-from-en16931-list.typ",
   "tools/zugferd/corpus/regression/withdrawn-scheme-9901-basic-wl.typ",
 ]
 

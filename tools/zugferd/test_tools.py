@@ -284,6 +284,48 @@ class OfficialVerdict(unittest.TestCase):
         # Only the documented level of the other validator counts.
         entries = {"BR-DE-27": {"rejected-by": ["mustang"], "other": ["warning"], "reason": "r"}}
         self.assertFalse(run.documented("BR-DE-27", "mustang", "nothing", entries))
+        # A decided warning names a rule of invoice-pro.
+        self.assertEqual(differences["BR-CL-04"].get("warned-as"), "IP-CODE-01")
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = Path(tmp) / "differences.toml"
+            bad.write_text('[BR-CL-04]\nrejected-by = "kosit"\nother = "nothing"\nreason = "r"\nwarned-as = "BR-CL-04"\n',
+                           encoding="utf-8")
+            with self.assertRaisesRegex(common.ToolError, "warned-as"):
+                run.load_differences(bad)
+
+    def test_decided_warnings(self):
+        # A currency only the newest EN 16931 list has withdrawn (e.g. BGN):
+        # KoSIT rejects it, Mustang accepts it, and invoice-pro warns of it
+        # as the maintainer decided (IP-CODE-01): WARNED, not FALSE_NEGATIVE.
+        decided = {"rejected-by": ["mustang", "kosit"], "other": ["nothing"], "reason": "r", "warned-as": "IP-CODE-01"}
+        differences = {"BR-CL-03": decided, "BR-CL-04": decided}
+        case = {"id": "rg-x", "population": "regression", "expect": "WARNED", "file": "x.typ",
+                "expect_warnings": ["IP-CODE-01"]}
+
+        def res(*kosit, warned=("IP-CODE-01",), mustang=()):
+            out = collected(mustang_report(*mustang), kosit_report(*kosit))
+            out["diagnostics"] += [{"level": "warning", "rule": rule, "field": "f", "message": "m", "hint": "h"}
+                                   for rule in warned]
+            return out
+
+        row = run.make_row(case, res("BR-CL-03", "BR-CL-04"), None, differences)
+        self.assertEqual((row["cls"], row["class_ok"], row["missing_rules"]), ("WARNED", True, []))
+        self.assertFalse(run.breaks_hard_gate(dict(row, population="legal")))
+        self.assertEqual(run.triage([row], [], differences=differences)[0], [])
+        text, ok = run.report([row], [], [], [], {"total_s": 0, "compile_s": 0, "mustang_wait_s": 0, "jobs": 1},
+                              True, (), True, differences)
+        self.assertIn("only KoSIT rejects BR-CL-03, BR-CL-04 (Mustang: nothing); invoice-pro warns, as decided", text)
+        # Without the decision, without the warning, with a rule that is not
+        # decided so, or when both validators reject: FALSE_NEGATIVE.
+        self.assertEqual(run.make_row(case, res("BR-CL-03", "BR-CL-04"), None)["cls"], "FALSE_NEGATIVE")
+        self.assertEqual(run.make_row(case, res("BR-CL-04", warned=()), None, differences)["cls"], "FALSE_NEGATIVE")
+        self.assertEqual(run.make_row(case, res("BR-CL-04", "BR-S-08"), None, differences)["cls"], "FALSE_NEGATIVE")
+        self.assertEqual(run.make_row(case, res("BR-CL-04", mustang=("BR-CL-04",)), None, differences)["cls"],
+                         "FALSE_NEGATIVE")
+        # An error of invoice-pro is classified as before.
+        with_error = res("BR-CL-04")
+        with_error["diagnostics"].append({"level": "error", "rule": "BR-CL-04", "field": "f", "message": "m", "hint": "h"})
+        self.assertEqual(run.make_row(case, with_error, None, differences)["cls"], "AGREE_INVALID")
 
 
 class Minimizer(unittest.TestCase):

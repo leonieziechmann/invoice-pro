@@ -59,7 +59,7 @@
       "terms": ["BT-5"],
       "level": "error",
       "field": "currency",
-      "summary": "The invoice currency code (BT-5) is in the ISO 4217 code list of the validation of the profile: Factur-X alone in MINIMUM and BASIC WL (FX-SCH-A-000040), both versions of the EN 16931 code list (1.3.12 of Mustang, 1.3.16 of KoSIT) in XRechnung, and all of them in BASIC and EN 16931, where a code only the Factur-X list lacks is FX-SCH-A-000040. A code the newest EN 16931 list has withdrawn is rejected in BASIC as well (IP-CODE-01).",
+      "summary": "The invoice currency code (BT-5) is in the ISO 4217 code list of the validation of the profile: Factur-X alone in MINIMUM and BASIC WL (FX-SCH-A-000040), both versions of the EN 16931 code list (1.3.12 of Mustang, 1.3.16 of KoSIT) in XRechnung, and all of them in BASIC and EN 16931, where a code only the Factur-X list lacks is FX-SCH-A-000040. A currency the newest EN 16931 list has withdrawn (e.g. BGN) is allowed in BASIC and EN 16931, whose Factur-X validation accepts it, with a warning (IP-CODE-01).",
       "legal": null,
       "note": "The field is `locale` when the currency comes from the locale. A code only the newest EN 16931 code list has is named as such."
     },
@@ -1598,12 +1598,12 @@
       "covers": [],
       "source": "IP",
       "versions": [],
-      "profiles": ["basic-wl", "basic"],
+      "profiles": ["basic-wl", "basic", "en16931"],
       "scope": "document",
       "terms": ["BT-5", "BT-34", "BT-49"],
-      "level": "error",
+      "level": ["error", "warning"],
       "field": "currency",
-      "summary": "A code that the newest EN 16931 code list (1.3.16) has withdrawn, which the validation of BASIC WL and BASIC still accepts: the currencies BGN and HRK (replaced by the euro) in BASIC, the electronic address scheme 9901 in both. A receiver that validates with the current list rejects the e-invoice, as KoSIT does in EN 16931 and XRechnung (`BR-CL-04`, `BR-CL-25`).",
+      "summary": "A code that the newest EN 16931 code list (1.3.16) has withdrawn, which the Factur-X validation of the profile still accepts, but a validator with the current list rejects, as KoSIT does: a currency such as BGN or HRK (replaced by the euro) is allowed with a warning in BASIC and EN 16931 (in XRechnung it is `BR-CL-04`); the electronic address scheme 9901 is an error in BASIC WL and BASIC (in EN 16931 and XRechnung `BR-CL-25`).",
       "legal": null
     },
     "IP-PRINT-01": {

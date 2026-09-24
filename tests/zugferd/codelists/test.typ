@@ -123,18 +123,33 @@
 // withdrawn codes that the older lists of Mustang still have. KoSIT does not
 // validate BASIC, whose validation accepts them: invoice-pro rejects them
 // there all the same, as a receiver that applies the current list does
-// (IP-CODE-01) ---
+// (IP-CODE-01). A withdrawn currency is allowed wherever the Factur-X
+// validation of the profile accepts it, with a warning where a validator
+// with the newest list rejects it (maintainer decision): only XRechnung
+// rejects it ---
 #import "/src/lib.typ": item, line-items, payment-goal
 #import "/src/zugferd/profile.typ": resolve-profile
+#import "/src/zugferd/build.typ": build-tree
+#import "/src/zugferd/xml.typ": dict-to-xml
 #import "/tests/zugferd/harness.typ": (
   bank, diagnostic, model-test, rules, xml-elements,
 )
+
+// The rules of the code lists the write guard finds broken in the XML of a
+// model.
+#let guard-code-rules(model) = {
+  let found = ()
+  for f in dict-to-xml(build-tree(model), model.profile.id).findings {
+    if f.kind == "code" and f.rule not in found { found.push(f.rule) }
+  }
+  found.sorted()
+}
 
 // Currencies the EN 16931 validation has withdrawn: the Netherlands Antillean
 // guilder (ANG, the Caribbean guilder XCG since 2025), the Bulgarian lev
 // (BGN, the euro since 2026), the Cuban convertible peso (CUC), the Croatian
 // kuna (HRK, the euro since 2023) and the Zimbabwe dollar (ZWL, Zimbabwe Gold
-// since 2024). The Factur-X list of MINIMUM and BASIC WL still has them.
+// since 2024). The Factur-X list still has them.
 #model-test(model => {
   let m = model
   m.printed-currency = (symbol: none, amount: none, price: none)
@@ -143,33 +158,52 @@
     assert(not in-list(lists.currency.every, code), message: code)
     assert(in-list(lists.currency.withdrawn, code), message: code)
     m.currency = code
-    m.profile = resolve-profile("en16931", "FR")
-    assert.eq(rules(m), ("BR-CL-04",), message: code + " in en16931")
-    assert(
-      diagnostic(m, "BR-CL-04").message.contains("\"" + code + "\""),
-      message: code,
-    )
-    m.profile = resolve-profile("basic", "FR")
-    assert.eq(rules(m), ("IP-CODE-01",), message: code + " in basic")
+    for id in ("basic", "en16931") {
+      m.profile = resolve-profile(id, "FR")
+      assert.eq(rules(m), (), message: code + " in " + id)
+      assert.eq(
+        rules(m, level: "warning"),
+        ("IP-CODE-01",),
+        message: code + " in " + id,
+      )
+      assert.eq(guard-code-rules(m), (), message: code + " in " + id)
+    }
     m.profile = resolve-profile("basic-wl", "FR")
-    assert.eq(rules(m), (), message: code + " in basic-wl")
+    assert.eq(rules(m) + rules(m, level: "warning"), (), message: code)
+    assert.eq(guard-code-rules(m), (), message: code + " in basic-wl")
+    m.profile = resolve-profile("xrechnung", "DE")
+    assert("BR-CL-04" in rules(m), message: code + " in xrechnung")
+    assert.eq(
+      guard-code-rules(m),
+      ("BR-CL-03", "BR-CL-04"),
+      message: code + " in xrechnung",
+    )
   }
   m.currency = "BGN"
-  m.profile = resolve-profile("basic", "FR")
+  m.profile = resolve-profile("en16931", "FR")
   let d = diagnostic(m, "IP-CODE-01")
+  assert.eq(d.level, "warning")
   assert.eq(d.field, "locale")
   assert.eq(
     d.message,
-    "The invoice currency code (BT-5) \"BGN\" was withdrawn from the newest version of the EN 16931 code list (1.3.16). The validation of the BASIC profile still accepts it, but a receiver that validates with the current list rejects the e-invoice.",
+    "The invoice currency code (BT-5) \"BGN\" was withdrawn from the newest version of the EN 16931 code list (1.3.16). The Factur-X validation of the EN 16931 (COMFORT) profile still accepts it, but a validator with the current list, such as KoSIT, rejects the e-invoice.",
   )
   assert.eq(
     d.hint,
     "Invoice in the currency that replaced it, e.g. \"EUR\" for \"BGN\" and \"HRK\".",
   )
-  // The withdrawn Mauritanian ouguiya (MRO) is no code of Factur-X either,
-  // whose validation rejects it in BASIC.
+  m.profile = resolve-profile("xrechnung", "DE")
+  assert(
+    diagnostic(m, "BR-CL-04").hint.contains("with a warning in \"basic\""),
+    message: diagnostic(m, "BR-CL-04").hint,
+  )
+  // The withdrawn Mauritanian ouguiya (MRO) is no code of Factur-X, whose
+  // validation rejects it in BASIC; KoSIT rejects it in EN 16931.
   m.currency = "MRO"
+  m.profile = resolve-profile("basic", "FR")
   assert.eq(rules(m), ("FX-SCH-A-000040",))
+  m.profile = resolve-profile("en16931", "FR")
+  assert.eq(rules(m), ("BR-CL-04",))
 })[
   #line-items[#item([Consulting], price: 1000)]
   #payment-goal(days: 14)

@@ -36,9 +36,11 @@ XRechnung documents, whose code lists have withdrawn codes that the older
 lists still have (e.g. the currencies BGN and HRK, the scheme 9901) and added
 new ones. Its code list rules join the CEN rules of the profiles with the
 CEN Schematron (see `load_cen_code_lists`): a code at such a position must be
-in the lists of both versions. Everything else of CEN 1.3.16 is left to the
-corpus, which runs KoSIT. There is no fallback without the configuration:
-the tables would silently accept the withdrawn codes.
+in the lists of both versions, but for a currency outside XRechnung, which
+is allowed where the Factur-X validation accepts it (NEWEST_XRECHNUNG_ONLY).
+Everything else of CEN 1.3.16 is left to the corpus, which runs KoSIT. There
+is no fallback without the configuration: the tables would silently accept
+the withdrawn codes.
 
 Global variables and parameters of the XRechnung Schematron that stand for
 a literal (e.g. $XR-CIUS-ID) or a path (e.g. $documentCurrencyCode) are
@@ -2513,12 +2515,12 @@ def count_text(n, noun):
 # of the profiles, so that the validator accepts the codes the validation of
 # each profile accepts (see `code-finding` of src/zugferd/rules/rare.typ):
 #
-#   every      the codes of every validation of BASIC and EN 16931 at the
-#              position in EN 16931: the Factur-X list and both CEN lists
-#              (1.3.12 in Mustang, 1.3.16 in KoSIT, which BASIC applies as
-#              well, see `withdrawn`). Every list of a profile holds them, so
-#              the validator accepts a code of `every` in every profile
-#              without a look at the others
+#   every      the codes of every validation of BASIC, EN 16931 and
+#              XRechnung: the Factur-X list and both CEN lists (1.3.12 in
+#              Mustang, 1.3.16 in KoSIT, which BASIC applies as well, see
+#              `withdrawn`). Every list of a profile holds them, so the
+#              validator accepts a code of `every` in every profile without
+#              a look at the others
 #   xrechnung  the codes of the validation of XRechnung, which applies both
 #              CEN lists and no Factur-X list (e.g. the scheme 0219, which
 #              the Factur-X list lacks); only where they are not `every`
@@ -2535,7 +2537,8 @@ def count_text(n, noun):
 #              BASIC WL, but a receiver that applies the current lists does.
 #              invoice-pro rejects them in every profile but in MINIMUM and
 #              BASIC WL for a name with `factur-x` (IP-CODE-01 where no
-#              validator of the profile does)
+#              validator of the profile does), and warns of a currency where
+#              the Factur-X validation accepts it (NEWEST_XRECHNUNG_ONLY)
 _SELLER = "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement/ram:SellerTradeParty"
 _SETTLEMENT = "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement"
 _LINE = "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem"
@@ -2583,10 +2586,16 @@ def validator_lists(compilers, names):
         for profile in ("en16931", "xrechnung"):
             if at[profile] is None:
                 raise GenError(f"VALIDATOR_LISTS {name}: no leaf {path} in the profile {profile}")
-        lists, every = at["en16931"]
-        entry = {"every": names.name(every)}
-        if at["basic"] is not None and at["basic"][1] != every:
+        own_lists, en16931 = at["en16931"]
+        xr_lists, xrechnung = at["xrechnung"]
+        if at["basic"] is not None and at["basic"][1] != en16931:
             raise GenError(f"VALIDATOR_LISTS {name}: the list of BASIC is not the one of EN 16931")
+        # The lists of every validation of the profiles based on EN 16931:
+        # XRechnung applies the newest CEN list to codes the others do not
+        # (NEWEST_XRECHNUNG_ONLY), which `every` then lacks as well.
+        lists = list(own_lists) + [c for c in xr_lists if c not in own_lists]
+        every = en16931 & xrechnung
+        entry = {"every": names.add(every, name)}
         older = frozenset().union(*(c.codes for c in lists if not c.newest))
         newest = [c.codes for c in lists if c.newest]
         newer = frozenset().union(*newest) - older
@@ -2608,9 +2617,14 @@ def validator_lists(compilers, names):
             if fx and not withdrawn <= frozenset.intersection(*fx):
                 raise GenError(f"VALIDATOR_LISTS {name}: withdrawn codes that the Factur-X list lacks; "
                                "give it `factur-x`")
-        xrechnung = at["xrechnung"][1]
-        if not every <= xrechnung or any(not every <= codes for codes in own):
+        if any(not every <= codes for codes in own):
             raise GenError(f"VALIDATOR_LISTS {name}: a list of a profile lacks codes of `every`")
+        # BASIC and EN 16931 accept beyond `every` only the withdrawn
+        # currencies, of which the validator warns (IP-CODE-01).
+        beyond = en16931 - every
+        if beyond and (name != "currency" or not beyond <= withdrawn):
+            raise GenError(f"VALIDATOR_LISTS {name}: the list of EN 16931 has codes beyond `every` that "
+                           f"are no withdrawn currencies: {sorted(beyond)[:8]}")
         if xrechnung != every:
             if name in VALIDATOR_EVERY_ONLY:
                 raise GenError(f"VALIDATOR_LISTS {name}: the list of XRechnung is not `every`, which the "
@@ -2692,6 +2706,18 @@ class ListNames:
         return names
 
     def name(self, codes):
+        return self.names[codes]
+
+    def add(self, codes, base):
+        """The name of a code set the validator needs besides the lists of
+        the tables (see `validator_lists`): its name, or the next free name
+        of `base`."""
+        if codes not in self.names:
+            taken, name, i = set(self.names.values()), base, 1
+            while name in taken:
+                i += 1
+                name = f"{base}-{i}"
+            self.names[codes] = name
         return self.names[codes]
 
     def variable(self, codes):
@@ -3076,17 +3102,34 @@ def known_tags(schemas):
     return tags
 
 
+# The code list rules of the newest CEN Schematron that apply to XRechnung
+# only: the currencies of the invoice (BR-CL-04), of its amounts (BR-CL-03)
+# and of its VAT accounting (BR-CL-05). A currency the newest list has
+# withdrawn (e.g. BGN and HRK, replaced by the euro) is allowed wherever the
+# Factur-X validation of the profile accepts it (maintainer decision of
+# 2026-09-24): the tables of BASIC and EN 16931 take the Factur-X list and
+# CEN 1.3.12 at these positions, and the validator warns (IP-CODE-01).
+NEWEST_XRECHNUNG_ONLY = frozenset({"BR-CL-03", "BR-CL-04", "BR-CL-05"})
+
+
+def newest_code_lists(profile, cen_code_lists):
+    """The code list rules of the newest CEN Schematron that join the CEN
+    rules of a profile (see NEWEST_XRECHNUNG_ONLY)."""
+    return [r for r in cen_code_lists if profile == "xrechnung" or r.id not in NEWEST_XRECHNUNG_ONLY]
+
+
 def load_profile(jar, profile, schemas, cen_code_lists=()):
     """The compiled rules of a profile. `cen_code_lists` are the code list
     rules of the newest CEN Schematron (`load_cen_code_lists`), which join
-    the CEN rules; without them, the lists are those of the Mustang jar."""
+    the CEN rules (see `newest_code_lists`); without them, the lists are
+    those of the Mustang jar."""
     directory, fx, cen, xr = PROFILES[profile]
     rules = []
     if fx:
         rules += load_rules(jar, fx_xslt(fx), "FX", fx_codedb(fx))
     if cen:
         rules += load_rules(jar, CEN_XSLT, "CEN")
-        rules += list(cen_code_lists)
+        rules += newest_code_lists(profile, cen_code_lists)
     if xr:
         rules += load_rules(jar, XR_XSLT, "XR")
     return Compiler(profile, schemas[directory], rules, known_tags(schemas.values())).compile()

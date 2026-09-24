@@ -26,10 +26,13 @@
 /// XRechnung accepts); and IP-CODE-01 for a code the newest CEN list has
 /// withdrawn, which no validator of BASIC, MINIMUM and BASIC WL rejects,
 /// but a receiver that applies the current list does (e.g. the scheme
-/// 9901). MINIMUM and BASIC WL accept the Factur-X list of a name with
-/// `factur-x` as it is, e.g. the currency BGN. Each list of a profile holds
-/// the codes of `every` (tools/zugferd/gen_guard.py checks it), which is
-/// the list of XRechnung, too, unless it has one (`xrechnung`).
+/// 9901), and for a withdrawn currency of the Factur-X list in BASIC and
+/// EN 16931, which are allowed with a warning (maintainer decision; KoSIT
+/// rejects them in EN 16931). MINIMUM and BASIC WL accept the Factur-X list
+/// of a name with `factur-x` as it is, e.g. the currency BGN. Each list of
+/// a profile holds the codes of `every` (tools/zugferd/gen_guard.py checks
+/// it), which is the list of XRechnung, too, unless it has one
+/// (`xrechnung`).
 ///
 /// -> none | str
 #let _code-rule(name, code, profile, cen, fx) = {
@@ -50,8 +53,10 @@
   if in-list(xrechnung, code) { return fx }
   // Only CEN 1.3.16 lacks it, which KoSIT applies to EN 16931 but not to
   // BASIC.
-  if profile.id == "basic" and in-list(withdrawn, code) {
-    return if own == none or in-list(own, code) { "IP-CODE-01" } else { fx }
+  if in-list(withdrawn, code) {
+    let factur-x = own == none or in-list(own, code)
+    if factur-x and name == "currency" { return "IP-CODE-01" }
+    if profile.id == "basic" { return if factur-x { "IP-CODE-01" } else { fx } }
   }
   cen
 }
@@ -63,7 +68,8 @@
 /// `fx`, the one of the Factur-X Schematron, as well (`id`, with `fx-only`
 /// where only the Factur-X list lacks the code, and `xrechnung` for the
 /// messages). A withdrawn code is IP-CODE-01, whose message names it by
-/// `term` (`scheme`: the code is the scheme of the term).
+/// `term` (`scheme`: the code is the scheme of the term): a warning for a
+/// currency, else an error.
 ///
 /// -> array
 #let code-finding(
@@ -82,6 +88,7 @@
     return (
       (
         key: rule,
+        level: if name == "currency" { "warning" } else { "error" },
         field: finding.field,
         code: code,
         term: term,

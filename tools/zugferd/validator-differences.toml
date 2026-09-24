@@ -9,7 +9,8 @@
 #
 # An e-invoice is officially valid only when the XSD, Mustang and KoSIT all
 # accept it, and invoice-pro must report an error whenever one of them
-# rejects it: otherwise the case is a FALSE_NEGATIVE. When only one of them
+# rejects it: otherwise the case is a FALSE_NEGATIVE, unless the maintainer
+# decided that invoice-pro only warns (`warned-as`). When only one of them
 # rejects a document, every rule behind the disagreement is listed here with
 # the validator that rejects it, what the other one reports and why they
 # differ. An unlisted rule fails the run (OFFICIAL_DISAGREE), and so does a
@@ -25,6 +26,10 @@
 #   other        what the other validator reports: "warning" or "nothing",
 #                or a list of both when it depends on the document
 #   reason       why they differ, and what invoice-pro does
+#   warned-as    optional: the rule of invoice-pro that warns, as the
+#                maintainer decided, where it accepts what only the
+#                rejecting validator rejects; such a case is WARNED rather
+#                than a FALSE_NEGATIVE (tools/zugferd/run.py)
 
 # ---- Mustang rejects, KoSIT warns (or, for BR-DE-28, may report nothing)
 
@@ -146,18 +151,21 @@ XRechnung, which both validators report)."""
 ["BR-CL-03"]
 rejected-by = ["mustang", "kosit"]
 other = "nothing"
+warned-as = "IP-CODE-01"
 reason = """The currency of an amount (currencyID) is in the ISO 4217 list of the EN 16931 \
 Schematron. CEN 1.3.12 in Mustang lacks newer codes such as the current bolivar (VES), which CEN \
 1.3.16 in KoSIT has; CEN 1.3.16 has withdrawn codes such as the Bulgarian lev (BGN, the euro since \
-2026) and the Croatian kuna (HRK), which CEN 1.3.12 still has. invoice-pro reports both kinds in \
-EN 16931 and XRechnung as BR-CL-04, and a withdrawn code in BASIC, which KoSIT does not validate, as \
-IP-CODE-01."""
+2026) and the Croatian kuna (HRK), which CEN 1.3.12 still has. invoice-pro reports a newer code as \
+BR-CL-04. A withdrawn code that the Factur-X list has is allowed in EN 16931 (and BASIC, which \
+KoSIT does not validate), as the Factur-X validation accepts it: invoice-pro warns of it \
+(IP-CODE-01, a maintainer decision; the case is WARNED), and reports it in XRechnung as BR-CL-04."""
 
 ["BR-CL-04"]
 rejected-by = ["mustang", "kosit"]
 other = "nothing"
+warned-as = "IP-CODE-01"
 reason = """The invoice currency (BT-5): the same difference of the code lists as BR-CL-03. \
-invoice-pro reports an error."""
+invoice-pro reports an error, but warns of a withdrawn currency in EN 16931 (IP-CODE-01)."""
 
 ["BR-CL-10"]
 rejected-by = "mustang"
