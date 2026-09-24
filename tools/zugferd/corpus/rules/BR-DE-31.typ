@@ -1,0 +1,19 @@
+// expect: AGREE_INVALID BR-DE-31
+//
+// An XRechnung collected by direct debit without the debited account (BT-91).
+
+#import "_base.typ": *
+
+#show: invoice.with(
+  ..setup,
+  zugferd: "xrechnung",
+  sender: seller-de,
+  recipient: buyer-de,
+  invoice-nr: "BR-DE-31",
+)
+
+#line-items[
+  #item-s
+]
+#payment-goal(days: 14)
+#direct-debit(mandate: "M-2026-017", creditor-id: "DE98ZZZ09999999999")

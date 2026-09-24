@@ -1,6 +1,6 @@
-// expect: AGREE_INVALID BR-02
+// expect: AGREE_INVALID BR-CL-14
 //
-// An invoice without an invoice number (BT-1).
+// A buyer country code (BT-55) outside ISO 3166-1.
 
 #import "_base.typ": *
 
@@ -8,7 +8,8 @@
   ..setup,
   zugferd: "en16931",
   sender: seller-de,
-  recipient: buyer-fr,
+  recipient: buyer-fr + (country: "XX"),
+  invoice-nr: "BR-CL-14",
 )
 
 #line-items[

@@ -1,6 +1,6 @@
-// expect: AGREE_INVALID BR-02
+// expect: AGREE_INVALID BR-E-10
 //
-// An invoice without an invoice number (BT-1).
+// Exempt items (E) without an exemption reason (BT-120).
 
 #import "_base.typ": *
 
@@ -9,10 +9,11 @@
   zugferd: "en16931",
   sender: seller-de,
   recipient: buyer-fr,
+  invoice-nr: "BR-E-10",
 )
 
 #line-items[
-  #item-s
+  #item-with(tax.exempt())
 ]
 #payment-goal(days: 14)
 #bank

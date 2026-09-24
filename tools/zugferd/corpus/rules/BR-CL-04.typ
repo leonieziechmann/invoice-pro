@@ -1,14 +1,16 @@
-// expect: AGREE_INVALID BR-02
+// expect: AGREE_INVALID BR-CL-04
 //
-// An invoice without an invoice number (BT-1).
+// An invoice currency (BT-5) that is no ISO 4217 code.
 
 #import "_base.typ": *
 
 #show: invoice.with(
   ..setup,
   zugferd: "en16931",
+  currency: "ABC",
   sender: seller-de,
   recipient: buyer-fr,
+  invoice-nr: "BR-CL-04",
 )
 
 #line-items[

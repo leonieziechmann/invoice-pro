@@ -1,14 +1,15 @@
-// expect: AGREE_INVALID BR-02
+// expect: AGREE_INVALID BR-06
 //
-// An invoice without an invoice number (BT-1).
+// A seller without a name (BT-27).
 
 #import "_base.typ": *
 
 #show: invoice.with(
   ..setup,
   zugferd: "en16931",
-  sender: seller-de,
+  sender: seller-de + (name: none),
   recipient: buyer-fr,
+  invoice-nr: "BR-06",
 )
 
 #line-items[

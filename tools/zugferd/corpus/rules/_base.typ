@@ -7,7 +7,7 @@
 // like a regression case:
 //
 //   // expect: AGREE_INVALID <RULE>   the rules invoice-pro must report
-//   // finding: <what it shows>       optional
+//   // warns: <RULE>                  the rules it must report as warnings
 //
 // `<RULE>--<variant>.typ` shows the rule once more (e.g. in another
 // profile), `<RULE>--pass.typ` is the corrected invoice, which everybody
@@ -16,9 +16,26 @@
 
 #import "../regression/_base.typ": *
 
-/// A German seller with neither VAT identifier nor tax number (for the
-/// rules of the VAT categories that require one of them).
-#let seller-de-no-ids = seller-de + (vat-id: none, tax-nr: none)
+/// A German seller identified by its seller identifier (BT-29) only, with
+/// neither VAT identifier nor tax number: for the rules of the VAT
+/// categories that require one of them.
+#let seller-de-id = seller-de + (vat-id: none, tax-nr: none, id: "SUP-70025")
+
+/// A seller tax representative (BG-11) in Germany.
+#let representative = (
+  name: "Vertreter GmbH",
+  address: "Friedrichstraße 20",
+  city: (name: "Berlin", post-code: "10117"),
+  country: country.de,
+  vat-id: "DE136695976",
+)
+
+/// One item of 100 with the given tax.
+#let item-with(tax) = item([Leistung], price: 100, quantity: 1, tax: tax)
 
 /// A standard rated item of 100 at 19 %.
-#let item-s = item([Beratung], price: 100, quantity: 1, tax: tax.vat(19%))
+#let item-s = item-with(tax.vat(19%))
+
+/// A document level allowance (BG-20) and charge (BG-21).
+#let rebate = discount([Rabatt], amount: 10%)
+#let shipping = surcharge([Versand], amount: 5.90)

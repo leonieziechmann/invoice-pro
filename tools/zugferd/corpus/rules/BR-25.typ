@@ -1,6 +1,6 @@
-// expect: AGREE_INVALID BR-02
+// expect: AGREE_INVALID BR-25
 //
-// An invoice without an invoice number (BT-1).
+// An item whose name (BT-153) has no text.
 
 #import "_base.typ": *
 
@@ -9,10 +9,11 @@
   zugferd: "en16931",
   sender: seller-de,
   recipient: buyer-fr,
+  invoice-nr: "BR-25",
 )
 
 #line-items[
-  #item-s
+  #item([], price: 100, quantity: 1, tax: tax.vat(19%))
 ]
 #payment-goal(days: 14)
 #bank
