@@ -489,12 +489,10 @@
   let term = if delivery.at("period", default: none) != none { "BG-14" } else {
     "BT-72"
   }
-  if (
-    profile.settlement
-      and printed != none
-      and stated != none
-      and printed != stated
-  ) {
+  // A credit note without dates states none (see `service-period-of`):
+  // a date printed there is missing from the e-invoice, a text of its own
+  // may be a warning only.
+  if profile.settlement and printed != none and printed != stated {
     let own = delivery.at("printed-own", default: true)
     let contradicts = not own or source == "invoice-date"
     let report = if contradicts { error } else { warning }
@@ -505,14 +503,20 @@
         + _quoted(printed)
         + if contradicts { "" } else { " as a text of its own" }
         + ", but the e-invoice states "
-        + _quoted(stated)
-        + " ("
-        + term
-        + ")"
-        + if source == "invoice-date" {
-          ", the invoice date, as no item has a date"
-        } else if source == "items" { ", from the dates of the items" }
-        + if contradicts { "." } else {
+        + if stated == none {
+          "none, as the date of a credit note is not the date of the supply"
+        } else {
+          (
+            _quoted(stated)
+              + " ("
+              + term
+              + ")"
+              + if source == "invoice-date" {
+                ", the invoice date, as no item has a date"
+              } else if source == "items" { ", from the dates of the items" }
+          )
+        }
+        + if contradicts or stated == none { "." } else {
           ". Make sure that both name the same period."
         },
       hint: "Set `service-period` on the invoice, e.g. `service-period: (datetime(year: 2026, month: 6, day: 1), datetime(year: 2026, month: 6, day: 30))`, and print it with `references.service-time()` without `value`, which prints the service period of the e-invoice.",

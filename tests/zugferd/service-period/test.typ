@@ -506,5 +506,35 @@
   #bank
 ]
 
+// A credit note without dates states no date of the supply: a date printed
+// with `value` is missing from the e-invoice (an error), a text of its own
+// cannot be compared (a warning)
+#report-test(
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  references: (references.service-time(value: day(8, 20)),),
+  result => {
+    assert.eq(result.model.delivery.text, none)
+    assert.eq(errors(result), ("IP-PERIOD-01",))
+    assert.eq(
+      result.diagnostics.find(d => d.rule == "IP-PERIOD-01").message,
+      "The invoice prints the service period \"20.08.2026\", but the e-invoice states none, as the date of a credit note is not the date of the supply.",
+    )
+  },
+)[#undated]
+#report-test(
+  document-type: "credit-note",
+  preceding-invoice-nr: "2026-00",
+  references: (references.service-time(value: [August 2026]),),
+  result => {
+    assert.eq(errors(result), ())
+    assert.eq(warnings(result), ("IP-PERIOD-01",))
+    assert.eq(
+      result.diagnostics.find(d => d.rule == "IP-PERIOD-01").message,
+      "The invoice prints the service period \"August 2026\" as a text of its own, but the e-invoice states none, as the date of a credit note is not the date of the supply.",
+    )
+  },
+)[#undated]
+
 // Every report above was shown and checked.
-#context assert.eq(query(<report-checked>).len(), 9)
+#context assert.eq(query(<report-checked>).len(), 11)
