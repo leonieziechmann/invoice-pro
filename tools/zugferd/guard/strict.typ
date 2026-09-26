@@ -1,8 +1,5 @@
-// The strict mode of the write guard (`zugferd-strict: true`, which the CI
-// uses): on top of the standard checks, the round trip of every line
-// (roundtrip.typ) and an arithmetic of its own over the amounts the XML
-// states (concept 4.4), which this module holds. It loads only for an
-// invoice in the strict mode.
+// The arithmetic of the test oracle (oracle.typ) over the amounts the XML
+// states, next to the round trip of every line (roundtrip.typ).
 //
 // The arithmetic checks the sums the official rules require of the written
 // amounts, with their tolerances, computed from the parsed XML alone:
@@ -85,7 +82,7 @@
   category + " " + str(rate)
 } else { category }
 
-/// The findings of the strict mode for the parsed XML `root` (its root
+/// The findings of the arithmetic for the parsed XML `root` (its root
 /// element) of the data model `model` (see the top of this file).
 ///
 /// -> array

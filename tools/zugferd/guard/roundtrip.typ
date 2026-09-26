@@ -32,12 +32,9 @@
 // than the model has values for it, or another number of entries of a
 // repeated group.
 //
-// The standard mode compares the header and counts the lines, about 13
-// million instructions (3 ms) per invoice; the strict mode (`zugferd-strict`,
-// which CI uses) compares every line as well, which with its arithmetic takes
-// about 1.7 million instructions (0.4 ms) per line, twenty times the budget
-// of a check per line (tools/perf/README.md). One call walks the document
-// with a stack, without a call per element.
+// Without `strict`, it compares the header and counts the lines; with
+// `strict`, as the test oracle runs it, every line as well. One call walks
+// the document with a stack, without a call per element.
 
 #let _table = json("bindings.json")
 
@@ -137,7 +134,7 @@
       let all = node.children
       if node.tag == "SupplyChainTradeTransaction" {
         // The lines (BG-25) come first, in schema order (G1): counted from
-        // the end, without a step per line, and compared in the strict mode.
+        // the end, without a step per line, and compared with `strict`.
         let k = 0
         for child in all.rev() {
           if child.tag == _line { break }

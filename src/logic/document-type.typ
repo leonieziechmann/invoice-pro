@@ -68,11 +68,6 @@
   "935": "invoice",
 )
 
-/// Whether a text is a UNTDID 1001 code the e-invoice accepts (BT-3).
-///
-/// -> bool
-#let known-code(code) = type(code) == str and code in _kinds
-
 /// Resolves the `document-type` of an invoice: `auto` (an invoice), a named
 /// type or a UNTDID 1001 code, also as integer; panics for any other value.
 ///

@@ -426,215 +426,115 @@
   prefixes: prefixes.pos(),
 )
 
-#let de(name: "Deutschland", code: "DE", show-always: false) = make-country(
+// A predefined country: its function takes `name`, `code` and `show-always`;
+// `parser` builds the parser of its city lines when the country is used.
+#let _country(name, code, parser, format: format-city-euro, inline: auto) = (
+  name: name,
+  code: code,
+  show-always: false,
+) => make-country(
   name: name,
   code: code,
   show-always: show-always,
-  parse-city-raw: _digits(5, "D", "DE"),
-)
-#let at(name: "Österreich", code: "AT", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(4, "A", "AT"),
-)
-#let ch(name: "Schweiz", code: "CH", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(4, "CH"),
-)
-#let fr(name: "France", code: "FR", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(5, "F", "FR"),
-)
-#let it(name: "Italia", code: "IT", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(5, "I", "IT"),
-)
-#let es(name: "España", code: "ES", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(5, "E", "ES"),
+  format-city: format,
+  format-inline-city: if inline == auto { format } else { inline },
+  parse-city-raw: parser(),
 )
 
-#let be(name: "België", code: "BE", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(4, "B", "BE"),
-)
-#let bg(name: "Bulgaria", code: "BG", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(4, "BG"),
-)
-#let cy(name: "Cyprus", code: "CY", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(4, "CY"),
-)
-#let cz(name: "Česko", code: "CZ", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: post-code-parser("\\d{3}\\s?\\d{2}", prefixes: ("CZ",)),
-)
-#let dk(name: "Danmark", code: "DK", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(4, "DK"),
-)
-#let ee(name: "Eesti", code: "EE", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(5, "EE"),
-)
-#let fi(name: "Suomi", code: "FI", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(5, "FI"),
-)
-#let gr(name: "Greece", code: "GR", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: post-code-parser("\\d{3}\\s?\\d{2}", prefixes: ("GR",)),
-)
-#let hr(name: "Hrvatska", code: "HR", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(5, "HR"),
-)
-#let hu(name: "Magyarország", code: "HU", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(4, "H", "HU"),
-)
+#let de = _country("Deutschland", "DE", () => _digits(5, "D", "DE"))
+#let at = _country("Österreich", "AT", () => _digits(4, "A", "AT"))
+#let ch = _country("Schweiz", "CH", () => _digits(4, "CH"))
+#let fr = _country("France", "FR", () => _digits(5, "F", "FR"))
+#let it = _country("Italia", "IT", () => _digits(5, "I", "IT"))
+#let es = _country("España", "ES", () => _digits(5, "E", "ES"))
+
+#let be = _country("België", "BE", () => _digits(4, "B", "BE"))
+#let bg = _country("Bulgaria", "BG", () => _digits(4, "BG"))
+#let cy = _country("Cyprus", "CY", () => _digits(4, "CY"))
+#let cz = _country("Česko", "CZ", () => post-code-parser(
+  "\\d{3}\\s?\\d{2}",
+  prefixes: ("CZ",),
+))
+#let dk = _country("Danmark", "DK", () => _digits(4, "DK"))
+#let ee = _country("Eesti", "EE", () => _digits(5, "EE"))
+#let fi = _country("Suomi", "FI", () => _digits(5, "FI"))
+#let gr = _country("Greece", "GR", () => post-code-parser(
+  "\\d{3}\\s?\\d{2}",
+  prefixes: ("GR",),
+))
+#let hr = _country("Hrvatska", "HR", () => _digits(5, "HR"))
+#let hu = _country("Magyarország", "HU", () => _digits(4, "H", "HU"))
 // The Eircode follows the city line: "Dublin 2 D02 X285".
-#let ie(name: "Ireland", code: "IE", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  format-city: format-city-uk,
-  format-inline-city: format-inline-city-uk,
-  parse-city-raw: post-code-parser(
+#let ie = _country(
+  "Ireland",
+  "IE",
+  () => post-code-parser(
     "(?:[AC-FHKNPRTV-Y]\\d{2}|D6W)\\s?[0-9AC-FHKNPRTV-Y]{4}",
     position: "either",
     ignore-case: true,
   ),
+  format: format-city-uk,
+  inline: format-inline-city-uk,
 )
 // The official post codes of LT, LU and LV include the marker ("LV-1050").
-#let lt(name: "Lietuva", code: "LT", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: post-code-parser(
-    "\\d{5}",
-    prefixes: ("LT",),
-    keep-prefix: true,
-  ),
+#let lt = _country("Lietuva", "LT", () => post-code-parser(
+  "\\d{5}",
+  prefixes: ("LT",),
+  keep-prefix: true,
+))
+#let lu = _country("Luxembourg", "LU", () => post-code-parser(
+  "\\d{4}",
+  prefixes: ("L",),
+  keep-prefix: true,
+))
+#let lv = _country("Latvija", "LV", () => post-code-parser(
+  "\\d{4}",
+  prefixes: ("LV",),
+  keep-prefix: true,
+))
+#let mt = _country(
+  "Malta",
+  "MT",
+  () => post-code-parser("[A-Z]{3}\\s?\\d{4}", position: "either"),
+  format: format-city-trailing,
 )
-#let lu(name: "Luxembourg", code: "LU", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: post-code-parser(
-    "\\d{4}",
-    prefixes: ("L",),
-    keep-prefix: true,
-  ),
-)
-#let lv(name: "Latvija", code: "LV", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: post-code-parser(
-    "\\d{4}",
-    prefixes: ("LV",),
-    keep-prefix: true,
-  ),
-)
-#let mt(name: "Malta", code: "MT", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  format-city: format-city-trailing,
-  format-inline-city: format-city-trailing,
-  parse-city-raw: post-code-parser("[A-Z]{3}\\s?\\d{4}", position: "either"),
-)
-#let nl(name: "Nederland", code: "NL", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: post-code-parser("\\d{4}\\s?[A-Z]{2}", prefixes: ("NL",)),
-)
-#let pl(name: "Polska", code: "PL", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: post-code-parser("\\d{2}-\\d{3}", prefixes: ("PL",)),
-)
-#let pt(name: "Portugal", code: "PT", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: post-code-parser("\\d{4}-\\d{3}", prefixes: ("PT",)),
-)
-#let ro(name: "România", code: "RO", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(6, "RO"),
-)
-#let se(name: "Sverige", code: "SE", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: post-code-parser("\\d{3}\\s?\\d{2}", prefixes: ("S", "SE")),
-)
-#let si(name: "Slovenija", code: "SI", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: _digits(4, "SI"),
-)
-#let sk(name: "Slovensko", code: "SK", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  parse-city-raw: post-code-parser("\\d{3}\\s?\\d{2}", prefixes: ("SK",)),
-)
+#let nl = _country("Nederland", "NL", () => post-code-parser(
+  "\\d{4}\\s?[A-Z]{2}",
+  prefixes: ("NL",),
+))
+#let pl = _country("Polska", "PL", () => post-code-parser(
+  "\\d{2}-\\d{3}",
+  prefixes: ("PL",),
+))
+#let pt = _country("Portugal", "PT", () => post-code-parser(
+  "\\d{4}-\\d{3}",
+  prefixes: ("PT",),
+))
+#let ro = _country("România", "RO", () => _digits(6, "RO"))
+#let se = _country("Sverige", "SE", () => post-code-parser(
+  "\\d{3}\\s?\\d{2}",
+  prefixes: ("S", "SE"),
+))
+#let si = _country("Slovenija", "SI", () => _digits(4, "SI"))
+#let sk = _country("Slovensko", "SK", () => post-code-parser(
+  "\\d{3}\\s?\\d{2}",
+  prefixes: ("SK",),
+))
 
-#let uk(name: "United Kingdom", code: "GB", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  format-city: format-city-uk,
-  format-inline-city: format-inline-city-uk,
-  parse-city-raw: parse-city-uk,
+#let uk = _country(
+  "United Kingdom",
+  "GB",
+  () => parse-city-uk,
+  format: format-city-uk,
+  inline: format-inline-city-uk,
 )
 #let gb = uk
 
-#let us(name: "United States", code: "US", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  format-city: format-city-us,
-  format-inline-city: format-city-us,
-  parse-city-raw: parse-city-us,
+#let us = _country(
+  "United States",
+  "US",
+  () => parse-city-us,
+  format: format-city-us,
 )
 
 // --- Resolution ---

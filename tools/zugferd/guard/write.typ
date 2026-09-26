@@ -1,7 +1,8 @@
-// The write guard (G1 and G2): the serializer of the e-invoice XML, which
-// checks every element against the guard tables of its profile while it
-// writes it. `dict-to-xml` (../xml.typ) calls it; the tables of a profile
-// load when the first invoice of the profile is written.
+// The write guard of the test oracle (G1 and G2, see oracle.typ): a writer
+// of the e-invoice XML that checks every element against the guard tables
+// of its profile while it writes it, and writes the same XML as the
+// serializer of the package (`dict-to-xml` of src/zugferd/xml.typ); the
+// tables of a profile load when the first invoice of the profile is written.
 //
 // The builder (build.typ) describes the document as a tree of dictionaries:
 // keys are element names, `@name` keys attributes and the key `""` the text
@@ -23,9 +24,9 @@
 //   element what its VAT category requires of its rate, VAT amount and
 //   exemption reason (e.g. BR-S-05, BR-E-10).
 //
-// The XML does not depend on the checks: the serializer writes the same
+// The XML does not depend on the checks: the writer writes the same
 // document whatever it finds and returns what it found as findings, which
-// process-zugferd turns into diagnostics (report.typ).
+// report.typ turns into readable diagnostics.
 //
 // Two writers share this work. `write` below writes a document in one pass
 // as long as every check passes: a subtree in which a check fails, or with

@@ -383,7 +383,7 @@
       )
     }
   } else if kind == "arithmetic" {
-    // The strict mode: the amounts of the XML do not add up (strict.typ).
+    // The amounts of the XML do not add up (strict.typ).
     f.text
   } else { "The XML guard found a problem (" + kind + ")." }
 }
