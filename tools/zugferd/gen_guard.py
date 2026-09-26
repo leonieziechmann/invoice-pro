@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Generates the tables of the XML write guard (src/zugferd/guard/).
+"""Generates the tables of the XML write guard (tools/zugferd/guard/) and
+the code lists of the validator (src/zugferd/code-lists.json).
 
   gen_guard.py [--jar PATH] [--kosit-config DIR] [--out DIR] [--check]
                [--stats FILE] [--explain]
 
-The guard (concept, section 4.4) checks every element while the serializer
-writes it: that the profile's XSD knows it at this position, in this order
-and number, that the profile does not mark it as not used, and that its codes
-and lexical values satisfy the official code lists and formats that apply at
-this position in this profile. This script compiles those constraints from
+The guard, the test oracle of the XML (tools/zugferd/guard/write.typ),
+checks every element of an e-invoice: that the profile's XSD knows it at
+this position, in this order and number, that the profile does not mark it
+as not used, and that its codes and lexical values satisfy the official code
+lists and formats that apply at this position in this profile. This script compiles those constraints from
 the pinned official artefacts inside the Mustang CLI jar 2.14.0 ($MUSTANG_JAR
 or --jar; read with zipfile, nothing is vendored):
 
@@ -47,19 +48,21 @@ a literal (e.g. $XR-CIUS-ID) or a path (e.g. $documentCurrencyCode) are
 replaced by it in the tests of its rules (see `global_values`), so that
 rules such as BR-DE-21 and PEPPOL-EN16931-R053 compile.
 
-Output (data shipped with the package, see `emit_lists` and `emit_profile`;
-the serializer src/zugferd/guard/write.typ reads it and describes the
-format; JSON, which Typst reads several times faster than the same data as
+Output (JSON, which Typst reads several times faster than the same data as
 Typst source):
 
-  src/zugferd/guard/lists.json      the code lists, the tables of the VAT
-                                    category rules, and the lists of the
-                                    validator (see VALIDATOR_LISTS), the one
-                                    source of the code lists of
-                                    src/zugferd/rules/; src/zugferd/guard/
-                                    lists.typ reads it
-  src/zugferd/guard/<profile>.json  the nodes of each profile, and the rule
-                                    that forbids an empty leaf
+  src/zugferd/code-lists.json         the code lists of the validator (see
+                                      VALIDATOR_LISTS and `emit_code_lists`),
+                                      the one source of the code lists of
+                                      src/zugferd/rules/, shipped with the
+                                      package
+  tools/zugferd/guard/lists.json      the code lists of the guard and the
+                                      tables of the VAT category rules (see
+                                      `emit_lists`)
+  tools/zugferd/guard/<profile>.json  the nodes of each profile, and the rule
+                                      that forbids an empty leaf (see
+                                      `emit_profile`; write.typ describes the
+                                      format)
 
 A node describes an element at a position. Positions with the same type and
 the same constraints share a node, so a complex type is written once unless
@@ -100,7 +103,9 @@ from lxml import etree
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
-OUT = REPO / "src" / "zugferd" / "guard"
+OUT = REPO / "tools" / "zugferd" / "guard"
+# The code lists of the validator, which the package ships.
+CODE_LISTS = REPO / "src" / "zugferd" / "code-lists.json"
 
 XS = "{http://www.w3.org/2001/XMLSchema}"
 XSL = "{http://www.w3.org/1999/XSL/Transform}"
@@ -1178,7 +1183,7 @@ DEFECTS = {
 }
 
 # The guard's own rule ids the tables name, where no official rule does
-# (src/zugferd/guard/report.typ lists every id of the guard).
+# (tools/zugferd/guard/report.typ lists every id of the guard).
 IP_NOT_USED = "IP-GUARD-05"  # the Factur-X reports that mark an element as not used
 IP_DATE = "IP-GUARD-08"  # a date of the format 102 that names no day
 
@@ -1683,7 +1688,7 @@ class Compiler:
         (`E or not(F)`, `(F and E) or not(F)`), or one of several children
         must exist. The writer treats a required leaf without text as
         missing (a "blank" finding of its checked writer, see
-        src/zugferd/guard/rare.typ), so "exists" and "is not empty" are the
+        tools/zugferd/guard/rare.typ), so "exists" and "is not empty" are the
         same for what it accepts. None when the test is anything else."""
         disjuncts = [strip_parens(d) for d in split_top(test, " or ")]
         plans = []
@@ -2709,22 +2714,21 @@ def chunks(codes, width=72):
     return lines
 
 
-def emit_lists(names, validator=None):
-    """src/zugferd/guard/lists.json: every code list as the lines of its
-    codes, which src/zugferd/guard/lists.typ joins into one string of the
-    codes, each between two spaces (a lookup is one substring search); the
-    tables of the rules of the VAT categories (see TAX_ELEMENTS) by name;
-    and `validator` (see `validator_lists`): per name, the names of its
-    lists (e.g. `every`) and, for a kind that is a set of codes of its own
-    (e.g. `newer`), the codes in lines as those of a list. One code list,
-    table or validator list per line or lines of its own, so that a change
-    reads as a diff."""
-    validator = validator or {}
-    own = [codes for entry in validator.values() for codes in entry.values() if isinstance(codes, (list, tuple))]
-    for codes in list(names.names) + own:
-        bad = sorted(c for c in codes if not c or re.search(r"\s", c))
-        if bad:
-            raise GenError(f"codes that are empty or contain whitespace cannot be listed: {bad}")
+def _check_codes(codes):
+    bad = sorted(c for c in codes if not c or re.search(r"\s", c))
+    if bad:
+        raise GenError(f"codes that are empty or contain whitespace cannot be listed: {bad}")
+
+
+def emit_lists(names):
+    """tools/zugferd/guard/lists.json: every code list of the tables as the
+    lines of its codes, which tools/zugferd/guard/lists.typ joins into one
+    string of the codes, each between two spaces (a lookup is one substring
+    search), and the tables of the rules of the VAT categories (see
+    TAX_ELEMENTS) by name. One code list or table per line or lines of its
+    own, so that a change reads as a diff."""
+    for codes in names.names:
+        _check_codes(codes)
     lines = ["{", f'"generated":{json_value(LISTS_NOTICE)},', '"lists":{']
     ordered = sorted(names.names.items(), key=lambda kv: kv[1])
     lines += json_members(
@@ -2737,12 +2741,36 @@ def emit_lists(names, validator=None):
         (name, "{" + ",".join(f"{json_value(code)}:{json_value([list(c) for c in checks])}" for code, checks in table) + "}")
         for table, name in sorted(names.vat.items(), key=lambda kv: kv[1])
     )
-    lines += ["},", '"validator":{']
-    lines += json_members(
-        (name, json_value({kind: chunks(v, 75) if isinstance(v, (list, tuple)) else v for kind, v in entry.items()}))
-        for name, entry in validator.items()
-    )
     lines += ["}", "}"]
+    return "\n".join(lines) + "\n"
+
+
+def emit_code_lists(names, validator):
+    """src/zugferd/code-lists.json, the code lists of the validator (see
+    `validator_lists`), which src/zugferd/code-lists.typ reads: per name,
+    `every` as the lines of its codes; `factur-x` and `xrechnung` as the
+    codes they have beyond `every` (each list has all of `every`); `newer`
+    and `withdrawn` as their codes."""
+    codes_of = {name: codes for codes, name in names.names.items()}
+    out = {}
+    for name, entry in validator.items():
+        every = codes_of[entry["every"]]
+        kinds = {}
+        for kind, value in entry.items():
+            if isinstance(value, (list, tuple)):
+                codes = frozenset(value)
+            else:
+                codes = codes_of[value]
+                if kind != "every":
+                    if not every <= codes:
+                        raise GenError(f"VALIDATOR_LISTS {name}: `{kind}` lacks codes of `every`")
+                    codes = codes - every
+            _check_codes(codes)
+            kinds[kind] = chunks(sorted(codes), 75)
+        out[name] = kinds
+    lines = ["{", f'"generated":{json_value(CODE_LISTS_NOTICE)},']
+    lines += json_members((name, json_value(kinds)) for name, kinds in out.items())
+    lines += ["}"]
     return "\n".join(lines) + "\n"
 
 
@@ -2762,11 +2790,15 @@ FAST_CLASSES = ("s", "d", "d2", "b")
 # The notice at the top of every generated JSON file (JSON has no comments).
 JSON_NOTICE = (
     "Generated by tools/zugferd/gen_guard.py from the Mustang CLI jar 2.14.0; do not edit, "
-    "rerun it (scripts/zugferd-corpus checks for drift). src/zugferd/guard/write.typ describes the nodes."
+    "rerun it (scripts/zugferd-corpus checks for drift). tools/zugferd/guard/write.typ describes the nodes."
 )
 LISTS_NOTICE = (
     "Generated by tools/zugferd/gen_guard.py from the Mustang CLI jar 2.14.0; do not edit, "
-    "rerun it (scripts/zugferd-corpus checks for drift). src/zugferd/guard/lists.typ reads it."
+    "rerun it (scripts/zugferd-corpus checks for drift). tools/zugferd/guard/lists.typ reads it."
+)
+CODE_LISTS_NOTICE = (
+    "Generated by tools/zugferd/gen_guard.py from the Mustang CLI jar 2.14.0; do not edit, "
+    "rerun it (scripts/zugferd-corpus checks for drift). src/zugferd/code-lists.typ reads it."
 )
 
 
@@ -2776,7 +2808,7 @@ def json_value(value):
 
 
 def emit_profile(profile, nodes, names, digests):
-    """src/zugferd/guard/<profile>.json: the nodes of one profile, and the
+    """tools/zugferd/guard/<profile>.json: the nodes of one profile, and the
     rule that forbids an empty leaf (`empty`, or null).
 
     JSON rather than Typst source: Typst reads JSON natively, several times
@@ -3038,14 +3070,19 @@ def builder_tags(path=BUILDER):
     return tags
 
 
-OUTPUT_FILES = ["lists.json"] + [f"{p}.json" for p in PROFILES]
-# The generated files may not grow beyond this (maintainer decision 13).
+# The generated files by name, and where they are committed.
+OUTPUTS = {"code-lists.json": CODE_LISTS, "lists.json": OUT / "lists.json"}
+OUTPUTS.update({f"{p}.json": OUT / f"{p}.json" for p in PROFILES})
+OUTPUT_FILES = list(OUTPUTS)
+# The tables of the guard may not grow beyond this (maintainer decision 13),
+# the code lists the package ships not beyond PACKAGE_BUDGET.
 SIZE_BUDGET = 100 * 1024
+PACKAGE_BUDGET = 16 * 1024
 
 
-def generate(jar_path, out_dir, pinned=True, builder=BUILDER, kosit_config=None):
-    """Compiles the tables and writes them into `out_dir`; returns the
-    statistics. `kosit_config` is the unpacked KoSIT configuration
+def generate(jar_path, out_dir=None, pinned=True, builder=BUILDER, kosit_config=None):
+    """Compiles the tables and writes them into `out_dir`, or where they are
+    committed (OUTPUTS); returns the statistics. `kosit_config` is the unpacked KoSIT configuration
     (default: $KOSIT_CONFIG), whose CEN Schematron narrows the code lists."""
     jar = Jar(jar_path, pinned=pinned)
     kosit = KositConfig(kosit_config or os.environ.get("KOSIT_CONFIG"), pinned=pinned)
@@ -3055,16 +3092,20 @@ def generate(jar_path, out_dir, pinned=True, builder=BUILDER, kosit_config=None)
     emitted = builder_tags(builder)
     nodes = {p: Nodes(c, emitted) for p, c in compilers.items()}
     names = ListNames(nodes[p] for p in PROFILES)
-    files = {"lists.json": emit_lists(names, validator_lists(compilers, names))}
+    files = {"code-lists.json": emit_code_lists(names, validator_lists(compilers, names))}
+    files["lists.json"] = emit_lists(names)
     for p in PROFILES:
         files[f"{p}.json"] = emit_profile(p, nodes[p], names, jar.digests)
-    size = sum(len(text.encode("utf-8")) for text in files.values())
+    package = len(files["code-lists.json"].encode("utf-8"))
+    if package > PACKAGE_BUDGET:
+        raise GenError(f"the code lists take {package} bytes, more than the budget of {PACKAGE_BUDGET}")
+    size = sum(len(text.encode("utf-8")) for name, text in files.items() if name != "code-lists.json")
     if size > SIZE_BUDGET:
         raise GenError(f"the tables take {size} bytes, more than the budget of {SIZE_BUDGET}")
-    out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
     for name, text in files.items():
-        (out_dir / name).write_text(text, encoding="utf-8")
+        path = OUTPUTS[name] if out_dir is None else Path(out_dir) / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
     jar.digests.update(kosit.digests)
     return stats(compilers, nodes, names, files, jar)
 
@@ -3126,31 +3167,37 @@ def is_generated(path):
         return path.read_text(encoding="utf-8").startswith(HEADER)
     if path.suffix == ".json":
         text = path.read_text(encoding="utf-8")
-        return any(f'"generated":{json_value(notice)}' in text for notice in (JSON_NOTICE, LISTS_NOTICE))
+        notices = (JSON_NOTICE, LISTS_NOTICE, CODE_LISTS_NOTICE)
+        return any(f'"generated":{json_value(notice)}' in text for notice in notices)
     return False
 
 
-def compare(fresh_dir, committed_dir=OUT):
+def compare(fresh_dir, committed_dir=None):
     """The differences between freshly generated tables and the committed
-    ones, as unified diffs (empty when there are none), including generated
-    files the generator no longer writes."""
-    fresh_dir, committed_dir = Path(fresh_dir), Path(committed_dir)
+    ones (in `committed_dir`, or where OUTPUTS says), as unified diffs (empty
+    when there are none), including generated files the generator no longer
+    writes."""
+    fresh_dir = Path(fresh_dir)
+    committed = {
+        name: OUTPUTS[name] if committed_dir is None else Path(committed_dir) / name for name in OUTPUT_FILES
+    }
     diffs = []
-    for name in OUTPUT_FILES:
+    for name, committed_path in committed.items():
         fresh = (fresh_dir / name).read_text(encoding="utf-8")
-        committed_path = committed_dir / name
-        committed = committed_path.read_text(encoding="utf-8") if committed_path.exists() else ""
-        if fresh != committed:
+        text = committed_path.read_text(encoding="utf-8") if committed_path.exists() else ""
+        if fresh != text:
             diffs.append("".join(difflib.unified_diff(
-                committed.splitlines(keepends=True), fresh.splitlines(keepends=True),
+                text.splitlines(keepends=True), fresh.splitlines(keepends=True),
                 f"committed/{name}", f"generated/{name}", n=1,
             )))
-    stale = sorted(
-        p.name for p in committed_dir.iterdir()
-        if p.name not in OUTPUT_FILES and is_generated(p)
-    )
-    if stale:
-        diffs.append(f"generated files in {committed_dir} the generator no longer writes: {', '.join(stale)}\n")
+    known = {path.resolve() for path in committed.values()}
+    for directory in sorted({path.parent for path in committed.values()}):
+        stale = sorted(
+            p.name for p in directory.iterdir()
+            if p.is_file() and p.resolve() not in known and is_generated(p)
+        )
+        if stale:
+            diffs.append(f"generated files in {directory} the generator no longer writes: {', '.join(stale)}\n")
     return diffs
 
 
@@ -3170,7 +3217,7 @@ def main(argv=None):
         default=os.environ.get("KOSIT_CONFIG"),
         help="the unpacked KoSIT XRechnung configuration 2026-08-31 ($KOSIT_CONFIG)",
     )
-    ap.add_argument("--out", default=str(OUT), help="output directory (default: src/zugferd/guard)")
+    ap.add_argument("--out", help="write every file into this directory (default: where they are committed)")
     ap.add_argument("--check", action="store_true", help="fail when the committed tables differ from a fresh generation")
     ap.add_argument("--stats", help="write the statistics as JSON to this file")
     ap.add_argument("--explain", action="store_true", help="list every rule with its disposition")
@@ -3182,7 +3229,8 @@ def main(argv=None):
         if args.check:
             diffs = check(args.jar, args.kosit_config)
             if diffs:
-                print("The guard tables in src/zugferd/guard/ differ from a fresh generation. "
+                print("The guard tables (tools/zugferd/guard/) or the code lists (src/zugferd/code-lists.json) "
+                      "differ from a fresh generation. "
                       "Run `python3 tools/zugferd/gen_guard.py` and commit the result:\n", file=sys.stderr)
                 for d in diffs:
                     print(d[:6000], file=sys.stderr)
@@ -3194,7 +3242,7 @@ def main(argv=None):
         print(f"error: {e}", file=sys.stderr)
         return 2
     total = result["bytes"]["total"]
-    print(f"✔ guard tables written to {args.out}: {total} bytes "
+    print(f"✔ guard tables and code lists written to {args.out or 'their places'}: {total} bytes "
           + ", ".join(f"{p} {info['nodes']} nodes" for p, info in result["profiles"].items()))
     if args.stats:
         Path(args.stats).write_text(json.dumps(result, indent=1, sort_keys=True) + "\n", encoding="utf-8")

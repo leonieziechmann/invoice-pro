@@ -13,7 +13,7 @@
 // all three agree on what ends up in the XML.
 
 #import "../utils/text.typ": plain-ascii, plain-text
-#import "guard/lists.typ": validator as lists
+#import "code-lists.typ": lists
 #import "profile.typ": resolve-profile
 #import "../utils/coercion.typ": to-decimal, to-ratio
 #import "../data/tax.typ": to-tax-key

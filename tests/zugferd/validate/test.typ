@@ -295,8 +295,7 @@
   m.taxes.at(0).basis += decimal("0.01")
   assert.eq(rules(m), ("BR-S-08", "IP-PRINT-01"))
 
-  // --- BR-48: a VAT breakdown without rate names its VAT group, which the
-  // write guard can only name by the element of the XML ---
+  // --- BR-48: a VAT breakdown without rate names its VAT group ---
   let m = base
   m.taxes.at(0).rate = none
   assert.eq(rules(m), ("BR-48",))
@@ -310,22 +309,34 @@
   assert.eq(rules(with-tax(base, tax("O", reason: "x") + (rate: none))), ())
 }
 
-// --- The rule registry: every finding of a check has an entry and a
-// message, and a diagnostic takes its level and id from the entry ---
-#import "/src/zugferd/rules/engine.typ": diagnostics, rule-registry
+// --- The rule registry (tools/zugferd/registry.json): every finding of a
+// check has an entry and a message; a diagnostic has the id and the level
+// the finding names, else the key and the usual level of the entry ---
+#import "/src/zugferd/rules/engine.typ": _warnings, diagnostics
+#import "/tests/zugferd/harness.typ": rule-registry
 #import "/src/zugferd/rules/messages.typ": messages
 #import "/src/zugferd/rules/xrechnung-messages.typ": (
   messages as xrechnung-messages,
 )
 #{
   let registry = rule-registry()
-  // The rules of the write guard (IP-GUARD-*) build their messages in
-  // guard/report.typ. Every other rule has one message, in messages.typ or,
-  // for a rule of XRechnung that no other profile reports (BR-DE-*), in
+  // Every rule has one message, in messages.typ or, for a rule of
+  // XRechnung that no other profile reports (BR-DE-*), in
   // xrechnung-messages.typ, which `diagnostics` loads for such a rule.
   assert.eq(
-    registry.keys().filter(key => not key.starts-with("IP-GUARD-")).sorted(),
+    registry.keys().sorted(),
     (messages.keys() + xrechnung-messages.keys()).sorted(),
+  )
+  // The rules whose usual level (the first of the entry) is "warning".
+  let usual(entry) = if type(entry.level) == str { entry.level } else {
+    entry.level.first()
+  }
+  assert.eq(
+    _warnings.sorted(),
+    registry
+      .keys()
+      .filter(key => usual(registry.at(key)) == "warning")
+      .sorted(),
   )
   for key in xrechnung-messages.keys() {
     assert(key.starts-with("BR-DE-"), message: key)
@@ -387,38 +398,14 @@
     diagnostics((period + (level: "error", contradicts: true),)).first().level,
     "error",
   )
-  // Anything else stops the compilation: every diagnostic is in the registry.
-  let fails(finding, expected) = {
-    let message = catch(() => diagnostics((finding,)))
-    assert(
-      message != none and message.contains(expected),
-      message: "Expected `" + expected + "`, got " + repr(message),
-    )
-  }
-  fails(
-    (key: "BR-99", field: "x"),
-    "invoice-pro: the rule BR-99 is not in the rule registry",
-  )
-  fails(
-    rate + (id: "BR-S-05"),
-    "invoice-pro: the rule registry has no error BR-S-05 for the entry vat-rate-zero",
-  )
-  fails(
-    missing + (level: "warning"),
-    "invoice-pro: the rule registry has no warning BR-02 for the entry BR-02",
-  )
-  // XRechnung requires the electronic addresses: a warning is IP-EADDR-01
-  fails(
-    (
-      key: "PEPPOL-EN16931-R020",
-      level: "warning",
-      field: "sender",
-      term: "seller electronic address (BT-34)",
-      vat-id: none,
-      represented: false,
-      reference: none,
-    ),
-    "invoice-pro: the rule registry has no warning PEPPOL-EN16931-R020 for the entry PEPPOL-EN16931-R020",
+  // A finding without a message stops the compilation. That the id and the
+  // level of a diagnostic are those of its entry, the tests check with the
+  // registry (`diagnostics` of tests/zugferd/harness.typ).
+  let message = catch(() => diagnostics(((key: "BR-99", field: "x"),)))
+  assert(
+    message != none
+      and message.contains("invoice-pro: no message for the rule BR-99"),
+    message: repr(message),
   )
 }
 

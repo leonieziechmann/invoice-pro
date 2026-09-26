@@ -78,7 +78,7 @@
 // children in the same loop, as it writes them. A leaf with further checks
 // goes through `_leaf`, memoized, so a leaf that repeats is checked once.
 
-#import "../xml.typ": escaped-class, xml-escape
+#import "/src/zugferd/xml.typ": escaped-class, xml-escape
 #import "lists.typ": lists as code-lists, vat-rules
 
 // A text written as it is: not blank, and nothing `xml-escape` changes.
@@ -167,7 +167,7 @@
 
 // The text of a written value.
 #let _text(value) = if type(value) == str { value } else {
-  import "../../utils/text.typ": plain-text
+  import "/src/utils/text.typ": plain-text
   plain-text(value)
 }
 

@@ -1,12 +1,12 @@
-// Factur-X XMP metadata (src/zugferd/xmp.typ), prepared for the day Typst
+// Factur-X XMP metadata (tools/zugferd/xmp.typ), prepared for the day Typst
 // can write custom XMP metadata. The references mustang-<letter>.xmp are the
 // XMP metadata Mustang writes with `--action combine` for each profile
 // letter; `scripts/zugferd-xmp --update` rewrites them, and the CI checks
 // that they are still what Mustang writes.
 
-#import "/src/zugferd/xmp.typ": (
+#import "/tools/zugferd/xmp.typ": (
   default-file-name, factur-x-metadata, factur-x-packet, factur-x-values,
-  namespace,
+  levels, namespace,
 )
 #import "/src/zugferd/profile.typ": profiles, resolve-profile
 
@@ -74,7 +74,7 @@
 #{
   assert.eq(profiles.keys().sorted(), letters.keys().sorted())
   for (id, profile) in profiles {
-    assert("xmp-level" in profile, message: id + " has no xmp-level")
+    assert(profile.guideline in levels, message: id + " has no level")
   }
 }
 

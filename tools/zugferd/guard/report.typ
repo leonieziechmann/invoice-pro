@@ -1,17 +1,9 @@
-// Diagnostics of the XML write guard: turns what the serializer found (see
-// write.typ) into diagnostics like the validator's, and merges them with
-// the validator's (concept 4.4, "Richtlinie für Diagnosen"):
-//
-// - every finding of the guard is an error;
-// - a finding the validator reports already (same rule or same input field)
-//   is left out: the validator's diagnostic names the input and a hint;
-// - when the validator reports errors, the remaining findings are one
-//   diagnostic, "N further problems in the XML";
-// - otherwise each finding is a diagnostic of its own, with a hint to report
-//   it: the validator has no rule for it, which is a bug of invoice-pro.
+// The findings of the test oracle (oracle.typ) as readable diagnostics, for
+// the messages of failed tests: the rule, the input field the XML path is
+// written from, and a sentence.
 
-// The guard's own rules, for findings no official rule names. The ids are
-// listed in docs/docs/e-invoicing.md.
+// The ids of the findings no official rule names (tests/TESTING.md, "The
+// test oracle of the XML").
 #let _rules = (
   unknown: "IP-GUARD-01",
   text: "IP-GUARD-01",
@@ -47,11 +39,6 @@
   extra: "IP-GUARD-12",
   count: "IP-GUARD-13",
 )
-
-/// The rule of the diagnostic that summarizes further findings.
-#let summary-rule = "IP-GUARD-00"
-
-#let report-hint = "invoice-pro could not map this problem to an input; please report it at https://github.com/leonieziechmann/invoice-pro/issues."
 
 // Input fields by the element of the XML they are written to: the parties
 // and the parts of the invoice a user sets. The first element of a path
@@ -345,6 +332,8 @@
           + " beside its root element rsm:CrossIndustryInvoice."
       )
     }
+  } else if kind == "serializer" {
+    "The serializer of the package writes other XML than the guard writer."
   } else if kind == "well-formed" {
     "Typst's XML parser does not read the XML as one CrossIndustryInvoice document."
   } else if kind in ("differs", "dropped", "extra", "count") {
@@ -448,8 +437,8 @@
   )
 }
 
-/// The findings of the guard as diagnostics (level, rule, source, field,
-/// message, hint, path).
+/// The findings of the oracle as diagnostics (level, rule, source, field,
+/// message, path).
 ///
 /// -> array
 #let guard-diagnostics(findings, lines, profile-name) = {
@@ -469,56 +458,8 @@
       source: "guard",
       field: if currency { "currency" } else { field-of(f.path, lines) },
       message: _message(f, profile-name),
-      hint: report-hint,
       path: "/" + f.path.join("/"),
     ))
   }
   out
-}
-
-/// The validator's diagnostics with the guard's merged in (see the policy
-/// at the top of this file).
-///
-/// -> array
-#let merge(diagnostics, guard) = {
-  if guard == () { return diagnostics }
-  let rules = (:)
-  let fields = (:)
-  let errors = 0
-  for d in diagnostics {
-    if d.level == "error" {
-      errors += 1
-      rules.insert(d.rule, true)
-      if type(d.field) == str { fields.insert(d.field, true) }
-    }
-  }
-  let remaining = ()
-  for g in guard {
-    if g.rule not in rules and g.field not in fields { remaining.push(g) }
-  }
-  if remaining == () { return diagnostics }
-  if errors == 0 { return diagnostics + remaining }
-  let n = remaining.len()
-  let first = remaining.first()
-  (
-    diagnostics
-      + (
-        (
-          level: "error",
-          rule: summary-rule,
-          source: "guard",
-          field: first.field,
-          message: (
-            str(n)
-              + if n == 1 { " further problem" } else { " further problems" }
-              + " in the XML, first: ["
-              + first.rule
-              + "] "
-              + first.message
-          ),
-          hint: "It may follow from the errors above. If it remains once they are fixed, please report it at https://github.com/leonieziechmann/invoice-pro/issues.",
-          path: first.path,
-        ),
-      )
-  )
 }

@@ -694,10 +694,6 @@
 #let xml-declaration = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 
 /// Serializes an e-invoice data model into the CrossIndustryInvoice XML.
-/// The write guard's findings are left out here; `process-zugferd` writes
-/// the same XML and reports them.
 ///
 /// -> str
-#let build-xml(model) = (
-  xml-declaration + dict-to-xml(build-tree(model), model.profile.id).xml
-)
+#let build-xml(model) = xml-declaration + dict-to-xml(build-tree(model))

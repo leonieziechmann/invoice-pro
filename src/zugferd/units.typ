@@ -4,7 +4,7 @@
 // loads this module only for the first unit given as text (Typst parses a
 // module when it is first imported).
 
-#import "guard/lists.typ": validator as lists
+#import "code-lists.typ": lists
 #import "../data/unit.typ": unit-db
 #import "../locale/lang/lang.typ" as languages
 

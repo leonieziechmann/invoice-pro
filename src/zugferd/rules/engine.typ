@@ -1,63 +1,21 @@
-// The rule registry of the e-invoice validation (concept, section 4.5): the
-// checks of the business rules of EN 16931, the Factur-X profiles and
-// XRechnung, and of the rules of invoice-pro itself, which the data model of
-// the e-invoice must satisfy before its XML is written.
+// The checks of the e-invoice validation: the business rules of EN 16931,
+// the Factur-X profiles and XRechnung, and the rules of invoice-pro itself
+// (IP-*: the official rules accept the XML, but the invoice would be wrong),
+// which the data model must satisfy before its XML is written. The metadata
+// of every rule is in tools/zugferd/registry.json.
 //
-// One registry, three parts, loaded as they are needed:
-//
-// - registry.json: the metadata of every rule, the one source the proof
-//   tools and the documentation read (tools/zugferd/registry.py): its key;
-//   the ids it reports (`ids`, by default the key); the official rules it
-//   implements (`covers`, with their Factur-X aliases, e.g.
-//   FX-SCH-A-000011 for BR-02); `source` (EN16931, FACTUR-X, XRECHNUNG,
-//   PEPPOL, CII or IP) and the `versions` of the artefact it was compared
-//   with; the `profiles` in which it can report; its `scope` (document,
-//   party, line, tax, allowance-charge, payment or printed); the business
-//   `terms` (BT, BG); its `level` ("error", "warning", or both, the first
-//   being the usual one); the input `field` it names; a `summary`; and the
-//   `legal` basis of a rule of invoice-pro. Typst reads it only for a
-//   diagnostic, for the level and the ids of the entry of a finding; JSON is
-//   the format Typst reads fastest (a TOML file of the same size takes about
-//   five times longer).
-// - this module: the checks (`run-rules`). A check that fails records a
-//   finding: `(key: .., field: .., ..values)`, the key of the rule's entry,
-//   the input field to name, `id` where the entry reports several ids (e.g.
-//   BR-S-05 of the entry `vat-rate-positive`), `level` where it has two,
-//   and the values its message needs. The checks of inputs most invoices
-//   do not give are in rare.typ, those of XRechnung in xrechnung.typ, both
-//   loaded when an invoice needs them.
-// - messages.typ: the message and the hint of every rule, but those of the
-//   rules of XRechnung that no other profile reports, which are in
-//   xrechnung-messages.typ. `diagnostics` (this module) turns the findings
-//   into diagnostics and loads the module of the messages it needs: a valid
-//   invoice parses none of the texts, and one whose XRechnung checks fail
-//   (e.g. `zugferd: auto` for a buyer without buyer reference) only those of
-//   XRechnung.
+// A check that fails records a finding `(key: .., field: .., ..values)`: the
+// key of the rule's entry, the input field to name, `id` where the entry
+// reports several ids, `level` where it has two, and the values its message
+// needs. Checks of inputs most invoices do not give are in rare.typ, those
+// of XRechnung in xrechnung.typ; the messages in messages.typ and
+// xrechnung-messages.typ. All of them load only when an invoice needs them.
 //
 // A diagnostic is `(level: "error" | "warning", rule: .., field: ..,
 // message: .., hint: .. | none)`, errors first, each level in the order of
-// the checks. Errors make the XML invalid, or the
-// invoice wrong in a way the official validators cannot see; warnings point
-// out data that is valid but most likely not intended. Rules whose id
-// starts with "IP-" are rules of invoice-pro itself: the official rules
-// accept the XML, but the invoice would still be wrong (e.g. required by
-// law, or a value would be lost).
-//
-// Code lists: the checks look codes up (`in-list`) in the lists of the
-// write guard (../guard/lists.typ, `validator`), which
-// tools/zugferd/gen_guard.py generates from the official validations of the
-// profiles: `every` holds the codes all of them accept (Factur-X 1.0.07 and
-// the CEN Schematron 1.3.12 of Mustang and 1.3.16 of KoSIT), and the lists
-// of each profile hold at least these. `code-finding` of rare.typ names the
-// rule a code outside `every` breaks in the profile, if any.
-//
-// Performance (concept 6.4): a valid invoice parses this module and, for
-// XRechnung, xrechnung.typ, but none of the messages; the code lists are
-// strings, searched natively, which the guard loads anyway. Per line, the
-// checks take the line only and use `for` loops; the patterns of rare
-// checks are compiled on first use.
+// the checks.
 
-#import "../guard/lists.typ": validator as lists
+#import "../code-lists.typ": lists
 #import "../xml.typ": fmt-number, rate-digits
 #import "../model.typ": profile-terms, vat-id-country, vat-id-prefix
 #import "../../utils/iban.typ": iban-valid
@@ -1610,14 +1568,24 @@
 
 // --- Diagnostics ------------------------------------------------------------
 
-/// The rules of the registry by key (registry.json), read for the first
-/// diagnostic of a compilation.
-///
-/// -> dictionary
-#let rule-registry() = json("registry.json").rules
+// The rules whose usual level is "warning" (the first `level` of their entry
+// in tools/zugferd/registry.json, which tools/zugferd/registry.py checks
+// against this list); a finding gives the level of a rule with two.
+#let _warnings = (
+  "BR-DE-TMP-32",
+  "IP-DOC-04",
+  "IP-EADDR-01",
+  "IP-KEY-01",
+  "IP-PERIOD-02",
+  "IP-PREPAID-01",
+  "IP-PROFILE-01",
+  "IP-TAX-03",
+  "IP-UNIT-01",
+  "IP-VAT-138",
+  "PEPPOL-EN16931-R120",
+)
 
-/// A diagnostic, e.g. for a report hook or a test: the form of the
-/// diagnostics of `run-rules`, without the metadata of the registry.
+/// A diagnostic, e.g. for a report hook or a test.
 ///
 /// -> dictionary
 #let diagnostic(level, rule, field, message, hint: none) = (
@@ -1631,14 +1599,10 @@
 /// Turns the findings of the checks into diagnostics, errors first. The
 /// messages load only now, and only the module of the rules found: the rules
 /// of XRechnung that no other profile reports are in xrechnung-messages.typ,
-/// every other rule in messages.typ. A finding of a key without an entry in
-/// the registry or without a message, or of an id or a level the entry does
-/// not have, stops the compilation: every diagnostic comes from the
-/// registry.
+/// every other rule in messages.typ.
 ///
 /// -> array
 #let diagnostics(findings) = {
-  let registry = rule-registry()
   let errors = ()
   let warnings = ()
   for f in findings {
@@ -1651,33 +1615,27 @@
       import "messages.typ": messages
       build = messages.at(f.key, default: none)
     }
-    let entry = registry.at(f.key, default: none)
-    if entry == none or build == none {
-      panic("invoice-pro: the rule " + f.key + " is not in the rule registry")
-    }
-    let id = f.at("id", default: f.key)
-    let levels = entry.level
-    if type(levels) == str { levels = (levels,) }
-    let level = f.at("level", default: levels.first())
-    if id not in entry.at("ids", default: (f.key,)) or level not in levels {
-      panic(
-        "invoice-pro: the rule registry has no "
-          + level
-          + " "
-          + id
-          + " for the entry "
-          + f.key,
-      )
-    }
+    if build == none { panic("invoice-pro: no message for the rule " + f.key) }
+    let level = f.at("level", default: if f.key in _warnings {
+      "warning"
+    } else {
+      "error"
+    })
     let (message, hint) = build(f)
-    let d = diagnostic(level, id, f.field, message, hint: hint)
+    let d = diagnostic(
+      level,
+      f.at("id", default: f.key),
+      f.field,
+      message,
+      hint: hint,
+    )
     if level == "error" { errors.push(d) } else { warnings.push(d) }
   }
   errors + warnings
 }
 
-/// Checks an e-invoice data model against the rules of the registry and
-/// returns every diagnostic, errors first (see the top of this file).
+/// Checks an e-invoice data model against the rules and returns every
+/// diagnostic, errors first (see the top of this file).
 ///
 /// -> array
 #let run-rules(model) = {

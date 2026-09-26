@@ -1,26 +1,26 @@
-// G3, the round trip of the write guard (src/zugferd/guard/roundtrip.typ):
+// G3, the round trip of the test oracle (tools/zugferd/guard/roundtrip.typ):
 // the XML read back states exactly what the data model states, through the
 // binding table of its own (bindings.json). A written invoice passes; an
 // element tree changed after the builder, or a model changed after the
 // XML was written, gives the findings `differs` (IP-GUARD-10), `dropped`
 // (IP-GUARD-11), `extra` (IP-GUARD-12) and `count` (IP-GUARD-13). The strict
-// mode compares every line as well and checks the arithmetic of the
-// written amounts (guard/strict.typ).
+// mode, which the oracle uses, compares every line as well and checks the
+// arithmetic of the written amounts (strict.typ).
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/build.typ": build-tree, xml-declaration
 #import "/src/zugferd/xml.typ": dict-to-xml
 #import "/src/zugferd/model.typ": profile-terms
-#import "/src/zugferd/guard/roundtrip.typ": round-trip
-#import "/src/zugferd/guard/strict.typ": strict-findings
-#import "/src/zugferd/guard/report.typ": guard-diagnostics
+#import "/tools/zugferd/guard/roundtrip.typ": round-trip
+#import "/tools/zugferd/guard/strict.typ": strict-findings
+#import "/tools/zugferd/guard/report.typ": guard-diagnostics
 #import "/tests/zugferd/harness.typ": bank, buyer-de, buyer-fr, model-test
 
 // The root element of the XML of an element tree, as Typst's parser reads
 // it back.
 #let parsed(model, tree) = {
-  let written = dict-to-xml(tree, model.profile.id)
-  xml(bytes(xml-declaration + written.xml)).find(n => type(n) == dictionary)
+  let nodes = xml(bytes(xml-declaration + dict-to-xml(tree)))
+  nodes.find(n => type(n) == dictionary)
 }
 
 // The findings of the round trip of a model and its (changed) element tree,

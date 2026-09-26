@@ -3,8 +3,10 @@
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/model.typ": build-model
-#import "/src/zugferd/rules/engine.typ": rule-registry, run-rules
+#import "/src/zugferd/rules/engine.typ": run-rules
 #import "/src/zugferd/build.typ": build-xml
+#import "/tools/zugferd/guard/oracle.typ": oracle-findings
+#import "/tools/zugferd/guard/report.typ": guard-diagnostics
 #import "/src/logic/payment-means.typ": resolve as resolve-payment-means
 #import "/tests/data-test.typ": data-test, loom
 
@@ -62,8 +64,24 @@
   bic: "SOLADEST600",
 )
 
+/// Checks that the XML of a model the validator lets through passes the test
+/// oracle (tools/zugferd/guard/oracle.typ): the rules of the validator are
+/// what keeps an invalid XML from going out.
+#let check-oracle(model) = {
+  if run-rules(model).any(d => d.level == "error") { return }
+  let found = oracle-findings(model)
+  assert(
+    found == (),
+    message: "the validator lets through an invoice whose XML the test oracle rejects:\n"
+      + guard-diagnostics(found, model.lines, model.profile.name)
+        .map(d => "[" + d.rule + "] " + d.path + ": " + d.message)
+        .join("\n"),
+  )
+}
+
 /// Renders an invoice (by default EN 16931 from Germany to France) and calls
-/// `test` with the e-invoice data model built from it.
+/// `test` with the e-invoice data model built from it; then checks the XML
+/// of the model with the test oracle (`check-oracle`).
 #let model-test(test, ..args, body) = invoice(
   theme: themes.blank,
   locale: locale.de-de,
@@ -77,23 +95,28 @@
   data-test(
     test: (ctx, data) => {
       let signal(kind) = loom.query.find-signal(data, kind)
-      test(build-model(
+      let model = build-model(
         ctx,
         signal("line-items").item-data,
         payment-goal: signal("payment-goal"),
         bank: signal("bank-details"),
         payment-means: payment-means(data),
-      ))
+      )
+      test(model)
+      check-oracle(model)
     },
     body,
   ),
 )
 
+/// The rules of the rule registry by key (tools/zugferd/registry.json).
+#let rule-registry() = json("/tools/zugferd/registry.json").rules
+
 /// The diagnostics the validator reports for a model (`run-rules`). Each
 /// must name a rule that an entry of the rule registry reports in the
 /// profile of the model (its `ids`, and the profiles of the id: its
-/// `id-profiles`, else the `profiles` of the entry), so that the tests check
-/// the metadata the proof tools read as well.
+/// `id-profiles`, else the `profiles` of the entry) at its level, so that
+/// the tests check the metadata the proof tools read as well.
 #let diagnostics(model) = {
   let found = run-rules(model)
   for d in found {
@@ -102,9 +125,12 @@
       let profiles = entry
         .at("id-profiles", default: (:))
         .at(d.rule, default: entry.profiles)
+      let levels = entry.level
+      if type(levels) == str { levels = (levels,) }
       if (
         d.rule in entry.at("ids", default: (key,))
           and model.profile.id in profiles
+          and d.level in levels
       ) {
         listed = true
         break
@@ -113,7 +139,9 @@
     assert(
       listed,
       message: d.rule
-        + " is reported in the profile "
+        + " is reported as "
+        + d.level
+        + " in the profile "
         + model.profile.id
         + ", which no entry of the rule registry lists for it",
     )

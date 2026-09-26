@@ -7,7 +7,7 @@
 // Every entry of `messages` takes a finding and returns `(message, hint)`
 // (the hint may be `none`); the finding holds the values its check found.
 
-#import "../guard/lists.typ": validator as lists
+#import "../code-lists.typ": lists
 #import "engine.typ": in-list, quoted as _quoted
 #import "../xml.typ": fmt-number, rate-digits
 #import "../model.typ": vat-eas-codes, vat-id-prefix

@@ -1,11 +1,10 @@
-// The code lists of the e-invoice validation: the lists of the write guard
-// that the rules check codes with (`validator` of src/zugferd/guard/lists.typ).
+// The code lists of the e-invoice validation (src/zugferd/code-lists.typ).
 // tools/zugferd/gen_guard.py intersects them from every official validation
 // of a profile: the Factur-X 1.0.07 code lists and the EN 16931 Schematron
 // 1.3.12 of Mustang and 1.3.16 of the KoSIT validator. A list is a string of
 // codes, each between two spaces.
 
-#import "/src/zugferd/guard/lists.typ": validator as lists
+#import "/src/zugferd/code-lists.typ": lists
 #import "/src/zugferd/rules/engine.typ": in-list
 
 #let codes(list) = list.trim().split(" ")
@@ -119,16 +118,16 @@
 #import "/src/lib.typ": item, line-items, payment-goal
 #import "/src/zugferd/profile.typ": resolve-profile
 #import "/src/zugferd/build.typ": build-tree
-#import "/src/zugferd/xml.typ": dict-to-xml
+#import "/tools/zugferd/guard/write.typ": write
 #import "/tests/zugferd/harness.typ": (
   bank, diagnostic, model-test, rules, xml-elements,
 )
 
-// The rules of the code lists the write guard finds broken in the XML of a
-// model.
+// The rules of the code lists the write guard of the test oracle finds
+// broken in the XML of a model.
 #let guard-code-rules(model) = {
   let found = ()
-  for f in dict-to-xml(build-tree(model), model.profile.id).findings {
+  for f in write(build-tree(model), model.profile.id).findings {
     if f.kind == "code" and f.rule not in found { found.push(f.rule) }
   }
   found.sorted()

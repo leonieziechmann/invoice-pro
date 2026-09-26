@@ -1,11 +1,8 @@
-// Every function below returns its patch as an array of one dictionary, so
-// that several of them in one code block join into a list of patches (two
-// dictionaries would be merged, and the second `strings` would replace the
-// first). `build-locale` applies the patches in their order.
+// Overrides for `locale.<lang>-<region>.with(..)`; `auto` keeps a value. Each
+// function returns an array of one patch, so that several calls in one code
+// block join into a list (dictionaries would merge, losing the first).
 
-/// Internal helper to remove unconfigured (`auto`) arguments.
-/// This guarantees that we only patch fields the user explicitly defined,
-/// preventing base translations from being overwritten by `auto`.
+/// Drops the `auto` arguments, so that only the given fields are patched.
 #let _clean-auto(d) = {
   let res = (:)
   for (k, v) in d {
@@ -15,17 +12,10 @@
 }
 
 
-// -----------------------------------------------------------------------------
-// LANGUAGE OVERRIDES (string.*)
-// -----------------------------------------------------------------------------
+// --- Language (strings.*) ---
 
-/// Customizes the document type designations, the default titles of the
-/// document types (`invoice(document-type: ..)`).
-/// - invoice (auto, str): e.g., "Invoice", "Rechnung"
-/// - credit-note (auto, str): e.g., "Credit Note", "Rechnungskorrektur"
-/// - corrected (auto, str): e.g., "Corrected Invoice", "Korrigierte Rechnung"
-/// - prepayment (auto, str): e.g., "Prepayment Invoice", "Anzahlungsrechnung"
-/// - self-billed (auto, str): e.g., "Self-Billing Invoice", "Gutschrift"
+/// The titles of the document types (`str`), the defaults of
+/// `invoice(document-type: ..)`.
 /// -> array
 #let document(
   invoice: auto,
@@ -46,9 +36,7 @@
   },
 )
 
-/// Customizes the address-related labels.
-/// - recipient (auto, str): e.g., "Bill To", "Empfänger"
-/// - sender (auto, str): e.g., "From", "Absender"
+/// The labels of the addresses (`str`).
 /// -> array
 #let address(recipient: auto, sender: auto) = (
   {
@@ -57,31 +45,8 @@
   },
 )
 
-/// Customizes the metadata and reference numbers labels.
-/// - tax-number (auto, str): e.g., "Tax ID", "Steuernummer"
-/// - invoice-number (auto, str): e.g., "Invoice Number", "Rechnungsnummer"
-/// - vat-id (auto, str): e.g., "VAT ID", "USt-IdNr."
-/// - invoice-date (auto, str): e.g., "Invoice Date", "Rechnungsdatum"
-/// - service-time (auto, str): e.g., "Period of Service", "Leistungszeitraum"
-/// - customer-number (auto, str): e.g., "Customer No.", "Kundennummer"
-/// - buyer-reference (auto, str): e.g., "Buyer Reference", "Leitweg-ID"
-/// - recipient-vat-id (auto, str): e.g., "Buyer VAT ID", "Ihre USt-IdNr."
-/// - recipient-tax-number (auto, str): e.g., "Buyer Tax ID", "Ihre Steuernummer"
-/// - order-number (auto, str): e.g., "Order No.", "Bestellnummer"
-/// - order-date (auto, str): e.g., "Order Date", "Bestelldatum"
-/// - project (auto, str): e.g., "Project", "Projekt"
-/// - contract-number (auto, str): e.g., "Contract No.", "Vertragsnummer"
-/// - quote-number (auto, str): e.g., "Quote No.", "Angebotsnummer"
-/// - delivery-note-number (auto, str): e.g., "Delivery Note No.", "Lieferschein-Nr."
-/// - preceding-invoice-number (auto, str): e.g., "Preceding Invoice No.", "Vorherige Rechnungsnummer"
-/// - preceding-invoice-date (auto, str): e.g., "Preceding Invoice Date", "Datum der vorherigen Rechnung"
-/// - due-date (auto, str): e.g., "Due Date", "Zahlbar bis"
-/// - payment-reference (auto, str): e.g., "Payment Reference", "Verwendungszweck"
-/// - contact-person (auto, str): e.g., "Contact Person", "Ansprechpartner:in"
-/// - contact-phone (auto, str): e.g., "Phone", "Telefon"
-/// - contact-email (auto, str): e.g., "Email", "E-Mail"
-/// - payee (auto, str): who receives the payment instead of the sender,
-///   e.g., "Payee", "Zahlungsempfänger"
+/// The labels of the references and contact details (`str`); `payee` labels
+/// who receives the payment instead of the sender.
 /// -> array
 #let reference(
   tax-number: auto,
@@ -140,24 +105,8 @@
   },
 )
 
-/// Customizes the headers and labels used in the invoice line-items table.
-///
-/// - position (auto, str): e.g., "Pos", "Item", "No."
-/// - description (auto, str): e.g., "Description", "Beschreibung"
-/// - quantity (auto, str): e.g., "Qty", "Menge"
-/// - unit-price (auto, str): e.g., "Unit Price", "Einzelpreis"
-/// - price (auto, str): e.g., "Price", "Preis"
-/// - total (auto, str): e.g., "Total", "Gesamt"
-/// - vat (auto, str): e.g., "Tax", "USt."
-/// - net (auto, str): e.g., "net", "netto"
-/// - gross (auto, str): e.g., "gross", "brutto"
-/// - discount (auto, str): e.g., "Discount", "Rabatt"
-/// - surcharge (auto, str): e.g., "Surcharge", "Zuschlag"
-/// - subtotal (auto, str): e.g., "Subtotal", "Zwischensumme"
-/// - conjunction (auto, str): joins the last two item names of an automatic
-///   bundle description, e.g., "and", "und"
-/// - origin (auto, str): label of the country of origin of an item, e.g.,
-///   "Country of origin", "Ursprungsland"
+/// The headers and labels of the line-items table (`str`); `conjunction`
+/// joins the last two item names of an automatic bundle description.
 /// -> array
 #let line-items(
   position: auto,
@@ -197,12 +146,7 @@
   },
 )
 
-/// Customizes the summary and total labels at the bottom of the table.
-/// - sum (auto, str): e.g., "Subtotal", "Summe"
-/// - vat-tax (auto, str): e.g., "Tax", "Umsatzsteuer"
-/// - total (auto, str): e.g., "Total", "Gesamtbetrag"
-/// - including (auto, str): e.g., "incl.", "inkl."
-/// - excluding (auto, str): e.g., "excl.", "zzgl."
+/// The labels of the totals below the table (`str`).
 /// -> array
 #let summary(
   sum: auto,
@@ -223,11 +167,9 @@
   },
 )
 
-/// Customizes global informational sentences.
-/// - tax-statement (auto, fn): Function for tax rate sentence
-/// - unit (auto, str): Unit label
-/// - quantity (auto, str): Quantity label
-/// - date (auto, str): Service date label
+/// The notes below the table on what all items share.
+/// - tax-statement (auto, fn): (tax-text, rate, vat-tax) => content
+/// - unit, quantity, date (auto, str): labels of the shared value
 #let global-info(
   tax-statement: auto,
   unit: auto,

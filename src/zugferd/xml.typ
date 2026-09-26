@@ -8,9 +8,8 @@
 #let escaped-class = "&<>\"'" + invalid-xml-class
 
 // Most values contain none of them. Compiled on first use (a call without
-// arguments is memoized): the serializer writes the common texts without
-// calling `xml-escape` (see guard/write.typ), so a valid e-invoice mostly
-// does not need it.
+// arguments is memoized): the serializer writes plain texts without calling
+// `xml-escape`.
 #let _needs-escape() = regex("[" + escaped-class + "]")
 
 // Escape a value for safe embedding in XML text/attribute content.
@@ -84,28 +83,67 @@
   date.display("[year][month][day]")
 } else { none }
 
+// A text written as it is: not blank, and nothing `xml-escape` changes.
+#let _plain = {
+  let c = escaped-class
+  regex("^[^" + c + "]*[^\\s" + c + "][^" + c + "]*$")
+}
 
-/// Serializes the builder's element tree `data` (see build.typ) into the
-/// CrossIndustryInvoice XML and checks every element against the guard
-/// tables of `profile` in the same pass: the write guard (G1, G2; see
-/// guard/write.typ).
+// The element `tag` with the value `body` (see `dict-to-xml`). One call per
+// element with children: plain texts, the common leaves, are written in the
+// loop.
+#let _element(tag, body) = {
+  if body == none { return "" }
+  if type(body) == array {
+    let out = ""
+    for item in body { out += _element(tag, item) }
+    return out
+  }
+  if type(body) != dictionary {
+    let text = if type(body) == str and _plain in body { body } else {
+      xml-escape(body)
+    }
+    return if text.trim() == "" { "" } else {
+      "<" + tag + ">" + text + "</" + tag + ">"
+    }
+  }
+  let attrs = ""
+  let out = ""
+  for (key, value) in body {
+    if value == none { continue }
+    if type(value) == str and _plain in value {
+      if key.starts-with("@") {
+        attrs += " " + key.slice(1) + "=\"" + value + "\""
+      } else if key == "" { out += value } else {
+        out += "<" + key + ">" + value + "</" + key + ">"
+      }
+    } else if key.starts-with("@") {
+      attrs += " " + key.slice(1) + "=\"" + xml-escape(value) + "\""
+    } else if key == "" {
+      if type(value) == dictionary {
+        for (k, v) in value { out += _element(k, v) }
+      } else { out += xml-escape(value) }
+    } else { out += _element(key, value) }
+  }
+  // An identifier or code without its value would be invalid.
+  if "" in body and out.trim() == "" { return "" }
+  if out == "" { "<" + tag + attrs + " />" } else {
+    "<" + tag + attrs + ">" + out + "</" + tag + ">"
+  }
+}
+
+/// Serializes the builder's element tree `data` (see build.typ) into XML,
+/// without the XML declaration. Keys starting with `@` are attributes, the
+/// key `""` is the text of an element with attributes; an array repeats its
+/// element. `none` and blank texts are left out, and so is an element whose
+/// text is; an element without children is written empty.
 ///
-/// Keys starting with `@` become attributes and the key `""` holds the text
-/// of an element with attributes. `none` values and elements without text
-/// are left out, so optional data can be passed through unchecked;
-/// dictionaries without any children are kept as empty elements (e.g. an
-/// empty `ram:ApplicableHeaderTradeDelivery`, which the schema requires). An
-/// array repeats its element once per item.
-///
-/// Returns `(xml: str, findings: array)`: the XML, without the XML
-/// declaration, and every problem the guard found, as findings `(kind, rule,
-/// path, ..details)` (see guard/report.typ). The XML does not depend on the
-/// findings.
-///
-/// -> dictionary
-#let dict-to-xml(data, profile) = {
-  // Imported here, as guard/write.typ imports this module; zugferd.typ loads
-  // it with the other modules of the e-invoice.
-  import "guard/write.typ": write
-  write(data, profile)
+/// -> str
+#let dict-to-xml(data) = {
+  if type(data) != dictionary {
+    return if data == none { "" } else { xml-escape(data) }
+  }
+  let out = ""
+  for (tag, body) in data { out += _element(tag, body) }
+  out
 }

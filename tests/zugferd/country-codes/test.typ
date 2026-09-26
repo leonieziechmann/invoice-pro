@@ -1,7 +1,7 @@
 // Country codes in the e-invoice: the country code list behind BR-CL-14 and
 // the electronic address scheme (EAS) derived from the VAT ID prefix.
 
-#import "/src/zugferd/guard/lists.typ": validator as lists
+#import "/src/zugferd/code-lists.typ": lists
 #import "/src/zugferd/rules/engine.typ": in-list
 #import "/src/zugferd/model.typ": get-electronic-address
 

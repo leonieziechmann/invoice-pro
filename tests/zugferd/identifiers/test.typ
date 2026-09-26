@@ -3,7 +3,7 @@
 // (IP-ID-01) instead of stopping the compilation.
 
 #import "/src/lib.typ": *
-#import "/src/zugferd/guard/lists.typ": validator as lists
+#import "/src/zugferd/code-lists.typ": lists
 #import "/src/zugferd/rules/engine.typ": in-list
 
 // The problems of an identifier.

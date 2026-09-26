@@ -108,10 +108,9 @@
 }
 
 // --- 4. dict-to-xml ---
-// The serializer writes elements the guard tables do not know unchecked, the
-// same way as known ones; the guard's findings are tested in
+// The serializer writes any tree; the test oracle of the XML is tested in
 // tests/zugferd/guard/.
-#let xml-of(data) = dict-to-xml(data, "en16931").xml
+#let xml-of(data) = dict-to-xml(data)
 #{
   // Attributes, text, repeated elements and empty structural elements
   assert.eq(

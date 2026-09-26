@@ -1,18 +1,19 @@
 // Factur-X XMP metadata of a hybrid e-invoice PDF, prepared for the day Typst
 // can write custom XMP metadata (https://github.com/typst/typst/issues/5667).
+// It lives with the tools until then: the package does not ship it.
 //
 // A Factur-X / ZUGFeRD PDF/A-3 announces its XML in the XMP metadata of the
 // PDF: the properties of the Factur-X extension schema (`fx:DocumentType`,
 // `fx:DocumentFileName`, `fx:Version` and `fx:ConformanceLevel`) and, as PDF/A
 // requires for every extension schema, the description of that schema in
 // `pdfaExtension:schemas`. Typst cannot write custom XMP metadata yet, so no
-// code calls this module: invoice-pro attaches the XML, and validators that
+// package code calls this module: invoice-pro attaches the XML, and validators that
 // check the PDF itself miss the metadata (docs/docs/e-invoicing.md, "Factur-X
 // XMP Metadata").
 //
-// Once Typst supports it, the attachment of the XML in
-// src/components/root.typ hands `factur-x-metadata(result.profile)` (or the
-// packet) to the new API, for a valid e-invoice only: an XML attached as a
+// Once Typst supports it, this module moves to src/zugferd/, and the
+// attachment of the XML in src/components/root.typ hands
+// `factur-x-metadata(result.profile)` (or the packet) to the new API, for a valid e-invoice only: an XML attached as a
 // draft (`zugferd-errors: "report"` with errors) is no Factur-X invoice. The
 // CI test `scripts/zugferd-xmp` fails as soon as the pinned Typst offers a
 // new PDF feature, so the integration is not missed.
@@ -20,7 +21,17 @@
 // tests/zugferd/xmp compares the metadata with the XMP that Mustang writes
 // (`--action combine`) for every profile.
 
-#import "profile.typ": profiles
+#import "/src/zugferd/profile.typ": profiles
+
+/// The conformance level each profile states (`fx:ConformanceLevel`), by
+/// its guideline (BT-24).
+#let levels = (
+  "urn:factur-x.eu:1p0:minimum": "MINIMUM",
+  "urn:factur-x.eu:1p0:basicwl": "BASIC WL",
+  "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic": "BASIC",
+  "urn:cen.eu:en16931:2017": "EN 16931",
+  "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0": "XRECHNUNG",
+)
 
 /// Namespace URI of the Factur-X extension schema: Factur-X 1.0, which
 /// ZUGFeRD 2.1 and later use as well.
@@ -76,14 +87,13 @@
 /// The values of the Factur-X properties of a profile, in the order of the
 /// XMP metadata Mustang writes: the document type (always `INVOICE`, credit
 /// notes included), the name of the attached XML, the version of the schema
-/// and the conformance level of the profile (`xmp-level` of the profile
-/// table).
+/// and the conformance level of the profile (`levels`).
 ///
 /// -> dictionary
 #let factur-x-values(profile) = {
   let profile = _profile(profile)
   (
-    ConformanceLevel: profile.xmp-level,
+    ConformanceLevel: levels.at(profile.guideline),
     DocumentType: "INVOICE",
     DocumentFileName: profile.at("file-name", default: default-file-name),
     Version: version,

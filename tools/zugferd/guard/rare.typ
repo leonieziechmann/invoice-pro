@@ -9,8 +9,8 @@
 // the same XML. A valid e-invoice needs none of this, so write.typ loads the
 // module only then (Typst parses a module when it is first imported).
 
-#import "../xml.typ": xml-escape
-#import "../../utils/text.typ": plain-text
+#import "/src/zugferd/xml.typ": xml-escape
+#import "/src/utils/text.typ": plain-text
 #import "lists.typ": lists as code-lists, vat-rules
 #import "write.typ": (
   _booleans, _category-ok, _code-rule, _decimal, _decimal2, _decimals,

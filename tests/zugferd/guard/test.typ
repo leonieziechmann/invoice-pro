@@ -1,20 +1,17 @@
-// The XML write guard (src/zugferd/guard/) checks every element the
-// serializer writes against the tables of its profile, whatever
-// invoice-pro's validator says (defense in depth). Each check is triggered
-// with the validator bypassed: the element tree of a valid invoice is
-// changed after the validation and serialized directly.
+// The write guard of the test oracle (tools/zugferd/guard/) checks every
+// element of the XML against the tables of its profile, whatever
+// invoice-pro's validator says. Each check is triggered with the validator
+// bypassed: the element tree of a valid invoice is changed after the
+// validation and written directly.
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/build.typ": build-tree, build-xml, xml-declaration
 #import "/src/zugferd/xml.typ": dict-to-xml
-#import "/src/zugferd/guard/write.typ": (
-  _raw, malformed-kinds, namespaces, root-tag, valid-base64, valid-date-102,
-  write,
+#import "/tools/zugferd/guard/write.typ": (
+  malformed-kinds, namespaces, root-tag, valid-base64, valid-date-102, write,
 )
-#import "/src/zugferd/guard/rare.typ": write as checked-write
-#import "/src/zugferd/guard/report.typ": (
-  field-of, guard-diagnostics, merge, report-hint, summary-rule,
-)
+#import "/tools/zugferd/guard/rare.typ": write as checked-write
+#import "/tools/zugferd/guard/report.typ": field-of, guard-diagnostics
 #import "/tests/zugferd/harness.typ": bank, buyer-de, buyer-fr, model-test
 
 // The tree with `value` at `path`: element names, and the index of an item
@@ -63,15 +60,13 @@
 )
 
 // What the guard finds in a tree: (kind, rule, path) of each finding. The XML
-// is always the one the unchecked writer writes, and the serializer's fast
-// path takes a tree only when the checked writer finds nothing in it: both
-// writers return the same.
+// is always the one the serializer of the package writes, and the guard's
+// fast path takes a tree only when the checked writer finds nothing in it:
+// both writers return the same.
 #let check(model, tree) = {
-  let written = dict-to-xml(tree, model.profile.id)
+  let written = write(tree, model.profile.id)
   assert.eq(written, checked-write(tree, model.profile.id))
-  let unchecked = ""
-  for (tag, body) in tree { unchecked += _raw(tag, body) }
-  assert.eq(written.xml, unchecked)
+  assert.eq(written.xml, dict-to-xml(tree))
   written.findings.map(f => (f.kind, f.rule, f.path.join("/")))
 }
 // The path of a finding at a path of the tree: an item of a repeated
@@ -99,11 +94,11 @@
 #let guard-test(test, ..args) = model-test(test, ..args, items)
 
 // --- 1. Valid invoices of every profile: nothing found, the same XML ---
-// The fast path of the serializer writes them in one pass, as the checked
-// writer does.
+// The fast path of the guard writes them in one pass, as the checked writer
+// does.
 #let valid(model) = {
   let tree = build-tree(model)
-  let written = dict-to-xml(tree, model.profile.id)
+  let written = write(tree, model.profile.id)
   assert.eq(written.findings, ())
   assert.eq(write(tree, model.profile.id, fallback: false), written)
   assert.eq(checked-write(tree, model.profile.id), written)
@@ -591,7 +586,7 @@
   assert.eq(check(model, (:)), (("root", none, root-tag),))
   // Not even a tree: its text, and no root element (the guard never
   // panics on what it is given).
-  let written = dict-to-xml("a < b", "en16931")
+  let written = write("a < b", "en16931")
   assert.eq(written.xml, "a &lt; b")
   assert.eq(written.findings.map(f => (f.kind, f.path)), (
     ("root", (root-tag,)),
@@ -605,8 +600,9 @@
   let tree = build-tree(model)
   let name = seller("ram:Name")
   let escaped = put(tree, name, "A & B <c> \"d\" 'e'\u{0}")
-  let written = dict-to-xml(escaped, "en16931")
+  let written = write(escaped, "en16931")
   assert.eq(written.findings, ())
+  assert.eq(written.xml, dict-to-xml(escaped))
   assert(
     written.xml.contains(
       "<ram:Name>A &amp; B &lt;c&gt; &quot;d&quot; &apos;e&apos;</ram:Name>",
@@ -619,16 +615,10 @@
   let content = put(tree, name, [A *bold* name])
   assert.eq(write(content, "en16931", fallback: false), none)
   assert.eq(check(model, content), ())
-  assert(
-    dict-to-xml(content, "en16931")
-      .xml
-      .contains(
-        "<ram:Name>A bold name</ram:Name>",
-      ),
-  )
+  assert(dict-to-xml(content).contains("<ram:Name>A bold name</ram:Name>"))
 })
 
-// --- 6. The diagnostics of the findings, and the merge with the validator ---
+// --- 6. The diagnostics of the findings, for the messages of failed tests ---
 #let found = (
   (
     kind: "code",
@@ -684,23 +674,9 @@
     "recipient.country",
     "item 2 (Travel)",
   ))
-  assert.eq(diagnostics.map(d => d.hint), (report-hint, report-hint))
   assert(diagnostics.first().message.contains("\"XX\""))
 
-  // Without errors of the validator, each finding is a diagnostic.
-  let warning = (
-    level: "warning",
-    rule: "BR-DE-27",
-    field: "sender.contact.phone",
-  )
-  assert.eq(merge((warning,), diagnostics), (warning,) + diagnostics)
-  // A finding the validator reports (same rule or field) is left out.
-  let error = (level: "error", rule: "BR-CL-14", field: "recipient.country")
-  assert.eq(merge((error,), diagnostics.slice(0, 1)), (error,))
-  let other = (level: "error", rule: "BR-XX", field: "recipient.country")
-  assert.eq(merge((other,), diagnostics.slice(0, 1)), (other,))
-  // The currency of the VAT total is the invoice currency: a finding on it
-  // merges with the validator's diagnostic of `currency`.
+  // The currency of the VAT total is the invoice currency.
   let total = guard-diagnostics(
     (
       (
@@ -720,13 +696,4 @@
     "EN 16931 (COMFORT)",
   )
   assert.eq(total.map(d => d.field), ("currency",))
-  let currency = (level: "error", rule: "BR-CL-04", field: "currency")
-  assert.eq(merge((currency,), total), (currency,))
-  // With errors of the validator, the others are one diagnostic.
-  let merged = merge((error,), diagnostics)
-  assert.eq(merged.len(), 2)
-  assert.eq(merged.last().rule, summary-rule)
-  assert.eq(merged.last().field, "item 2 (Travel)")
-  assert(merged.last().message.starts-with("1 further problem in the XML"))
-  assert.eq(merge((error,), ()), (error,))
 }

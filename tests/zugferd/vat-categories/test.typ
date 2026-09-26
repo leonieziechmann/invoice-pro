@@ -5,9 +5,9 @@
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/profile.typ": resolve-profile
-#import "/src/zugferd/rules/engine.typ": rule-registry
 #import "/tests/zugferd/harness.typ": (
-  bank, buyer-de, buyer-fr, diagnostic, model-test, rules, seller,
+  bank, buyer-de, buyer-fr, diagnostic, model-test, rule-registry, rules,
+  seller,
 )
 
 // A seller that states only its tax number, and one with an identifier only.
