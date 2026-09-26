@@ -38,8 +38,8 @@ tests/
 │
 └── zugferd/               # Unit tests of the e-invoice (ZUGFeRD) pipeline
     ├── xml/               # Plain text, number formatting, XML serialization
-    ├── guard/             # XML write guard: structure, values, names, diagnostics
-    ├── roundtrip/         # Round trip of the write guard (G3) and the strict mode
+    ├── guard/             # Write guard of the test oracle: structure, values, names, messages
+    ├── roundtrip/         # Round trip of the test oracle (G3), arithmetic of the amounts
     ├── codelists/         # Code lists of the rules, codes of the newest lists
     ├── model/             # E-invoice data model built from an invoice
     ├── equivalence/       # The XML states what the invoice prints (IP-PRINT-01, IP-CALC-*)
@@ -376,12 +376,12 @@ ZUGFeRD tests verify that generated invoices comply with the **EN 16931** Europe
 
 #### How It Works
 
-1. Compiles the Typst invoice document to **PDF/A-3b** (`--pdf-standard=a-3b`), in the strict mode of the write guard (`--input zugferd-strict=true`), which compares every line of the written XML with the invoice and checks the arithmetic of its amounts.
+1. Compiles the Typst invoice document to **PDF/A-3b** (`--pdf-standard=a-3b`).
 2. Extracts the embedded `factur-x.xml` attachment (or `xrechnung.xml`, the name ZUGFeRD gives the XML of its XRECHNUNG profile) using `pdfdetach` (from `poppler-utils`).
 3. Validates the XML syntax and Schematron business rules (including XRechnung / EN16931 rules) using the **Mustangproject CLI validator** (`mustang-cli`).
 4. `validate-all-zugferd` then validates the XML of all EN 16931 and XRechnung documents once more with **KoSIT**, the reference validator for XRechnung (validator 1.6.3 with the XRechnung configuration 2026-08-31), in a single JVM (`tools/zugferd/kosit.py`). KoSIT has no scenario for MINIMUM, BASIC WL and BASIC; it lists these documents as skipped. The step needs `KOSIT_JAR`, `KOSIT_CONFIG` and Python with `lxml` and `pypdf` (see [Running Without Nix](#running-without-nix)); `nix run .#validate-all-zugferd` provides them. Without `KOSIT_JAR` and `KOSIT_CONFIG`, a local run skips KoSIT with a notice, and a run in CI (`CI=true`) fails.
 
-Independently of Mustang, `invoice-pro` checks the e-invoice data itself while compiling (the rule registry in `src/zugferd/rules/`, see [The Rule Registry](#the-rule-registry)) and lists every violated rule at once. The tests under `tests/zugferd/` cover these checks; the Mustang validation makes sure that an invoice passing them is valid for the official validator as well.
+Independently of Mustang, `invoice-pro` checks the e-invoice data itself while compiling (the rules in `src/zugferd/rules/`, see [The Rule Registry](#the-rule-registry)) and lists every violated rule at once. The tests under `tests/zugferd/` cover these checks, and the test oracle checks the XML of every test invoice they let through (see [The Test Oracle of the XML](#the-test-oracle-of-the-xml)); the Mustang validation makes sure that an invoice passing them is valid for the official validator as well.
 
 #### Running Validations
 
@@ -460,7 +460,7 @@ If Mustang reports validation errors:
    pdfdetach -saveall -o /tmp/extracted /tmp/test.pdf
    cat /tmp/extracted/factur-x.xml
    ```
-4. If Mustang rejects an invoice that compiled without errors, `invoice-pro`'s own validation misses a rule: add the check to the rule registry (see [The Rule Registry](#the-rule-registry)) and a case to `tests/zugferd/validate/test.typ`.
+4. If Mustang rejects an invoice that compiled without errors, `invoice-pro`'s own validation misses a rule: add the check to the rules and its entry to the rule registry (see [The Rule Registry](#the-rule-registry)) and a case to `tests/zugferd/validate/test.typ`.
 5. If KoSIT rejects a document, the output names the rule of each error (`error [BR-DE-15] ...`); `KOSIT_JAR=... KOSIT_CONFIG=... python3 tools/zugferd/kosit.py <file.pdf|file.xml>` validates single files. A rule that only one of Mustang and KoSIT reports is documented in `tools/zugferd/validator-differences.toml` (see [Validator Differences](#validator-differences)).
 
 ---
@@ -473,7 +473,7 @@ The Mustang validation above checks two dozen hand-written documents. The CI add
 | :--------------------- | :--------------------------------------------------------------------------------------------- | :---------------------------------- | :----------------------------------------- |
 | Conformance corpus     | invoice-pro's verdict equals the official one, and the XML says what the input and the PDF say | `nix run .#zugferd-corpus`          | `corpus` in `zugferd-validation.yaml`      |
 | Business terms         | every business term of EN 16931 has an input, a derivation or a reason why it is not supported | (part of `zugferd-corpus`)          | `corpus`                                   |
-| XML write guard        | the guard's tables are those of the pinned artefacts, and the guard passes the mutation test   | (part of `zugferd-corpus`)          | `corpus`                                   |
+| Test oracle of the XML | its tables and the code lists are those of the pinned artefacts; its guard passes mutations    | (part of `zugferd-corpus`)          | `corpus`                                   |
 | Rule coverage          | every rule id of the official validators has a class, and invoice-pro reports its rules by id  | (part of `zugferd-corpus`)          | `corpus`                                   |
 | Golden XML             | the XML of every e-invoice test document is unchanged, or changed on purpose                   | `nix run .#zugferd-golden`          | `golden` in `zugferd-validation.yaml`      |
 | Reproducibility        | two compilations of a document give bit-identical PDFs (same Typst and package version)        | (part of `zugferd-golden`)          | `golden`                                   |
@@ -517,7 +517,7 @@ export KOSIT_CONFIG=~/Downloads/xrechnung-configuration   # the unpacked zip
 
 `tools/zugferd/corpus/gen.py` writes the generated invoices and their `manifest.json` to `build/zugferd/corpus/`; `tools/zugferd/corpus/regression/` holds the committed regression cases and `tools/zugferd/corpus/rules/` the parity fixtures (see [Rule Coverage](#rule-coverage)). `tools/zugferd/run.py` then handles every case in six steps:
 
-1. **Typst, once per case.** The cases use `zugferd-errors: "report"` and the harness theme `tools/zugferd/harness.typ`, which attaches invoice-pro's diagnostics to the PDF as `invoice-pro-diagnostics.json`. One compilation yields the XML, invoice-pro's verdict and the printed text. Every case compiles in the strict mode of the write guard (`--input zugferd-strict=true`, see [The XML Write Guard](#the-xml-write-guard)).
+1. **Typst, once per case.** The cases use `zugferd-errors: "report"` and the harness theme `tools/zugferd/harness.typ`, which attaches invoice-pro's diagnostics to the PDF as `invoice-pro-diagnostics.json`. One compilation yields the XML, invoice-pro's verdict and the printed text.
 2. **XSD** of the profile with lxml. The Factur-X 1.0.07 XSDs are read from the Mustang jar.
 3. **Mustang 2.14** (EN 16931, Factur-X and XRechnung Schematron) in a single JVM for the whole run, validating while Typst still compiles. The XRechnung Schematron reports its rules (BR-DE-\*, PEPPOL-\*) with message type 27: as errors for an XRechnung, as notices for the other profiles. The runner counts every error, whatever its type.
 4. **KoSIT 1.6.3** with the XRechnung configuration 2026-08-31 (CEN Schematron 1.3.16, XRechnung Schematron 2.6.0), the reference validator for XRechnung: one JVM validates the EN 16931 and XRechnung cases of the run as a batch after Typst is done (about 15 s for the some 500 files of a PR run). KoSIT has no scenario for MINIMUM, BASIC WL and BASIC.
@@ -543,7 +543,6 @@ export KOSIT_CONFIG=~/Downloads/xrechnung-configuration   # the unpacked zip
 | `WARNED`         | no invoice-pro error, and only one validator rejects the XML, under rules invoice-pro warns about as decided (`warned-as` in `validator-differences.toml`) |
 | `FALSE_POSITIVE` | invoice-pro reports errors, but the XML is officially valid                                                                                                |
 | `STRICTER`       | only invoice-pro's own rules (`IP-*`, e.g. legal requirements the profile lacks) reject a valid invoice                                                    |
-| `GUARD_ONLY`     | only the XML guard objects (diagnostics with `source: "guard"`): a registry rule is missing                                                                |
 | `CRASH`          | the compilation failed                                                                                                                                     |
 | `INPUT_ERROR`    | the compilation stopped with the message the case expects (a deliberate input check)                                                                       |
 | `NO_XML`         | no e-invoice XML was attached                                                                                                                              |
@@ -554,7 +553,7 @@ The dimensions of the legal population cover the inputs of real invoices, among 
 
 The oracles compare the XML with the facts the generator put into the invoice (`O-BT1` invoice number, `O-BT3` document type, `O-BT5` currency, `O-BT27`/`O-BT44` party names, `O-BT29`/`O-BT30`/`O-BT31`/`O-BT32` seller identifiers, `O-BT46`/`O-BT47`/`O-BT48` buyer identifiers, `O-BG10` payee, `O-BG11` tax representative, `O-BT25` preceding invoice, `O-BT22` invoice notes, `O-BT37`/`O-BT38`/`O-BT52`/`O-BT53` city and post code, `O-BT40`/`O-BT55`/`O-BT80` countries, `O-BG23` VAT categories and rates, `O-BT120` exemption reasons, `O-BT121` exemption reason codes, `O-BG20/21` and `O-BG27/28` allowances and charges with their amounts, `O-BG14` invoicing period, `O-BT9` due date, `O-BT84` IBAN, `O-BT81` payment means codes, `O-BT85` account name, `O-BG18` payment card, `O-BT89`/`O-BT90`/`O-BT91` direct debit, `O-BT113` paid invoice, `O-BT20` payment terms, `O-BT130` units, `O-BT153` item names, `O-BT127` item notes, `O-BT159` countries of origin) and with the printed PDF (`O-PDF-BT112`/`O-PDF-BT115` totals in the decimals of the currency, `O-PDF-BT131` the net amount of the first line with net prices, `O-PDF-BT120` exemption reasons). `O-META-*` are the relations between twins. `O-DIAG` checks invoice-pro's own messages in every case: each error names its rule, the input field, the problem and a hint.
 
-**Hard gates.** The job fails when a case does not meet its expectation. The only exceptions are the failure signatures listed in `tools/zugferd/known-issues.toml` (see below), and they never cover the hard gate of the legal population: every legal invoice must be `AGREE_VALID` (or `WARNED` as decided), so a `FALSE_NEGATIVE`, `FALSE_POSITIVE`, `STRICTER`, `CRASH`, `GUARD_ONLY` or any other class there fails the job even when its signature is listed (the report says `HARD GATE BROKEN`). Oracle failures of legal invoices can be known issues. The job also fails when a listed signature no longer occurs, and when Mustang and KoSIT disagree in a way that `tools/zugferd/validator-differences.toml` does not document (see [Validator Differences](#validator-differences)).
+**Hard gates.** The job fails when a case does not meet its expectation. The only exceptions are the failure signatures listed in `tools/zugferd/known-issues.toml` (see below), and they never cover the hard gate of the legal population: every legal invoice must be `AGREE_VALID` (or `WARNED` as decided), so a `FALSE_NEGATIVE`, `FALSE_POSITIVE`, `STRICTER`, `CRASH` or any other class there fails the job even when its signature is listed (the report says `HARD GATE BROKEN`). Oracle failures of legal invoices can be known issues. The job also fails when a listed signature no longer occurs, and when Mustang and KoSIT disagree in a way that `tools/zugferd/validator-differences.toml` does not document (see [Validator Differences](#validator-differences)).
 
 #### Regression Cases
 

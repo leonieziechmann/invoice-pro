@@ -19,7 +19,7 @@
 
 #let _unparsed-city(city-str) = (name: city-str.trim(), post-code: none)
 
-// 4 or 5 digits, optionally after a country marker ("D-10115 Berlin").
+// "10115 Berlin", "D-10115 Berlin"
 #let parse-city-euro(city-str) = {
   let m = city-str.match(_euro-city-pattern())
   if m != none {
@@ -34,11 +34,9 @@
   }
 }
 
-/// A parser that splits a city line into post code and city name. `pattern`
-/// matches the post code (without anchors or groups), which stands `"before"`
-/// or `"after"` the city name, or `"either"`. Country markers (`prefixes`,
-/// "D-10115") are dropped unless `keep-prefix`; `ignore-case` accepts lower
-/// case and returns the post code in upper case.
+/// A parser that splits a city line into the post code `pattern` (without
+/// anchors or groups) and the city name. Country markers (`prefixes`,
+/// "D-10115") are dropped unless `keep-prefix`.
 ///
 /// -> function
 #let post-code-parser(
@@ -318,7 +316,6 @@
   if code == "UK" { "GB" } else { code }
 }
 
-// The characters a post code mask escapes in its regular expression.
 #let _regex-syntax = (
   "\\": true,
   ".": true,
@@ -340,7 +337,6 @@
   "-": true,
 )
 
-// The regular expression of a post code mask of `country.custom`.
 #let _mask-pattern(mask) = {
   let pattern = ""
   for char in mask.clusters() {
@@ -358,10 +354,9 @@
 /// - `code`: the ISO 3166-1 alpha-2 code, e.g. `"NO"` (required).
 /// - `name`: the printed name of the country.
 /// - `show-always`: print the country line even for domestic addresses.
-/// - `post-code`: a mask of the post code (`9` a digit, `A` a letter, e.g.
-///   `"A9A 9A9"`) or an array of masks; `auto` accepts 4 or 5 digits.
-/// - `post-code-position`: `"before"` the city name ("0154 Oslo") or
-///   `"after"` it ("Toronto ON M5V 2T6").
+/// - `post-code`: a mask (`9` a digit, `A` a letter, e.g. `"A9A 9A9"`) or an
+///   array of masks; `auto` accepts 4 or 5 digits.
+/// - `post-code-position`: `"before"` or `"after"` the city name.
 ///
 /// -> dictionary
 #let custom(

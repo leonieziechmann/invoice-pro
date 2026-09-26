@@ -12,17 +12,14 @@
   spaces: regex(" {2,}"),
   separators: regex("[\\s\\p{Cf}./-]+"),
   digits: regex("^[0-9]+$"),
-  // A Swiss UID, and its VAT and register suffixes.
   uid-ch: regex("^CHE[0-9]{9}$"),
   uid-ch-suffix: regex("(MWST|TVA|IVA|HR|RC)+$"),
-  // Grobadressierung, optional Feinadressierung, and check digits.
   leitweg: regex("^[0-9]{2,12}(-[0-9A-Z]{1,30})?-[0-9]{2}$"),
   lower: regex("[a-z]"),
 )
 
 #let _quoted(text) = "\"" + text + "\""
 
-// The text of a value: "" for `none` or `auto`, `none` if it is no text.
 #let _text(value) = {
   if value == none or value == auto { return "" }
   if type(value) in (str, content, symbol, int) { return plain-text(value) }

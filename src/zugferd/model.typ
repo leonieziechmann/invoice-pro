@@ -1,6 +1,5 @@
-// Normalizes the computed invoice into the e-invoice data model. Its amounts
-// are those the invoice prints, except the sums BT-106 to BT-108 and the net
-// amounts of gross prices (logic/net-amounts.typ).
+// Normalizes the computed invoice into the e-invoice data model: amounts are
+// read, never computed again (except BT-106 to BT-108 and gross-price nets).
 
 #import "../utils/text.typ": plain-ascii, plain-text
 #import "code-lists.typ": lists
@@ -35,7 +34,7 @@
 // The fallbacks of the printed invoice.
 #let first-of = first-given
 
-// The strings `plain-text` returns as they are (a cheaper test).
+// Strings `plain-text` returns as they are.
 #let _plain-ascii = plain-ascii
 
 // The plain text of a value, or `none` if it has no visible text.
@@ -50,8 +49,8 @@
   if result == "" { none } else { result }
 }
 
-/// The payment terms (BT-20) of a text with its line breaks, or `none`. A
-/// Skonto line (BR-DE-18) ends with a line break.
+/// The payment terms (BT-20) with line breaks, or `none`; a Skonto line
+/// (BR-DE-18) ends with one.
 ///
 /// -> str | none
 #let payment-terms(value) = {
@@ -62,7 +61,7 @@
 }
 
 
-// Invisible characters (Cf) of copied identifiers, compiled on first use.
+// Compiled on first use (memoized).
 #let _invisible-patterns() = (
   invisible: regex("\\p{Cf}"),
   spaces: regex(" {2,}"),
@@ -188,8 +187,8 @@
   } else { result }
 }
 
-/// The electronic address (BT-34, BT-49) as `(scheme: .., id: ..)`: the
-/// explicit one with an id (BR-62, BR-63), else of the VAT ID, else the email.
+/// The electronic address (BT-34, BT-49): the explicit one with an id (BR-62,
+/// BR-63), else of the VAT ID, else the email.
 ///
 /// -> none | dictionary
 #let get-electronic-address(party) = {
@@ -227,7 +226,7 @@
   none
 }
 
-// An identifier as `(scheme: .., id: ..)`; with a scheme, without spaces.
+// `(scheme: .., id: ..)`, without spaces if it has a scheme.
 #let _scheme-id(value) = {
   if type(value) == dictionary {
     let scheme = compact(value.at("scheme", default: none))
@@ -239,8 +238,7 @@
   if id == none { none } else { (scheme: none, id: id) }
 }
 
-// The ids of `keys`: `ram:ID` (BT-29, BT-46, BT-71) without scheme, else
-// `ram:GlobalID`.
+// `ram:ID` (BT-29, BT-46, BT-71) without scheme, else `ram:GlobalID`.
 #let _party-ids(party, keys) = {
   let ids = ()
   let id-keys = ()
@@ -510,8 +508,8 @@
     or not _is-unset(party.at("phone", default: none))
 )
 
-/// A party (`role`: `"seller"`, `"buyer"` or `"ship-to"`). `use-vat-id: false`
-/// keeps the VAT ID out of the XML (BR-O-02), not out of the electronic address.
+/// A seller, buyer or ship-to party (`role`); `use-vat-id: false` keeps the
+/// VAT ID out of the XML (BR-O-02), not out of the electronic address.
 ///
 /// -> dictionary
 #let party-model(party, role: none, use-vat-id: true) = {
@@ -649,8 +647,7 @@
   items,
 ))
 
-// The service period printed as a reference as `(text: .., own: ..)`, `own`
-// if it is a text rather than dates.
+// The service period printed as a reference; `own` if not dates.
 #let _printed-service-period(ctx) = {
   let strings = ctx.at("locale", default: (:)).at("strings", default: (:))
   let labels = strings.at("reference", default: (:))
@@ -872,7 +869,6 @@
       quantity: quantity,
       base-quantity: base-quantity,
       unit-code: unit.code,
-      // See `resolve-unit`.
       unit-issue: unit.issue,
       price: price,
       net: net,
@@ -1042,8 +1038,7 @@
   }
 }
 
-/// Builds the e-invoice data model from the root context and the computed
-/// line item data.
+/// The e-invoice data model of the root context and the computed items.
 ///
 /// -> dictionary
 #let build-model(
@@ -1170,7 +1165,7 @@
       allowance-total += entry.amount
     }
   }
-  // The printed totals (BT-109, BT-112, BT-113); BT-110 adds up the VAT.
+  // BT-110 adds up the printed VAT amounts.
   let net-total = _decimal(item-data.at("net-total", default: _zero))
   let gross-total = _decimal(item-data.at("gross-total", default: _zero))
   let tax-total = _zero
@@ -1189,7 +1184,7 @@
   }
 
   let currency = currency-code(locale)
-  // The printed formats of amounts and prices, to check the currency (BT-5).
+  // To check the printed currency (BT-5).
   let printed-currency = (
     symbol: text-or-none(currency-meta.at("symbol", default: none)),
   )

@@ -360,14 +360,12 @@
           payment-means: view.payment-means,
         )
         let errors = result.diagnostics.filter(d => d.level == "error")
-        // The report module loads only when there is something to report.
         if errors.len() > 0 and ctx.zugferd-errors == "panic" {
           import "../zugferd/report.typ": format-report
           assert(false, message: format-report(result))
         }
 
-        // With errors, "report" attaches a draft under a name no receiver takes
-        // for the e-invoice; "ignore" attaches the XML like a valid one.
+        // With errors, "report" attaches a draft; "ignore" attaches it as valid.
         let draft = errors.len() > 0 and ctx.zugferd-errors == "report"
         // MINIMUM and BASIC WL do not replace the visual invoice either.
         let as-data = draft or result.profile.id in ("minimum", "basic-wl")

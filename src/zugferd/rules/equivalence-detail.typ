@@ -11,7 +11,7 @@
 // A net price derived from a gross price keeps at least 6 decimals.
 #let _price-tolerance = decimal("0.000001")
 
-// IP-PRINT-01; `rate`: of a net `stated` compared with a gross `printed`.
+// A finding of IP-PRINT-01; `rate`: the VAT rate of a gross `printed`.
 #let _differs(field, term, stated, printed, rate: none) = (
   key: "IP-PRINT-01",
   field: field,

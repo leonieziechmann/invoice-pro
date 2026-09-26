@@ -54,8 +54,7 @@
     scope: ctx => loom.mutator.batch(ctx, {
       import loom.mutator: *
 
-      // Not cascaded: the context's `tax` is the items' default. A small
-      // business replaces a pinned category with its scheme.
+      // Not cascaded: the context's `tax` is the items' default.
       let small-biz = ctx.at("tax-exempt-small-biz", default: false)
       put("modifier-tax", if tax == auto { none } else if small-biz {
         ctx.locale.tax.small-enterprise-special-scheme

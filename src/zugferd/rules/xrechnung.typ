@@ -38,7 +38,7 @@
         out.push((key: rule, field: "sender.contact." + key, input: key))
       }
     }
-    // Errors, as Mustang rejects them; XRechnung only warns (also BR-DE-17).
+    // Errors: XRechnung only warns, but Mustang rejects the invoice.
     if (
       contact.phone != none
         and contact.phone.matches(_patterns().digit).len() < 3

@@ -42,8 +42,7 @@
   }
 }
 
-/// Collects the amount of the invoice by SEPA direct debit from the account
-/// of the buyer (BT-81 = 59, BG-19).
+/// Collects the amount by SEPA direct debit (BT-81 = 59, BG-19).
 ///
 /// -> content
 #let direct-debit(
@@ -134,8 +133,7 @@
   )
 }
 
-/// States that the amount of the invoice is paid, or charged, with a
-/// payment card (BT-81 = 48, 54 or 55, BG-18).
+/// States that the amount is paid with a card (BT-81 = 48, 54, 55, BG-18).
 ///
 /// -> content
 #let card-payment(

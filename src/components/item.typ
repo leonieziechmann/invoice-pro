@@ -251,7 +251,6 @@
       derive("reference", reference)
       if note != auto { put("note", note) }
       if origin != auto { put("origin", origin) }
-      // A bundle is one line, which would lose the note or origin of its items.
       if (
         (note not in (auto, none) or origin not in (auto, none))
           and ctx.at("bundle-quantity", default: none) != none

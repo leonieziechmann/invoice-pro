@@ -106,7 +106,7 @@
     out += currency-code(currency, currency-field, model.profile)
   }
 
-  // IP-TAX-01: `tax: none` states no VAT category (BT-151).
+  // IP-TAX-01: `tax: none` does not say which VAT category (BT-151) applies.
   let implicit = 0
   for line in model.lines {
     if line.at("implicit", default: false) { implicit += 1 }
@@ -182,7 +182,7 @@
     out += document-type(code)
   }
 
-  // IP-DOC-05: BG-3 is written with its number (BT-25) only.
+  // IP-DOC-05: a date (BT-26) without the number (BT-25) would be lost.
   if model.profile.document-references {
     let number = invoice.at("preceding-invoice-nr", default: none)
     if (
@@ -269,7 +269,7 @@
     }
   }
 
-  // IP-PERIOD-01: a text of its own is an error only for the invoice date.
+  // IP-PERIOD-01: a text of its own warns, unless the XML has the invoice date.
   let delivery = model.at("delivery", default: (:))
   let printed = delivery.at("printed", default: none)
   let stated = delivery.at("text", default: none)
@@ -705,7 +705,7 @@
   }
 
   if profile.addresses {
-    // Required by XRechnung, a warning in EN 16931 (Peppol needs them).
+    // Electronic addresses: XRechnung requires them; EN 16931 warns (Peppol).
     let (required, seller-rule, buyer-rule) = if profile.xrechnung {
       ("error", "PEPPOL-EN16931-R020", "PEPPOL-EN16931-R010")
     } else if profile.id == "en16931" {
@@ -1300,7 +1300,7 @@
       currency: model.at("currency", default: none),
       decimals: decimals,
     ))
-    // The sums below would repeat it; without it, amounts compare exactly.
+    // The sums below would only repeat it; otherwise amounts compare exactly.
     return out
   }
 
