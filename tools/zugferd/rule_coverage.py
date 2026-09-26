@@ -1046,7 +1046,7 @@ def summarize(decisions):
 
 
 def markdown_table(summary):
-    header = ["Profile", "Rule ids", "Reported by invoice-pro", "Enforced by the guard", "Excluded by construction",
+    header = ["Profile", "Rule ids", "Reported by invoice-pro", "Checked by the tests", "Excluded by construction",
               "Cannot occur", "Open"]
     rows = [header, [":--"] + ["--:"] * (len(header) - 1)]
     for profile in PROFILES:
