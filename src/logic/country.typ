@@ -34,9 +34,9 @@
   }
 }
 
-/// A parser that splits a city line into the post code `pattern` (without
-/// anchors or groups) and the city name. Country markers (`prefixes`,
-/// "D-10115") are dropped unless `keep-prefix`.
+/// A parser of city lines with a post code matching `pattern` (without
+/// anchors or groups) `"before"`, `"after"` or on `"either"` side of the name.
+/// Markers (`prefixes`, "D-10115") are dropped unless `keep-prefix`.
 ///
 /// -> function
 #let post-code-parser(
@@ -419,11 +419,8 @@
 }
 
 // --- Countries ---
-//
-// Each parses the post code in its own format; a city line without such a
-// post code is not taken apart: the whole line is the city name.
+// A city line without a post code of the country's format is not split.
 
-// `count` digits before the city name, optionally after a marker ("D-10115").
 #let _digits(count, ..prefixes) = post-code-parser(
   "\\d{" + str(count) + "}",
   prefixes: prefixes.pos(),

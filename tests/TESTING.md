@@ -473,7 +473,7 @@ The Mustang validation above checks two dozen hand-written documents. The CI add
 | :--------------------- | :--------------------------------------------------------------------------------------------- | :---------------------------------- | :----------------------------------------- |
 | Conformance corpus     | invoice-pro's verdict equals the official one, and the XML says what the input and the PDF say | `nix run .#zugferd-corpus`          | `corpus` in `zugferd-validation.yaml`      |
 | Business terms         | every business term of EN 16931 has an input, a derivation or a reason why it is not supported | (part of `zugferd-corpus`)          | `corpus`                                   |
-| Test oracle of the XML | its tables and the code lists are those of the pinned artefacts; its guard passes mutations    | (part of `zugferd-corpus`)          | `corpus`                                   |
+| Test oracle of the XML | the tables and code lists match the pinned artefacts, and the guard passes the mutation test   | (part of `zugferd-corpus`)          | `corpus`                                   |
 | Rule coverage          | every rule id of the official validators has a class, and invoice-pro reports its rules by id  | (part of `zugferd-corpus`)          | `corpus`                                   |
 | Golden XML             | the XML of every e-invoice test document is unchanged, or changed on purpose                   | `nix run .#zugferd-golden`          | `golden` in `zugferd-validation.yaml`      |
 | Reproducibility        | two compilations of a document give bit-identical PDFs (same Typst and package version)        | (part of `zugferd-golden`)          | `golden`                                   |
