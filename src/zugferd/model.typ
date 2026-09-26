@@ -1355,7 +1355,6 @@
         ))
       },
     ),
-    printed-totals: (net: net-total, gross: gross-total),
     payment: (
       reference: text-or-none(resolve-payment-reference(ctx, bank: bank)),
       // BG-16

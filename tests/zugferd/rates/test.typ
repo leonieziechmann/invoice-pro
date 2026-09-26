@@ -5,6 +5,7 @@
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/xml.typ": fmt-rate
+#import "/tools/zugferd/guard/equivalence.typ": consistency-findings
 #import "/tests/zugferd/harness.typ": (
   bank, buyer-fr, diagnostic, model-test, rules, xml-values,
 )
@@ -71,24 +72,17 @@
 ]
 
 // --- 5. The VAT amount is the taxable amount times the stated rate within
-// the tolerance of 1 (BR-CO-17) ---
+// the tolerance of 1 (BR-CO-17, which the test oracle checks) ---
 #model-test(model => {
-  assert.eq(rules(model), ())
+  let sums(m) = consistency-findings(m, m.totals).map(f => f.key)
+  assert.eq(sums(model), ())
   let m = model
   m.taxes.at(0).amount += decimal("1.01")
-  m.totals.tax += decimal("1.01")
-  m.totals.gross += decimal("1.01")
-  m.totals.due += decimal("1.01")
-  m.printed-totals.gross += decimal("1.01")
-  assert.eq(rules(m), ("BR-CO-17",))
+  assert.eq(sums(m), ("BR-CO-17",))
   // A difference of a cent, e.g. from gross prices, is fine
   let m = model
   m.taxes.at(0).amount += decimal("0.01")
-  m.totals.tax += decimal("0.01")
-  m.totals.gross += decimal("0.01")
-  m.totals.due += decimal("0.01")
-  m.printed-totals.gross += decimal("0.01")
-  assert.eq(rules(m), ())
+  assert.eq(sums(m), ())
 })[
   #line-items[#item([Consulting], price: 1000)]
   #payment-goal(days: 14)

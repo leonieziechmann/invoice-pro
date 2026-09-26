@@ -1,12 +1,13 @@
-// The invariants that the e-invoice states what the invoice prints
-// (src/zugferd/rules/equivalence.typ): IP-PRINT-01, IP-CALC-01, IP-CALC-02,
-// and PEPPOL-EN16931-R120 of XRechnung. A computed invoice keeps them; a
-// model or a computed invoice changed after the computation breaks them.
+// The invariants of the test oracle that the e-invoice states what the
+// invoice prints (tools/zugferd/guard/equivalence.typ): IP-PRINT-01,
+// IP-CALC-01 and IP-CALC-02. A computed invoice keeps them; a model or a
+// computed invoice changed after the computation breaks them. And the rule
+// PEPPOL-EN16931-R120 of XRechnung, which the validator checks.
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/model.typ": build-model
-#import "/src/zugferd/rules/equivalence.typ": findings
-#import "/src/zugferd/rules/engine.typ": diagnostics
+#import "/tools/zugferd/guard/equivalence.typ": findings, messages
+#import "/src/zugferd/rules/engine.typ": run-rules
 #import "/src/zugferd/zugferd.typ": process-zugferd
 #import "/tests/zugferd/harness.typ": bank, buyer-de, payment-means, seller
 #import "/tests/data-test.typ": data-test, loom
@@ -212,15 +213,13 @@
     ),
   )
 
-  // Every finding is an error with a message and a hint.
+  // Every finding names its field and has a message.
   let m = model
   m.lines.at(1).net += one
-  let d = diagnostics(findings(m, item-data, printed)).first()
-  assert.eq(d.rule, "IP-PRINT-01")
-  assert.eq(d.level, "error")
-  assert.eq(d.field, "item 2 (Buch)")
-  assert(d.message.contains("line net amount (BT-131)"))
-  assert(d.hint != none)
+  let f = findings(m, item-data, printed).first()
+  assert.eq(f.key, "IP-PRINT-01")
+  assert.eq(f.field, "item 2 (Buch)")
+  assert(messages.at(f.key)(f).first().contains("line net amount (BT-131)"))
 })[#rich]
 
 // With gross prices, a net amount differs by more than the rounding allows.
@@ -233,7 +232,7 @@
   ))
   // The message compares the net amount with VAT to the printed gross one.
   assert.eq(f.first().rate, decimal("0.07"))
-  assert(diagnostics(f).first().message.contains("7"))
+  assert(messages.at("IP-PRINT-01")(f.first()).first().contains("7"))
   // Within the rounding: a cent less.
   let m = model
   m.lines.at(1).net -= decimal("0.001")
@@ -251,7 +250,9 @@
   assert.eq(calc01.map(f => (f.field, f.amount - f.parts)), (
     ("discount (Projektrabatt)", decimal("0.01")),
   ))
-  assert(diagnostics(calc01).first().message.contains("add up to"))
+  assert(
+    messages.at("IP-CALC-01")(calc01.first()).first().contains("add up to"),
+  )
 
   // A taxable amount the lines, allowances and charges of its VAT group do
   // not add up to.
@@ -260,7 +261,14 @@
   let calc02 = findings(model, data, printed).filter(f => f.key == "IP-CALC-02")
   assert.eq(calc02.len(), 1)
   assert.eq(calc02.first().expected - calc02.first().sum, one)
-  assert(diagnostics(calc02).first().message.contains("taxable amount"))
+  assert(
+    messages
+      .at("IP-CALC-02")(calc02.first())
+      .first()
+      .contains(
+        "taxable amount",
+      ),
+  )
 })[#rich]
 
 // A discount on a VAT group whose lines add up to a credit is a charge of
@@ -290,12 +298,12 @@
   zugferd: "xrechnung",
   currency: "JPY",
   (model, item-data, printed, root) => {
-    let f = findings(model, item-data, printed)
-    assert.eq(f.map(f => (f.key, f.field)), (
-      ("PEPPOL-EN16931-R120", "item 1 (Leistung)"),
+    assert.eq(found(model, item-data, printed), ())
+    let r120 = run-rules(model).filter(d => d.rule == "PEPPOL-EN16931-R120")
+    assert.eq(r120.map(d => (d.level, d.field)), (
+      ("warning", "item 1 (Leistung)"),
     ))
-    assert.eq(f.first().net, decimal("100"))
-    assert.eq(f.first().expected, decimal("100.4"))
+    assert(r120.first().message.contains("100.4"))
     // A warning, as KoSIT reports it; not an EN 16931 rule.
     let ctx = root.ctx + (global: (total: printed))
     let result = process-zugferd(ctx, item-data, ..root.inputs)
@@ -305,7 +313,7 @@
     assert.eq(r120.map(d => d.level), ("warning",))
     let m = model
     m.profile.xrechnung = false
-    assert.eq(found(m, item-data, printed), ())
+    assert.eq(run-rules(m).filter(d => d.rule == "PEPPOL-EN16931-R120"), ())
   },
 )[#yen]
 
@@ -317,12 +325,10 @@
     money: x => calc.round(x * 20) / 20,
   )),
   (model, item-data, printed, _) => {
-    let f = findings(model, item-data, printed)
-    assert.eq(f.map(f => (f.key, f.field)), (
-      ("PEPPOL-EN16931-R120", "item 1 (Kabel)"),
-    ))
-    assert.eq(f.first().net, decimal("0.35"))
-    assert.eq(f.first().expected, decimal("0.325"))
+    assert.eq(found(model, item-data, printed), ())
+    let r120 = run-rules(model).filter(d => d.rule == "PEPPOL-EN16931-R120")
+    assert.eq(r120.map(d => d.field), ("item 1 (Kabel)",))
+    assert(r120.first().message.contains("0.325"))
   },
 )[
   #line-items[
@@ -339,6 +345,7 @@
   currency: "JPY",
   (model, item-data, printed, _) => {
     assert.eq(found(model, item-data, printed), ())
+    assert.eq(run-rules(model), ())
   },
 )[
   #line-items[#item([Leistung], price: 100, quantity: 3)]
@@ -347,13 +354,12 @@
 ]
 #invariant-test(zugferd: "xrechnung", (model, item-data, printed, _) => {
   assert.eq(found(model, item-data, printed), ())
+  assert.eq(run-rules(model), ())
   // A net amount 0.03 off is beyond it.
   let m = model
   m.lines.at(0).net += decimal("0.03")
-  assert.eq(rules(m, item-data, printed), (
-    "IP-PRINT-01",
-    "PEPPOL-EN16931-R120",
-  ))
+  assert.eq(rules(m, item-data, printed), ("IP-PRINT-01",))
+  assert.eq(run-rules(m).map(d => d.rule), ("PEPPOL-EN16931-R120",))
 })[
   #line-items[
     #item(

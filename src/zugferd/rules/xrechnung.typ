@@ -163,3 +163,32 @@
   }
   out
 }
+
+/// PEPPOL-EN16931-R120: a line's net amount is its quantity times its price
+/// per base quantity, plus its charges, minus its allowances, within 0.02
+/// (0.5 for HUF). A total rounded more coarsely than its price breaks it.
+///
+/// -> array
+#let line-amounts(model, line-field) = {
+  let slack = decimal(if model.currency == "HUF" { "0.5" } else { "0.02" })
+  let out = ()
+  for line in model.lines {
+    let expected = line.quantity * line.price / line.base-quantity
+    for entry in line.charges { expected += entry.amount }
+    for entry in line.allowances { expected -= entry.amount }
+    let off = line.net - expected
+    if off > slack or off < -slack {
+      out.push((
+        key: "PEPPOL-EN16931-R120",
+        field: line-field(line),
+        net: line.net,
+        quantity: line.quantity,
+        price: line.price,
+        base-quantity: line.base-quantity,
+        expected: expected,
+        slack: slack,
+      ))
+    }
+  }
+  out
+}

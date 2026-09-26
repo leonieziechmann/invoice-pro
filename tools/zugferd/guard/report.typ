@@ -445,6 +445,17 @@
   let out = ()
   for f in findings {
     if f.kind in _round-trip-kinds { f = _round-trip(f) }
+    if f.kind == "invariant" {
+      out.push((
+        level: "error",
+        rule: f.rule,
+        source: "invariant",
+        field: f.field,
+        message: f.message,
+        path: "",
+      ))
+      continue
+    }
     let rule = if f.rule != none { f.rule } else {
       _rules.at(f.kind, default: "IP-GUARD-01")
     }

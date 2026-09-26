@@ -467,8 +467,8 @@ class Decision:
 @dataclasses.dataclass
 class WithoutFixture:
     """An entry `[[without-fixture]]` of rule-coverage.toml: official rule
-    ids that src/ names, but that no parity fixture shows invoice-pro
-    report, and why."""
+    ids that src/ or the rule registry names, but that no parity fixture
+    shows invoice-pro report, and why."""
 
     index: int
     ids: list
@@ -1153,7 +1153,8 @@ def report(inventory, decisions, summary, problems, ip, without=()):
     lines.append(f"invoice-pro's own rules: {len(ip)} (IP-*)")
     unshown = sorted({rule for entry in without for rule in entry.ids})
     if unshown:
-        lines.append(f"official rule ids src/ names without a parity fixture ([[without-fixture]]): {len(unshown)}")
+        lines.append(f"official rule ids of src/ and the rule registry without a parity fixture ([[without-fixture]]): "
+                     f"{len(unshown)}")
     if problems:
         lines.append(f"\nPROBLEMS ({len(problems)}):")
         lines += [f"  {p}" for p in problems]

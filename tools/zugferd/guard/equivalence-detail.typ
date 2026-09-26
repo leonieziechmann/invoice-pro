@@ -1,9 +1,8 @@
 // The detailed check of equivalence.typ: IP-PRINT-01 (a value differs from
-// the printed one), IP-CALC-01, IP-CALC-02 and PEPPOL-EN16931-R120. A finding
-// is a bug in invoice-pro, so every finding is an error.
+// the printed one), IP-CALC-01 and IP-CALC-02.
 
-#import "engine.typ": line-field, tax-field
-#import "../model.typ": text-or-none
+#import "/src/zugferd/rules/engine.typ": line-field, tax-field
+#import "/src/zugferd/model.typ": text-or-none
 
 #let _zero = decimal("0")
 #let _one = decimal("1")
@@ -32,7 +31,7 @@
 
 // A line against its item. `limit`: the tolerance of the net amount with
 // gross prices, else `none`; `unit`: the smallest amount of the currency.
-#let _line-findings(line, item, limit, unit, slack) = {
+#let _line-findings(line, item, limit, unit) = {
   let out = ()
   let divisor = _one + line.rate
   // BR-27: a negative price may be stated positive, of a negative quantity.
@@ -112,24 +111,6 @@
       }
     }
   }
-  if slack != none {
-    let expected = line.quantity * line.price / line.base-quantity
-    for entry in line.charges { expected += entry.amount }
-    for entry in line.allowances { expected -= entry.amount }
-    let off = line.net - expected
-    if off > slack or off < -slack {
-      out.push((
-        key: "PEPPOL-EN16931-R120",
-        field: line-field(line),
-        net: line.net,
-        quantity: line.quantity,
-        price: line.price,
-        base-quantity: line.base-quantity,
-        expected: expected,
-        slack: slack,
-      ))
-    }
-  }
   out
 }
 
@@ -159,9 +140,6 @@
       tolerance.insert(key, unit + calc.abs(basis - gross / divisor))
     }
   }
-  let slack = if model.profile.at("xrechnung", default: false) {
-    if model.currency == "HUF" { decimal("0.5") } else { decimal("0.02") }
-  }
 
   // --- Lines ---
   let lines = model.lines
@@ -179,7 +157,6 @@
   let single = sums.len() == 1
   let total = _zero
   let limit = if inclusive and single { tolerance.values().first() }
-  // PEPPOL-EN16931-R120: the `money` rounding may be coarser than the slack.
   for (line, item) in lines.zip(items) {
     let net = item.total
     total += net
@@ -235,11 +212,7 @@
           )
       )
     }
-    if not detailed and slack != none {
-      let off = line.net - line.quantity * line.price / line.base-quantity
-      detailed = off > slack or off < -slack
-    }
-    if detailed { out += _line-findings(line, item, limit, unit, slack) }
+    if detailed { out += _line-findings(line, item, limit, unit) }
   }
   if single { sums.at(sums.keys().first()) += total }
 

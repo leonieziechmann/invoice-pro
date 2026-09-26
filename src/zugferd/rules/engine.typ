@@ -794,6 +794,10 @@
       out.push((key: "BR-CO-04", field: line-field(line)))
     }
   }
+  if model.profile.xrechnung {
+    import "xrechnung.typ": line-amounts
+    out += line-amounts(model, line-field)
+  }
   out
 }
 
@@ -1269,28 +1273,14 @@
   found
 }
 
-#let _basis-rules = (
-  S: "BR-S-08",
-  Z: "BR-Z-08",
-  E: "BR-E-08",
-  AE: "BR-AE-08",
-  K: "BR-IC-08",
-  G: "BR-G-08",
-  O: "BR-O-08",
-  L: "BR-AF-08",
-  M: "BR-AG-08",
-)
-
-// A failure here is a bug in invoice-pro, except IP-DEC-02.
+// IP-DEC-02: the XML states amounts with 2 decimals (BR-DEC-*).
 #let _consistency(model) = {
-  let out = ()
-
-  // IP-DEC-02: the XML states amounts with 2 decimals (BR-DEC-*).
   let excess = _excess-decimals(model)
-  if excess.count > 0 {
-    let decimals = model.at("currency-decimals", default: 2)
-    let by-currency = type(decimals) == int and decimals > 2
-    out.push((
+  if excess.count == 0 { return () }
+  let decimals = model.at("currency-decimals", default: 2)
+  let by-currency = type(decimals) == int and decimals > 2
+  (
+    (
       key: "IP-DEC-02",
       field: if by-currency {
         model.at("currency-field", default: "locale")
@@ -1299,90 +1289,8 @@
       by-currency: by-currency,
       currency: model.at("currency", default: none),
       decimals: decimals,
-    ))
-    // The sums below would only repeat it; otherwise amounts compare exactly.
-    return out
-  }
-
-  let totals = model.totals
-  let printed = model.printed-totals
-  for (term, stated, shown) in (
-    ("total without VAT (BT-109)", totals.net, printed.net),
-    ("total with VAT (BT-112)", totals.gross, printed.gross),
-  ) {
-    if stated != shown {
-      out.push((
-        key: "IP-PRINT-01",
-        field: "line-items",
-        term: term,
-        stated: stated,
-        printed: shown,
-        rate: none,
-      ))
-    }
-  }
-  if model.profile.settlement {
-    let basis = _zero
-    for tax in model.taxes { basis += tax.basis }
-    if basis != printed.net {
-      out.push((
-        key: "IP-PRINT-01",
-        field: "line-items",
-        term: "sum of the VAT taxable amounts (BT-116)",
-        stated: basis,
-        printed: printed.net,
-        rate: none,
-      ))
-    }
-    // BR-CO-17: VAT amount = basis times rate, within the validators' tolerance
-    // of 1 (gross prices round differently); O and IP-DEC-01 rates are skipped.
-    for tax in model.taxes {
-      if tax.category == "O" or tax.rate == none { continue }
-      let percent = calc.round(tax.rate * 100, digits: rate-digits)
-      if percent != tax.rate * 100 { continue }
-      let expected = calc.round(tax.basis * percent / 100, digits: 2)
-      if calc.abs(tax.amount - expected) > 1 {
-        out.push((
-          key: "BR-CO-17",
-          field: tax-field(tax),
-          amount: tax.amount,
-          basis: tax.basis,
-          expected: expected,
-        ))
-      }
-    }
-  }
-  if model.profile.lines and model.taxes != () {
-    let sums = (:)
-    for line in model.lines {
-      if type(line.key) == str {
-        sums.insert(line.key, sums.at(line.key, default: _zero) + line.net)
-      }
-    }
-    for e in model.allowance-charges {
-      if type(e.key) == str {
-        let amount = if e.charge { e.amount } else { -e.amount }
-        sums.insert(e.key, sums.at(e.key, default: _zero) + amount)
-      }
-    }
-    // BR-x-08 of each VAT category that has one (not B).
-    for tax in model.taxes {
-      if type(tax.key) != str or type(tax.category) != str { continue }
-      let rule = _basis-rules.at(tax.category, default: none)
-      if rule == none { continue }
-      let amount = sums.at(tax.key, default: _zero)
-      if amount != tax.basis {
-        out.push((
-          key: "vat-basis",
-          id: rule,
-          field: tax-field(tax),
-          amount: amount,
-          basis: tax.basis,
-        ))
-      }
-    }
-  }
-  out
+    ),
+  )
 }
 
 /// The findings of the rules for an e-invoice data model.

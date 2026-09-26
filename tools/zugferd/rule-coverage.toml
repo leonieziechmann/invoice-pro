@@ -352,14 +352,13 @@ ids = [
 ]
 class = "construction"
 reason = """The model takes the totals and the VAT breakdown the invoice prints and adds up the \
-sums of the lines, allowances and charges it writes (BT-106 to BT-108); the rules check that these \
-add up to the printed amounts before the XML is written (IP-PRINT-01, IP-CALC-02, BR-CO-17 and \
-BR-*-08, a failure there is a bug), and the test oracle checks the sums of these rules on the XML \
-of every test invoice. Every invoice of the corpus is checked by both validators."""
+sums of the lines, allowances and charges it writes (BT-106 to BT-108). The test oracle checks, for \
+every test invoice, that the model states the printed amounts and that its sums hold (IP-PRINT-01, \
+IP-CALC-01, IP-CALC-02, BR-CO-17 and BR-*-08), and the sums of these rules on the XML. Every \
+invoice of the corpus is checked by both validators."""
 evidence = [
   "src/zugferd/model.typ: totals and taxes",
-  "src/zugferd/rules/engine.typ: the consistency checks of the totals (IP-PRINT-01, BR-CO-17 and BR-*-08)",
-  "src/zugferd/rules/equivalence-detail.typ: the printed amounts of every VAT group (IP-CALC-02)",
+  "tools/zugferd/guard/equivalence.typ: the invariants of the model (IP-PRINT-01, IP-CALC-01, IP-CALC-02, BR-CO-17, BR-*-08)",
   "tools/zugferd/guard/strict.typ: BR-CO-10 to BR-CO-17 and BR-*-08 on the XML of every test invoice (the test oracle)",
   "tools/zugferd/corpus/gen.py: the legal population, AGREE_VALID by the hard gate",
 ]
@@ -636,15 +635,6 @@ zero rated, with IP-TAX-01), and `direct-debit` requires the creditor identifier
 construction entries of these rules)."""
 
 [[without-fixture]]
-ids = [
-  "BR-CO-17",
-  "BR-S-08", "BR-Z-08", "BR-E-08", "BR-AE-08", "BR-IC-08", "BR-G-08", "BR-O-08", "BR-AF-08", "BR-AG-08",
-]
-reason = """A safety net that cannot fire: the consistency checks of engine.typ re-check the VAT \
-breakdown that the model computes from the lines, allowances and charges it writes; a failure is a \
-bug of invoice-pro, which no input shows."""
-
-[[without-fixture]]
 ids = ["BR-IC-12"]
 reason = """A safety net that cannot fire: an intra-community supply without `delivery-address` is \
 delivered to the buyer's address, so the deliver-to country (BT-80) is always written (see its \
@@ -710,24 +700,6 @@ level = "error"
 summary = "The printed invoice shows neither the seller's VAT identifier nor its tax number, which the XML states."
 basis = "§ 14 Abs. 4 Satz 1 Nr. 2 UStG; Art. 226 No. 3 of the VAT Directive 2006/112/EC."
 tests = ["tests/zugferd/printed/test.typ"]
-
-[ip."IP-PRINT-01"]
-level = "error"
-summary = "An amount or quantity of the XML differs from the one the invoice prints (a line, an allowance or charge, a VAT group, a total)."
-basis = "§ 14 Abs. 4 Satz 1 Nr. 5, 7 and 8 UStG; Art. 226 No. 6 and 8 to 10 of the VAT Directive 2006/112/EC: the XML of a hybrid invoice states the invoice its PDF shows."
-tests = ["tests/zugferd/equivalence/test.typ", "tests/zugferd/validate/test.typ"]
-
-[ip."IP-CALC-01"]
-level = "error"
-summary = "The parts of a document level allowance or charge per VAT category do not add up to its printed amount."
-basis = "§ 14 Abs. 4 Satz 1 Nr. 7 UStG; Art. 226 No. 8 of the VAT Directive 2006/112/EC (the taxable amount per rate, with its reductions)."
-tests = ["tests/zugferd/equivalence/test.typ"]
-
-[ip."IP-CALC-02"]
-level = "error"
-summary = "The printed lines, allowances and charges of a VAT category do not add up to its printed taxable amount (gross prices: its gross total)."
-basis = "§ 14 Abs. 4 Satz 1 Nr. 7 and 8 UStG; Art. 226 No. 8 and 10 of the VAT Directive 2006/112/EC."
-tests = ["tests/zugferd/equivalence/test.typ"]
 
 [ip."IP-DOC-01"]
 level = "error"

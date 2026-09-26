@@ -1317,63 +1317,6 @@
       },
     )
   },
-  "BR-CO-17": f => (
-    "The VAT amount "
-      + str(f.amount)
-      + " is not the taxable amount "
-      + str(f.basis)
-      + " times the rate ("
-      + str(f.expected)
-      + ").",
-    _bug-hint,
-  ),
-  "vat-basis": f => (
-    "The lines of this VAT category add up to "
-      + str(f.amount)
-      + " instead of the taxable amount "
-      + str(f.basis)
-      + ".",
-    _bug-hint,
-  ),
-  // The e-invoice states what the invoice prints (equivalence.typ, and the
-  // totals of the consistency checks of engine.typ).
-  "IP-PRINT-01": f => {
-    let shown(value) = if value == none { "(none)" } else { str(value) }
-    let stated = shown(f.stated)
-    if f.rate != none and type(f.stated) == decimal {
-      let gross = calc.round(f.stated * (1 + f.rate), digits: 2)
-      stated += (
-        " net, which with " + _percent(f.rate) + " VAT is " + str(gross)
-      )
-    }
-    (
-      "The e-invoice states the "
-        + f.term
-        + " "
-        + stated
-        + ", but the invoice prints "
-        + shown(f.printed)
-        + ".",
-      _bug-hint,
-    )
-  },
-  "IP-CALC-01": f => (
-    "The parts of this allowance or charge per VAT category add up to "
-      + str(f.parts)
-      + ", but it amounts to "
-      + str(f.amount)
-      + ".",
-    _bug-hint,
-  ),
-  "IP-CALC-02": f => (
-    "The lines, allowances and charges of this VAT category add up to "
-      + str(f.sum)
-      + ", but the invoice prints its "
-      + if f.gross { "gross total " } else { "taxable amount " }
-      + str(f.expected)
-      + ".",
-    _bug-hint,
-  ),
   "PEPPOL-EN16931-R120": f => (
     "The line net amount (BT-131) "
       + str(f.net)

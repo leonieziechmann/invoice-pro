@@ -92,8 +92,6 @@
       message: "Lines of " + tax.key + " do not add up to " + str(tax.basis),
     )
   }
-  assert.eq(model.totals.net, model.printed-totals.net)
-  assert.eq(model.totals.gross, model.printed-totals.gross)
   assert.eq(model.totals.gross, decimal("75.97"))
 })[
   #line-items[

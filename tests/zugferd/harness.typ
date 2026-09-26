@@ -65,16 +65,17 @@
 )
 
 /// Checks that the XML of a model the validator lets through passes the test
-/// oracle (tools/zugferd/guard/oracle.typ): the rules of the validator are
-/// what keeps an invalid XML from going out.
-#let check-oracle(model) = {
+/// oracle (tools/zugferd/guard/oracle.typ), with the invariants against the
+/// computed invoice `item-data` and the totals it prints (`printed`): the
+/// rules of the validator are what keeps an invalid XML from going out.
+#let check-oracle(model, item-data: none, printed: none) = {
   if run-rules(model).any(d => d.level == "error") { return }
-  let found = oracle-findings(model)
+  let found = oracle-findings(model, item-data: item-data, printed: printed)
   assert(
     found == (),
     message: "the validator lets through an invoice whose XML the test oracle rejects:\n"
       + guard-diagnostics(found, model.lines, model.profile.name)
-        .map(d => "[" + d.rule + "] " + d.path + ": " + d.message)
+        .map(d => "[" + d.rule + "] " + d.field + ": " + d.message)
         .join("\n"),
   )
 }
@@ -95,15 +96,16 @@
   data-test(
     test: (ctx, data) => {
       let signal(kind) = loom.query.find-signal(data, kind)
+      let items = signal("line-items")
       let model = build-model(
         ctx,
-        signal("line-items").item-data,
+        items.item-data,
         payment-goal: signal("payment-goal"),
         bank: signal("bank-details"),
         payment-means: payment-means(data),
       )
       test(model)
-      check-oracle(model)
+      check-oracle(model, item-data: items.item-data, printed: items.total)
     },
     body,
   ),

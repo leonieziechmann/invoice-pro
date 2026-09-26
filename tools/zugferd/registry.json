@@ -1606,67 +1606,6 @@
       "summary": "A code that the newest EN 16931 code list (1.3.16) has withdrawn, which the Factur-X validation of the profile still accepts, but a validator with the current list rejects, as KoSIT does: a currency such as BGN or HRK (replaced by the euro) is allowed with a warning in BASIC and EN 16931 (in XRechnung it is `BR-CL-04`); the electronic address scheme 9901 is an error in BASIC WL and BASIC (in EN 16931 and XRechnung `BR-CL-25`).",
       "legal": null
     },
-    "IP-PRINT-01": {
-      "covers": [],
-      "source": "IP",
-      "versions": [],
-      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
-      "scope": "printed",
-      "terms": ["BT-92", "BT-99", "BT-106", "BT-109", "BT-110", "BT-112", "BT-113", "BT-115", "BT-116", "BT-117", "BT-118", "BT-119", "BT-129", "BT-131", "BT-136", "BT-141", "BT-146", "BT-149"],
-      "level": "error",
-      "field": "item <id> (<name>), discount (<name>), surcharge (<name>), tax <category> <rate> or line-items",
-      "summary": "An amount or quantity of the XML differs from the printed one: of a line, an allowance or charge, a VAT group or a total; with gross prices, a net amount plus VAT differs from the printed gross amount by more than the rounding allows. A failure is a bug of invoice-pro.",
-      "legal": "§ 14 Abs. 4 Satz 1 Nr. 5, 7 and 8 UStG; Art. 226 No. 6 and 8 to 10 of the VAT Directive 2006/112/EC; the XML of a hybrid invoice (ZUGFeRD, Factur-X) states the invoice its PDF shows"
-    },
-    "BR-CO-17": {
-      "covers": ["BR-CO-17", "FX-SCH-A-000052"],
-      "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
-      "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
-      "scope": "tax",
-      "terms": ["BT-116", "BT-117", "BT-119"],
-      "level": "error",
-      "field": "tax <category> <rate>",
-      "summary": "The VAT amount of a VAT group (BT-117) is its taxable amount (BT-116) times its rate (BT-119), within the tolerance of 1 the validators allow. A failure is a bug of invoice-pro.",
-      "legal": null
-    },
-    "vat-basis": {
-      "ids": ["BR-S-08", "BR-Z-08", "BR-E-08", "BR-AE-08", "BR-IC-08", "BR-G-08", "BR-O-08", "BR-AF-08", "BR-AG-08"],
-      "covers": ["BR-S-08", "BR-Z-08", "BR-E-08", "BR-AE-08", "BR-IC-08", "BR-G-08", "BR-O-08", "BR-AF-08", "BR-AG-08", "FX-SCH-A-000197", "FX-SCH-A-000198", "FX-SCH-A-000227", "FX-SCH-A-000228", "FX-SCH-A-000229", "FX-SCH-A-000230", "FX-SCH-A-000231", "FX-SCH-A-000232", "FX-SCH-A-000233"],
-      "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
-      "profiles": ["basic", "en16931", "xrechnung"],
-      "scope": "tax",
-      "terms": ["BT-116", "BT-131"],
-      "level": "error",
-      "field": "tax <category> <rate>",
-      "summary": "The net amounts of the lines and the allowances and charges of a VAT group add up to its taxable amount (BT-116, BR-S-08 and the like). A failure is a bug of invoice-pro.",
-      "legal": null
-    },
-    "IP-CALC-01": {
-      "covers": [],
-      "source": "IP",
-      "versions": [],
-      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
-      "scope": "allowance-charge",
-      "terms": ["BT-92", "BT-99"],
-      "level": "error",
-      "field": "discount (<name>) or surcharge (<name>)",
-      "summary": "The parts of an allowance or charge per VAT category (BG-20, BG-21) do not add up to its printed amount. A failure is a bug of invoice-pro.",
-      "legal": "§ 14 Abs. 4 Satz 1 Nr. 7 UStG; Art. 226 No. 8 of the VAT Directive 2006/112/EC (the taxable amount per rate, with its reductions)"
-    },
-    "IP-CALC-02": {
-      "covers": [],
-      "source": "IP",
-      "versions": [],
-      "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
-      "scope": "tax",
-      "terms": ["BT-116", "BT-117", "BT-131", "BT-92", "BT-99"],
-      "level": "error",
-      "field": "tax <category> <rate>",
-      "summary": "The printed lines, allowances and charges of a VAT category do not add up to its printed taxable amount (with gross prices: its gross total). A failure is a bug of invoice-pro.",
-      "legal": "§ 14 Abs. 4 Satz 1 Nr. 7 and 8 UStG; Art. 226 No. 8 and 10 of the VAT Directive 2006/112/EC"
-    },
     "PEPPOL-EN16931-R120": {
       "covers": ["PEPPOL-EN16931-R120"],
       "source": "PEPPOL",

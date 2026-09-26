@@ -2,21 +2,10 @@
 
 #import "model.typ": build-model
 #import "profile.typ": switch-profile
-#import "rules/engine.typ": diagnostics as rule-diagnostics, run-rules
-#import "rules/equivalence.typ": findings as equivalence-findings
+#import "rules/engine.typ": run-rules
 #import "build.typ": build-xml
 
 #let _has-errors(diagnostics) = diagnostics.any(d => d.level == "error")
-
-// Adds the invariants (rules/equivalence.typ), errors first.
-#let _with-invariants(diagnostics, invariants) = {
-  let errors = ()
-  let warnings = ()
-  for d in diagnostics + rule-diagnostics(invariants) {
-    if d.level == "error" { errors.push(d) } else { warnings.push(d) }
-  }
-  errors + warnings
-}
 
 /// Builds and checks the e-invoice as `(profile: .., model: .., diagnostics:
 /// .., xml: ..)`; the XML is built even with errors.
@@ -36,22 +25,7 @@
     bank: bank,
     payment-means: payment-means,
   )
-  // The totals the invoice prints, else those of the line items.
-  let printed = ctx.at("global", default: (:)).at("total", default: none)
-  if type(printed) != dictionary or printed == (:) {
-    printed = (
-      net: item-data.at("net-total", default: decimal("0")),
-      gross: item-data.at("gross-total", default: decimal("0")),
-      prepaid: item-data.at("prepaid-total", default: decimal("0")),
-      due: item-data.at("due-total", default: decimal("0")),
-    )
-  }
   let diagnostics = run-rules(model)
-  // All but PEPPOL-EN16931-R120 apply to every candidate (XRechnung is first).
-  let invariants = equivalence-findings(model, item-data, printed)
-  if invariants != () {
-    diagnostics = _with-invariants(diagnostics, invariants)
-  }
 
   // `zugferd: auto`: the next candidate while there are errors.
   let skipped = ()
@@ -64,10 +38,6 @@
     ))
     model.profile = switch-profile(model.profile, id)
     diagnostics = run-rules(model)
-    invariants = invariants.filter(f => f.key != "PEPPOL-EN16931-R120")
-    if invariants != () {
-      diagnostics = _with-invariants(diagnostics, invariants)
-    }
   }
   if skipped.len() > 0 {
     import "rare.typ": skipped-warnings

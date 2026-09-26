@@ -6,6 +6,7 @@
 #import "/src/zugferd/model.typ": build-model
 #import "/src/zugferd/profile.typ": resolve-profile
 #import "/src/zugferd/rules/engine.typ": run-rules
+#import "/tools/zugferd/guard/equivalence.typ": consistency-findings
 #import "/tests/data-test.typ": data-test, loom
 // `run-rules`, checking that the registry lists each rule for the profile.
 #import "/tests/zugferd/harness.typ": diagnostics as checked
@@ -278,22 +279,20 @@
   assert.eq(rules(m), ())
   assert.eq(rules(m, level: "warning"), ("IP-PREPAID-01",))
 
-  // --- Consistency with the printed invoice (IP-PRINT-01) and in itself ---
-  let m = base
-  m.printed-totals.gross += decimal("0.01")
-  assert.eq(rules(m), ("IP-PRINT-01",))
-  let d = checked(m).first()
-  assert.eq(d.field, "line-items")
-  assert(
-    d.message.starts-with("The e-invoice states the total with VAT (BT-112) "),
-    message: d.message,
-  )
+  // --- The sums of the model, which the test oracle checks: the lines add
+  // up to the taxable amount of their VAT group (BR-S-08), and the VAT
+  // breakdown to the printed total without VAT (IP-PRINT-01) ---
+  let sums(m) = consistency-findings(m, base.totals).map(f => f.at(
+    "id",
+    default: f.key,
+  ))
+  assert.eq(sums(base), ())
   let m = base
   m.lines.at(0).net += decimal("0.01")
-  assert.eq(rules(m), ("BR-S-08",))
+  assert.eq(sums(m), ("BR-S-08",))
   let m = base
   m.taxes.at(0).basis += decimal("0.01")
-  assert.eq(rules(m), ("BR-S-08", "IP-PRINT-01"))
+  assert.eq(sums(m).sorted(), ("BR-S-08", "IP-PRINT-01"))
 
   // --- BR-48: a VAT breakdown without rate names its VAT group ---
   let m = base

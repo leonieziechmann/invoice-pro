@@ -12,6 +12,8 @@
 // - G3: the XML states what the data model states, every line included
 //   (roundtrip.typ), and its amounts add up as the official rules require
 //   (strict.typ).
+// - The invariants (equivalence.typ): the data model states what the
+//   invoice computed and prints, and its sums hold.
 //
 // A finding is `(kind: .., rule: .., path: .., ..details)` (see report.typ).
 
@@ -21,14 +23,29 @@
 #import "write.typ": malformed-kinds, root-tag, write
 #import "roundtrip.typ": round-trip
 #import "strict.typ": strict-findings
+#import "equivalence.typ": invariant-findings, messages as invariant-messages
 
-/// The findings of the oracle for the XML of an e-invoice data model.
+/// The findings of the oracle for the XML of an e-invoice data model and,
+/// with the computed invoice `item-data` and the totals it prints
+/// (`printed`), for the invariants.
 ///
 /// -> array
-#let oracle-findings(model) = {
+#let oracle-findings(model, item-data: none, printed: none) = {
+  let findings = ()
+  if item-data != none {
+    for f in invariant-findings(model, item-data, printed) {
+      findings.push((
+        kind: "invariant",
+        rule: f.at("id", default: f.key),
+        path: (),
+        field: f.field,
+        message: invariant-messages.at(f.key)(f).first(),
+      ))
+    }
+  }
   let tree = build-tree(model)
   let written = write(tree, model.profile.id)
-  let findings = written.findings
+  findings += written.findings
   let serialized = dict-to-xml(tree)
   if serialized != written.xml {
     findings.push((
@@ -52,10 +69,10 @@
   }
   if roots != ("CrossIndustryInvoice",) {
     findings.push((kind: "well-formed", rule: none, path: (root-tag,)))
-  } else if findings == () {
+  } else if written.findings == () {
     // The round trip compares a document of the schema whose values have
     // their lexical form: one without findings of G1 and G2.
-    findings = round-trip(
+    findings += round-trip(
       root,
       model,
       profile-terms(model.payment, model.profile),
