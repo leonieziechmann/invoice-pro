@@ -1,64 +1,56 @@
-// Factur-X / ZUGFeRD profiles and the parts of the invoice each one carries.
-//
-// The flags mirror the Factur-X 1.0.07 (ZUGFeRD 2.3) schemas: the builder
-// leaves out whatever a profile's schema does not allow, and the validator
-// only checks what ends up in the XML.
+// The Factur-X 1.0.07 (ZUGFeRD 2.3) profiles and what the schema of each
+// allows: the builder leaves out the rest.
 
 #let _base = (
-  // BT-23: business process, only announced by the EN 16931 based profiles.
+  // BT-23
   business-process: none,
-  // BG-25: invoice lines.
+  // BG-25
   lines: false,
-  // BG-5, BG-8, BG-15 (postal addresses beyond the seller country), BT-34,
-  // BT-49 (electronic addresses) and the delivery information (BG-13).
+  // BG-5, BG-8, BG-15 (beyond the seller country), BT-34, BT-49, BG-13
   addresses: false,
-  // BG-16, BG-20, BG-21, BG-23, BT-20, BT-83: payment instructions, document
-  // level allowances and charges, VAT breakdown, payment terms and reference.
+  // BG-16, BG-20, BG-21, BG-23, BT-20, BT-83
   settlement: false,
-  // BT-29, BT-46: party identifiers (`ram:ID`, `ram:GlobalID`).
+  // BT-29, BT-46
   party-ids: false,
-  // BT-48: buyer VAT identifier.
+  // BT-48
   buyer-vat-id: false,
-  // BG-6: seller contact.
+  // BG-6
   seller-contact: false,
-  // BT-28: seller trading name. (The legal registration identifiers BT-30
-  // and BT-47 are part of every profile.)
+  // BT-28 (BT-30 and BT-47 are in every profile)
   seller-trading-name: false,
-  // BT-33: seller additional legal information.
+  // BT-33
   seller-legal-info: false,
-  // BT-45: buyer trading name.
+  // BT-45
   buyer-trading-name: false,
-  // BG-9: buyer contact.
+  // BG-9
   buyer-contact: false,
-  // BG-10: payee.
+  // BG-10
   payee: false,
-  // BG-11: seller tax representative.
+  // BG-11
   tax-representative: false,
-  // BT-86: BIC of the payment service provider.
+  // BT-86
   bic: false,
-  // BT-85: name of the payment account.
+  // BT-85
   account-name: false,
-  // BG-18: payment card (BT-87, BT-88). The profiles without it state only
-  // the payment means code of a card payment (BT-81).
+  // BG-18; without it, a card payment states only its code (BT-81).
   payment-card: false,
-  // BT-155, BT-156: seller and buyer assigned item identifiers.
+  // BT-155, BT-156
   item-ids: false,
-  // BT-154: item description.
+  // BT-154
   item-description: false,
-  // BT-12, BT-16, BT-25: contract, despatch advice and preceding invoice.
+  // BT-12, BT-16, BT-25
   document-references: false,
-  // BT-21, BT-22: invoice notes.
+  // BT-21, BT-22
   notes: false,
-  // BT-11: project reference.
+  // BT-11
   procuring-project: false,
-  // BT-159: country of origin of an item.
+  // BT-159
   item-origin: false,
-  // The EN 16931 business rules (BR-*) apply to the whole document.
+  // The EN 16931 business rules (BR-*).
   en16931: false,
-  // The German CIUS XRechnung (BR-DE-*) applies on top of EN 16931.
+  // XRechnung (BR-DE-*), on top of EN 16931.
   xrechnung: false,
-  // The name of the embedded XML file: "factur-x.xml", and "xrechnung.xml"
-  // for the XRECHNUNG profile (ZUGFeRD 2.3, as Mustang embeds it as well).
+  // The embedded XML file ("xrechnung.xml" for XRechnung, as in ZUGFeRD 2.3).
   file-name: "factur-x.xml",
 )
 
@@ -82,7 +74,7 @@
       document-references: true,
       notes: true,
     ),
-  // BASIC is a CIUS of EN 16931 and therefore carries the EN 16931 prefix.
+  // A CIUS of EN 16931, hence the EN 16931 prefix.
   basic: _base
     + (
       name: "BASIC",
@@ -159,12 +151,8 @@
     ),
 )
 
-/// Resolves the profile the XML is written in.
-///
-/// An explicit profile is used as given. `auto` lists the candidates, best
-/// first: `"xrechnung"`, the German CIUS of EN 16931, for a buyer in Germany,
-/// then `"en16931"`. `process-zugferd` takes the first candidate the invoice
-/// satisfies.
+/// Resolves the profile of the XML. `auto` lists the candidates, best first:
+/// `"xrechnung"` for a buyer in Germany, then `"en16931"`.
 ///
 /// -> dictionary
 #let resolve-profile(requested, buyer-country) = {

@@ -1,8 +1,8 @@
-"""The binding table of the round trip of the write guard (G3,
-src/zugferd/guard/bindings.json, see src/zugferd/guard/roundtrip.typ)
-against the guard tables of every profile (src/zugferd/guard/<profile>.json,
-which gen_guard.py generates from the pinned XSDs and Schematrons and
-checks for drift).
+"""The binding table of the round trip of the test oracle (G3,
+tools/zugferd/guard/bindings.json, see tools/zugferd/guard/roundtrip.typ)
+against the guard tables of every profile
+(tools/zugferd/guard/<profile>.json, which gen_guard.py generates from the
+pinned XSDs and Schematrons and checks for drift).
 
 A binding says from which profile on the XML can state its element (`p`, by
 `levels`). That profile and every richer one must have the element at its
@@ -11,8 +11,8 @@ the round trip calls a value "dropped" exactly where the profile could have
 stated it. Every element and attribute of a binding exists in the schema of
 EN 16931, so no binding names an element the XML can never have. A binding
 compared as a decimal (an amount, a quantity, a rate) is a decimal leaf of
-the schema, whose lexical form the write guard checks (G2) before the round
-trip reads it as a decimal.
+the schema, whose lexical form the write guard of the oracle checks (G2)
+before the round trip reads it as a decimal.
 """
 
 import json
@@ -20,7 +20,7 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-GUARD = REPO / "src" / "zugferd" / "guard"
+GUARD = REPO / "tools" / "zugferd" / "guard"
 PROFILES = ("minimum", "basic-wl", "basic", "en16931", "xrechnung")
 PREFIXES = ("ram:", "rsm:", "udt:", "qdt:")
 KINDS = {"t", "a", "a0", "q", "q1", "p", "po", "d", "b"}

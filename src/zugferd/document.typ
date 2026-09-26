@@ -1,19 +1,9 @@
-// The kind of document the title of an invoice names (e.g. "Gutschrift",
-// "Angebot" or "Credit note"), which the validator compares with the
-// document type of the e-invoice (IP-DOC-01).
+// The kind of document an invoice title names, which the validator compares
+// with the document type of the e-invoice (IP-DOC-01).
 
-// Words and phrases (in lower case) that name a kind of document in the
-// languages of invoice-pro, by the kind:
-// - "invoice": an invoice, which the e-invoice states without a
-//   `document-type` (e.g. "Rechnung zum Angebot 17" is an invoice),
-// - "credit-note", "corrected", "self-billed": documents with a document
-//   type of their own,
-// - "credit-note-or-self-billed": "Gutschrift", which German VAT law uses for
-//   self-billed invoices, and colloquially for credit notes,
-// - "quote", "delivery-note", "order", "pro-forma", "reminder": documents
-//   that are no invoice at all.
+// Words and phrases (in lower case) naming a kind of document. "Gutschrift"
+// is a self-billed invoice in German VAT law, colloquially a credit note.
 #let _title-words = (
-  // Invoices
   "rechnung": "invoice",
   "invoice": "invoice",
   "facture": "invoice",
@@ -26,7 +16,6 @@
   "schlussrechnung": "invoice",
   "anzahlungsrechnung": "invoice",
   "vorauszahlungsrechnung": "invoice",
-  // Credit notes
   "gutschrift": "credit-note-or-self-billed",
   "gutschriftsanzeige": "credit-note",
   "rechnungskorrektur": "credit-note",
@@ -45,7 +34,6 @@
   "nota de crédito": "credit-note",
   "nota de abono": "credit-note",
   "factura de abono": "credit-note",
-  // Corrected invoices
   "korrigierte rechnung": "corrected",
   "berichtigte rechnung": "corrected",
   "rechnungsberichtigung": "corrected",
@@ -58,7 +46,6 @@
   "fattura correttiva": "corrected",
   "factura rectificativa": "corrected",
   "factura corregida": "corrected",
-  // Self-billed invoices
   "self billing": "self-billed",
   "self billed": "self-billed",
   "autofacturation": "self-billed",
@@ -66,7 +53,6 @@
   "autofatturazione": "self-billed",
   "autofactura": "self-billed",
   "facturación por el destinatario": "self-billed",
-  // No invoices
   "angebot": "quote",
   "kostenvoranschlag": "quote",
   "kostenangebot": "quote",
@@ -119,10 +105,7 @@
   "recordatorio de pago": "reminder",
 )
 
-// The subject codes of notes (BT-21) the EN 16931 validation accepts
-// (BR-CL-08, a restriction of UNTDID 4451), identical to the code list of
-// the Factur-X profiles. One text instead of a table: notes are few, and
-// most have no subject code.
+// The subject codes of notes (BT-21) EN 16931 accepts (BR-CL-08).
 #let _note-subject-codes = (
   " AAA AAB AAC AAD AAE AAF AAG AAI AAJ AAK AAL AAM AAN AAO AAP AAQ AAR AAS"
     + " AAT AAU AAV AAW AAX AAY AAZ ABA ABB ABC ABD ABE ABF ABG ABH ABI ABJ ABK"
@@ -149,8 +132,7 @@
     + " TRA TRR TXD WHI ZZZ "
 )
 
-/// Whether a text is a subject code of a note (BT-21) the EN 16931
-/// validation accepts (BR-CL-08).
+/// Whether a text is a subject code of a note EN 16931 accepts (BR-CL-08).
 ///
 /// -> bool
 #let note-subject-code-valid(code) = (
@@ -159,9 +141,7 @@
     and _note-subject-codes.contains(" " + code + " ")
 )
 
-// Runs of ASCII characters that are no letters: spaces, digits and
-// punctuation separate the words of a title. (ASCII only: a Unicode class
-// takes a fraction of a millisecond to compile.)
+// Runs of ASCII non-letters (a Unicode class is slow to compile).
 #let _separators = regex("[\\x00-\\x40\\x5B-\\x60\\x7B-\\x7F]+")
 
 // Punctuation outside ASCII that separates words as well.
@@ -179,13 +159,9 @@
   "\u{202f}",
 )
 
-/// The kind of document a title names (see `_title-words`), or `none` if it
-/// names none. The first word or phrase of the title that names a kind
-/// decides, so that "Rechnung zum Angebot 17" is an invoice and "Angebot
-/// zur Rechnung 17" a quote; of the phrases starting at the same word, the
-/// longest one (e.g. "facture proforma" rather than "facture").
-///
-/// Returns `(kind: .., words: ..)`, with the words of the title that name it.
+/// The kind of document a title names, as `(kind: .., words: ..)`, or `none`:
+/// the first word that names one decides, with the longest phrase starting
+/// there ("Rechnung zum Angebot 17" is an invoice).
 ///
 /// -> none | dictionary
 #let title-kind(title) = {

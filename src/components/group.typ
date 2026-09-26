@@ -4,38 +4,35 @@
 #import "../data/tax.typ" as m-tax
 #import "../data/unit.typ"
 
-/// A container used to visually and structurally group multiple invoice items, bundles,
-/// and nested groups together. Unlike `bundle`, a `group` does not aggregate its children
-/// into a single line item; instead, all contained items remain full line items and are
-/// displayed with hierarchical position IDs (e.g., `1.1`, `1.1.4`).
+/// A section of line items with hierarchical positions and a subtotal.
 ///
 /// -> content
 #let group(
-  /// The name or title of the group.
+  /// The name of the group.
   /// -> str | content
   name,
-  /// Additional details or description about the group.
+  /// A description of the group.
   /// -> str | content | auto | none
   description: none,
 
-  /// Whether to display a subtotal row for this group. Defaults to `auto` (which enables it).
+  /// Whether to show a subtotal row; `auto` shows it.
   /// -> bool | auto
   show-subtotal: auto,
 
-  /// Optional tax rate or tax dictionary applied by default to items within this group.
+  /// The default tax of the items in the group.
   /// -> ratio | dictionary | auto
   tax: auto,
-  /// Passed through context to indicate if input prices in this group are treated as gross.
+  /// Whether the prices in the group are gross.
   /// -> bool | auto
   input-gross: auto,
-  /// Optional default date or date range for items in this group.
+  /// The default date or date range of the items.
   /// -> datetime | array | auto | none
   date: auto,
-  /// Optional default unit of measurement for items in this group.
+  /// The default unit of the items.
   /// -> str | content | dictionary | auto | none
   unit: auto,
 
-  /// The content block containing `#item`s, `#bundle`s, or nested `#group`s.
+  /// The grouped items.
   /// -> content
   body,
 ) = {
@@ -106,8 +103,7 @@
         )
       }
 
-      // Cascade the unresolved unit: each item resolves it with its own
-      // quantity ("1 hour", "2 hours").
+      // Unresolved: each item resolves it with its own quantity ("2 hours").
       if unit != auto and unit != none {
         put("unit", unit)
       }

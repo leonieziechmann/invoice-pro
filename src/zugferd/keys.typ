@@ -1,13 +1,9 @@
-// Unknown keys of the party dictionaries (see `_input-keys` of model.typ):
-// the known key an unknown one most likely stands for, by its aliases and
-// misspellings. Invoices rarely have unknown keys, so model.typ loads this
-// module only for the first one (Typst parses a module when it is first
-// imported).
+// The known key an unknown party key most likely stands for (see
+// `_input-keys` of model.typ), loaded only for the first unknown key.
 
 #let _post-code-hint = "Write the post code into `city`, e.g. `city: \"10115 Berlin\"` or `city: (name: \"Berlin\", post-code: \"10115\")`."
 
-// Other names of party keys, as normalized by `_normalize-key`: the key they
-// stand for, or the key and a hint where renaming alone does not fit.
+// Other names of party keys (normalized): the key, or the key and a hint.
 #let _key-aliases = (
   vat: "vat-id",
   vatid: "vat-id",
@@ -64,8 +60,7 @@
     "global-id",
     "Pass the GLN as `global-id: id.gln(..)`.",
   ),
-  // The legal registration identifier (BT-30, BT-47) and the constructors of
-  // the `id` module for its schemes.
+  // The legal registration identifier (BT-30, BT-47).
   siret: ("legal-id", "Pass the SIRET as `legal-id: id.siret(..)`."),
   siren: ("legal-id", "Pass the SIREN as `legal-id: id.siren(..)`."),
   handelsregister: (
@@ -111,25 +106,21 @@
   ),
 )
 
-// Keys invoices often carry that `invoice-pro` does not read, but which look
-// like misspellings of keys it knows ("fax-nr" and "tax-nr"). Like any
-// unknown key, they are not written into the e-invoice, but they are never
-// taken for a misspelling.
+// Keys that look like misspellings ("fax-nr" of "tax-nr") but are none.
 #let _other-keys = (
   fax-nr: true,
   fax-no: true,
   faxnr: true,
 )
 
-// Patterns for unknown keys, compiled once on first use: unknown keys are rare.
+// Compiled on first use (memoized).
 #let _key-patterns() = (
   camel-case: regex("([a-z0-9])([A-Z])"),
   separators: regex("[\\s_.-]+"),
   numbered: regex("[0-9]$"),
 )
 
-// A key in lower case with `-` between its words: "vatId", "vat_id" and
-// "VAT-ID" all become "vat-id".
+// A key in lower case with `-` between its words: "vat_id" is "vat-id".
 #let _normalize-key(key) = {
   let patterns = _key-patterns()
   let key = key.replace(patterns.camel-case, m => (
@@ -138,8 +129,7 @@
   lower(key).replace(patterns.separators, "-").trim("-")
 }
 
-// The optimal string alignment distance of `a` and `b` (edits and swaps of
-// neighboring characters), or `limit + 1` as soon as it exceeds `limit`.
+// The optimal string alignment distance of `a` and `b`, at most `limit + 1`.
 #let _edit-distance(a, b, limit) = {
   let a = a.clusters()
   let b = b.clusters()
@@ -174,9 +164,7 @@
   calc.min(previous.last(), limit + 1)
 }
 
-// The known key a misspelled `key` most likely stands for: within an edit
-// distance of 1 for keys of up to 4 characters and of 2 for longer ones,
-// preferring keys the e-invoice reads.
+// The closest known key, preferring keys the e-invoice reads.
 #let _closest-key(key, known) = {
   let best = none
   let best-distance = none
@@ -196,10 +184,8 @@
   best
 }
 
-/// An input key a party does not know: the known key it looks like (`like`),
-/// whether the e-invoice reads that key, and a hint where renaming alone does
-/// not fit. A key ending in a number (e.g. "email2") and the keys of
-/// `_other-keys` are taken as deliberate.
+/// An input key a party does not know, with the known key it looks like
+/// (`like`); a key ending in a number (e.g. "email2") is deliberate.
 ///
 /// -> dictionary
 #let unknown-key(key, known, path: none) = {

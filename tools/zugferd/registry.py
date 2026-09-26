@@ -3,17 +3,20 @@
 
   registry.py [--check] [--format] [--write-docs] [--jar PATH]
 
-The registry, src/zugferd/rules/registry.json, is the one source of the
+The registry, tools/zugferd/registry.json, is the one source of the
 metadata of every rule whose diagnostics invoice-pro reports: the checks of
 its validator (src/zugferd/rules/engine.typ, rare.typ, xrechnung.typ and
 equivalence.typ with equivalence-detail.typ, the invariants that the XML
 states what the invoice prints, which report findings by the key of an
-entry) and the rules of the XML write guard (IP-GUARD-*). The messages are
-in src/zugferd/rules/messages.typ, those of the rules of XRechnung that no
-other profile reports in xrechnung-messages.typ (engine.typ loads it for a
-finding of a BR-DE-* rule, messages.typ only for another rule). Typst reads
-the file only when a check fails (JSON is the format it reads fastest); the
-tools read it here:
+entry). The messages are in src/zugferd/rules/messages.typ, those of the
+rules of XRechnung that no other profile reports in xrechnung-messages.typ
+(engine.typ loads it for a finding of a BR-DE-* rule, messages.typ only for
+another rule). The package does not read the registry: engine.typ lists the
+keys whose usual level is "warning" (`_warnings`), which --check compares
+with the registry, and gives any other finding without a level the level
+"error". The tests of tests/zugferd/ read it (the helpers of
+tests/zugferd/harness.typ check every diagnostic against it), and the tools
+read it here:
 
   load()              the registry, checked (`problems`): {"format": 1,
                       "sources": {source: artefact}, "rules": {key: entry}}
@@ -27,13 +30,15 @@ tools read it here:
                       {official id: [key, ..]}
   profiles_of(entry, rule)
                       the profiles in which an id of `covers` counts
-  docs_tables(..)     the tables of the rules of invoice-pro in
+  docs_tables(..)     the table of the rules of invoice-pro in
                       docs/docs/e-invoicing.md, generated from the registry
                       and sorted by rule id
+  warning_keys()      the keys of `_warnings` of engine.typ, read from its
+                      Typst source
   fx_aliases(jar)     the Factur-X rules that implement an official rule of
                       EN 16931 (from the Mustang jar)
 
-An entry (see src/zugferd/rules/engine.typ for its meaning):
+An entry (see tests/TESTING.md, "The Rule Registry", for its meaning):
 
   "BR-CO-25": {
     "ids": ["BR-CO-25"],                  # optional, default: [key]
@@ -65,12 +70,13 @@ profile (REGISTRY), and run.py every diagnostic of the corpus against
 
 --check reports every problem: of the entries, of the keys that have no
 message or no check (a key the rule modules do not name) and of the rule
-ids the rule modules name that the registry does not know; a registry.json
-that is not in the layout of `dump`; tables of the documentation that
-differ from the generated ones; with the Mustang jar ($MUSTANG_JAR or
---jar), `covers` that lacks a Factur-X alias of a rule it covers or names
-one of another rule. --format rewrites registry.json in the layout of
-`dump`, --write-docs the tables of the documentation.
+ids the rule modules name that the registry does not know; a `_warnings` of
+engine.typ that is not the keys whose usual level is "warning"; a
+registry.json that is not in the layout of `dump`; a table of the
+documentation that differs from the generated one; with the Mustang jar
+($MUSTANG_JAR or --jar), `covers` that lacks a Factur-X alias of a rule it
+covers or names one of another rule. --format rewrites registry.json in the
+layout of `dump`, --write-docs the table of the documentation.
 """
 
 import argparse
@@ -84,20 +90,20 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 RULES = REPO / "src" / "zugferd" / "rules"
-REGISTRY = RULES / "registry.json"
+REGISTRY = HERE / "registry.json"
+ENGINE = RULES / "engine.typ"
 MESSAGES = RULES / "messages.typ"
 # The messages of the rules of XRechnung that no other profile reports, which
 # `diagnostics` of engine.typ looks up first for a key starting with BR-DE-.
 XRECHNUNG_MESSAGES = RULES / "xrechnung-messages.typ"
 XRECHNUNG_PREFIX = "BR-DE-"
 MODULES = [
-    RULES / "engine.typ",
+    ENGINE,
     RULES / "rare.typ",
     RULES / "xrechnung.typ",
     RULES / "equivalence.typ",
     RULES / "equivalence-detail.typ",
 ]
-GUARD_REPORT = REPO / "src" / "zugferd" / "guard" / "report.typ"
 DOCS = REPO / "docs" / "docs" / "e-invoicing.md"
 
 PROFILES = ("minimum", "basic-wl", "basic", "en16931", "xrechnung")
@@ -326,23 +332,50 @@ def module_literals(paths=MODULES):
     return out
 
 
-def guard_ids(path=GUARD_REPORT):
-    """The ids of the rules of the write guard (report.typ)."""
-    return set(re.findall(r'"(IP-GUARD-\d\d)"', Path(path).read_text(encoding="utf-8")))
+_WARNINGS = re.compile(r"^#let _warnings = \(", re.M)
+# The tokens of an array of string literals in Typst source: whitespace,
+# comments, a string, a comma and the closing parenthesis.
+_ARRAY_TOKEN = re.compile(r'\s+|//[^\n]*|/\*.*?\*/|"([^"\\\n]*)"|(,)|(\))', re.S)
+
+
+def warning_keys(path=ENGINE):
+    """The keys of the array `_warnings` of engine.typ (or `path`), read
+    from the Typst source as it is written: the rules whose usual level is
+    "warning", which `diagnostics` gives a finding without a level. Anything
+    but string literals and comments in the array raises ValueError, and so
+    does one string without a comma, which Typst reads as a string (`in`
+    would then find any part of it)."""
+    text = Path(path).read_text(encoding="utf-8")
+    m = _WARNINGS.search(text)
+    if not m:
+        raise ValueError(f"{_shown(path)}: no array `#let _warnings = (..)`")
+    keys, commas, pos = [], 0, m.end()
+    while True:
+        token = _ARRAY_TOKEN.match(text, pos)
+        if token is None:
+            raise ValueError(f"{_shown(path)}: `_warnings` is not an array of string literals "
+                             f"(at {text[pos:pos + 30]!r})")
+        pos = token.end()
+        if token.group(1) is not None:
+            keys.append(token.group(1))
+        commas += token.group(2) is not None
+        if token.group(3) is not None:
+            break
+    if len(keys) == 1 and not commas:
+        raise ValueError(f"{_shown(path)}: `_warnings` is a string, not an array: write `(\"{keys[0]}\",)`")
+    return keys
 
 
 def source_problems(registry):
-    """Keys without a message or a check, and rule ids of the rule modules
-    that the registry does not know."""
+    """Keys without a message or a check, rule ids of the rule modules that
+    the registry does not know, and a list `_warnings` of engine.typ that is
+    not the keys whose usual (first) level is "warning"."""
     out = []
     rules = registry["rules"]
-    guard = guard_ids()
     xrechnung = message_keys(XRECHNUNG_MESSAGES)
     messages = message_keys() + xrechnung
     literals = module_literals()
     for key in rules:
-        if key in guard:
-            continue
         if key not in messages:
             out.append(f"{key}: no message in {MESSAGES.relative_to(REPO)} or {XRECHNUNG_MESSAGES.name}")
         if key not in literals:
@@ -365,19 +398,42 @@ def source_problems(registry):
     for literal in sorted(literals):
         if RULE_ID.match(literal) and literal not in known:
             out.append(f"{literal}: a rule id of src/zugferd/rules/ that the registry does not know")
-    for rule in sorted(guard):
-        if rule not in rules:
-            out.append(f"{rule}: a rule of {GUARD_REPORT.relative_to(REPO)} that the registry does not know")
+    out += warning_problems(registry)
+    return out
+
+
+def warning_problems(registry, path=ENGINE):
+    """`_warnings` of engine.typ (or `path`), if it is not the keys whose
+    usual (first) level is "warning": `diagnostics` gives a finding without a
+    level the level "warning" for a key of the array, "error" for any other."""
+    try:
+        listed = warning_keys(path)
+    except ValueError as e:
+        return [str(e)]
+    rules = registry["rules"]
+    where = f"`_warnings` of {_shown(path)}"
+    usual = {key for key, entry in rules.items() if levels(entry)[0] == "warning"}
+    out = []
+    for key in sorted({key for key in listed if listed.count(key) > 1}):
+        out.append(f"{key}: twice in {where}")
+    for key in sorted(usual - set(listed)):
+        out.append(f"{key}: its usual level is \"warning\", but {where} does not list it")
+    for key in sorted(set(listed) - usual):
+        if key in rules:
+            out.append(f"{key}: in {where}, but its usual level is \"{levels(rules[key])[0]}\"")
+        else:
+            out.append(f"{key}: in {where}, but the registry has no such entry")
     return out
 
 
 # ---------------------------------------------------------------- documentation
 
 # The tables of docs/docs/e-invoicing.md that list rules of the registry:
-# the line that starts the table, and the entries (by key) with their columns.
+# the line that starts the table, its columns, and the entries (by key) it
+# lists, each with its usual level and its summary. One table: the rules of
+# invoice-pro.
 DOC_TABLES = (
-    ("| Rule ", "Level", lambda key, entry: entry["source"] == "IP" and not key.startswith("IP-GUARD-")),
-    ("| Rule ", None, lambda key, entry: key.startswith("IP-GUARD-")),
+    ("| Rule ", ("Rule", "Level", "Checks"), lambda key, entry: entry["source"] == "IP"),
 )
 
 
@@ -402,18 +458,13 @@ def docs_tables(registry):
     """The generated tables, in the order of DOC_TABLES, each sorted by rule
     id (see `rule_order`) so that a reader finds a rule by its id."""
     out = []
-    for _, level, select in DOC_TABLES:
+    for _, columns, select in DOC_TABLES:
         entries = sorted(
             ((key, entry) for key, entry in registry["rules"].items() if select(key, entry)),
             key=lambda item: rule_order(item[0]),
         )
-        if level:
-            header = ["Rule", "Level", "Checks"]
-            rows = [[f"`{key}`", levels(entry)[0], entry["summary"]] for key, entry in entries]
-        else:
-            header = ["Rule", "Checks"]
-            rows = [[f"`{key}`", entry["summary"]] for key, entry in entries]
-        out.append(table(rows, header))
+        rows = [[f"`{key}`", levels(entry)[0], entry["summary"]] for key, entry in entries]
+        out.append(table(rows, list(columns)))
     return out
 
 
@@ -422,7 +473,7 @@ def _table_spans(lines, path=DOCS):
     lines of `path`): for each of DOC_TABLES, the first table with its
     columns."""
     spans = []
-    for (start, level, _), columns in zip(DOC_TABLES, (("Rule", "Level", "Checks"), ("Rule", "Checks"))):
+    for start, columns, _ in DOC_TABLES:
         for i, line in enumerate(lines):
             cells = [c.strip() for c in line.strip().strip("|").split("|")]
             if line.startswith(start) and tuple(cells) == columns and all(i != s for s, _ in spans):
@@ -528,7 +579,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--check", action="store_true", help="check the registry, the rule modules and the documentation")
     ap.add_argument("--format", action="store_true", help="rewrite registry.json in the layout of `dump`")
-    ap.add_argument("--write-docs", action="store_true", help="rewrite the tables of the documentation")
+    ap.add_argument("--write-docs", action="store_true", help="rewrite the table of the rules in the documentation")
     ap.add_argument("--jar", default=os.environ.get("MUSTANG_JAR"), help="Mustang-CLI-2.14.0.jar, for the aliases")
     args = ap.parse_args(argv)
     try:

@@ -8,7 +8,7 @@
 #import "../public/unit.typ" as m-unit
 #import "../logic/unit.typ" as unit-logic
 
-/// Normalizes a modifier input (content, dictionary, or signal) into a structured modifier object.
+/// Normalizes a modifier.
 ///
 /// -> dictionary | none
 #let normalize-modifier(
@@ -45,7 +45,7 @@
   }
 }
 
-/// Evaluates a collection of modifiers, flattening arrays and resolving content signals.
+/// Evaluates modifiers into a flat array.
 ///
 /// -> array
 #let evaluate-modifier(
@@ -71,69 +71,61 @@
   }.filter(m => m != none)
 }
 
-/// Represents a single line item, product, or service on the invoice.
-/// It integrates with the loom data model to automatically calculate base prices,
-/// totals, and apply relevant taxes and modifiers.
+/// A line item: a product or service on the invoice.
 ///
 /// -> content
 #let item(
-  /// The name or title of the item.
+  /// The name of the item.
   /// -> str | content
   name,
-  /// Additional details or description about the item.
+  /// A description of the item.
   /// -> str | content | auto | none
   description: auto,
 
-  /// The amount being billed. Automatically defaults to `1`.
+  /// The quantity, by default 1.
   /// -> int | float | decimal | str | auto
   quantity: auto,
-  /// The reference quantity for the price, useful for calculating price-per-unit ratios. Automatically defaults to `1`.
+  /// The quantity the price refers to, by default 1.
   /// -> int | float | decimal | str | auto
   base-quantity: auto,
-  /// The unit of measurement. For ZUGFeRD compliance, pass a dictionary: `(display: "Std.", code: "HUR")`.
+  /// The unit of measurement.
   /// -> str | content | dictionary | auto | none
   unit: auto,
 
-  /// The date or a date range `(datetime, datetime)` the item or service was provided.
+  /// The date or date range of the supply.
   /// -> datetime | array | auto | none
-  date: auto, // none | datetime | (datetime, datetime)
+  date: auto,
 
-  /// The price per unit. *Note: You must specify either `price` or `total`, but not both*.
+  /// The price per unit; give it or `total`.
   /// -> int | float | decimal | str | auto
   price: auto,
-  /// The total price for the item. *Note: You must specify either `price` or `total`, but not both*.
+  /// The total price; give it or `price`.
   /// -> int | float | decimal | str | auto
   total: auto,
 
-  /// Indicates if the provided price/total already includes tax.
+  /// Whether `price` or `total` includes tax.
   /// -> bool | auto
   input-gross: auto,
 
-  /// The specific tax rate or tax dictionary for this item. Defaults to a zero tax rate.
+  /// The tax of the item, e.g. `19%`; `auto` inherits it.
   /// -> ratio | dictionary | auto
   tax: auto,
 
-  /// An identifier for the item, such as an EAN/GTIN/ISBN string, or a dictionary with `seller`, `buyer`, and `standard` keys.
+  /// An article identifier (a string or a dictionary).
   /// -> str | dictionary | auto | none
   item-id: auto,
-  /// An optional reference string for the item.
+  /// An optional reference string.
   /// -> str | auto | none
-  reference: auto, // str optional
+  reference: auto,
 
-  /// A note about the item, printed below its description and written into
-  /// the e-invoice (BT-127). Not for an item inside a `bundle`, which is no
-  /// line of its own.
+  /// A note, printed below the description (BT-127). Not inside a `bundle`.
   /// -> str | content | auto | none
   note: auto,
-  /// The country of origin of the item: a country of the `country` module
-  /// (e.g. `country.de`) or an ISO 3166-1 alpha-2 code such as `"DE"`.
-  /// Printed with its code below the description and written into the
-  /// e-invoice (BT-159). Not for an item inside a `bundle`, which is no line
-  /// of its own.
+  /// The country of origin (BT-159), e.g. `"DE"`; not inside a `bundle`.
   /// -> function | dictionary | str | auto | none
   origin: auto,
 
-  /// An array of specific modifiers (discounts or surcharges) applied specifically to this item.
+  /// The discounts and surcharges of the item.
   /// -> array | auto | none
   modifier: auto,
 ) = {
@@ -207,8 +199,7 @@
         coercion.to-decimal(base-quantity),
         default: decimal("1"),
       )
-      // Without an own unit, use the unresolved unit a `group` or `apply`
-      // cascades, so it is resolved with this item's quantity.
+      // Else the unresolved unit a `group` or `apply` cascades.
       let unit-input = if unit != auto { unit } else {
         ctx.at("unit", default: auto)
       }
@@ -223,7 +214,7 @@
           default: m-unit.pc,
         ),
       )
-      // Quantity-independent form, used to detect and name a shared unit.
+      // Singular form, to detect and name a shared unit.
       put(
         "unit-singular",
         unit-logic.resolve(
@@ -245,8 +236,6 @@
         input-gross,
         default: ctx.at("tax-mode", default: "exclusive") == "inclusive",
       )
-      // Without a tax from anywhere (`tax: none` on the invoice), the item is
-      // zero rated, marked as implicit (see `tax.implicit-zero`).
       update("tax", t => m-tax.resolve(ctx, t, "item"))
       derive(
         "tax",
@@ -260,13 +249,9 @@
 
       derive("item-id", item-id)
       derive("reference", reference)
-      // Set only if given, so that items without them carry no extra keys
-      // (`calculate-item-data` reads them with a default).
       if note != auto { put("note", note) }
       if origin != auto { put("origin", origin) }
-      // The items of a bundle are no lines of their own: the bundle is
-      // printed and written as one line, which names its items, so a note or
-      // a country of origin of one of them would be lost.
+      // A bundle is one line, which would lose the note or origin of its items.
       if (
         (note not in (auto, none) or origin not in (auto, none))
           and ctx.at("bundle-quantity", default: none) != none

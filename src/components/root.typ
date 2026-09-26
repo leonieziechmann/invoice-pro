@@ -2,11 +2,10 @@
 #import "../logic/payment-means.typ": resolve as resolve-payment-means
 
 /// The internal root container that wraps the invoice body.
-/// It initializes the global context and provides the base document structure to the theme.
 ///
 /// -> content
 #let root(
-  /// The content to be rendered within the document structure.
+  /// The invoice body.
   /// -> content
   body,
 ) = {
@@ -116,8 +115,7 @@
       )
       let payment-goal-signal = all-payment-goals.first(default: none)
 
-      // The payment means: each bank details are an account of a credit
-      // transfer; a direct debit, a payment card and `paid` occur once.
+      // Each `bank-details` is an account; other payment means occur once.
       let payment-means-signals = (:)
       for kind in ("direct-debit", "card-payment", "paid") {
         let signals = loom.query.collect-signals(children, kind: kind)
@@ -133,10 +131,7 @@
         payment-means-signals.paid == none or payment-goal-signal == none,
         message: "An invoice that is `paid` has no `payment-goal`: nothing is left to pay. Remove the `payment-goal`.",
       )
-      // Nor payment terms of its own: a text as `due-date` (e.g. "sofort")
-      // would be printed and stated as the payment terms (BT-20) instead of
-      // the sentence that the invoice is paid. A date is the due date the
-      // payment met.
+      // Nor a text as `due-date`, which would be the payment terms (BT-20).
       let due-date = ctx.at("due-date", default: none)
       if (
         payment-means-signals.paid != none
@@ -345,14 +340,11 @@
 
       let body = body
       if ctx.zugferd != none {
-        // Loaded here rather than at the top of the module, so that invoices
-        // without an e-invoice do not load the e-invoice modules (code lists,
-        // validator, serializer) at all.
+        // Imported here, so invoices without an e-invoice do not load these.
         import "../zugferd/zugferd.typ": process-zugferd
         import "../logic/printed.typ": printed-record
 
-        // What the printed invoice shows besides the components, for the
-        // checks that it states what the e-invoice states.
+        // What the printed invoice shows (IP-PRINT-03, IP-PERIOD-03).
         let printed = printed-record(
           ctx.theme,
           ctx.references,
@@ -374,15 +366,10 @@
           assert(false, message: format-report(result))
         }
 
-        // The e-invoice is "factur-x.xml", or "xrechnung.xml" in the
-        // XRECHNUNG profile (`file-name` of the profile). With errors,
-        // "report" attaches the XML as a draft: under a name that no
-        // receiving software takes for the e-invoice and only as
-        // supplementary data. "ignore" skips the check on purpose and
-        // attaches the XML like a valid one.
+        // With errors, "report" attaches a draft under a name no receiver takes
+        // for the e-invoice; "ignore" attaches the XML like a valid one.
         let draft = errors.len() > 0 and ctx.zugferd-errors == "report"
-        // MINIMUM and BASIC WL do not replace the visual invoice either, so
-        // their XML is attached as data rather than as an alternative of it.
+        // MINIMUM and BASIC WL do not replace the visual invoice either.
         let as-data = draft or result.profile.id in ("minimum", "basic-wl")
         pdf.attach(
           if draft { "/invoice-draft.xml" } else {
@@ -407,10 +394,7 @@
             message: "theme::zugferd-report must be `none` or a function `(ctx, result) => content`, got "
               + repr(render-report),
           )
-          // Whatever the hook returns is shown as content. A theme without
-          // a report (`zugferd-report: none`, or a hook that returns
-          // nothing) must not hide errors: they stop the compilation as with
-          // "panic", so no invalid e-invoice goes out unnoticed.
+          // A theme without a report must not hide the errors: they panic.
           let report = if render-report != none {
             render-report(ctx, result)
           }

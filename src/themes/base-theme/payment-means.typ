@@ -1,9 +1,5 @@
-// Draws the payment means of `direct-debit`, `card-payment` and `paid`. The
-// component prepares the view (see there): an optional sentence (`text`)
-// and the details to print, each with its `label`, its `value` and, for an
-// identifier, whether it is `valid` (only `false` for an e-invoice with
-// `zugferd-errors: "report"`, otherwise the component stops the
-// compilation).
+// Draws the payment means of `direct-debit`, `card-payment` and `paid` from
+// the view the component prepares.
 #let render-payment-means(ctx, view) = {
   let lines = ()
   let sentence = view.at("text", default: none)

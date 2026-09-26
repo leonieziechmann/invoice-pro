@@ -3,10 +3,8 @@
 #import "country.typ": normalize-code
 #import "../data/tax.typ" as m-tax
 
-/// The decimals of a quantity (BT-129, BT-149). A quantity is rounded to them
-/// once, before anything is calculated with it, so the line total, the
-/// printed quantity and the e-invoice all use the same value, e.g. 0.3333 for
-/// a quantity of `1/3`. The built-in number formats print 4 decimals.
+/// The decimals of a quantity (BT-129, BT-149): it is rounded to them first,
+/// so the line total, the printed quantity and the e-invoice agree.
 #let quantity-digits = 4
 
 /// A quantity rounded to `quantity-digits` decimals.
@@ -45,10 +43,8 @@
   }
 }
 
-/// The ISO 3166-1 alpha-2 code of the country of origin of an item
-/// (`origin`): a country of the `country` module (`country.de`), a country
-/// dictionary (`country.custom(..)`) or a code such as "DE". An empty text
-/// states no country; anything else that is not a code is an error.
+/// The ISO 3166-1 alpha-2 code of an item's `origin`, a country or a code
+/// such as "DE"; `none` for an empty text.
 ///
 /// -> none | str
 #let origin-code(origin) = {
@@ -67,14 +63,12 @@
   let norm-money = ctx.locale.normalize.money
   let norm-money-fine = ctx.locale.normalize.money-fine
 
-  // 1. Quantity & Uni Normalization
   require-positive-base-quantity(ctx.base-quantity, "item")
   let quantity = normalize-quantity(ctx.quantity)
   let base-quantity = normalize-quantity(ctx.base-quantity)
   let quantity-multiplier = quantity / base-quantity
   let unit = ctx.unit
 
-  // 2. Tax Mode & Gross/Net Handling
   let is-net-based = ctx.tax-mode == "exclusive"
   let is-input-gross = if type(ctx.input-gross) == bool {
     ctx.input-gross
@@ -88,7 +82,7 @@
     tax-modifier = 1 + tax-ratio
   }
 
-  // 3. Base Price Calculation (B2C = gross, B2B = net)
+  // Gross with `tax-mode: "inclusive"`, net otherwise.
   let price = if ctx.item-price != auto { ctx.item-price * tax-modifier } else {
     auto
   }
@@ -105,7 +99,6 @@
   let base-price = norm-money-fine(price)
   let base-total = norm-money(base-price * quantity-multiplier)
 
-  // 4. Discount / Surcharge Application
   let raw-modifiers = if type(ctx.modifier) == array { ctx.modifier } else {
     ()
   }
@@ -162,18 +155,16 @@
     .sum(default: decimal("0"))
   let modified-total = base-total + modifier-sum
 
-  // 5. Final Tax Calculation
   let final-tax = (
     rate: ctx.tax.rate,
     category: ctx.tax.category,
     grounds: ctx.tax.at("grounds", default: none),
-    // The VAT exemption reason code (BT-121), if the tax has one.
+    // The VAT exemption reason code (BT-121).
     ..if "code" in ctx.tax { (code: ctx.tax.code) },
     // No tax was set anywhere (`tax: none`), see `tax.implicit-zero`.
     ..if m-tax.is-implicit(ctx.tax) { (implicit: true) },
   )
 
-  // 6. Return Data
   return (
     name: name,
     description: ctx.description,

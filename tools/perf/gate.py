@@ -64,12 +64,11 @@ EINVOICE_PREFIX = "/src/zugferd/"
 # What the e-invoice path loads only for the invoices that need it (see
 # "Keeping the e-invoice path cheap" in tools/perf/README.md): the modules,
 # imported in the function that needs them, and functions whose first call
-# reads a data file. A valid invoice without warnings, like the benchmark
-# invoices, needs none of them.
+# reads a data file (none at the moment: the data the package reads, e.g.
+# the code lists, every e-invoice needs). A valid invoice without warnings,
+# like the benchmark invoices, needs none of them.
 LAZY_MODULES = (
     "src/zugferd/rare.typ",  # a fallback of `zugferd: auto`, a self-billed invoice
-    "src/zugferd/guard/rare.typ",  # the checked writer, for a document with findings
-    "src/zugferd/guard/report.typ",  # the diagnostics of the write guard
     "src/zugferd/keys.typ",  # unknown keys of the parties
     "src/zugferd/units.typ",  # units given as text
     "src/zugferd/report.typ",  # the report of the diagnostics
@@ -77,11 +76,8 @@ LAZY_MODULES = (
     "src/zugferd/rules/messages.typ",  # the messages of failed checks
     "src/zugferd/rules/xrechnung-messages.typ",
     "src/zugferd/document.typ",  # a title that may name another document type
-    "src/zugferd/guard/strict.typ",  # `zugferd-strict`
 )
-LAZY_CALLS = (
-    ("src/zugferd/rules/engine.typ", "rule-registry"),  # reads registry.json
-)
+LAZY_CALLS = ()
 
 # ---------------------------------------------------------------- benchmark and trace aggregation
 

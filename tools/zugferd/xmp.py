@@ -5,7 +5,8 @@
 
 A Factur-X / ZUGFeRD PDF announces its XML in the XMP metadata of the PDF,
 which Typst cannot write yet (https://github.com/typst/typst/issues/5667).
-src/zugferd/xmp.typ prepares the metadata; this check tracks the gap:
+tools/zugferd/xmp.typ prepares the metadata (it moves into the package once
+Typst can write it); this check tracks the gap:
 
   1. Typst compiles one test document per profile (DOCUMENTS) to PDF/A-3b.
   2. Mustang validates each PDF (one JVM): the XML must be valid, the PDF
@@ -15,7 +16,7 @@ src/zugferd/xmp.typ prepares the metadata; this check tracks the gap:
      of docs/docs/e-invoicing.md). The result must be valid in full, so the
      metadata is all that is missing. Its fx: values and schema description
      must equal tests/zugferd/xmp/mustang-<letter>.xmp, the reference the
-     unit test of src/zugferd/xmp.typ compares with; --update rewrites the
+     unit test of tools/zugferd/xmp.typ compares with; --update rewrites the
      references from Mustang's output.
   4. Typst lists the definitions of its `pdf` module: one that is not in
      TYPST_PDF_DEFINITIONS may be the custom XMP support.
@@ -23,8 +24,9 @@ src/zugferd/xmp.typ prepares the metadata; this check tracks the gap:
 The check fails when anything differs from that: other problems of a PDF, a
 PDF without the XMP problems (XPASS: the metadata is written now, turn this
 check around), an invalid combined PDF, a changed reference, or a new
-definition of `pdf` (check whether it writes custom XMP; if so, write the
-metadata with src/zugferd/xmp.typ, else add it to TYPST_PDF_DEFINITIONS).
+definition of `pdf` (check whether it writes custom XMP; if so, move
+tools/zugferd/xmp.typ into the package and write the metadata with it, else
+add it to TYPST_PDF_DEFINITIONS).
 
 Needs Typst ($TYPST_BIN), Python 3.11+ with lxml and pypdf, a JDK and the
 Mustang CLI jar ($MUSTANG_JAR); `nix run .#zugferd-xmp` provides them.
@@ -250,7 +252,7 @@ def main(argv=None):
                     problems.append(f"no reference {reference.relative_to(REPO)} (run with --update)")
                 elif facts(xmp) != facts(reference.read_text(encoding="utf-8")):
                     problems.append(f"Mustang's XMP differs from {reference.relative_to(REPO)}: update it with "
-                                    "--update and check src/zugferd/xmp.typ with tests/zugferd/xmp")
+                                    "--update and check tools/zugferd/xmp.typ with tests/zugferd/xmp")
                 if verdict == "expected" and not problems:
                     status = "EXPECTED FAILURE"
                 else:
@@ -266,8 +268,9 @@ def main(argv=None):
         if new:
             failed += 1
             lines.append(f"  FAIL             new definitions of `pdf`: {', '.join(new)}. If one writes custom XMP "
-                         "metadata (typst/typst#5667), write the Factur-X metadata with src/zugferd/xmp.typ and turn "
-                         "this check around; otherwise add them to TYPST_PDF_DEFINITIONS in tools/zugferd/xmp.py.")
+                         "metadata (typst/typst#5667), move tools/zugferd/xmp.typ into the package, write the Factur-X "
+                         "metadata with it and turn this check around; otherwise add them to TYPST_PDF_DEFINITIONS in "
+                         "tools/zugferd/xmp.py.")
     except common.ToolError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

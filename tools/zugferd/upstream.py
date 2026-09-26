@@ -56,8 +56,8 @@ ARTIFACTS = {
         r"v(\d+(?:\.\d+)+)",
         "Update the nixpkgs input (`nix flake update nixpkgs`) once nixpkgs has the release, and run all "
         "checks. If the release can write custom XMP metadata (https://github.com/typst/typst/issues/5667), "
-        "write the Factur-X metadata with src/zugferd/xmp.typ; `nix run .#zugferd-xmp` fails on new "
-        "definitions of the `pdf` module.",
+        "move tools/zugferd/xmp.typ into the package and write the Factur-X metadata with it; "
+        "`nix run .#zugferd-xmp` fails on new definitions of the `pdf` module.",
     ),
 }
 

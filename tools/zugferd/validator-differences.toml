@@ -143,9 +143,10 @@ XRechnung, which both validators report)."""
 # withdrawn codes the older ones still have; the Factur-X lists lack a few
 # codes the CEN lists have (e.g. the scheme 0219). invoice-pro accepts only
 # the codes that every list the validation of a profile applies contains
-# (the lists of the write guard, which tools/zugferd/gen_guard.py intersects:
-# `validator` of src/zugferd/guard/lists.typ), and reports an error for any
-# other, under the rule of a validator that rejects it (`code-finding` of
+# (the code lists of the validator, which tools/zugferd/gen_guard.py
+# intersects: src/zugferd/code-lists.json, read by
+# src/zugferd/code-lists.typ), and reports an error for any other, under the
+# rule of a validator that rejects it (`code-finding` of
 # src/zugferd/rules/rare.typ).
 
 ["BR-CL-03"]

@@ -55,12 +55,7 @@
   } else { panic("Invalid Location!") }
 }
 
-/// Helper function to reduce formatting boilerplate in concrete regions.
-/// Generates the standard number and currency formatters based on the provided metadata.
-///
-/// `currency-formatters` rebuilds the formatters with the same number format
-/// for another currency: `build-locale` uses it when a patch sets the
-/// currency of a region but not its currency formatters.
+/// Generates the standard number and currency formatters of a region.
 #let make-formatters(numeric-format, currency-meta, currency-location: end) = {
   let currency-format = (
     currency: currency-meta.symbol,
@@ -77,11 +72,8 @@
     ),
 
     currency-fine: x => {
-      // A unit price is printed as it was calculated, i.e. as rounded by
-      // `normalize.money-fine`: with the standard decimals if it has no more,
-      // otherwise with `decimals-fine` decimals, or more if it carries more
-      // (up to 6, like the e-invoice). So the printed price is the one the
-      // line total and the XML (BT-146) are based on.
+      // A unit price is printed as calculated (BT-146): with the standard
+      // decimals if it has no more, else `decimals-fine` or more (up to 6).
       let standard-rounded = calc.round(x, digits: currency-meta.decimals)
       let fine-rounded = calc.round(
         x,

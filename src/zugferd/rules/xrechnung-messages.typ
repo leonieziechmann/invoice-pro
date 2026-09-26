@@ -1,17 +1,9 @@
-// The messages and hints of the rules of XRechnung (BR-DE-*) that no other
-// profile reports, e.g. the buyer reference (BR-DE-15) or the seller contact
-// (BR-DE-2). `diagnostics` of engine.typ loads this module for a finding of
-// one of them, and messages.typ only for a finding of another rule: an
-// invoice whose XRechnung checks fail (e.g. `zugferd: auto` for a buyer
-// without buyer reference, which then falls back to EN 16931) does not parse
-// the messages of every rule. A rule of XRechnung that shares its message
-// with a rule of the other profiles (e.g. BR-DE-19 with IP-PAY-01) is in
-// messages.typ. See engine.typ for the registry and the form of a finding.
+// The messages of the rules of XRechnung (BR-DE-*) that no other profile
+// reports, loaded only for their findings; the others are in messages.typ.
 
 #import "engine.typ": quoted as _quoted
 
-// The inputs of the payment means, besides the bank details of a credit
-// transfer, for hints.
+// The inputs of the payment means, for hints.
 #let _means-hint = "`#bank-details(iban: ..)` for a credit transfer, `#direct-debit(mandate: .., creditor-id: .., debtor-iban: ..)` for a SEPA direct debit, `#card-payment(last4: ..)` for a payment card, or `#paid(method: ..)` for an invoice that is paid already"
 
 // XRechnung requires the city or the post code of an address.
@@ -43,8 +35,7 @@
     + "`) on the sender.",
 )
 
-/// The message and the hint of every rule of this module, by the key of its
-/// entry (see `messages` of messages.typ).
+/// The message and the hint of each rule of this module, by its key.
 #let messages = (
   "BR-DE-17": f => (
     "XRechnung does not allow the document type "

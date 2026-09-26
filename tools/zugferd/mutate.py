@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Mutation test of the XML write guard (G1, G2; src/zugferd/guard/).
+"""Mutation test of the XML write guard (G1, G2), the part of the test
+oracle that checks every element (tools/zugferd/guard/).
 
   mutate.py [--seed N] [--per-operator K] [--only GLOB] [--out DIR] [--kosit]
 
@@ -7,8 +8,9 @@ Takes the golden e-invoices of every profile (tests/zugferd/golden/), derives
 mutants from them with a fixed seed and puts every mutant through
 
   - the guard: tools/zugferd/mutate.typ reads the XML with Typst's parser,
-    turns it back into the builder's element tree and serializes it with
-    the guard (one compilation for all mutants);
+    turns it back into the builder's element tree and writes it with the
+    guard and with the serializer of the package (one compilation for all
+    mutants);
   - the XSD of the profile (lxml), and Mustang (XSD and the Schematron of
     Factur-X, EN 16931 and XRechnung, in one JVM);
   - with --kosit, the KoSIT validator for EN 16931 and XRechnung
@@ -24,9 +26,11 @@ XML the guard writes differs from the mutant) is left out and counted.
 
 The proof criteria, each must hold for every mutant:
 
-  C0  the serializer's fast path and its checked writer return the same XML
-      and findings (src/zugferd/guard/write.typ and rare.typ): the fast path
-      takes no mutant in which the checked writer finds a problem;
+  C0  the guard's fast path and its checked writer return the same XML and
+      findings (tools/zugferd/guard/write.typ and rare.typ): the fast path
+      takes no mutant in which the checked writer finds a problem; and the
+      serializer of the package (`dict-to-xml` of src/zugferd/xml.typ)
+      writes the same XML, the XML the guard checks;
   C1  the guard accepts no mutant that the XSD rejects;
   C2  the guard blocks no structural mutant the official validators accept,
       except by its documented stricter checks: an element the builder never
@@ -413,7 +417,7 @@ def compiled_rules(jar, profiles, kosit):
 def all_codes(jar):
     """Every code of every list of the tables, sorted: candidates for code
     mutants that some list knows (the lines of codes in lists.json)."""
-    data = json.loads((common.REPO / "src" / "zugferd" / "guard" / "lists.json").read_text(encoding="utf-8"))
+    data = json.loads(gen_guard.OUTPUTS["lists.json"].read_text(encoding="utf-8"))
     codes = set()
     for lines in data["lists"].values():
         for line in lines:
@@ -555,7 +559,7 @@ def main(argv=None):
         stats = collections.Counter()
         for m in mutants:
             g = guard[m["id"]]
-            if g.get("representable") and not g["agree"]:
+            if g.get("representable") and not (g["agree"] and g["serialized"]):
                 failures["C0"].append({"id": m["id"], "detail": m["detail"], "findings": g["findings"][:5],
                                        "mustang": []})
             if not g.get("representable") or canonical(g["xml"].encode()) != canonical(Path(m["file"]).read_bytes()):

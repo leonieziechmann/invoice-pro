@@ -1,8 +1,7 @@
-// Overrides for `locale.<lang>-<region>.with(..)`; `auto` keeps a value. Each
-// function returns an array of one patch, so that several calls in one code
-// block join into a list (dictionaries would merge, losing the first).
+// Overrides for `locale.<lang>-<region>.with(..)`. Each returns an array of
+// one patch: in a code block, arrays join, dictionaries would overwrite.
 
-/// Drops the `auto` arguments, so that only the given fields are patched.
+/// Drops the `auto` arguments: only the given fields are patched.
 #let _clean-auto(d) = {
   let res = (:)
   for (k, v) in d {
@@ -167,9 +166,8 @@
   },
 )
 
-/// The notes below the table on what all items share.
+/// The notes below the table on what all items share (`str`), and:
 /// - tax-statement (auto, fn): (tax-text, rate, vat-tax) => content
-/// - unit, quantity, date (auto, str): labels of the shared value
 #let global-info(
   tax-statement: auto,
   unit: auto,
@@ -187,12 +185,7 @@
   },
 )
 
-/// Customizes the bank detail labels.
-/// - account-holder (auto, str): e.g., "Account Holder", "Kontoinhaber"
-/// - bank (auto, str): e.g., "Bank", "Kreditinstitut"
-/// - iban (auto, str): e.g., "IBAN"
-/// - bic (auto, str): e.g., "BIC"
-/// - reference (auto, str): e.g., "Reference", "Verwendungszweck"
+/// The labels of the bank details (`str`).
 /// -> array
 #let bank-details(
   account-holder: auto,
@@ -213,19 +206,9 @@
   },
 )
 
-/// Customizes the texts of the payment means `direct-debit`, `card-payment`
-/// and `paid`.
-/// - method (auto, str): label of the payment method, e.g., "Payment method"
-/// - transfer, direct-debit, sepa-direct-debit, card, credit-card,
-///   debit-card, cash, cheque, online (auto, str): names of the payment
-///   methods, e.g., "SEPA direct debit", "Barzahlung"
-/// - mandate, creditor-id, debtor-iban, card-number, card-holder (auto,
-///   str): labels of the details of a direct debit and a payment card
-/// - paid (auto, fn): sentence of a paid invoice: (sum, date) => content,
-///   `date` is `none` if not given
-/// - paid-due (auto, fn): `paid` after prepayments: (sum, date) => content
-/// - paid-credit (auto, fn): `paid` on a credit note or a self-billed
-///   invoice, whose sender pays the amount: (sum, date) => content
+/// The texts of `direct-debit`, `card-payment` and `paid` (`str`), and:
+/// - paid, paid-due, paid-credit (auto, fn): (sum, date) => content, `date`
+///   may be `none`
 /// -> array
 #let payment-means(
   method: auto,
@@ -272,22 +255,13 @@
   },
 )
 
-/// Customizes the payment instructions and deadline texts.
-/// - text (auto, fn): Function generating the main sentence: (sum, currency, deadline) => content
-/// - text-due (auto, fn): Main sentence when prepayments reduce the payable amount: (sum, deadline) => content
-/// - text-direct-debit, text-direct-debit-due (auto, fn): `text` and
-///   `text-due` of an amount collected by `direct-debit`: (sum, deadline) => content
-/// - text-card, text-card-due (auto, fn): `text` and `text-due` of an amount
-///   charged to a `card-payment`: (sum, deadline) => content
-/// - cash-discount (auto, fn): Note of a cash discount of the payment goal:
-///   (percent, deadline, basis) => content, `basis` is `none` if not given
-/// - deadline-date (auto, fn): Function formatting a fixed date: (date) => str
-/// - deadline-days (auto, fn): Function formatting relative days: (days) => str
-/// - deadline-soon (auto, str): Text for immediate payment: e.g., "upon receipt"
-/// - text-credit (auto, fn): Main sentence of a credit note or a self-billed
-///   invoice, whose sender pays the amount: (sum, deadline) => content
-/// - deadline-soon-credit (auto, str): Text for immediate payment in
-///   `text-credit`: e.g., "promptly"
+/// The sentences of the payment goal (`-due`: after prepayments, `-credit`:
+/// on a credit note or a self-billed invoice).
+/// - text, text-due, text-direct-debit, text-direct-debit-due, text-card,
+///   text-card-due, text-credit (auto, fn): (sum, deadline) => content
+/// - cash-discount (auto, fn): (percent, deadline, basis) => content
+/// - deadline-date, deadline-days (auto, fn): (date) => str, (days) => str
+/// - deadline-soon, deadline-soon-credit (auto, str): e.g. "upon receipt"
 /// -> array
 #let payment(
   text: auto,
@@ -322,8 +296,7 @@
   },
 )
 
-/// Customizes the signature and closing area.
-/// - closing (auto, str): e.g., "Sincerely,", "Mit freundlichen Grüßen"
+/// The closing above the signature (`str`).
 /// -> array
 #let signature(closing: auto) = (
   {
@@ -332,8 +305,7 @@
   },
 )
 
-/// Customizes standard legal texts.
-/// - vat-exemption (auto, str): Legal text for small business tax exemptions.
+/// The small business note (`str`).
 /// -> array
 #let legal(vat-exemption: auto) = (
   {
@@ -342,12 +314,7 @@
   },
 )
 
-/// Customizes error and warning messages.
-/// - name-missing (auto, str)
-/// - address-missing (auto, str)
-/// - city-missing (auto, str)
-/// - ambiguous-tax (auto, str)
-/// - invalid-tax (auto, str)
+/// The error messages (`str`).
 #let errors(
   name-missing: auto,
   address-missing: auto,
@@ -367,16 +334,14 @@
   },
 )
 
-// -----------------------------------------------------------------------------
-// REGION OVERRIDES (region.*)
-// -----------------------------------------------------------------------------
+// --- Region (region.*) ---
 
-/// Customizes regional normalization and calculation logic.
-/// - money (auto, fn): Function to round standard currency totals.
+/// The rounding and the tax inference of the region.
+/// - money (auto, fn): rounds totals
 /// -> (number) => number
-/// - money-fine (auto, fn): Function to round high-precision items.
+/// - money-fine (auto, fn): rounds unit prices
 /// -> (number) => number
-/// - infer-tax (auto, fn): Function that maps a raw rate to a tax object.
+/// - infer-tax (auto, fn): maps a raw rate to a tax object
 /// -> (number) => tax
 /// -> array
 #let normalize(
@@ -394,14 +359,10 @@
   },
 )
 
-/// Customizes regional formatting behaviors without creating a new region file.
-/// Highly useful for tweaking date patterns or currency symbols on the fly.
-/// - percent (auto, fn): -> (number) => str
-/// - number (auto, fn): -> (number) => str
-/// - currency (auto, fn): -> (number) => str
-/// - currency-fine (auto, fn): -> (number) => str
-/// - date (auto, fn): -> (datetime | array) => str
-/// - time (auto, fn): -> (datetime) => str
+/// The formatting functions of the region.
+/// - percent, number, currency, currency-fine (auto, fn): (number) => str
+/// - date (auto, fn): (datetime | array) => str
+/// - time (auto, fn): (datetime) => str
 /// -> array
 #let format(
   percent: auto,
@@ -424,10 +385,8 @@
   },
 )
 
-/// Customizes the legal tax objects applied within the region.
-/// Useful for overriding default rates or providing custom exemption grounds.
-/// - default-vat (auto, tax): Standard VAT tax object.
-/// - small-enterprise-special-scheme (auto, tax): Tax object for small business exemptions.
+/// The tax objects of the region: `default-vat` for items without a tax,
+/// `small-enterprise-special-scheme` with `tax-exempt-small-biz`.
 /// -> array
 #let tax(
   default-vat: auto,

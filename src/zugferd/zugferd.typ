@@ -1,7 +1,4 @@
-// Entry point of the e-invoice generation: builds the data model, validates
-// it and serializes the XML. The test suite checks the XML itself against
-// the schema and Schematron of every profile (tools/zugferd/guard/, the
-// corpus of tools/zugferd/).
+// Entry point of the e-invoice: builds the model, validates it, writes the XML.
 
 #import "model.typ": build-model
 #import "profile.typ": switch-profile
@@ -11,9 +8,7 @@
 
 #let _has-errors(diagnostics) = diagnostics.any(d => d.level == "error")
 
-// The diagnostics of the validator with the invariants that the model
-// states what the invoice prints (rules/equivalence.typ), errors first,
-// each level in the order of the checks.
+// Adds the invariants (rules/equivalence.typ), errors first.
 #let _with-invariants(diagnostics, invariants) = {
   let errors = ()
   let warnings = ()
@@ -23,18 +18,9 @@
   errors + warnings
 }
 
-// What only some invoices need (a fallback of `zugferd: auto`, a self-billed
-// invoice) is in rare.typ, which loads when an invoice needs it.
-
-/// Builds and checks the e-invoice of the computed invoice.
-///
-/// With `zugferd: auto`, the richest candidate profile the invoice satisfies
-/// is chosen (see `resolve-profile`); the errors that ruled out a better one
-/// are listed as warnings.
-///
-/// Returns `(profile: .., model: .., diagnostics: .., xml: ..)`. The XML is
-/// always built; `diagnostics` lists every problem found (errors first), so
-/// the caller decides whether to stop, report or ignore them.
+/// Builds and checks the e-invoice as `(profile: .., model: .., diagnostics:
+/// .., xml: ..)`. The XML is always built; the caller decides what to do with
+/// the diagnostics.
 ///
 /// -> dictionary
 #let process-zugferd(
@@ -51,8 +37,7 @@
     bank: bank,
     payment-means: payment-means,
   )
-  // The totals the invoice prints (`ctx.global.total` of the root), else
-  // those of the line items.
+  // The totals the invoice prints, else those of the line items.
   let printed = ctx.at("global", default: (:)).at("total", default: none)
   if type(printed) != dictionary or printed == (:) {
     printed = (
@@ -63,15 +48,13 @@
     )
   }
   let diagnostics = run-rules(model)
-  // The invariants do not depend on the profile, except the rule of
-  // XRechnung among them (PEPPOL-EN16931-R120), the first candidate if any.
+  // All but PEPPOL-EN16931-R120 hold for every candidate (XRechnung is first).
   let invariants = equivalence-findings(model, item-data, printed)
   if invariants != () {
     diagnostics = _with-invariants(diagnostics, invariants)
   }
 
-  // The model does not depend on the candidate profile, so switching the
-  // profile only repeats the validation.
+  // `zugferd: auto`: the next candidate while there are errors.
   let skipped = ()
   for id in model.profile.candidates.slice(1) {
     if not _has-errors(diagnostics) { break }

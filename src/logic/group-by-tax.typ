@@ -1,11 +1,8 @@
 #import "../data/tax.typ"
 
-// The tax of a VAT group: rate, category and every distinct exemption ground
-// of its items. `grounds` joins them into the one exemption reason of the
-// category (BT-120). With several grounds, `grounds-list` keeps each of them
-// for the printed notes. The exemption reason codes of the items (BT-121)
-// are `code`, or `codes` if they differ. `implicit` marks a group with an
-// item whose tax was never set (`tax: none`), see `tax.implicit-zero`.
+// The tax of a VAT group: `grounds` joins the exemption grounds of its items
+// (BT-120), `grounds-list` keeps several for the notes, `code` or `codes` are
+// their reason codes (BT-121), `implicit` marks an item with `tax: none`.
 #let group-tax(first-tax, grounds-list, implicit, codes: ()) = (
   rate: first-tax.rate,
   category: first-tax.category,
@@ -16,9 +13,8 @@
   ..if implicit { (implicit: true) },
 )
 
-/// Makes sure `tax-groups` has a group for the VAT category of `pinned-tax`
-/// (the `tax` a modifier is pinned to) and adds its exemption grounds. A
-/// group without items has a total of 0.
+/// Adds a VAT group for the `tax` a modifier is pinned to (with a total of 0
+/// if it has no items) and its exemption grounds.
 ///
 /// -> dictionary
 #let with-tax-group(tax-groups, pinned-tax) = {
@@ -46,11 +42,9 @@
   tax-groups
 }
 
-/// Groups items by VAT group (rate and category) and sums their totals.
-///
-/// Every group keeps the distinct exemption grounds of all its items, not
-/// only those of the first one, and counts the items that have none
-/// (`missing-grounds`).
+/// Groups items by VAT group (rate and category) and sums their totals. Each
+/// group keeps the exemption grounds of all its items and counts the items
+/// without (`missing-grounds`).
 ///
 /// -> dictionary
 #let group-by-tax(items, include-items: true) = {
@@ -72,8 +66,7 @@
       ))
     }
 
-    // Update the group in place: a copy of it would copy its items as well,
-    // which makes grouping quadratic in the number of items.
+    // In place: a copy of the group would copy its items (quadratic).
     total += item.total
     groups.at(tax-key).total += item.total
     if item-grounds.len() == 0 {
@@ -85,7 +78,6 @@
       )
     }
     if tax.is-implicit(item.tax) { groups.at(tax-key).implicit = true }
-    // Most taxes have no exemption reason code: only those are merged.
     if "code" in item.tax or "codes" in item.tax {
       groups.at(tax-key).codes = tax.merge-codes(
         groups.at(tax-key).codes,

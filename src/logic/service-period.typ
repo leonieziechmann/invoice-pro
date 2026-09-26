@@ -1,24 +1,13 @@
-// The service period of an invoice: the date or period of the supply, which
-// the invoice prints (`references.service-time`) and the e-invoice states
-// (the actual delivery date, BT-72, or the invoicing period, BG-14). One
-// function resolves it for both, so they cannot differ.
+// The service period of an invoice (BT-72 or BG-14), resolved once for the
+// printed `references.service-time` and the e-invoice, so they cannot differ.
 
-/// Resolves the service period of an invoice:
-///
-/// 1. the invoice's `service-period` (a `datetime` or a range
-///    `(datetime, datetime)`) if it is given,
-/// 2. else from the earliest to the latest date of the items (`date` of
-///    `item`, `bundle` and `group`, a date or a range); items without a date
-///    do not count,
-/// 3. else the invoice date, if no item has a date.
-///
-/// Returns `(start: .., end: .., source: ..)`, with `source` one of
-/// `"invoice"`, `"items"` and `"invoice-date"`, or `none` if there is no date
-/// at all. A single date has the same `start` and `end`.
+/// Resolves the service period: the invoice's `service-period`, else from the
+/// earliest to the latest date of the items, else the invoice date. Returns
+/// `(start: .., end: .., source: ..)`, or `none` without any date.
 ///
 /// -> none | dictionary
 #let resolve-service-period(
-  /// The computed items of the line items (each with its `date`).
+  /// The computed items (each with its `date`).
   /// -> array
   items,
   /// The date of the invoice.
@@ -58,10 +47,8 @@
   none
 }
 
-/// Whether the date of a document (the resolved `document-type` of the
-/// context, `none` for an invoice) is the date of its supply when nothing
-/// else dates it: not for a credit note, which amends an invoice, nor for a
-/// prepayment invoice, which precedes the supply.
+/// Whether the date of a document is the date of its supply when nothing
+/// else dates it: not for a credit note or a prepayment invoice.
 ///
 /// -> bool
 #let supply-dated(document) = (
@@ -72,17 +59,8 @@
     )
 )
 
-/// Resolves the service period of the invoice of the root context `ctx`
-/// with its computed `items`, see `resolve-service-period`: the one source
-/// of the printed service period (`references.service-time`) and the
-/// e-invoice (BT-72, BG-14).
-///
-/// The date of a credit note (`document-type`, e.g. `"credit-note"`, 381),
-/// which amends an invoice, and of a prepayment invoice (`"prepayment"`,
-/// 386), which asks for an advance payment before the supply, is not the
-/// date of a supply: they fall back to no date at all rather than to the
-/// invoice date (see `supply-dated`). Their `service-period` and the dates
-/// of their items still count.
+/// The service period of the invoice of the root context `ctx` with its
+/// computed `items`, for `references.service-time` and the e-invoice.
 ///
 /// -> none | dictionary
 #let service-period-of(ctx, items) = {
@@ -94,9 +72,7 @@
   )
 }
 
-/// The printed text of a service period: its date, or its first and last
-/// date joined by " – ", each formatted with `format-date` (the date format
-/// of the locale).
+/// The printed text of a service period, formatted with `format-date`.
 ///
 /// -> str | content | none
 #let format-service-period(period, format-date) = {

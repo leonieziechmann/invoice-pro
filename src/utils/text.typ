@@ -1,9 +1,6 @@
-// Plain text of values that may be content: for the e-invoice XML, the PDF
-// metadata, the EPC-QR payload and anything else that needs a string.
+// Plain text of content.
 
-/// The characters XML 1.0 does not allow in a document, not even escaped, as
-/// the content of a character class: the one definition of them, which the
-/// serializer of the e-invoice combines with the markup characters.
+/// The characters XML 1.0 forbids even escaped, as a character class body.
 ///
 /// -> str
 #let invalid-xml-class = "\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x{FFFE}\\x{FFFF}"
@@ -12,22 +9,13 @@
 ///
 /// -> regex
 #let invalid-xml-chars = regex("[" + invalid-xml-class + "]")
-/// A pattern of the texts `plain-text` returns as they are: printable ASCII
-/// words with single spaces between them, as most names, numbers and
-/// identifiers are. A string it matches needs no conversion.
+/// Printable ASCII words with single spaces: texts `plain-text` returns as is.
 ///
 /// -> regex
 #let plain-ascii = regex("^[!-~]+(?: [!-~]+)*$")
-// Typst sets a hyphen in front of a digit as minus sign (U+2212) after an
-// expression or styled text, e.g. in `[#{2026}-001]`. The hyphens U+2010 and
-// U+2011 look the same. In plain text, e.g. an identifier, all of them are
-// the ASCII hyphen-minus.
+// Hyphens, and the minus sign (U+2212) Typst sets for "-" before a digit.
 #let _hyphens = regex("[\\x{2010}\\x{2011}\\x{2212}]")
-// A space or operator in a part of a fraction or root, which then needs
-// parentheses, e.g. "a+b" in "(a+b)/2". Spaces of math are collected as " ".
-// (No regular expression: this module is loaded for every invoice, and a
-// class with characters beyond ASCII takes a third of a millisecond to
-// compile, while math is rare.)
+// Parts of a fraction or root with these need parentheses (no regex: slow).
 #let _compound = (
   " ",
   "+",
@@ -47,7 +35,6 @@
 #let _space = [ ].func()
 #let _sequence = [*a* b].func()
 
-// Scripts of math as Unicode superscripts and subscripts, e.g. "m²".
 #let _superscripts = (
   "0": "⁰",
   "1": "¹",
@@ -87,9 +74,7 @@
   ")": "₎",
 )
 
-// A script of math, e.g. `2` in `x^2`: in Unicode superscript or subscript
-// characters if there are any for all of its characters ("²"), otherwise
-// after `sign` ("^n", "^(n+1)").
+// A math script as Unicode scripts ("²") or after `sign` ("^n").
 #let _script(text, characters, sign) = {
   if text == "" { return "" }
   let clusters = text.clusters()
@@ -104,8 +89,6 @@
   result
 }
 
-// The text of a part of a fraction or root, in parentheses if it has more
-// than one term, e.g. "(a+b)".
 #let _grouped(text) = {
   for character in _compound {
     if text.contains(character) { return "(" + text + ")" }
@@ -113,8 +96,6 @@
   text
 }
 
-// Collects the visible text of a value, see `plain-text`. Line and paragraph
-// breaks become `newline`.
 #let _collect-text(it, newline) = {
   if it == none or it == auto { return "" }
   let kind = type(it)
@@ -130,8 +111,7 @@
   if kind != content { return "" }
 
   let func = it.func()
-  // `text`, `raw` and symbols (e.g. the `--` shorthand) carry their text,
-  // math operators such as `sin` carry it as content.
+  // Math operators (`sin`) carry their text as content.
   if it.has("text") {
     return if type(it.text) == str { it.text } else {
       _collect-text(it.text, newline)
@@ -144,7 +124,6 @@
   if func in (_space, h, v) { return " " }
   if func == footnote { return "" }
 
-  // Math as it reads: "1/2", "√2", "x²", "f′".
   if func == math.frac {
     return (
       _grouped(_collect-text(it.num, newline))
@@ -181,7 +160,6 @@
   if it.has("body") { return _collect-text(it.body, newline) }
   if it.has("child") { return _collect-text(it.child, newline) }
 
-  // Any other element: the text of its content fields in order.
   let parts = ()
   for value in it.fields().values() {
     if type(value) == content { parts.push(_collect-text(value, newline)) }
@@ -189,26 +167,12 @@
   parts.join(default: "")
 }
 
-/// Extracts the plain text of a value as it reads on the page.
-///
-/// Works for strings, numbers and arbitrary content, including styled text,
-/// emphasis, links, boxes, smart quotes, line breaks and math (`$1/2$` reads
-/// "1/2", `$x^2$` reads "x²"). Characters XML cannot carry are removed, and a
-/// minus sign or hyphen that Typst sets instead of a hyphen-minus becomes
-/// "-", so that identifiers such as `[#{2026}-001]` keep their ASCII hyphen.
-///
-/// Whitespace is collapsed, so the result can be written into a single XML
-/// text node. With `keep-newlines: true`, line breaks (`\n` in a string,
-/// `linebreak()` and paragraph breaks in content) are kept as `"\n"`: spaces
-/// are collapsed within each line, each line is trimmed, and empty lines at
-/// the start and end are removed. This keeps the lines of multi-line texts
-/// such as payment terms (BT-20).
+/// The plain text of a value as it reads on the page, XML-safe and with
+/// whitespace collapsed; `keep-newlines: true` keeps line breaks as `"\n"`.
 ///
 /// -> str
 #let plain-text(it, keep-newlines: false) = {
-  // The common values without the recursion of `_collect-text`, whose text
-  // they have: a string, a single text (e.g. `[Consulting]`), or a sequence
-  // of texts and spaces (e.g. `[Travel & more]`).
+  // Fast path: a string, a text, or a sequence of texts and spaces.
   let collected = none
   if type(it) == str { collected = it } else if type(it) == content {
     let func = it.func()
@@ -225,18 +189,12 @@
       }
     }
   }
-  // Printable ASCII words with single spaces: there is nothing to remove,
-  // replace or collapse.
   if collected != none and plain-ascii in collected { return collected }
   if collected == none {
     collected = _collect-text(it, if keep-newlines { "\n" } else { " " })
   }
   let result = collected.replace(invalid-xml-chars, "").replace(_hyphens, "-")
-  // `split()` splits at runs of whitespace and drops them at both ends: the
-  // words joined by single spaces are the text with its whitespace collapsed
-  // and trimmed. (No pattern: the class `\s` of all Unicode whitespace takes
-  // more than a third of a millisecond to compile, and this module is loaded
-  // for every invoice.)
+  // Collapses and trims whitespace; a `\s` pattern is slow to compile.
   if not keep-newlines { return result.split().join(" ", default: "") }
   let lines = ()
   for line in result.replace("\r\n", "\n").replace("\r", "\n").split("\n") {

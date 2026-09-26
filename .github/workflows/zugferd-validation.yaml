@@ -85,7 +85,8 @@ jobs:
   # (tools/zugferd/validator-differences.toml), no official rule id without
   # a class and no failing parity fixture (tools/zugferd/rule-coverage.toml).
   # Pull requests run the PR population, the nightly run the larger one with
-  # random invoices and more mutants of the write guard, also against KoSIT.
+  # random invoices and more mutants of the write guard of the test oracle,
+  # also against KoSIT.
   corpus:
     name: Conformance corpus
     runs-on: ubuntu-latest

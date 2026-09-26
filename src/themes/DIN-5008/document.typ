@@ -66,9 +66,7 @@
     document-keywords.push("Factur-X")
   }
 
-  // PDF metadata takes plain text: names and subjects may be styled content
-  // or, for names, several lines. The author is the seller name of the
-  // e-invoice (BT-27).
+  // PDF metadata takes plain text. The author is the seller name (BT-27).
   let author-name = _field(ctx.sender, "name-inline")
   if author-name == none { author-name = _field(ctx.sender, "name") }
   let author = plain-text(author-name)

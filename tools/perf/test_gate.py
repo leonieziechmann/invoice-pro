@@ -9,6 +9,7 @@ import re
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -70,9 +71,9 @@ class Thresholds(unittest.TestCase):
         self.assertTrue(any("1000 / 300" in m for m in red))
 
     def test_lazy_loading(self):
-        red, _ = gate.verdict([row(5, 10.0, lazy_loaded=["src/zugferd/guard/rare.typ"])], None, False)
+        red, _ = gate.verdict([row(5, 10.0, lazy_loaded=["src/zugferd/rules/messages.typ"])], None, False)
         self.assertEqual(len(red), 1)
-        self.assertIn("src/zugferd/guard/rare.typ", red[0])
+        self.assertIn("src/zugferd/rules/messages.typ", red[0])
         self.assertEqual(gate.verdict([row(5, 10.0)], None, False), ([], []))
 
     def test_missing_measurements_are_noted(self):
@@ -109,19 +110,31 @@ class Trace(unittest.TestCase):
         self.assertEqual(gate.lazy_loads(result["inclusive"]), [])
 
     def test_lazy_loads_are_found_by_module_and_by_call(self):
-        registry = gate.function_key(*gate.LAZY_CALLS[0])
-        self.assertIsNotNone(registry, "LAZY_CALLS names a function that does not exist")
+        # A call is found by the line of the function's definition; the
+        # example is `unit-aliases` of units.typ, whose first call builds a
+        # table.
+        call = ("src/zugferd/units.typ", "unit-aliases")
+        key = gate.function_key(*call)
+        self.assertIsNotNone(key, "the example function does not exist")
         inclusive = {
             "eval /src/zugferd/zugferd.typ:1": 5.0,
-            "eval /src/zugferd/guard/rare.typ:1": 1.0,
-            registry: 1.0,
+            "eval /src/zugferd/rules/messages.typ:1": 1.0,
+            key: 1.0,
         }
-        self.assertEqual(
-            gate.lazy_loads(inclusive),
-            ["src/zugferd/guard/rare.typ", f"{gate.LAZY_CALLS[0][0]} ({gate.LAZY_CALLS[0][1]})"],
-        )
+        with unittest.mock.patch.object(gate, "LAZY_CALLS", (call,)):
+            self.assertEqual(
+                gate.lazy_loads(inclusive),
+                ["src/zugferd/rules/messages.typ", "src/zugferd/units.typ (unit-aliases)"],
+            )
+        self.assertEqual(gate.lazy_loads({"eval /src/zugferd/zugferd.typ:1": 5.0}), [])
+
+    def test_the_lazy_modules_and_calls_exist(self):
+        # A module or function that no longer exists would never be found
+        # loaded: the gate would pass without checking it.
         for module in gate.LAZY_MODULES:
             self.assertTrue((gate.REPO / module).exists(), module)
+        for relative_file, name in gate.LAZY_CALLS:
+            self.assertIsNotNone(gate.function_key(relative_file, name), f"{relative_file} ({name})")
 
 
 class Watch(unittest.TestCase):

@@ -1,8 +1,5 @@
-// Serializes the e-invoice data model (see `model.typ`) into a ZUGFeRD 2.x /
-// Factur-X 1.0 CrossIndustryInvoice XML document.
-//
-// Elements are inserted in the order of the Factur-X schemas, and whatever the
-// schema of the selected profile does not know is left out.
+// Serializes the e-invoice model into the CrossIndustryInvoice XML. Elements
+// are inserted in the order of the Factur-X schemas.
 
 #import "xml.typ": (
   dict-to-xml, fmt-amount, fmt-date, fmt-price, fmt-quantity, fmt-rate,
@@ -21,7 +18,6 @@
   ),
 )
 
-// Emits the exchanged document context dictionary
 #let build-document-context(profile) = {
   let doc-context = (:)
   if profile.business-process != none {
@@ -37,14 +33,13 @@
   doc-context
 }
 
-// Emits the exchanged document details
 #let build-exchanged-document(invoice) = (
   "ram:ID": invoice.number,
   "ram:TypeCode": invoice.type-code,
   "ram:IssueDateTime": _date(invoice.issue-date),
 )
 
-// Emits the notes of the invoice (BT-22 with the subject code BT-21).
+// The notes (BT-22, BT-21).
 #let build-notes(notes) = {
   let entries = ()
   for note in notes {
@@ -56,8 +51,7 @@
   entries
 }
 
-// Emits a postal address (BG-5, BG-8, BG-15). ZUGFeRD knows three address
-// lines; any further lines are joined into the third one.
+// A postal address (BG-5, BG-8, BG-15); lines beyond three join the third.
 #let build-postal-address(address) = {
   let lines = address.at("lines", default: ())
   let postal = (:)
@@ -104,7 +98,7 @@
   )
 }
 
-// Emits the contact of a party (BG-6, BG-9), or `none` without any details.
+// The contact of a party (BG-6, BG-9), `none` without details.
 #let _trade-contact(contact) = {
   if contact == none { return none }
   let details = (:)
@@ -124,9 +118,8 @@
   if details.len() > 0 { details }
 }
 
-// Emits the legal organization of a party: its legal registration identifier
-// (BT-30, BT-47, BT-61), with a scheme only if it has one, and its trading
-// name (BT-28, BT-45); `none` without either.
+// The legal registration identifier (BT-30, BT-47, BT-61) and trading name
+// (BT-28, BT-45), `none` without either.
 #let _legal-organization(legal-id, trading-name) = {
   let organization = (:)
   if legal-id != none {
@@ -141,14 +134,14 @@
   if organization.len() > 0 { organization }
 }
 
-// Emits the seller trade party details (BG-4)
+// The seller (BG-4).
 #let build-seller-trade-party(party, profile) = {
   let res = if profile.party-ids { _identifiers(party) } else { (:) }
   res.insert("ram:Name", party.name)
   if profile.seller-legal-info {
     res.insert("ram:Description", party.at("legal-info", default: none))
   }
-  // The legal registration identifier (BT-30) is part of every profile.
+  // BT-30 is part of every profile.
   res.insert("ram:SpecifiedLegalOrganization", _legal-organization(
     party.at("legal-id", default: none),
     if profile.seller-trading-name {
@@ -167,8 +160,7 @@
       _electronic-address(party.electronic-address),
     )
   } else if party.address.country != none {
-    // MINIMUM has no addresses, but the seller country code is still
-    // mandatory (BR-08, BR-09).
+    // MINIMUM has no addresses but the seller country (BR-08, BR-09).
     res.insert("ram:PostalTradeAddress", (
       "ram:CountryID": party.address.country,
     ))
@@ -187,16 +179,11 @@
   res
 }
 
-// Emits the buyer trade party details (BG-7)
-//
-// Note: unlike the seller, EN16931 only defines a VAT identifier (BT-48,
-// schemeID "VA") for the buyer — there is no buyer equivalent of the
-// seller's national tax number (BT-32, schemeID "FC"), so `tax-nr` is
-// intentionally not used here.
+// The buyer (BG-7), without tax number: EN 16931 has only its VAT ID (BT-48).
 #let build-buyer-trade-party(party, profile) = {
   let res = if profile.party-ids { _identifiers(party) } else { (:) }
   res.insert("ram:Name", party.name)
-  // The legal registration identifier (BT-47) is part of every profile.
+  // BT-47 is part of every profile.
   res.insert("ram:SpecifiedLegalOrganization", _legal-organization(
     party.at("legal-id", default: none),
     if profile.buyer-trading-name {
@@ -224,9 +211,7 @@
   res
 }
 
-// Emits the seller tax representative party (BG-11): its name (BT-62), postal
-// address (BG-12) and VAT identifier (BT-63); EN 16931 has no other details
-// of it (CII-SR-283 to CII-SR-288).
+// BG-11: name, address and VAT ID only (CII-SR-283 to CII-SR-288).
 #let build-tax-representative-party(party) = {
   let res = ("ram:Name": party.name)
   res.insert("ram:PostalTradeAddress", build-postal-address(party.address))
@@ -238,10 +223,7 @@
   res
 }
 
-// Emits the payee party (BG-10): its identifier (BT-60, `ram:ID` or
-// `ram:GlobalID`), name (BT-59) and legal registration identifier (BT-61);
-// EN 16931 has no address or tax registration of the payee (CII-SR-360,
-// CII-SR-362).
+// BG-10, without address or tax registration (CII-SR-360, CII-SR-362).
 #let build-payee-party(party) = {
   let res = _identifiers(party)
   res.insert("ram:Name", party.name)
@@ -252,7 +234,7 @@
   res
 }
 
-// Emits the ship-to trade party details (BG-13 Deliver to / BT-70-80)
+// BG-13 (BT-70 to BT-80)
 #let build-ship-to-trade-party(party) = {
   let res = _identifiers(party)
   if party.at("name", default: none) != none {
@@ -270,11 +252,8 @@
   res
 }
 
-// Emits a single ram:SpecifiedTradeAllowanceCharge (discount/surcharge) entry.
-//
-// `tax-category`/`tax-rate` are mandatory for document-level allowances/charges
-// (BR-53), but intentionally omitted at line level, since the line already
-// declares its own tax category via its own ApplicableTradeTax.
+// An allowance or charge; its VAT category and rate only at document level
+// (BR-53), as a line states its own.
 #let build-allowance-charge(
   is-charge,
   amount,
@@ -298,7 +277,7 @@
       "ram:TypeCode": "VAT",
       "ram:CategoryCode": tax-category,
     )
-    // Amounts not subject to VAT carry no rate (BR-O-06, BR-O-07).
+    // No rate for category O (BR-O-06, BR-O-07).
     if tax-category != "O" {
       category.insert("ram:RateApplicablePercent", fmt-rate(tax-rate))
     }
@@ -307,8 +286,7 @@
   entry
 }
 
-// Emits the header-level SpecifiedTradeAllowanceCharge entries for the
-// document level allowances and charges, one per VAT category (BR-53).
+// One per VAT category (BR-53).
 #let build-header-allowance-charges(entries) = entries.map(
   entry => build-allowance-charge(
     entry.charge,
@@ -319,11 +297,9 @@
   ),
 )
 
-// Emits a single supply chain line item (BG-25)
+// An invoice line (BG-25).
 #let build-line-item(line, profile) = {
-  // Inserted in XSD sequence order (GlobalID, SellerAssignedID,
-  // BuyerAssignedID), all before ram:Name. The BASIC profile's TradeProduct
-  // only allows GlobalID, so the seller/buyer IDs (BT-155/BT-156) are dropped.
+  // In schema order; BASIC has only GlobalID, not BT-155 and BT-156.
   let product = (:)
   if line.standard-id != none {
     product.insert("ram:GlobalID", (
@@ -348,7 +324,7 @@
     product.insert("ram:OriginTradeCountry", ("ram:ID": origin))
   }
 
-  // BT-146 is the price of BT-149 units, e.g. a price per 100 pieces.
+  // BT-146 is the price of BT-149 units.
   let price = ("ram:ChargeAmount": fmt-price(line.price))
   if line.base-quantity != _one {
     price.insert("ram:BasisQuantity", (
@@ -361,7 +337,7 @@
     "ram:TypeCode": "VAT",
     "ram:CategoryCode": line.category,
   )
-  // A line not subject to VAT carries no rate (BR-O-05).
+  // No rate for category O (BR-O-05).
   if line.category != "O" {
     applicable-trade-tax.insert(
       "ram:RateApplicablePercent",
@@ -370,7 +346,7 @@
   }
 
   let line-settlement = ("ram:ApplicableTradeTax": applicable-trade-tax)
-  // BG-26: the date or period of the item.
+  // BG-26
   let period = line.at("period", default: none)
   if period != none {
     line-settlement.insert("ram:BillingSpecifiedPeriod", (
@@ -394,7 +370,7 @@
   )
 
   let document-line = ("ram:LineID": line.id)
-  // BT-127: the note of the item.
+  // BT-127
   let note = line.at("note", default: none)
   if note != none {
     document-line.insert("ram:IncludedNote", ("ram:Content": note))
@@ -416,10 +392,8 @@
   )
 }
 
-// Emits one payment means (BG-16), with the details of its kind: the payment
-// card (BG-18), the debited account of a direct debit (BT-91) or the account
-// of a credit transfer (BG-17). The profiles below EN 16931 have no card, no
-// account name and no BIC.
+// A payment means (BG-16) with its card (BG-18), debited account (BT-91) or
+// credit transfer account (BG-17).
 #let build-payment-means(means, profile) = {
   let entry = ("ram:TypeCode": means.type-code)
   let card = means.at("card", default: none)
@@ -453,7 +427,7 @@
   entry
 }
 
-// Emits the tax breakdown block (BG-23)
+// The VAT breakdown (BG-23).
 #let build-applicable-trade-tax(taxes) = {
   taxes.map(tax => {
     let entry = (
@@ -474,8 +448,7 @@
   })
 }
 
-// Emits the SpecifiedTradePaymentTerms block (BT-20, BT-9, BT-89), if any
-// data is available.
+// The payment terms (BT-20, BT-9, BT-89), `none` without any.
 #let build-payment-terms(payment, profile) = {
   let terms = (:)
   let description = profile-terms(payment, profile)
@@ -491,14 +464,9 @@
   if terms.len() == 0 { none } else { terms }
 }
 
-// Emits the header monetary summation block (BG-22).
-//
-// `line` (BT-106) is the sum of line net amounts *before* document-level
-// allowances/charges, while `net` (BT-109) is the total *after* them — they
-// only coincide when there are no global discounts/surcharges.
-//
-// With `include-breakdown: false` (MINIMUM profile) only BT-109, BT-110,
-// BT-112 and BT-115 are emitted; the amount due still accounts for prepayments.
+// The totals (BG-22): `line` (BT-106) is before the document level
+// allowances and charges, `net` (BT-109) after them. MINIMUM states only
+// BT-109, BT-110, BT-112 and BT-115.
 #let build-monetary-summation(totals, currency, include-breakdown: true) = {
   let summation = (:)
   if include-breakdown {
@@ -523,8 +491,7 @@
   summation
 }
 
-/// The element tree of the CrossIndustryInvoice XML of an e-invoice data
-/// model, for the serializer `dict-to-xml` (xml.typ).
+/// The element tree of the XML of a model, for `dict-to-xml` (xml.typ).
 ///
 /// -> dictionary
 #let build-tree(model) = {
@@ -561,8 +528,7 @@
       "ram:IssuerAssignedID": invoice.contract-nr,
     ))
   }
-  // BT-11: the project reference is its identifier; the name the syntax
-  // requires as well is the same text.
+  // BT-11: the name the syntax requires as well is the same text.
   let project = invoice.at("project", default: none)
   if profile.procuring-project and project != none {
     header-agreement.insert("ram:SpecifiedProcuringProject", (
@@ -593,12 +559,12 @@
 
   let trade-settlement = (:)
   if profile.settlement {
-    // BT-90: the creditor identifier of a direct debit.
+    // BT-90
     trade-settlement.insert(
       "ram:CreditorReferenceID",
       payment.at("creditor-id", default: none),
     )
-    // BT-83: same value as printed in the bank details and the EPC-QR code.
+    // BT-83, as the bank details and the EPC-QR code print it.
     trade-settlement.insert("ram:PaymentReference", payment.reference)
   }
   trade-settlement.insert("ram:InvoiceCurrencyCode", model.currency)
@@ -647,7 +613,7 @@
   )
   if profile.document-references and invoice.preceding-invoice-nr != none {
     let reference = ("ram:IssuerAssignedID": invoice.preceding-invoice-nr)
-    // BT-26: the date of the preceding invoice.
+    // BT-26
     let date = invoice.at("preceding-invoice-date", default: none)
     if type(date) == datetime {
       reference.insert("ram:FormattedIssueDateTime", (
@@ -665,7 +631,6 @@
 
   let transaction = (:)
   if profile.lines and model.lines != () {
-    // A loop rather than `map`, which would call a closure per line.
     let items = ()
     for line in model.lines { items.push(build-line-item(line, profile)) }
     transaction.insert("ram:IncludedSupplyChainTradeLineItem", items)

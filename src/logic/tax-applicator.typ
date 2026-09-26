@@ -73,27 +73,21 @@
     let tax = (
       rate: group.tax.rate,
       category: group.tax.category,
-      // Every distinct exemption ground of the category, joined.
+      // The distinct exemption grounds, joined and (for the notes) one by one.
       grounds: group.tax.at("grounds", default: none),
-      // The same grounds one by one, for the printed notes.
       grounds-list: group.at("grounds-list", default: ()),
-      // Items of the category without exemption grounds.
       missing-grounds: group.at("missing-grounds", default: 0),
       // The exemption reason codes of the items (BT-121).
       codes: m-tax.codes-of(group.tax),
-      // Some item has no tax at all (`tax: none`), see `tax.implicit-zero`.
+      // Some item has `tax: none`, see `tax.implicit-zero`.
       implicit: group.tax.at("implicit", default: false),
       absolute: decimal("0"),
       basis: decimal("0"),
     )
 
-    // A category that needs an exemption reason (AE, K, G, O) states the note
-    // of the language (`tax-exemption`) when no item gives grounds. It is
-    // printed below the line items like other grounds and written as
-    // exemption reason into the e-invoice (BT-120), so both say the same.
-    // The themes print the note of the small business scheme themselves
-    // (`legal.vat-exemption` if the scheme has no grounds), so it is only the
-    // reason of its group.
+    // Without grounds, a category that needs an exemption reason (AE, K, G,
+    // O) takes the note of the language, printed and as BT-120; the small
+    // business note, which the themes print, is only the reason of its group.
     if tax.grounds-list.len() == 0 and not m-tax.has-grounds(tax.grounds) {
       if key == small-business-key {
         tax.grounds = strings

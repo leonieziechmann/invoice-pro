@@ -1,15 +1,8 @@
-// The checks of the German CIUS XRechnung 3.0 (BR-DE-*) that run only in
-// the profile `xrechnung`; engine.typ loads this module for it. The other
-// rules of XRechnung are in engine.typ and rare.typ, where they replace a
-// rule of the same check in the other profiles (e.g. BR-DE-26 for
-// IP-DOC-02). See engine.typ for the findings and the registry.
+// The checks of XRechnung 3.0 (BR-DE-*) that only its profile runs.
 
-// The document types XRechnung allows (BR-DE-17).
 #let _type-codes = ("326", "380", "381", "384", "389", "875", "876", "877")
 
-/// BR-DE-17: the document type (BT-3). XRechnung only warns about it, but
-/// validators such as Mustang reject the invoice, so invoice-pro reports an
-/// error.
+/// BR-DE-17: the document type (BT-3).
 ///
 /// -> array
 #let document-type(code) = {
@@ -17,8 +10,7 @@
   ((key: "BR-DE-17", field: "document-type", code: code),)
 }
 
-// XR-TELEPHONE-REGEX (three digits, BR-DE-27) and XR-EMAIL-REGEX (BR-DE-28)
-// of the XRechnung 3.0 Schematron, compiled on first use.
+// XR-TELEPHONE-REGEX and XR-EMAIL-REGEX, compiled on first use.
 #let _patterns() = (
   digit: regex("[0-9]"),
   email: regex(
@@ -26,8 +18,7 @@
   ),
 )
 
-/// The seller contact (BG-6), the cities and post codes of the addresses
-/// and the buyer reference (BT-10), which XRechnung requires.
+/// The seller contact (BG-6), addresses and buyer reference (BT-10).
 ///
 /// -> array
 #let parties(model) = {
@@ -47,8 +38,7 @@
         out.push((key: rule, field: "sender.contact." + key, input: key))
       }
     }
-    // XRechnung only warns about BR-DE-27 and BR-DE-28, but validators such
-    // as Mustang reject the invoice, so invoice-pro reports errors.
+    // Errors, as Mustang rejects them; XRechnung only warns (also BR-DE-17).
     if (
       contact.phone != none
         and contact.phone.matches(_patterns().digit).len() < 3
@@ -109,20 +99,13 @@
   out
 }
 
-// BR-DE-18, as the XRechnung 3.0 validation tests it: each line of the
-// payment terms (BT-20) that starts with "#" matches XR-SKONTO-REGEX, and the
-// text after the last "#...#" starts with a line break.
+// XR-SKONTO-REGEX (BR-DE-18).
 #let _skonto-line() = regex(
   "#(SKONTO)#TAGE=([0-9]+#PROZENT=[0-9]+\\.[0-9]{2})(#BASISBETRAG=-?[0-9]+\\.[0-9]{2})?#$",
 )
-// Whitespace as XPath's normalize-space() collapses it, and `\s` of XPath
-// regular expressions: a space, tab or line break.
 #let _xml-whitespace = regex("[ \\t\\r\\n]+")
 
-// What breaks the XRechnung Skonto syntax in the payment terms (BR-DE-18):
-// `none` if nothing does, `(line: ..)` for a line that starts with "#" but is
-// no cash discount, and `(after: ..)` for the line of the last "#...#" if no
-// line break follows it.
+// A "#" line that is no cash discount (`line`), text after "#...#" (`after`).
 #let _skonto-problem(terms) = {
   let lines = terms.split("\n")
   let skonto = false
@@ -136,10 +119,7 @@
     }
   }
   if not skonto { return none }
-  // The validation splits the terms at `#.+#`, whose `.` is no line break:
-  // the last "#...#" reaches from the first to the last "#" of the last line
-  // with two "#" and text between them. (No regular expression: compiling
-  // this one takes a third of a millisecond on every compile.)
+  // The last "#.+#": the last line with text between two "#" (no regex: slow).
   for i in range(lines.len() - 1, -1, step: -1) {
     let parts = lines.at(i).split("#")
     if parts.len() >= 3 and parts.slice(1, -1).join("#") != "" {
@@ -154,9 +134,7 @@
   none
 }
 
-/// BR-DE-18: the Skonto syntax of the payment terms (BT-20) `terms` as the
-/// profile states them, and the amounts the cash discounts apply to, which
-/// XRechnung states with 2 decimals.
+/// BR-DE-18: the Skonto syntax of the payment terms and the discount bases.
 ///
 /// -> array
 #let payment-terms(payment, terms) = {

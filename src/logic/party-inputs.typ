@@ -1,12 +1,9 @@
-// Checks of the identifier inputs of the parties at the input boundary of
-// `invoice`, for every invoice: an identifier that produces no text would
-// otherwise be left out of the printed invoice and of the e-invoice without
-// notice.
+// Checks of the identifier inputs of the parties, for every invoice: an
+// identifier without text would be left out without notice.
 
 #import "../utils/text.typ": plain-text
 
-/// The keys of each party that take an identifier: a text, a dictionary
-/// `(scheme: .., id: ..)` or an identifier of the `id` module.
+/// The keys of each party that take an identifier.
 #let identifier-keys = (
   sender: ("id", "global-id", "legal-id", "electronic-address"),
   recipient: (
@@ -21,18 +18,12 @@
   payee: ("id", "global-id", "legal-id"),
 )
 
-// Whether a dictionary is an identifier of the `id` module, whose problems
-// (e.g. an empty or a wrong identifier) the e-invoice reports (IP-ID-01).
+// An `id` identifier: the e-invoice reports its problems (IP-ID-01).
 #let _is-typed(value) = "kind" in value and "problems" in value
 
-/// Stops the compilation for an identifier of `party` (the input `field`,
-/// e.g. `"sender"`, with the keys `keys`) that produces no text:
-///
-/// - a function, e.g. the constructor `id.siret` given without calling it;
-/// - a dictionary whose `id` is missing or empty, e.g. `(scheme: "0002")`.
-///   An electronic address without `id` counts as not given and is derived
-///   instead, and an identifier of the `id` module reports its problems in
-///   the e-invoice.
+/// Stops the compilation for an identifier of `party` that produces no text:
+/// a function (e.g. `id.siret` not called) or a dictionary without `id`,
+/// except an electronic address, which is then derived.
 ///
 /// -> none
 #let check-identifiers(party, field, keys) = {

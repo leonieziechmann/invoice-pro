@@ -39,14 +39,12 @@
   (code: "Z", name: "Zero rated goods"),
 )
 
-// The key of the VAT group (rate and category) a tax belongs to. The rate may
-// be a ratio (`19%`) or decimal-like (`0.19`), as in a hand-built dictionary.
+// The rate may be a ratio or a number, as in a hand-built tax.
 #let to-tax-key(tax) = {
   return str(coercion.to-ratio(tax.rate)) + "-" + tax.category
 }
 
-/// Creates a tax of any UNTDID 5305 category, for cases the constructors below
-/// do not cover.
+/// Creates a tax of any UNTDID 5305 category.
 ///
 /// -> dictionary
 #let new(
@@ -62,9 +60,8 @@
   /// The legal reason of an exemption or a 0% rate.
   /// -> str | content | none
   grounds: none,
-  /// The VAT exemption reason code of the CEF VATEX code list (BT-121 of
-  /// the e-invoice), e.g. `"VATEX-EU-132-1A"`, next to the `grounds` the
-  /// invoice prints. Only a tax that is exempt or not charged has one.
+  /// The VATEX exemption reason code (BT-121), e.g. `"VATEX-EU-132-1A"`, of a
+  /// tax that is exempt or not charged.
   /// -> none | str
   code: none,
 ) = {
@@ -81,13 +78,12 @@
     category: category,
     label: label,
     grounds: grounds,
-    // Only a tax with a code carries the key, so that the tax of most items
-    // stays as small as before.
+    // Only if given: keeps most taxes small.
     ..if code != none { (code: code) },
   )
 }
 
-// A: Mixed tax rate
+// --- Constructors (UNTDID 5305) ---
 #let mixed(rate, grounds: none) = new(
   rate: rate,
   category: "A",
@@ -95,7 +91,6 @@
   grounds: grounds,
 )
 
-// AA: Lower rate
 #let lower-rate(rate, grounds: none) = new(
   rate: rate,
   category: "AA",
@@ -103,7 +98,6 @@
   grounds: grounds,
 )
 
-// AB: Exempt for resale
 #let exempt-for-resale(grounds: none) = new(
   rate: 0%,
   category: "AB",
@@ -111,7 +105,6 @@
   grounds: grounds,
 )
 
-// AC: Value Added Tax (VAT) not now due for payment
 #let vat-not-due(rate, grounds: none) = new(
   rate: rate,
   category: "AC",
@@ -119,7 +112,6 @@
   grounds: grounds,
 )
 
-// AD: Value Added Tax (VAT) due from a previous invoice
 #let vat-previous(rate, grounds: none) = new(
   rate: rate,
   category: "AD",
@@ -127,7 +119,6 @@
   grounds: grounds,
 )
 
-// AE: VAT Reverse Charge
 #let reverse-charge(grounds: "Reverse charge", code: none) = new(
   rate: 0%,
   category: "AE",
@@ -136,7 +127,6 @@
   code: code,
 )
 
-// B: Transferred (VAT)
 #let transferred(rate, grounds: none) = new(
   rate: rate,
   category: "B",
@@ -144,7 +134,6 @@
   grounds: grounds,
 )
 
-// C: Duty paid by supplier
 #let duty-paid(rate, grounds: none) = new(
   rate: rate,
   category: "C",
@@ -152,7 +141,6 @@
   grounds: grounds,
 )
 
-// D: Value Added Tax (VAT) margin scheme - travel agents
 #let margin-travel(rate, grounds: none) = new(
   rate: rate,
   category: "D",
@@ -160,7 +148,6 @@
   grounds: grounds,
 )
 
-// E: Exempt from tax
 #let exempt(grounds: none, code: none) = new(
   rate: 0%,
   category: "E",
@@ -169,7 +156,6 @@
   code: code,
 )
 
-// F: Value Added Tax (VAT) margin scheme - second-hand goods
 #let margin-second-hand(rate, grounds: none) = new(
   rate: rate,
   category: "F",
@@ -177,7 +163,6 @@
   grounds: grounds,
 )
 
-// G: Free export item, tax not charged
 #let export(grounds: none, code: none) = new(
   rate: 0%,
   category: "G",
@@ -186,7 +171,6 @@
   code: code,
 )
 
-// H: Higher rate
 #let higher-rate(rate, grounds: none) = new(
   rate: rate,
   category: "H",
@@ -194,7 +178,6 @@
   grounds: grounds,
 )
 
-// I: Value Added Tax (VAT) margin scheme - works of art
 #let margin-art(rate, grounds: none) = new(
   rate: rate,
   category: "I",
@@ -202,7 +185,6 @@
   grounds: grounds,
 )
 
-// J: Value Added Tax (VAT) margin scheme - collector’s items and antiques
 #let margin-antiques(rate, grounds: none) = new(
   rate: rate,
   category: "J",
@@ -210,7 +192,6 @@
   grounds: grounds,
 )
 
-// K: VAT exempt for EEA intra-community supply of goods and services
 #let intra-community(grounds: none, code: none) = new(
   rate: 0%,
   category: "K",
@@ -219,7 +200,6 @@
   code: code,
 )
 
-// L: Canary Islands general indirect tax (IGIC)
 #let canary-islands(rate, grounds: none) = new(
   rate: rate,
   category: "L",
@@ -227,7 +207,6 @@
   grounds: grounds,
 )
 
-// M: Tax for production, services and importation in Ceuta and Melilla (IPSI)
 #let ceuta-melilla(rate, grounds: none) = new(
   rate: rate,
   category: "M",
@@ -235,7 +214,6 @@
   grounds: grounds,
 )
 
-// N: Standard rate additional VAT
 #let standard-additional(rate, grounds: none) = new(
   rate: rate,
   category: "N",
@@ -243,7 +221,6 @@
   grounds: grounds,
 )
 
-// O: Services outside scope of tax
 #let outside-scope(grounds: none, code: none) = new(
   rate: 0%,
   category: "O",
@@ -252,7 +229,6 @@
   code: code,
 )
 
-// S: Standard rate
 #let vat(rate, grounds: none) = new(
   rate: rate,
   category: "S",
@@ -260,7 +236,6 @@
   grounds: grounds,
 )
 
-// Z: Zero rated goods
 #let zero(grounds: none) = new(
   rate: 0%,
   category: "Z",
@@ -268,10 +243,8 @@
   grounds: grounds,
 )
 
-// The tax of an item for which no tax is set anywhere (`tax: none` on the
-// invoice). The printed invoice treats it as zero rated (Z), but "no tax" does
-// not say which of the 0% categories (Z, E, O, ...) applies, so it is marked
-// `implicit` and an e-invoice must not declare it as a zero rated supply.
+// The tax of an item without any tax (`tax: none`): printed as zero rated, but
+// `implicit`, as it does not say which 0% category applies.
 #let implicit-zero() = (..zero(), label: "implicit-zero", implicit: true)
 
 // A tax for messages, e.g. "19% S".
@@ -281,14 +254,11 @@
     + tax.category
 )
 
-// Whether a tax is the placeholder of `implicit-zero`.
 #let is-implicit(tax) = (
   type(tax) == dictionary and tax.at("implicit", default: false) == true
 )
 
-// A hand-built tax dictionary, normalized like the constructors: the rate
-// becomes a decimal ratio and missing keys get their defaults. Other keys
-// (such as `implicit`) are kept.
+// A hand-built tax with the defaults of `new`; other keys are kept.
 #let normalize(value) = (
   value
     + new(
@@ -318,9 +288,6 @@
   }
 }
 
-// Resolves the tax input of a component (`name` is used in error messages):
-// a ratio is mapped to a tax by the region of the locale, a dictionary is
-// normalized, `none` becomes `implicit-zero` and `auto` stays `auto`.
 #let resolve(ctx, value, name) = {
   if type(value) == ratio {
     let infer-tax = (
@@ -339,18 +306,15 @@
 
 // --- Exemption grounds ---
 
-// Whether exemption grounds carry any text.
 #let has-grounds(grounds) = grounds not in (none, "", [], [ ])
 
-// The text an exemption ground is compared by, so that the same reason given
-// as a string and as content is listed once.
+// Grounds are compared by text: a string and equal content are listed once.
 #let grounds-key(grounds) = {
   let text = coercion.to-string(grounds)
   if type(text) == str { text.trim() } else { repr(grounds) }
 }
 
-// The distinct exemption grounds of a tax. The virtual item of a bundle can
-// carry several (`grounds-list`), every other tax at most one (`grounds`).
+// The virtual item of a bundle can carry several grounds (`grounds-list`).
 #let grounds-of(tax) = {
   let list = tax.at("grounds-list", default: none)
   if type(list) == array { return list }
@@ -358,7 +322,6 @@
   if has-grounds(grounds) { (grounds,) } else { () }
 }
 
-// Adds the grounds of `more` that are not in `list` yet (compared by text).
 #let merge-grounds(list, more) = {
   let keys = list.map(grounds-key)
   for grounds in more {
@@ -371,10 +334,8 @@
   list
 }
 
-// The note of the language strings (`tax-exemption`) for a VAT category that
-// needs an exemption reason (BR-AE-10, BR-IC-10, BR-G-10, BR-O-10) when its
-// items give no grounds, or `none` for the other categories (and without a
-// category).
+// The default exemption note of a category that needs a reason (BR-AE-10,
+// BR-IC-10, BR-G-10, BR-O-10), else `none`.
 #let default-grounds(category, strings) = {
   if type(category) != str { return none }
   let key = (
@@ -387,9 +348,7 @@
   strings.at("tax-exemption", default: (:)).at(key, default: none)
 }
 
-// The distinct VAT exemption reason codes of a tax (BT-121): the virtual item
-// of a bundle and a VAT group can carry several (`codes`), every other tax at
-// most one (`code`).
+// The exemption reason codes (BT-121) of a tax.
 #let codes-of(tax) = {
   let list = tax.at("codes", default: none)
   if type(list) == array { return list }
@@ -397,7 +356,6 @@
   if code == none { () } else { (code,) }
 }
 
-// Adds the codes of `more` that are not in `list` yet.
 #let merge-codes(list, more) = {
   for code in more {
     if code not in list { list.push(code) }
@@ -405,9 +363,7 @@
   list
 }
 
-// All exemption grounds of a VAT category as one value: `none`, the single
-// ground, or every distinct ground joined with "; " (EN 16931 allows one
-// exemption reason, BT-120, per VAT category).
+// EN 16931 allows one exemption reason (BT-120) per VAT category.
 #let join-grounds(list) = {
   if list.len() == 0 { none } else if list.len() == 1 { list.first() } else {
     list.join("; ")

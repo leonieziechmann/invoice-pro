@@ -18,9 +18,7 @@
   },
 )
 
-// Draws the bank details. `bank-details` prepares the view (see there): the
-// IBAN and BIC in electronic format, and the EPC-QR code as its payload or
-// the problems that prevent it.
+// Draws the bank details from the view `bank-details` prepares.
 #let render-bank-details(ctx, view) = {
   let strings = ctx.locale.strings
   let bd-str = strings.bank-details

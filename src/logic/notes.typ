@@ -1,14 +1,8 @@
-// The notes of an invoice (`invoice(notes: ..)`): texts about the invoice as
-// a whole, printed below the line items and written into the e-invoice
-// (BT-22, with the subject code BT-21).
+// The notes of an invoice (`invoice(notes: ..)`), printed below the line
+// items and written into the e-invoice (BT-22, subject code BT-21).
 
-/// Normalizes the `notes` of an invoice: a text, or an array of texts and
-/// dictionaries `(text: .., subject-code: ..)`, whose optional subject code
-/// (UNTDID 4451, e.g. `"AAI"` for general information or `"REG"` for
-/// regulatory information) classifies the note in the e-invoice. Panics for
-/// any other value.
-///
-/// Returns an array of `(text: str | content, subject-code: none | str)`.
+/// Normalizes the `notes` of an invoice, a text or an array of texts and
+/// `(text: .., subject-code: ..)` (UNTDID 4451), into such dictionaries.
 ///
 /// -> array
 #let normalize-notes(notes) = {

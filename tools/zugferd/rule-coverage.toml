@@ -2,9 +2,9 @@
 #
 # tools/zugferd/rule_coverage.py collects the rule ids of every profile from
 # the pinned artefacts of Mustang and KoSIT and fails on any id without a
-# class (see tests/TESTING.md, "Rule Coverage"). The write guard settles most
-# of them (`compiled`, `unreachable`), derived from gen_guard.py; this file
-# classifies the others:
+# class (see tests/TESTING.md, "Rule Coverage"). The compiler of the tables
+# of the test oracle (gen_guard.py) settles most of them (`compiled`,
+# `unreachable`); this file classifies the others:
 #
 #   [[rule]]
 #   ids = ["BR-XX", ..]         rule ids as the validators report them
@@ -21,18 +21,18 @@
 #                 header). With `reported-as`, invoice-pro reports a related
 #                 rule that the validators report for the same invoice as
 #                 well.
-#   compiled      the write guard enforces the rule, although KoSIT's
-#                 version of it differs from Mustang's (the reason says why
-#                 the guard covers it)
+#   compiled      the test oracle checks the rule on the XML of every test
+#                 invoice, although KoSIT's version of it differs from
+#                 Mustang's (the reason says why the oracle covers it)
 #   construction  the builder cannot produce the violation
 #   unreachable   the rule cannot fire on an XML invoice-pro writes
 #   open          not handled yet (the target is none; the work list
 #                 OPEN_WORK_LIST of rule_coverage.py can only become shorter)
 #
-# invoice-pro's own rules are listed at the end ([ip."IP-.."]) with their
-# level, what they check, their basis and their tests, and so are the
-# official rule ids src/ names that no parity fixture shows
-# ([[without-fixture]]).
+# invoice-pro's own rules, those the package reports, are listed at the end
+# ([ip."IP-.."]) with their level, what they check, their basis and their
+# tests, and so are the official rule ids src/ and the rule registry name
+# that no parity fixture shows ([[without-fixture]]).
 
 # ======================================================================
 # fixture: reported under the rule's own id
@@ -65,7 +65,7 @@ ids = [
 class = "fixture"
 
 # The country of origin of an item (BT-159), from EN 16931 on; BASIC has no
-# element for it (the guard derives `unreachable` there).
+# element for it (gen_guard.py derives `unreachable` there).
 [[rule]]
 ids = ["BR-CL-15"]
 class = "fixture"
@@ -127,8 +127,8 @@ class = "fixture"
 
 # The rate on allowances (-06) and charges (-07) and the VAT amount of the
 # breakdown (-09), which BASIC WL reports for the VAT groups of its items.
-# Elsewhere, invoice-pro reports the rate of the lines (-05), and the guard
-# enforces these rules (derived as `compiled`).
+# Elsewhere, invoice-pro reports the rate of the lines (-05), and the test
+# oracle checks these rules (derived as `compiled`).
 [[rule]]
 ids = [
   "BR-S-06", "BR-S-07",
@@ -146,8 +146,8 @@ profiles = ["basic-wl"]
 # The code lists of the Factur-X Schematron, which MINIMUM and BASIC WL apply
 # alone (a code none of its lists has); in BASIC and EN 16931, a code that the
 # lists of EN 16931 have, but the Factur-X list lacks (e.g. the scheme 0219,
-# which XRechnung accepts, BR-CL-25--pass.typ). Elsewhere the guard enforces
-# these rules (derived as `compiled`).
+# which XRechnung accepts, BR-CL-25--pass.typ). Elsewhere the test oracle
+# checks these rules (derived as `compiled`).
 [[rule]]
 ids = ["FX-SCH-A-000031", "FX-SCH-A-000036", "FX-SCH-A-000040"]
 class = "fixture"
@@ -217,23 +217,23 @@ class = "fixture"
 profiles = ["basic-wl"]
 
 # ======================================================================
-# compiled: the guard enforces Mustang's version, KoSIT's differs
+# compiled: the test oracle checks Mustang's version, KoSIT's differs
 # ======================================================================
 
 [[rule]]
 ids = ["BR-20"]
 class = "compiled"
 profiles = ["en16931", "xrechnung"]
-reason = """CEN 1.3.16 in KoSIT tests the country code for text (normalize-space); the guard \
-enforces the element and the country code list (BR-CL-14), which an empty code fails as well. A tax \
+reason = """CEN 1.3.16 in KoSIT tests the country code for text (normalize-space); the test oracle \
+checks the element and the country code list (BR-CL-14), which an empty code fails as well. A tax \
 representative without `country` gets the country of the locale."""
 
 [[rule]]
 ids = ["BR-AG-06", "BR-AG-07"]
 class = "compiled"
 profiles = ["en16931", "xrechnung"]
-reason = """CEN 1.3.16 in KoSIT allows IPSI (M) at 0 % on an allowance or charge; the guard enforces \
-the rate above 0 of CEN 1.3.12 in Mustang, which is stricter (as for BR-AG-05, see \
+reason = """CEN 1.3.16 in KoSIT allows IPSI (M) at 0 % on an allowance or charge; the test oracle \
+checks the rate above 0 of CEN 1.3.12 in Mustang, which is stricter (as for BR-AG-05, see \
 validator-differences.toml)."""
 
 [[rule]]
@@ -241,22 +241,22 @@ ids = ["BR-DEC-01", "BR-DEC-05", "BR-DEC-24", "BR-DEC-27"]
 class = "compiled"
 profiles = ["en16931", "xrechnung"]
 reason = """CEN 1.3.16 in KoSIT tests the first `ram:ActualAmount` of an allowance or charge only; \
-the guard enforces the decimals of every one (and the schema allows one)."""
+the test oracle checks the decimals of every one (and the schema allows one)."""
 
 [[rule]]
 ids = ["BR-DEC-23"]
 class = "compiled"
 profiles = ["en16931", "xrechnung"]
 reason = """CEN 1.3.12 in Mustang names the path `ram:SpecifiedTradeSettlement`, which never \
-matches; the guard compiles the corrected path, which CEN 1.3.16 in KoSIT has."""
+matches; the tables of the test oracle compile the corrected path, which CEN 1.3.16 in KoSIT has."""
 
 [[rule]]
 ids = ["CII-DT-001", "CII-DT-002", "CII-DT-003", "CII-DT-004"]
 class = "compiled"
 profiles = ["en16931", "xrechnung"]
 reason = """CEN 1.3.16 in KoSIT tests the attribute on four identifiers (BT-24, BT-1, BT-126, \
-BT-155); the guard enforces Mustang's test on every element whose name ends in ID, which includes \
-them."""
+BT-155); the test oracle checks Mustang's test on every element whose name ends in ID, which \
+includes them."""
 
 # ======================================================================
 # construction: the builder cannot produce the violation
@@ -305,7 +305,7 @@ ids = ["BR-CO-18"]
 class = "construction"
 profiles = ["basic", "en16931", "xrechnung"]
 reason = """The VAT breakdown has a group for the VAT category of every line, and an invoice without \
-lines breaks BR-16, which invoice-pro reports (with the guard's finding of the missing breakdown)."""
+lines breaks BR-16, which invoice-pro reports."""
 evidence = [
   "src/zugferd/model.typ: the VAT breakdown (taxes)",
   "tools/zugferd/corpus/rules/BR-16.typ",
@@ -354,13 +354,13 @@ class = "construction"
 reason = """The model takes the totals and the VAT breakdown the invoice prints and adds up the \
 sums of the lines, allowances and charges it writes (BT-106 to BT-108); the rules check that these \
 add up to the printed amounts before the XML is written (IP-PRINT-01, IP-CALC-02, BR-CO-17 and \
-BR-*-08, a failure there is a bug), and `zugferd-strict` checks the sums of these rules on the XML. \
-Every invoice of the corpus is checked by both validators."""
+BR-*-08, a failure there is a bug), and the test oracle checks the sums of these rules on the XML \
+of every test invoice. Every invoice of the corpus is checked by both validators."""
 evidence = [
   "src/zugferd/model.typ: totals and taxes",
   "src/zugferd/rules/engine.typ: the consistency checks of the totals (IP-PRINT-01, BR-CO-17 and BR-*-08)",
   "src/zugferd/rules/equivalence-detail.typ: the printed amounts of every VAT group (IP-CALC-02)",
-  "src/zugferd/guard/strict.typ: BR-CO-10 to BR-CO-17 and BR-*-08 on the XML (`zugferd-strict`)",
+  "tools/zugferd/guard/strict.typ: BR-CO-10 to BR-CO-17 and BR-*-08 on the XML of every test invoice (the test oracle)",
   "tools/zugferd/corpus/gen.py: the legal population, AGREE_VALID by the hard gate",
 ]
 
@@ -418,9 +418,9 @@ evidence = [
 [[rule]]
 ids = ["BR-TMP-7"]
 class = "construction"
-reason = """The builder writes every date with the format 102 as YYYYMMDD, and the guard checks each \
-one (IP-GUARD-08)."""
-evidence = ["src/zugferd/build.typ: _date", "src/zugferd/guard/write.typ"]
+reason = """The builder writes every date with the format 102 as YYYYMMDD, and the test oracle \
+checks each one on the XML of every test invoice (its finding IP-GUARD-08)."""
+evidence = ["src/zugferd/build.typ: _date", "tools/zugferd/guard/write.typ"]
 
 [[rule]]
 ids = ["CII-DT-005", "CII-DT-006", "CII-DT-007"]
@@ -444,8 +444,9 @@ ids = [
 ]
 class = "construction"
 reason = """The builder writes these elements at most once (one entry of a dictionary each), and the \
-guard rejects an element more often than the schema allows (IP-GUARD-03)."""
-evidence = ["src/zugferd/build.typ", "src/zugferd/guard/write.typ"]
+test oracle rejects an element more often than the schema allows on the XML of every test invoice \
+(its finding IP-GUARD-03)."""
+evidence = ["src/zugferd/build.typ", "tools/zugferd/guard/write.typ"]
 
 [[rule]]
 ids = ["PEPPOL-EN16931-R054"]
@@ -604,18 +605,19 @@ with a base amount (BT-93) or percentage (BT-94)."""
 # without-fixture: official rule ids of src/ that no fixture shows
 # ======================================================================
 #
-# Every official rule id that a file of src/ names outside the write guard
-# (src/zugferd/guard/) has a parity fixture that shows invoice-pro report
-# it, or an entry here that says why there is none. An id used for another
-# condition than the official rule is a bug: the validators do not report it
-# for such an invoice, so no fixture can show it. Fix the id, then remove it
-# here (the gate names every entry that no file of src/ names any more).
+# Every official rule id that a file of src/ or the rule registry
+# (tools/zugferd/registry.json) names has a parity fixture that shows
+# invoice-pro report it, or an entry here that says why there is none. An id
+# used for another condition than the official rule is a bug: the validators
+# do not report it for such an invoice, so no fixture can show it. Fix the
+# id, then remove it here (the gate names every entry that neither src/ nor
+# the rule registry names any more).
 
 [[without-fixture]]
 ids = ["BR-48"]
 reason = """Cannot fire: every VAT constructor states a rate (0 % by default) and the model writes \
-the rate of every VAT breakdown. The registry checks it as a model defect and names the input; the \
-write guard checks the XML (FX-SCH-A-000050)."""
+the rate of every VAT breakdown. The rules check it as a model defect and name the input; the test \
+oracle checks the XML of every test invoice (FX-SCH-A-000050)."""
 
 [[without-fixture]]
 ids = ["BR-03"]
@@ -655,8 +657,7 @@ construction entry)."""
 # level    "error", "warning" or "error or warning"
 # summary  what the rule checks
 # basis    the law or the requirement it enforces
-# tests    tests that name the rule (the rules of the guard are tested by
-#          their kind of finding)
+# tests    tests that name the rule
 
 [ip."IP-PROFILE-01"]
 level = "warning"
@@ -929,87 +930,3 @@ summary = "Prepayments above the invoice total, so that the amount due (BT-115) 
 basis = """Plausibility: EN 16931 BR-CO-16 (amount due = total - paid amount) holds, but a negative \
 amount due asks the seller to pay the difference."""
 tests = ["tests/zugferd/validate/test.typ"]
-
-[ip."IP-GUARD-00"]
-level = "error"
-summary = "Summarizes the guard's findings next to errors of the validator."
-basis = "The XML write guard (tools/zugferd/gen_guard.py): the schema and Schematron of the profile."
-tests = ["tests/zugferd/guard/test.typ"]
-
-[ip."IP-GUARD-01"]
-level = "error"
-summary = "An element the profile's schema does not know at its position, or text where it expects elements."
-basis = "The XSD of the profile (Factur-X 1.0.07)."
-tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
-
-[ip."IP-GUARD-02"]
-level = "error"
-summary = "An element out of the order of the schema."
-basis = "The XSD of the profile (Factur-X 1.0.07)."
-tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
-
-[ip."IP-GUARD-03"]
-level = "error"
-summary = "An element more often than the schema or the Schematron allows."
-basis = "The XSD and Schematron of the profile."
-tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
-
-[ip."IP-GUARD-04"]
-level = "error"
-summary = "A required element that is missing or has no text."
-basis = "The XSD and Schematron of the profile."
-tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
-
-[ip."IP-GUARD-05"]
-level = "error"
-summary = "An element or attribute the Factur-X Schematron of the profile marks as not used."
-basis = "The Factur-X 1.0.07 Schematron of the profile (its reports without id)."
-tests = ["tests/zugferd/guard/test.typ"]
-
-[ip."IP-GUARD-06"]
-level = "error"
-summary = "An attribute the schema does not allow, or a required one that is missing."
-basis = "The XSD of the profile (Factur-X 1.0.07)."
-tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
-
-[ip."IP-GUARD-07"]
-level = "error"
-summary = "A value outside its lexical form or a code outside its list, where no official rule says so."
-basis = "The XSD data types and the code lists of the profile."
-tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
-
-[ip."IP-GUARD-08"]
-level = "error"
-summary = "A date in the format 102 that names no day of the calendar."
-basis = "UNTDID 2379 format 102 (CCYYMMDD)."
-tests = ["tests/zugferd/guard/test.typ", "tools/zugferd/mutate.py"]
-
-[ip."IP-GUARD-09"]
-level = "error"
-summary = "An invalid name, a missing namespace declaration, or not exactly one root element."
-basis = "XML 1.0 and Namespaces in XML: the attachment must be well-formed."
-tests = ["tests/zugferd/guard/test.typ"]
-
-[ip."IP-GUARD-10"]
-level = "error"
-summary = "The XML read back states a business term with another value than the data model of the invoice."
-basis = "The syntax binding of EN 16931 to CII (src/zugferd/guard/bindings.json): the XML states the invoice data."
-tests = ["tests/zugferd/roundtrip/test.typ", "tools/zugferd/test_roundtrip.py"]
-
-[ip."IP-GUARD-11"]
-level = "error"
-summary = "The XML leaves out a business term the data model of the invoice has, although the profile can state it."
-basis = "The syntax binding of EN 16931 to CII and the XSD and Schematron of the profile (src/zugferd/guard/bindings.json)."
-tests = ["tests/zugferd/roundtrip/test.typ", "tools/zugferd/test_roundtrip.py"]
-
-[ip."IP-GUARD-12"]
-level = "error"
-summary = "The XML states a business term the data model of the invoice does not have."
-basis = "The syntax binding of EN 16931 to CII (src/zugferd/guard/bindings.json)."
-tests = ["tests/zugferd/roundtrip/test.typ"]
-
-[ip."IP-GUARD-13"]
-level = "error"
-summary = "An element, or the entries of a repeated group (e.g. the lines), occur more or less often than the data model has."
-basis = "The syntax binding of EN 16931 to CII (src/zugferd/guard/bindings.json): one element per value."
-tests = ["tests/zugferd/roundtrip/test.typ"]

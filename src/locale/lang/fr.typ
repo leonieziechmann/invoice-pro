@@ -19,12 +19,10 @@
 /// French language overrides.
 #let fr = (
   meta: (
-    /// The ISO 639-1 language code of the file.
     lang: "fr",
     resolve-plural: resolve-plural,
   ),
 
-  /// Designations for document types
   document: (
     invoice: "Facture",
     credit-note: "Avoir",
@@ -34,13 +32,11 @@
     self-billed: "Autofacturation",
   ),
 
-  /// Address-related designations
   address: (
     recipient: "Destinataire",
     sender: "Expéditeur·rice",
   ),
 
-  /// Designations for reference numbers and metadata
   reference: (
     tax-number: "Numéro fiscal",
     invoice-number: "N° de facture",
@@ -68,7 +64,6 @@
     payee: "Bénéficiaire du paiement",
   ),
 
-  /// Column headers and labels for the line-items table
   line-items: (
     position: "Pos.",
     description: "Désignation",
@@ -87,7 +82,6 @@
     origin: "Pays d'origine",
   ),
 
-  /// Labels for the summary section (footer of the table)
   summary: (
     sum: "Sous-total",
     vat-tax: "TVA",
@@ -98,7 +92,6 @@
     amount-due: "Net à payer",
   ),
 
-  /// Global informational sentences
   global-info: (
     tax-statement: (
       tax-text,
@@ -138,7 +131,6 @@
     "cubic-metre": "mètre cube",
   ),
 
-  /// Designations for bank and payment details
   bank-details: (
     account-holder: "Titulaire du compte",
     bank: "Banque",
@@ -147,7 +139,6 @@
     reference: "Référence",
   ),
 
-  /// Texts of the payment means besides the bank details
   payment-means: (
     method: "Mode de paiement",
     transfer: "Virement",
@@ -178,7 +169,6 @@
     ) => [Nous vous avons versé le montant de *#sum*#if date != none [ le #date].],
   ),
 
-  /// Text blocks for payment terms
   payment: (
     text: (
       sum,
@@ -224,17 +214,14 @@
     deadline-soon-credit: "sans délai",
   ),
 
-  /// Greetings and signature area
   signature: (
     closing: "Cordialement,",
   ),
 
-  /// Standard legal texts (Explanation for the recipient)
   legal: (
     vat-exemption: "La TVA n'est pas facturée en raison de l'exonération pour les petites entreprises.",
   ),
 
-  /// Error and warning messages for developers
   errors: (
     name-missing: "Le nom est manquant !",
     address-missing: "L'adresse est manquante !",

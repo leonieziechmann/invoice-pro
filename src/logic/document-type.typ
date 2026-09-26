@@ -1,18 +1,7 @@
-// The document type of an invoice (`invoice(document-type: ..)`, BT-3 of the
-// e-invoice): the named types and the UNTDID 1001 codes the e-invoice
-// profiles accept, with what each one means for the printed document, its
-// default title and who pays whom.
+// The document type of an invoice (`invoice(document-type: ..)`, BT-3): what
+// it means for the title and for who pays whom.
 
-/// The document types `invoice` names, with their UNTDID 1001 code (BT-3).
-///
-/// - `"invoice"`: a commercial invoice (380).
-/// - `"credit-note"`: a credit note (381); its amounts are credited to the
-///   buyer and stated as positive amounts.
-/// - `"corrected"`: a corrected invoice (384), which replaces the preceding
-///   invoice (`preceding-invoice-nr`).
-/// - `"prepayment"`: a prepayment invoice (386) for an advance payment.
-/// - `"self-billed"`: a self-billed invoice (389), issued by the buyer (the
-///   sender of the document) for a supply of the seller (its recipient).
+/// The named document types and their UNTDID 1001 code (BT-3).
 #let named-types = (
   invoice: "380",
   credit-note: "381",
@@ -21,12 +10,8 @@
   self-billed: "389",
 )
 
-// The codes of UNTDID 1001 that EN 16931 (BR-CL-01) and every Factur-X
-// profile accept for BT-3, by the kind of document they are:
-// - "invoice", "corrected", "prepayment": the buyer pays the seller,
-// - "credit-note": the amounts are credited to the buyer,
-// - "self-billed": the buyer issues the invoice for the seller,
-// - "self-billed-credit-note": the buyer issues a credit note for the seller.
+// The UNTDID 1001 codes that EN 16931 (BR-CL-01) and every Factur-X profile
+// accept for BT-3, by the kind of document.
 #let _kinds = (
   "71": "invoice",
   "80": "invoice",
@@ -85,28 +70,14 @@
   "935": "invoice",
 )
 
-/// Whether a text is a UNTDID 1001 code that the e-invoice accepts as
-/// document type (BT-3).
+/// Whether a text is a UNTDID 1001 code the e-invoice accepts (BT-3).
 ///
 /// -> bool
 #let known-code(code) = type(code) == str and code in _kinds
 
-/// Resolves the `document-type` of an invoice: `auto` (an invoice), one of
-/// the `named-types`, or a UNTDID 1001 code (e.g. `"326"` for a partial
-/// invoice, also as integer). Panics for any other value.
-///
-/// Returns a dictionary with
-/// - `input`: the value as given (`auto` if not given),
-/// - `name`: the name of a named type, else `none`,
-/// - `code`: the UNTDID 1001 code (BT-3),
-/// - `title`: the key of the default title in `strings.document`,
-/// - `credit`: whether the amounts are credited to the buyer (credit notes),
-/// - `self-billed`: whether the buyer issues the document, i.e. the sender
-///   of the document is the buyer and its recipient the seller,
-/// - `sender-pays`: whether the sender of the document pays the amount to
-///   its recipient (credit notes and self-billed invoices),
-/// - `prepayment`: whether it is a prepayment invoice (386), which asks for
-///   an advance payment before the supply.
+/// Resolves the `document-type` of an invoice: `auto` (an invoice), a named
+/// type or a UNTDID 1001 code, also as integer; panics for any other value.
+/// `title` is the key of the default title in `strings.document`.
 ///
 /// -> dictionary
 #let resolve-document-type(value) = {
@@ -145,19 +116,16 @@
   )
 }
 
-/// Whether the sender of the document pays the amount to its recipient: a
-/// credit note refunds the buyer, and the buyer issues a self-billed invoice
-/// to pay the seller. `document` is the resolved `document-type` of the
-/// context (`none` for an invoice).
+/// Whether the sender of the document pays its recipient (a credit note, a
+/// self-billed invoice); `document` is the resolved `document-type` or `none`.
 ///
 /// -> bool
 #let sender-pays(document) = (
   type(document) == dictionary and document.at("sender-pays", default: false)
 )
 
-/// The default title of a document in the language of `strings` (the
-/// language strings of the locale): the title of its type, or the title of
-/// an invoice if the language has none for it.
+/// The default title of a document in the language of `strings`, or that of
+/// an invoice if the language has none for its type.
 ///
 /// -> str | content
 #let document-title(document, strings) = {

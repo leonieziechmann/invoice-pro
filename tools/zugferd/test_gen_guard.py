@@ -1,12 +1,14 @@
-"""Unit tests of the generator of the XML write guard (gen_guard.py).
+"""Unit tests of the generator of the tables of the XML write guard, the
+test oracle (tools/zugferd/guard/), and of the code lists of the validator
+(src/zugferd/code-lists.json): gen_guard.py.
 
   python3 -m unittest discover -s tools/zugferd -p 'test_*.py'
 
 The tests of the parts run on small synthetic schemas and rules and need
 only lxml. With the Mustang CLI jar 2.14.0 ($MUSTANG_JAR) and the KoSIT
-XRechnung configuration ($KOSIT_CONFIG), the tables are also regenerated:
+XRechnung configuration ($KOSIT_CONFIG), the files are also regenerated:
 they must equal the committed ones (drift test), come out the same twice,
-and stay within the size budget.
+and stay within their size budgets.
 """
 
 import io
@@ -568,8 +570,9 @@ class NewestSchematron(unittest.TestCase):
 
 
 class ListsOutput(unittest.TestCase):
-    """lists.json: every code list in lines of its sorted codes, the tables
-    of the VAT category rules, and the lists of the validator."""
+    """lists.json: every code list of the tables in lines of its sorted
+    codes, and the tables of the VAT category rules; code-lists.json: the
+    code lists of the validator, which the package ships."""
 
     def test_layout(self):
         country = frozenset(f"C{i:02}" for i in range(60))
@@ -583,15 +586,9 @@ class ListsOutput(unittest.TestCase):
             }
             vat = {(("AE", checks), ("O", (("r", None, "BR-O-05"),))): "vat-line"}
 
-        validator = {
-            "country": {"every": "country-2", "factur-x": "country"},
-            "icd": {"every": "country", "newer": [f"02{i:02}" for i in range(31, 49)]},
-            # Any other set of codes of an entry (e.g. codes a newer list has
-            # withdrawn) takes lines as well.
-            "eas": {"every": "country", "withdrawn": [f"99{i:02}" for i in range(20)]},
-        }
-        text = g.emit_lists(Names(), validator)
+        text = g.emit_lists(Names())
         data = json.loads(text)
+        self.assertEqual(list(data), ["generated", "lists", "vat-rules"])
         self.assertEqual(data["generated"], g.LISTS_NOTICE)
         # Lines of at most 75 characters, the codes sorted; one code longer
         # than a line stays whole.
@@ -600,15 +597,6 @@ class ListsOutput(unittest.TestCase):
         self.assertNotIn("C01", " ".join(data["lists"]["country-2"]).split(" "))
         self.assertEqual(data["lists"]["guideline"], ["urn:" + "x" * 90])
         self.assertEqual(data["vat-rules"], {"vat-line": {"AE": [["r", 0, "BR-AE-05"]], "O": [["r", None, "BR-O-05"]]}})
-        self.assertEqual(data["validator"]["country"], {"every": "country-2", "factur-x": "country"})
-        self.assertEqual(data["validator"]["icd"]["newer"], [
-            "0231 0232 0233 0234 0235 0236 0237 0238 0239 0240 0241 0242 0243 0244 0245",
-            "0246 0247 0248",
-        ])
-        self.assertEqual(data["validator"]["eas"], {"every": "country", "withdrawn": [
-            "9900 9901 9902 9903 9904 9905 9906 9907 9908 9909 9910 9911 9912 9913 9914",
-            "9915 9916 9917 9918 9919",
-        ]})
         # A list takes lines of its own, so that a change of a code reads as
         # a diff of its line.
         self.assertIn('"country":[\n"C00 C01 ', text)
@@ -618,6 +606,72 @@ class ListsOutput(unittest.TestCase):
             path.write_text(text, encoding="utf-8")
             self.assertTrue(g.is_generated(path))
 
+    def test_the_layout_of_the_code_lists(self):
+        every = frozenset(f"C{i:02}" for i in range(60))
+
+        class Names:
+            names = {
+                every | {"X1", "X2"}: "country",
+                every: "country-2",
+                every | {"X3"}: "country-3",
+            }
+
+        validator = {
+            "country": {
+                "every": "country-2",
+                "factur-x": "country",
+                "xrechnung": "country-3",
+                "newer": [f"02{i:02}" for i in range(31, 49)],
+                "withdrawn": [f"99{i:02}" for i in range(20)],
+            },
+            # The list of a validation that is `every` has no codes beyond it.
+            "unit": {"every": "country-2", "factur-x": "country-2"},
+        }
+        text = g.emit_code_lists(Names(), validator)
+        data = json.loads(text)
+        self.assertEqual(list(data), ["generated", "country", "unit"])
+        self.assertEqual(data["generated"], g.CODE_LISTS_NOTICE)
+        country = data["country"]
+        self.assertEqual(list(country), ["every", "factur-x", "xrechnung", "newer", "withdrawn"])
+        # `every` in full: lines of at most 75 characters of its sorted codes.
+        self.assertEqual(" ".join(country["every"]).split(" "), sorted(every))
+        self.assertTrue(all(len(line) <= 75 for line in country["every"]))
+        # The lists of the validations: the codes they have beyond `every`,
+        # which code-lists.typ adds to it.
+        self.assertEqual(country["factur-x"], ["X1 X2"])
+        self.assertEqual(country["xrechnung"], ["X3"])
+        self.assertEqual(data["unit"], {"every": country["every"], "factur-x": []})
+        # The codes of `newer` and `withdrawn`, in lines as well.
+        self.assertEqual(country["newer"], [
+            "0231 0232 0233 0234 0235 0236 0237 0238 0239 0240 0241 0242 0243 0244 0245",
+            "0246 0247 0248",
+        ])
+        self.assertEqual(country["withdrawn"], [
+            "9900 9901 9902 9903 9904 9905 9906 9907 9908 9909 9910 9911 9912 9913 9914",
+            "9915 9916 9917 9918 9919",
+        ])
+        # Every name takes a line of its own, so that a change of its codes
+        # reads as a diff of its line.
+        lines = text.splitlines()
+        self.assertEqual(len(lines), 5)
+        self.assertTrue(lines[2].startswith('"country":{"every":["C00 C01 '), lines[2])
+        self.assertTrue(lines[3].startswith('"unit":{'), lines[3])
+        # The drift test knows it as a file of the generator.
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "code-lists.json"
+            path.write_text(text, encoding="utf-8")
+            self.assertTrue(g.is_generated(path))
+
+    def test_a_list_of_a_validation_holds_every(self):
+        # The validator accepts a code of `every` in every profile: a list of
+        # a validation that lacks one cannot be written as codes beyond it.
+        class Names:
+            names = {frozenset("AB"): "x", frozenset("AC"): "x-2"}
+
+        with self.assertRaises(g.GenError) as caught:
+            g.emit_code_lists(Names(), {"x": {"every": "x", "xrechnung": "x-2"}})
+        self.assertIn("`xrechnung` lacks codes of `every`", str(caught.exception))
+
     def test_codes_with_whitespace_are_refused(self):
         class Names:
             names = {frozenset({"A B"}): "bad"}
@@ -625,16 +679,18 @@ class ListsOutput(unittest.TestCase):
 
         with self.assertRaises(g.GenError):
             g.emit_lists(Names())
+        with self.assertRaises(g.GenError):
+            g.emit_code_lists(Names(), {"bad": {"every": "bad"}})
 
         class Valid:
             names = {frozenset({"A"}): "good"}
             vat = {}
 
-        # The codes of a validator entry as well: lists.typ joins them with
-        # spaces.
+        # The codes of the validator's own sets as well: code-lists.typ joins
+        # them with spaces.
         with self.assertRaises(g.GenError):
-            g.emit_lists(Valid(), {"good": {"every": "good", "newer": ["B C"]}})
-        g.emit_lists(Valid(), {"good": {"every": "good", "newer": ["B"]}})
+            g.emit_code_lists(Valid(), {"good": {"every": "good", "newer": ["B C"]}})
+        g.emit_code_lists(Valid(), {"good": {"every": "good", "newer": ["B"]}})
 
 
 class ValidatorLists(unittest.TestCase):
@@ -778,8 +834,9 @@ KOSIT = os.environ.get("KOSIT_CONFIG")
     "needs the Mustang CLI jar 2.14.0 ($MUSTANG_JAR) and the KoSIT XRechnung configuration ($KOSIT_CONFIG)",
 )
 class Tables(unittest.TestCase):
-    """The committed tables are the generator's (the drift test of
-    `gen_guard.py --check`), deterministically, within the size budget."""
+    """The committed tables and code lists are the generator's (the drift
+    test of `gen_guard.py --check`), deterministically, within their size
+    budgets."""
 
     @classmethod
     def setUpClass(cls):
@@ -792,30 +849,46 @@ class Tables(unittest.TestCase):
         cls.tmp.cleanup()
 
     def test_no_drift(self):
+        # The package ships the code lists of the validator; the tables of
+        # the guard stay with the tools.
+        self.assertEqual(g.OUTPUTS["code-lists.json"], g.REPO / "src" / "zugferd" / "code-lists.json")
+        self.assertEqual(
+            {path.parent for name, path in g.OUTPUTS.items() if name != "code-lists.json"},
+            {g.REPO / "tools" / "zugferd" / "guard"},
+        )
+        self.assertEqual(sorted(p.name for p in self.fresh.iterdir()), sorted(g.OUTPUT_FILES))
         self.assertEqual(g.compare(self.fresh), [])
 
     def test_drift_is_found(self):
         with tempfile.TemporaryDirectory() as committed:
+            committed = Path(committed)
             for name in g.OUTPUT_FILES:
-                (Path(committed) / name).write_bytes((self.fresh / name).read_bytes())
+                (committed / name).write_bytes((self.fresh / name).read_bytes())
             self.assertEqual(g.compare(self.fresh, committed), [])
-            lists = Path(committed) / "lists.json"
-            lists.write_text(lists.read_text(encoding="utf-8").replace(" DE ", " "), encoding="utf-8")
-            (Path(committed) / "old.typ").write_text(g.HEADER, encoding="utf-8")
-            (Path(committed) / "old.json").write_text(
+            for name in ("code-lists.json", "lists.json"):
+                path = committed / name
+                path.write_text(path.read_text(encoding="utf-8").replace(" DE ", " "), encoding="utf-8")
+            (committed / "old.typ").write_text(g.HEADER, encoding="utf-8")
+            (committed / "old.json").write_text(
                 "{\n" + f'"generated":{g.json_value(g.JSON_NOTICE)},' + "\n}", encoding="utf-8"
             )
             diffs = g.compare(self.fresh, committed)
-            self.assertEqual(len(diffs), 2)
-            self.assertIn("committed/lists.json", diffs[0])
-            self.assertIn("no longer writes: old.json, old.typ", diffs[1])
+            self.assertEqual(len(diffs), 3)
+            self.assertIn("committed/code-lists.json", diffs[0])
+            self.assertIn("committed/lists.json", diffs[1])
+            self.assertIn("no longer writes: old.json, old.typ", diffs[2])
 
     def test_deterministic_and_small(self):
         with tempfile.TemporaryDirectory() as again:
             g.generate(JAR, again, kosit_config=KOSIT)
             for name in g.OUTPUT_FILES:
                 self.assertEqual((self.fresh / name).read_bytes(), (Path(again) / name).read_bytes(), name)
-        self.assertLessEqual(self.stats["bytes"]["total"], g.SIZE_BUDGET)
+        sizes = self.stats["bytes"]
+        # The tables of the guard, which only the tests read, and the code
+        # lists, which every e-invoice of the package loads.
+        tables = sum(size for name, size in sizes.items() if name not in ("total", "code-lists.json"))
+        self.assertLessEqual(tables, g.SIZE_BUDGET)
+        self.assertLessEqual(sizes["code-lists.json"], g.PACKAGE_BUDGET)
         for profile, info in self.stats["profiles"].items():
             self.assertGreater(info["nodes"], 10, profile)
             self.assertGreater(info["rules"].get("compiled", 0), 10, profile)
@@ -830,25 +903,44 @@ class Tables(unittest.TestCase):
             self.assertIn("never writes", str(caught.exception))
 
     def test_codes_withdrawn_from_the_newest_lists(self):
-        # The lists of the validator hold what every validation accepts:
+        # The code lists of the validator hold what every validation accepts:
         # the currencies and the scheme the CEN Schematron 1.3.16 withdrew
         # are missing from `every`, which the profiles based on EN 16931
-        # apply, and the codes only it has are `newer`.
-        data = json.loads((self.fresh / "lists.json").read_text(encoding="utf-8"))
-        validator = data["validator"]
-        self.assertEqual(validator["currency"]["newer"], ["CNH VED XCG ZWG"])
-        every = set(" ".join(data["lists"][validator["currency"]["every"]]).split(" "))
-        factur_x = set(" ".join(data["lists"][validator["currency"]["factur-x"]]).split(" "))
+        # apply, and the codes only it has are `newer`. `every` is written in
+        # full, `factur-x` and `xrechnung` as the codes beyond it.
+        data = json.loads((self.fresh / "code-lists.json").read_text(encoding="utf-8"))
+
+        def codes(lines):
+            return set(" ".join(lines).split())
+
+        currency = data["currency"]
+        self.assertEqual(currency["newer"], ["CNH VED XCG ZWG"])
+        every = codes(currency["every"])
+        factur_x = codes(currency["factur-x"])
         for code in ("ANG", "BGN", "CUC", "HRK", "MRU", "STN", "UYW", "VES", "ZWL"):
             self.assertNotIn(code, every)
             self.assertIn(code, factur_x)
-        self.assertIn("0231 0232", " ".join(validator["icd"]["newer"]))
+        self.assertIn("EUR", every)
+        self.assertIn("0231 0232", " ".join(data["icd"]["newer"]))
         # The withdrawn codes, which the validator names as such, and the
         # lists of XRechnung, which lack no code of both CEN lists (e.g. the
         # scheme 0219, which the Factur-X list lacks).
-        self.assertEqual(validator["currency"]["withdrawn"], ["ANG BGN CUC HRK MRO VEF ZWL"])
-        self.assertEqual(validator["eas"]["withdrawn"], ["9901"])
-        self.assertIn("0219", " ".join(data["lists"][validator["eas"]["xrechnung"]]).split(" "))
+        self.assertEqual(currency["withdrawn"], ["ANG BGN CUC HRK MRO VEF ZWL"])
+        self.assertEqual(data["eas"]["withdrawn"], ["9901"])
+        self.assertIn("0219", codes(data["eas"]["xrechnung"]))
+        self.assertNotIn("0219", codes(data["eas"]["every"]))
+        # `every` with the codes beyond it is a list of the tables of the
+        # guard (lists.json): the validator accepts the codes the guard does.
+        lists = json.loads((self.fresh / "lists.json").read_text(encoding="utf-8"))["lists"]
+        tables = {frozenset(codes(lines)) for lines in lists.values()}
+        for name, kinds in data.items():
+            if name == "generated":
+                continue
+            every = codes(kinds["every"])
+            for kind in ("factur-x", "xrechnung"):
+                if kind in kinds:
+                    self.assertFalse(codes(kinds[kind]) & every, (name, kind))
+                    self.assertIn(frozenset(every | codes(kinds[kind])), tables, (name, kind))
         disposition = {
             (p, r["id"]): d
             for p, info in self.stats["profiles"].items()

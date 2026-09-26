@@ -33,9 +33,8 @@
       color-row-odd: color-row-odd,
       color-row-even: color-row-even,
     ),
-    // The letter prints the reference signs, the `extra` of the sender (next
-    // to its address) and of the recipient (in the address field), and the
-    // footer, if any, on every page.
+    // The letter prints the reference signs, the parties' `extra` and the
+    // footer, if any.
     prints: (
       references: true,
       party-extra: true,

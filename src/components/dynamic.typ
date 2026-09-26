@@ -3,7 +3,6 @@
 #import "../utils/helper.typ": first-given
 #import "../logic/payment-reference.typ": bank-signal, resolve-payment-reference
 
-// The value of a key of the recipient, or `none`.
 #let _recipient(ctx, key) = (
   ctx.at("recipient", default: (:)).at(key, default: none)
 )
@@ -18,16 +17,13 @@
   }
 }
 
-// Draws the value of `dynamic` at the path `pos` (see `dynamic`). It is
-// defined once rather than as a closure in `dynamic`: evaluating a closure
-// of this size takes time, and `info` creates one element per value when
-// the package is imported.
+// Not a closure in `dynamic`: `info` creates one per value at import.
 #let _draw(pos, default, format, ctx, body) = {
   if pos.len() == 0 {
     return _to-content(default)
   }
 
-  // 1. If first positional argument is a closure `ctx => content`
+  // 1. A query closure `ctx => content`
   if type(pos.first()) == function {
     let fn = pos.first()
     let res = fn(ctx)
@@ -47,7 +43,7 @@
     }
   }
 
-  // 3. Smart resolution with fallbacks for top-level shortcuts
+  // 3. Top-level keys, with fallbacks
   let val = none
   if keys.len() == 1 {
     let key = keys.first()
@@ -70,8 +66,7 @@
         }
       }
     } else if key == "customer-nr" or key == "customer-id" {
-      // The context holds every parameter of `invoice`, most of them as
-      // `none`, so each fallback is taken explicitly.
+      // Unset parameters of `invoice` are `none`: fall back explicitly.
       val = first-given(
         ctx.at("customer-nr", default: none),
         _recipient(ctx, "customer-nr"),
@@ -176,7 +171,7 @@
       }
     }
 
-    // Additional smart fallbacks for nested lookups
+    // Fallbacks for nested paths
     if val == none {
       if (
         keys == ("locale", "region", "code")
@@ -287,36 +282,27 @@
       res.map(x => if type(x) == content { x } else { [#x] }).join(", "),
     )
   } else if type(res) == dictionary and "id" in res {
-    // An identifier with scheme, e.g. of the `id` module (`id.siret(..)`).
+    // An identifier of the `id` module.
     _to-content(res.id)
   } else {
     _to-content(res)
   }
 }
 
-/// A draw-only motif that queries and displays dynamic values from the Loom context (`ctx`).
-///
-/// Can be invoked with path segments, e.g.:
-/// - `#dynamic("locale", "region", "code")`
-/// - `#dynamic("sender", "name")`
-/// - `#dynamic("recipient", "city-name")`
-/// - `#dynamic("invoice-nr")`
-/// - `#dynamic("due-date")`
-/// - `#dynamic("order-nr")`
-/// - `#dynamic("bank", "iban")`
-/// - `#dynamic(ctx => [Custom: #ctx.sender.name])`
+/// Displays a value of the context (`ctx`) at a path, e.g.
+/// `#dynamic("sender", "name")`.
 ///
 /// -> content
 #let dynamic(
-  /// The path segments in `ctx` (e.g. `"sender", "name"`), or a query function `ctx => content`.
+  /// The path in `ctx`, or a query function `ctx => content`.
   /// -> ..str | function
   ..path,
 
-  /// Fallback content or string to render if the path is not found or evaluates to `none`.
+  /// Shown if the value is missing or `none`.
   /// -> any
   default: none,
 
-  /// Custom formatting function `(val) => content`, or `auto` to apply contextual formatting (e.g. for dates).
+  /// A formatter `val => content`; `auto` formats e.g. dates by the locale.
   /// -> auto | function
   format: auto,
 ) = {

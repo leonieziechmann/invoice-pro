@@ -1,28 +1,13 @@
-// Printed = written (concept 4.2): whether the data model of the e-invoice
-// states the amounts and quantities the invoice computed and prints
-// (IP-PRINT-01, IP-CALC-01, IP-CALC-02 and, in XRechnung,
-// PEPPOL-EN16931-R120, which equivalence-detail.typ describes and reports).
-//
-// The model takes these values over from the computed invoice (the line
-// items' `item-data` and the totals it prints), so with net prices they are
-// the same values. Every e-invoice compares them here in one pass; the
-// detailed check loads only when a value differs, or for the invoices that
-// need it anyway: with gross prices (the net amounts are derived from the
-// printed gross ones), with allowances or charges (of a line, or of the
-// document, split per VAT group), and an XRechnung with a line whose total
-// misses its quantity times its price by more than PEPPOL-EN16931-R120
-// allows (a total rounded more coarsely than the price, e.g. to whole yen
-// or with a custom `money` rounding to 0.05).
+// Printed = written: whether the e-invoice states what the invoice prints;
+// equivalence-detail.typ checks in detail where needed.
 
 #let _zero = decimal("0")
 #let _one = decimal("1")
 #let _slack = decimal("0.02")
 #let _slack-huf = decimal("0.5")
 
-/// The findings of the invariants for the data model `model` of the
-/// computed invoice `item-data` (the line items' data), whose totals the
-/// invoice prints as `printed` (`ctx.global.total`: net, gross, prepaid,
-/// due), in the order of the checks (see equivalence-detail.typ).
+/// The findings for the model of the computed invoice `item-data`, whose
+/// totals the invoice prints as `printed` (`ctx.global.total`).
 ///
 /// -> array
 #let findings(model, item-data, printed) = {
@@ -37,13 +22,10 @@
       and lines.len() == items.len()
       and model.taxes.len() == taxes.len()
   )
-  // The slack of PEPPOL-EN16931-R120 in XRechnung (see
-  // equivalence-detail.typ).
   let slack = if model.profile.at("xrechnung", default: false) {
     if model.currency == "HUF" { _slack-huf } else { _slack }
   }
-  // Each line states its item, and the lines add up per VAT group (or all
-  // of them, with one group).
+  // Each line states its item.
   let sums = (:)
   for key in taxes.keys() { sums.insert(key, _zero) }
   let single = sums.len() == 1
@@ -93,7 +75,7 @@
     }
   }
   if single { sums.at(sums.keys().first()) += total }
-  // Each VAT group states its printed amounts, which its lines add up to.
+  // Each VAT group states its printed amounts.
   if same {
     for tax in model.taxes {
       let group = taxes.at(tax.key, default: none)
@@ -113,7 +95,7 @@
       }
     }
   }
-  // The totals are those printed, and the lines add up to them.
+  // The totals are those printed.
   if same {
     let totals = model.totals
     let net = printed.at("net", default: _zero)

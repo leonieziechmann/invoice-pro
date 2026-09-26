@@ -10,8 +10,7 @@ corpus/regression and corpus/rules.
 
 For every case:
   1. Typst, once: `zugferd-errors: "report"` with the harness theme
-     (harness.typ), which attaches invoice-pro's diagnostics as JSON, in the
-     strict mode of the write guard (`--input zugferd-strict=true`). The
+     (harness.typ), which attaches invoice-pro's diagnostics as JSON. The
      e-invoice XML, the diagnostics and the PDF text are read from the PDF.
   2. XSD of the profile (lxml; the Factur-X XSDs come from the Mustang jar).
   3. Mustang 2.14 (EN 16931, Factur-X and XRechnung Schematron) in a single
@@ -87,7 +86,6 @@ CLASSES = {
               "as decided (`warned-as` in validator-differences.toml)",
     "FALSE_POSITIVE": "invoice-pro error, but officially valid",
     "STRICTER": "only invoice-pro's own rules (IP-*) reject an officially valid invoice",
-    "GUARD_ONLY": "only the XML guard objects: no rule of the registry explains it",
     "CRASH": "the compilation failed",
     "INPUT_ERROR": "the compilation stopped with the expected message about the input (a deliberate check)",
     "NO_XML": "no e-invoice XML attached",
@@ -95,7 +93,7 @@ CLASSES = {
 # The hard gate: every legal invoice is AGREE_VALID, and no entry of
 # known-issues.toml can excuse another class there. The report counts these
 # classes separately (silently invalid, falsely blocked, crashed).
-HARD = ("FALSE_NEGATIVE", "FALSE_POSITIVE", "CRASH", "GUARD_ONLY")
+HARD = ("FALSE_NEGATIVE", "FALSE_POSITIVE", "CRASH")
 # Official ids that name no business rule: schema and well-formedness,
 # Factur-X structure rules and failures of the validators themselves.
 STRUCTURAL = re.compile(r"^(XSD|XML|\?|FX-SCH-.*|MUSTANG-CRASH|KOSIT-.*)$")
@@ -269,22 +267,11 @@ def _file_cases(file):
 
 # ---------------------------------------------------------------- stage 1: Typst
 
-# The strict mode of the write guard (`zugferd-strict`, see
-# docs/docs/e-invoicing.md): every line of the XML is read back and compared
-# with the data model, and the arithmetic of the written amounts is checked
-# (BR-CO-10 to BR-CO-17, BR-S-08 and the like), which invoices outside CI
-# skip for speed.
-STRICT_INPUTS = {"zugferd-strict": "true"}
-
-
 
 def compile_case(case, out_dir, timestamp=common.DEFAULT_TIMESTAMP):
-    """Runs in a worker process: compile, then read XML, diagnostics, text.
-    Every case compiles in the strict mode of the write guard (see
-    STRICT_INPUTS)."""
+    """Runs in a worker process: compile, then read XML, diagnostics, text."""
     pdf = Path(out_dir) / f"{case['id']}.pdf"
-    inputs = {**STRICT_INPUTS, **(case.get("inputs") or {})}
-    ok, stderr, seconds = common.typst_compile(case["file"], pdf, inputs=inputs, timestamp=timestamp)
+    ok, stderr, seconds = common.typst_compile(case["file"], pdf, inputs=case.get("inputs"), timestamp=timestamp)
     res = {"id": case["id"], "t_compile": round(seconds, 3)}
     if not ok:
         res["crash"] = stderr.strip()[:4000]
@@ -329,11 +316,8 @@ def classify(res, official=None):
         return "CRASH"
     if "xml_path" not in res:
         return "NO_XML"
-    errors = [d for d in res.get("diagnostics", []) if d.get("level") == "error"]
     ours = error_rules(res)
     official = official or res["official"]
-    if errors and all(d.get("source") == "guard" for d in errors):
-        return "GUARD_ONLY"
     if not ours:
         return "AGREE_VALID" if official["valid"] else "FALSE_NEGATIVE"
     if official["valid"]:

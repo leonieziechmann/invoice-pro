@@ -182,8 +182,7 @@
 
 /// Wrapper applied to every output of the styling functions
 #let totals-cell-wrapper(ctx, content, styles) = {
-  // Should wrap the raw content (label or value) in a container like table.cell.
-  // This is the point where theme-specific cell styling (inset, fill, etc.) is applied.
+  // Wraps a label or value in a cell; themes apply their cell styling here.
   grid.cell(content)
 }
 

@@ -6,8 +6,9 @@
 // including 19 % VAT. The net price needs 13 decimals (0.0000840336134) for
 // the quantity times the price to be the line's net amount within 0.02
 // (PEPPOL-EN16931-R120). The XML was written with at most 12, so it stated
-// another price than the data model, which the round trip of the strict
-// mode reported (IP-GUARD-10).
+// another price than the data model, which the round trip of the test
+// oracle reported (IP-GUARD-10; tests/zugferd/prices/test.typ runs it on
+// this invoice).
 
 #import "_base.typ": *
 

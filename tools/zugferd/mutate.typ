@@ -1,10 +1,12 @@
-// The write guard on mutated e-invoices (tools/zugferd/mutate.py): reads
-// the XML of each case with Typst's XML parser, turns it back into the
-// element tree the builder writes (see src/zugferd/guard/write.typ) and
-// serializes the tree with the guard. The result is the metadata
-// <guard-results>, for `typst query`: per case its id, the XML written, the
-// findings as (kind, rule, path), and whether the serializer and its
-// checked writer (src/zugferd/guard/rare.typ) return the same.
+// The write guard of the test oracle on mutated e-invoices
+// (tools/zugferd/mutate.py): reads the XML of each case with Typst's XML
+// parser, turns it back into the element tree the builder writes (see
+// tools/zugferd/guard/write.typ) and writes the tree with the guard. The
+// result is the metadata <guard-results>, for `typst query`: per case its
+// id, the XML written, the findings as (kind, rule, path), whether the
+// guard's fast path and its checked writer (tools/zugferd/guard/rare.typ)
+// return the same, and whether the serializer of the package writes the
+// same XML.
 //
 //   typst query --root . --input cases=/build/.../cases.json \
 //     tools/zugferd/mutate.typ "<guard-results>" --field value --one
@@ -17,8 +19,8 @@
 // is (e.g. a repeated element with another one between) is noticed.
 
 #import "/src/zugferd/xml.typ": dict-to-xml
-#import "/src/zugferd/guard/write.typ": namespaces
-#import "/src/zugferd/guard/rare.typ": write as checked
+#import "/tools/zugferd/guard/write.typ": namespaces, write
+#import "/tools/zugferd/guard/rare.typ": write as checked
 
 #let _xsi = "http://www.w3.org/2001/XMLSchema-instance"
 
@@ -74,13 +76,15 @@
   for (name, uri) in namespaces { declarations.insert("@" + name, uri) }
   declarations.insert("@xmlns:xsi", _xsi)
   let tree = ((_prefix(root.tag, none, 0) + root.tag): declarations + body)
-  let written = dict-to-xml(tree, case.profile)
+  let written = write(tree, case.profile)
   (
     id: case.id,
     representable: true,
-    // The serializer takes its fast path only for a tree in which the
-    // checked writer finds nothing, and writes the same XML (criterion C0).
+    // The guard takes its fast path only for a tree in which the checked
+    // writer finds nothing, and writes the same XML; the serializer of the
+    // package writes it as well (criterion C0).
     agree: written == checked(tree, case.profile),
+    serialized: dict-to-xml(tree) == written.xml,
     xml: written.xml,
     findings: written.findings.map(f => (f.kind, f.rule, f.path.join("/"))),
   )

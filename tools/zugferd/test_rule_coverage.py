@@ -559,10 +559,31 @@ class OwnRules(unittest.TestCase):
         found = rc.ip_rules_in_source()
         self.assertIn("IP-VAT-226", found)
         self.assertIn(rc.REPO / "src" / "zugferd" / "rules" / "messages.typ", found["IP-VAT-226"])
-        self.assertIn(rc.REPO / "src" / "zugferd" / "rules" / "registry.json", found["IP-VAT-226"])
+        self.assertIn(rc.REPO / "tools" / "zugferd" / "registry.json", found["IP-VAT-226"])
+        # The ids of the findings of the test oracle are no rules the package
+        # reports.
+        self.assertEqual([rule for rule in found if rule.startswith("IP-GUARD-")], [])
+
+    def test_the_files_of_the_source(self):
+        # The Typst sources and data of src/ and the rule registry. The tables
+        # of the test oracle do not count, wherever they are: they name every
+        # rule the oracle checks.
+        with tempfile.TemporaryDirectory() as tmp:
+            src, registry_path = Path(tmp) / "src", Path(tmp) / "registry.json"
+            guard = src / "guard"
+            guard.mkdir(parents=True)
+            (src / "rules.typ").write_text('"BR-02", "IP-TAX-01"', encoding="utf-8")
+            (guard / "en16931.json").write_text('["BR-01", "IP-GUARD-04"]', encoding="utf-8")
+            registry_path.write_text('{"BR-CO-25": {"covers": ["BR-CO-25", "FX-SCH-A-000155"]}, "IP-PAY-01": {}}',
+                                     encoding="utf-8")
+            self.assertEqual(rc.source_files(src, guard, registry_path), [src / "rules.typ", registry_path])
+            self.assertEqual(rc.ip_rules_in_source(src, guard, registry_path),
+                             {"IP-TAX-01": [src / "rules.typ"], "IP-PAY-01": [registry_path]})
+            self.assertEqual(rc.official_rules_in_source(src, guard, registry_path),
+                             {"BR-02": [src / "rules.typ"], "BR-CO-25": [registry_path]})
 
     def test_entries(self):
-        source = {"IP-TAX-01": [rc.REPO / "src/zugferd/validate.typ"], "IP-GUARD-02": [rc.REPO / "src/x.typ"],
+        source = {"IP-TAX-01": [rc.REPO / "src/zugferd/validate.typ"],
                   "IP-NEW-01": [rc.REPO / "src/zugferd/validate.typ"]}
 
         def ip(*tests):
@@ -570,8 +591,6 @@ class OwnRules(unittest.TestCase):
 
         entries = {
             "IP-TAX-01": ip("tests/zugferd/vat-categories/test.typ"),
-            # The rules of the guard are tested by their kind of finding.
-            "IP-GUARD-02": ip("tests/zugferd/guard/test.typ"),
             "IP-OLD-01": ip("tests/zugferd/vat-categories/test.typ"),
         }
         problems = rc.check_ip(entries, source)
@@ -592,10 +611,11 @@ class WithoutFixture(unittest.TestCase):
         # (FX-SCH-A-000011 of BR-02). The rule modules name the Factur-X ids
         # they report, e.g. the one of the currency code list in MINIMUM,
         # which rare.typ builds for a code not every validation accepts.
-        self.assertIn(rc.REPO / "src" / "zugferd" / "rules" / "registry.json", found["BR-02"])
+        self.assertIn(rc.REPO / "tools" / "zugferd" / "registry.json", found["BR-02"])
         self.assertNotIn("FX-SCH-A-000011", found)
         self.assertEqual(found["FX-SCH-A-000040"], [rc.REPO / "src" / "zugferd" / "rules" / "rare.typ"])
-        # The guard's tables name the rules it compiles: they do not count.
+        # The tables of the test oracle name the rules they compile: they do
+        # not count.
         self.assertNotIn("BR-01", found)
         # A prefix the source completes is no rule id.
         self.assertNotIn("BR-AE", found)

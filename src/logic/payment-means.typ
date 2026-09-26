@@ -1,21 +1,7 @@
-// The payment means of an invoice (BG-16 of EN 16931): how the buyer pays
-// the amount due, or how it was paid.
-//
-// Four components state them:
-//
-// - `bank-details`: a credit transfer to the account of the seller (BG-17),
-// - `direct-debit`: a SEPA direct debit from the account of the buyer (BG-19),
-// - `card-payment`: a payment card (BG-18),
-// - `paid`: the invoice is paid already, and how.
-//
-// `resolve` combines their signals into the description the root context
-// publishes (`global.payment-means`). It is the one source for the sentence
-// the payment goal prints, for whether the bank details show an EPC-QR code
-// and for the payment means the e-invoice states (BT-81 and its groups).
+// The payment means of an invoice (BG-16), as `bank-details`, `direct-debit`,
+// `card-payment` and `paid` state them.
 
-/// The methods of `paid`, with the kind of payment means each one is: a
-/// credit transfer, a direct debit, a payment card, or another means without
-/// details of its own.
+/// The methods of `paid` and the kind of payment means of each.
 #let method-kinds = (
   cash: "other",
   cheque: "other",
@@ -25,9 +11,7 @@
   direct-debit: "direct-debit",
 )
 
-// The kinds of the payment means codes (UNTDID 4461) that have details in
-// EN 16931: credit transfers (BG-17), payment cards (BG-18) and direct
-// debits (BG-19).
+// The UNTDID 4461 codes with details in EN 16931 (BG-17, BG-18, BG-19).
 #let _code-kinds = (
   "30": "transfer",
   "58": "transfer",
@@ -44,8 +28,7 @@
 /// -> str
 #let code-kind(code) = _code-kinds.at(code, default: "other")
 
-/// The kind of payment means of a method of `paid`, or `none` for `auto`,
-/// which states no kind of its own.
+/// The kind of payment means of a method of `paid`; `none` for `auto`.
 ///
 /// -> none | str
 #let method-kind(method) = {
@@ -54,33 +37,29 @@
   method-kinds.at(method)
 }
 
-/// The payment means code (BT-81) of a credit transfer: SEPA credit transfer
-/// (58) in euro, credit transfer (30) in any other currency.
+/// The payment means code (BT-81) of a credit transfer, SEPA in euro.
 ///
 /// -> str
 #let transfer-code(currency) = if currency == "EUR" { "58" } else { "30" }
 
-/// The payment means code (BT-81) of a direct debit: SEPA direct debit (59)
-/// in euro, direct debit (49) in any other currency.
+/// The payment means code (BT-81) of a direct debit, SEPA in euro.
 ///
 /// -> str
 #let direct-debit-code(currency) = if currency == "EUR" { "59" } else {
   "49"
 }
 
-/// The payment means code (BT-81) of a payment card: credit card (54), debit
-/// card (55), or bank card (48) if the kind of card is not stated (`auto`).
+/// The payment means code (BT-81) of a payment card (`auto`: any kind, 48).
 ///
 /// -> str
 #let card-code(kind) = if kind == "credit" { "54" } else if kind == "debit" {
   "55"
 } else { "48" }
 
-// The codes of the methods of `paid` that do not depend on the currency.
+// The methods whose code does not depend on the currency.
 #let _method-codes = (cash: "10", cheque: "20", card: "48", online: "68")
 
-/// The payment means code (BT-81) of a method of `paid` (see `method-kinds`,
-/// or `(code: .., name: ..)`) in an invoice currency.
+/// The payment means code (BT-81) of a method of `paid` in a currency.
 ///
 /// -> str
 #let method-code(method, currency) = {
@@ -91,9 +70,7 @@
 }
 
 /// Whether problems of an e-invoice are shown in the document
-/// (`zugferd-errors: "report"`) rather than stopping the compilation. The
-/// components then show them where they print the value, and the e-invoice
-/// report lists them.
+/// (`zugferd-errors: "report"`) rather than stopping the compilation.
 ///
 /// -> bool
 #let report-problems(ctx) = (
@@ -101,16 +78,8 @@
     and ctx.at("zugferd-errors", default: "panic") == "report"
 )
 
-/// Combines the signals of the payment means components of an invoice.
-///
-/// Returns `(transfers, direct-debit, card, paid, kinds)`: the signals of
-/// `bank-details` (an array, one per account), `direct-debit`,
-/// `card-payment` and `paid` (each `none` if the invoice has none), and the
-/// kinds of payment means they state. An invoice has one kind of payment
-/// means (one BT-81); more than one kind are conflicting instructions, which
-/// the e-invoice reports. The kinds are listed in the order in which they
-/// decide the payment sentence: a direct debit, a payment card, a credit
-/// transfer, another means.
+/// Combines the signals of the payment means components and the `kinds` they
+/// state, in the order that decides the payment sentence.
 ///
 /// -> dictionary
 #let resolve(transfers, direct-debit, card, paid) = {
@@ -135,18 +104,15 @@
   )
 }
 
-/// The payment means of a context: the description `resolve` built, which
-/// the root context publishes from the second layout pass on, or `none`.
+/// The payment means of `resolve` (from the second layout pass on) or `none`.
 ///
 /// -> none | dictionary
 #let of-context(ctx) = (
   ctx.at("global", default: (:)).at("payment-means", default: none)
 )
 
-/// Whether the bank details show their EPC-QR code by default: only if the
-/// buyer pays the amount by credit transfer. A direct debit or a payment card
-/// collects it otherwise, and a paid invoice asks for nothing, so a QR code
-/// would invite the buyer to pay twice.
+/// Whether the bank details show their EPC-QR code by default: only for a
+/// credit transfer, so that the buyer does not pay twice.
 ///
 /// -> bool
 #let transfer-requested(means) = {
@@ -156,11 +122,8 @@
   )
 }
 
-/// The payment strings of the language, with the sentence of the payment
-/// goal for the payment means of the invoice: the layout prints `text`, or
-/// `text-due` with prepayments, so these are the sentences of a direct debit
-/// or a payment card, and of a credit transfer otherwise. The notes of the
-/// cash discounts (`payment-goal(discount: ..)`) follow the sentence.
+/// The payment strings with the payment goal sentences (`text`, `text-due`)
+/// of the invoice's payment means, followed by the cash discount notes.
 ///
 /// -> dictionary
 #let goal-strings(payment, means, discount-notes: ()) = {

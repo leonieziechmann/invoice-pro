@@ -3,7 +3,6 @@
 
 /// Swiss regional configuration (CH).
 #let ch(lang) = {
-  // --- Regional Settings ---
   let numeric-format = (
     decimal-sign: ".",
     thousand-separators: "'",
@@ -18,15 +17,14 @@
     decimals-fine: 4,
   )
 
-  // --- Helper Functions ---
   // Swiss VAT rates since 1 January 2024.
   let infer-tax-ch(rate) = {
     if rate == 8.1% {
       tax.vat(8.1%) // Standard rate
     } else if rate == 2.6% {
-      tax.vat(2.6%) // Reduced rate (e.g., food, books, medicine)
+      tax.vat(2.6%) // Reduced rate
     } else if rate == 3.8% {
-      tax.vat(3.8%) // Special rate for accommodation/lodging
+      tax.vat(3.8%) // Special rate (accommodation)
     } else if rate == 0% {
       panic(
         "Ambiguous 0% tax rate in region 'ch'. Please explicitly use tax.zero(), tax.exempt(), tax.export(), or tax.outside-scope() from tax.typ instead of passing 0%.",
@@ -40,7 +38,6 @@
     }
   }
 
-  // --- Regional Data ---
   return (
     meta: (
       region: "ch",
@@ -53,7 +50,7 @@
     ),
 
     format: (
-      // Override the base percent formatter to use a dot for decimals instead of a comma
+      // A dot as decimal sign, unlike the base region.
       percent: x => {
         let p = float(x) * 100
         str(calc.round(p, digits: 1)) + "%"
@@ -67,9 +64,7 @@
 
     tax: (
       default-vat: tax.vat(8.1%),
-      // Small businesses below the turnover threshold are not liable for VAT
-      // (Art. 10 Abs. 2 MWSTG), so the e-invoice states VAT category O with
-      // this note as exemption reason (BT-120).
+      // Not liable for VAT (Art. 10 Abs. 2 MWSTG), so category O.
       small-enterprise-special-scheme: tax.outside-scope(
         grounds: "Nicht MWST-pflichtig / Non soumis à la TVA / Non assoggettato all'IVA",
       ),

@@ -1,13 +1,8 @@
-// The rarely needed parts of process-zugferd (zugferd.typ): the warnings of
-// the candidate profiles `zugferd: auto` skipped, and the diagnostics of a
-// self-billed invoice. Most e-invoices need neither, so zugferd.typ loads
-// this module only for an invoice that does (Typst parses a module when it
-// is first imported).
+// The rarely needed parts of `process-zugferd` (skipped candidate profiles,
+// self-billed invoices), loaded only for an invoice that needs them.
 
-// On a self-billed invoice, the sender of the document is the buyer and its
-// recipient the seller (see `build-model`). The validator names the inputs
-// of the seller as `sender` and those of the buyer as `recipient`, so they
-// change places in the field and the texts of each diagnostic.
+// On a self-billed invoice the buyer is the `sender`, but the validator
+// names the seller's inputs `sender`: swap them in the field and texts.
 #let _other-party = (sender: "recipient", recipient: "sender")
 
 #let _swap-parties(text) = {
@@ -18,8 +13,7 @@
     .replace("\u{E000}", "the recipient")
 }
 
-/// A diagnostic of a self-billed invoice with the parties in the field and
-/// the texts swapped (see above).
+/// A diagnostic with the parties swapped for a self-billed invoice.
 ///
 /// -> dictionary
 #let self-billed-diagnostic(d) = {
@@ -40,13 +34,8 @@
   )
 }
 
-/// The errors that kept a better candidate profile out of reach and that the
-/// chosen profile does not report itself, as warnings of the chosen profile.
-/// A problem the chosen profile reports under a rule of its own (e.g. two
-/// payment means: `BR-DE-23-b` in XRechnung, `CII-SR-467` in EN 16931; a
-/// missing electronic address: `PEPPOL-EN16931-R010` in XRechnung, the
-/// warning `IP-EADDR-01` in EN 16931) has the same field and message, and is
-/// not listed twice either.
+/// The errors that ruled out better candidate profiles, as warnings, unless
+/// the chosen profile reports the same field with the same rule or message.
 ///
 /// -> array
 #let skipped-warnings(skipped, diagnostics) = {

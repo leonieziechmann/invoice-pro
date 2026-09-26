@@ -14,12 +14,11 @@
 #import "logic/references.typ" as reference-builders
 #import "data/currency.typ": with-currency
 
-// The title the e-invoice checks against the document type (IP-DOC-01), or
-// `none` for a default title of the language, which names the type.
+// The subject IP-DOC-01 checks, `none` if it is the language's own title.
 #let _title-to-check(given, subject, document-type, lang) = {
   if given != auto { return given }
   if document-type != auto { return none }
-  // Imported here, as the language module is large.
+  // Imported here: the module is large.
   import "locale/lang/lang.typ" as languages
   let own = dictionary(languages)
     .at(lang, default: (:))
@@ -39,8 +38,7 @@
   /// The locale settings for language and number formatting.
   /// -> function
   locale: locale.de-de,
-  /// The currency of the invoice, an ISO 4217 code such as `"USD"` (BT-5).
-  /// `auto` is the currency of the locale.
+  /// An ISO 4217 currency code such as `"USD"` (BT-5); `auto` is the locale's.
   /// -> auto | str
   currency: auto,
 
@@ -70,8 +68,8 @@
   /// the item dates or the invoice date (not on credit notes and prepayments).
   /// -> none | datetime | array
   service-period: none,
-  /// The subject line of the invoice. If `auto`, the title of the
-  /// `document-type` in the language of the locale, e.g. "Rechnung".
+  /// The subject line of the invoice.
+  /// `auto` is the title of the `document-type`.
   /// -> string | content
   subject: auto,
   /// The type of the document (BT-3): `"invoice"` (`auto`), `"credit-note"`,
@@ -137,7 +135,7 @@
 
   /// ZUGFeRD / Factur-X profile for embedding machine-readable XML into the PDF.
   /// Requires exporting with PDF/A-3 (`typst compile --pdf-standard=a-3b`).
-  /// `auto` is `"xrechnung"` for a buyer in Germany if met, else `"en16931"`.
+  /// `auto` is `"xrechnung"` for a buyer in Germany if valid, else `"en16931"`.
   /// -> none | auto | "minimum" | "basic-wl" | "basic" | "en16931" | "xrechnung"
   zugferd: none,
   /// On e-invoice rule violations: `"panic"` stops, `"report"` lists them in
@@ -350,7 +348,6 @@
   } else {
     none
   }
-  // Its default country is the buyer's (the sender's if self-billed).
   let normalized-delivery-address = if raw-delivery-address != none {
     normalize-party(
       raw-delivery-address,
@@ -388,8 +385,7 @@
 
   let document-references = ()
   if references == auto {
-    // What the law requires (§ 14 Abs. 4 UStG, Art. 226 VAT Directive); in
-    // Germany the supply date even if it is the invoice date (Nr. 6).
+    // What the law requires; § 14 UStG always wants the date of the supply.
     let seller = if document.self-billed { normalized-recipient } else {
       normalized-sender
     }
@@ -457,7 +453,7 @@
     zugferd: zugferd,
     zugferd-errors: zugferd-errors,
   )
-  // Joins the context only if given (smaller context); read with a default.
+  // Added to the context only if given, to keep it small; read with a default.
   for (key, value) in (
     currency: currency,
     service-period: service-period,

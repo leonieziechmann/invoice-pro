@@ -347,13 +347,11 @@ class Minimizer(unittest.TestCase):
         self.assertTrue(minimize.failure(run.make_row(wrong, res, None), documented)[1])
 
 
-def result(ours=(), official=(), valid=None, crash=None, source=None):
+def result(ours=(), official=(), valid=None, crash=None):
     res = {"xml_path": "x.xml"}
     if crash:
         return {"crash": crash}
-    res["diagnostics"] = [
-        {"level": "error", "rule": rule, **({"source": source} if source else {})} for rule in ours
-    ] + [{"level": "warning", "rule": "BR-X"}]
+    res["diagnostics"] = [{"level": "error", "rule": rule} for rule in ours] + [{"level": "warning", "rule": "BR-X"}]
     res["official"] = {"valid": not official if valid is None else valid, "rules": sorted(official)}
     return res
 
@@ -366,7 +364,6 @@ class Classification(unittest.TestCase):
         self.assertEqual(run.classify(result(ours=["IP-VAT-226"])), "STRICTER")
         self.assertEqual(run.classify(result(ours=["BR-S-02"], official=["BR-S-02", "XSD"])), "AGREE_INVALID")
         self.assertEqual(run.classify(result(ours=["BR-CL-10"], official=["BR-CL-26"])), "WRONG_RULE_ID")
-        self.assertEqual(run.classify(result(ours=["G2-01"], official=["XSD"], source="guard")), "GUARD_ONLY")
         self.assertEqual(run.classify(result(crash="error: boom")), "CRASH")
         self.assertEqual(run.classify({"diagnostics": []}), "NO_XML")
 
@@ -638,14 +635,15 @@ class Headers(unittest.TestCase):
                 run.load_cases([file])
 
     def test_the_profile_goes_to_typst(self):
-        # Every case compiles in the strict mode of the write guard.
+        # The profile of a parity fixture is its only input; any other case
+        # compiles without inputs.
         case = {"id": "rule-BR-01@basic", "file": "x.typ", "inputs": {"profile": "basic"}}
         with tempfile.TemporaryDirectory() as tmp, \
                 unittest.mock.patch.object(common, "typst_compile", return_value=(False, "error: x", 0.1)) as compile_:
             run.compile_case(case, tmp)
-            self.assertEqual(compile_.call_args.kwargs["inputs"], {"profile": "basic", "zugferd-strict": "true"})
+            self.assertEqual(compile_.call_args.kwargs["inputs"], {"profile": "basic"})
             run.compile_case({"id": "regression-x", "file": "x.typ"}, tmp)
-            self.assertEqual(compile_.call_args.kwargs["inputs"], {"zugferd-strict": "true"})
+            self.assertIsNone(compile_.call_args.kwargs["inputs"])
 
 
 def fixture_case(name, *rules, warns=()):

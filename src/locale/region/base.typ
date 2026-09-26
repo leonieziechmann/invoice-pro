@@ -1,5 +1,4 @@
-/// The base region serves as the 'Master Schema' for all regional configurations.
-/// Every regional file (e.g., DE.typ, US.typ) should mirror this structure.
+/// The schema of all regions, and the fallback of their missing keys.
 #let base-region = {
   import "../../data/tax.typ"
   import "../../utils/format.typ"
@@ -12,60 +11,44 @@
   )
 
   let currency-meta = (
-    /// The 3-letter ISO 4217 currency code (e.g., "EUR", "CHF").
-    /// Required for EPC-QR payloads and ZUGFeRD.
+    /// ISO 4217 code, the invoice currency (BT-5).
     code: "EUR",
-
-    /// The visual symbol of the currency (e.g., "€", "CHF ").
     symbol: "€",
-
-    /// The standard number of subunits/decimal places for financial totals (e.g., 2).
     decimals: 2,
-
-    /// The number of decimal places of unit prices (BT-146), used by
-    /// `normalize.money-fine` and the `currency-fine` format. EN 16931 does
-    /// not limit these decimals; 4 is the common precision of unit prices.
+    /// Decimals of unit prices (BT-146); EN 16931 sets no limit, 4 is common.
     decimals-fine: 4,
   )
 
   (
     meta: (
-      /// The 2-letter (lower-case) ISO 3166-1 alpha-2 country code (e.g., "de", "ch").
-      /// Required for ZUGFeRD compliance (Buyer/Seller country codes).
+      /// ISO 3166-1 alpha-2 code, lower case; the default country of addresses.
       /// -> str
       region: "base",
     ),
 
-    /// Metadata for the primary currency used in the region.
     currency: currency-meta,
 
     normalize: (
-      /// Rounds a numerical value to the standard decimal precision of the region's currency.
-      /// Used for final totals and line item sums.
+      /// Rounds totals.
       /// -> (int | float | decimal) => (int | float | decimal)
       money: x => calc.round(x, digits: currency-meta.decimals),
 
-      /// Rounds a value to the precision required for unit prices or internal calculations.
-      /// Useful for high-precision items (e.g., fuel prices or bulk commodities).
+      /// Rounds unit prices.
       /// -> (int | float | decimal) => (int | float | decimal)
       money-fine: x => calc.round(x, digits: currency-meta.decimals-fine),
 
-      /// A function that interprets a raw tax value (usually a percentage or ratio)
-      /// and maps it to a structured regional tax object.
+      /// Maps a raw rate (e.g. `19%`) to the tax object of the region.
       /// -> (ratio | float | decimal | int) => tax
       infer-tax: x => panic("Can't infer tax for region:`base`!"),
     ),
 
     format: (
-      /// Converts a ratio (0.19) or number into a localized percentage string ("19%").
       /// -> (ratio | float | decimal | int) => str
       percent: x => {
         let p = float(x) * 100
         str(calc.round(p, digits: 1)).replace(".", ",") + "%"
       },
 
-      /// Formats a single date or a range (start, end) into a human-readable string.
-      /// Handles both `datetime` objects and arrays of two `datetime` objects.
       /// -> (datetime | (datetime, datetime)) => str
       date: x => if type(x) == array {
         x.first().display("[day].[month].[year]")
@@ -77,25 +60,19 @@
         x.display("[day].[month].[year]")
       },
 
-      /// Formats a time object into a localized string (e.g., 24h or AM/PM).
       /// -> datetime => str
       time: x => x.display("[hour repr:24]:[minute padding:zero]"),
 
-      // Dynamically injects `number`, `currency`, and `currency-fine`
+      // Adds `number`, `currency` and `currency-fine`.
     )
       + format.make-formatters(numeric-format, currency-meta),
     tax: (
-      /// The standard VAT/Sales Tax rate applied when no specific rate is provided.
+      /// The VAT of items without a tax.
       /// -> tax
       default-vat: tax.vat(21%),
 
-      /// The tax of small businesses ("Kleinunternehmer") that charge no VAT
-      /// (`tax-exempt-small-biz: true`). Its `grounds` are the legal note the
-      /// invoice prints and the exemption reason (BT-120) of the e-invoice.
-      /// Use `tax.exempt(grounds: ..)` (VAT category E) where the law exempts
-      /// the turnover of small businesses (e.g. DE, AT, FR) and
-      /// `tax.outside-scope(grounds: ..)` (O) where they are not liable for
-      /// VAT (e.g. CH). This neutral fallback claims no exemption.
+      /// The tax with `tax-exempt-small-biz`; its `grounds` are the printed
+      /// note and the exemption reason (BT-120). This fallback claims none.
       /// -> tax
       small-enterprise-special-scheme: tax.outside-scope(),
     ),

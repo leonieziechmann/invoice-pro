@@ -1,5 +1,5 @@
-/// Merges a depth-2 patch dictionary onto a base dictionary.
-/// Panics if the patch contains keys not present in the base schema.
+/// Merges a depth-2 patch onto a base dictionary; panics on keys the base
+/// does not have.
 #let base-pull-deep-merge(base, patch) = {
   if type(patch) != dictionary { return base }
 
@@ -34,8 +34,7 @@
   return result
 }
 
-// The index of the last of `sources` that sets `key` in its group `group`,
-// or -1.
+// The index of the last of `sources` that sets `group.key`, or -1.
 #let _last-source(sources, group, key) = {
   let found = -1
   for (i, source) in sources.enumerate() {
@@ -47,19 +46,9 @@
   found
 }
 
-/// Keeps the currency formatting and the rounding of a merged region in line
-/// with its `currency` (code, symbol, decimals), which the e-invoice states
-/// as the invoice currency (BT-5).
-///
-/// `sources` are the region dictionaries in the order they were merged. The
-/// functions the base region derives from the currency are rebuilt from the
-/// merged currency if a later source sets the currency but not them:
-/// `format.currency` and `format.currency-fine` (symbol and decimals, with
-/// the number format of the region) and `normalize.money` and
-/// `normalize.money-fine` (decimals). So `currency: (code: "PLN", symbol:
-/// "zł")` prints amounts in zł and states PLN. A function set together with
-/// or after the currency is kept as it is.
-///
+/// Rebuilds the currency formats and the rounding of the merged `region`
+/// from its `currency` (BT-5), unless `sources` (in merge order) set them
+/// with or after the currency.
 /// -> dictionary
 #let derive-from-currency(sources, region) = {
   let level(group, key) = _last-source(sources, group, key)
@@ -94,7 +83,6 @@
 
 #let build-locale(lang, region) = {
   (..overrides, base-lang, base-region) => {
-    // 1. Extract the user DSL arrays safely
     let user-lang-patches = overrides
       .pos()
       .flatten()
@@ -107,13 +95,11 @@
       .filter(p => type(p) == dictionary)
       .map(p => p.at("region", default: (:)))
 
-    // 2. Language Pipeline
     let final-lang = (
       lang,
       ..user-lang-patches,
     ).fold(base-lang, base-pull-deep-merge)
 
-    // 3. Region Pipeline
     let specific-region = region(final-lang)
     let final-region = derive-from-currency(
       (base-region, specific-region, ..user-region-patches),
@@ -123,12 +109,10 @@
       ).fold(base-region, base-pull-deep-merge),
     )
 
-    // 4. Document language: `base` is the English fallback schema,
-    // not an ISO 639-1 code.
+    // `base` is the English fallback schema, not an ISO 639-1 code.
     let lang-code = final-lang.meta.lang
     if lang-code == "base" { lang-code = "en" }
 
-    // 5. Return Final Context
     return (
       lang: lang-code,
       strings: final-lang,

@@ -48,10 +48,12 @@ class Entries(unittest.TestCase):
     def test_the_committed_registry_is_valid(self):
         loaded = r.load()
         self.assertEqual(r.problems(loaded), [])
-        # Every rule of the old validator and the write guard has an entry.
+        # Every rule of the validator has an entry. The findings of the test
+        # oracle (IP-GUARD-*) have none: the package never reports them.
         self.assertGreaterEqual(len(loaded["rules"]), 120)
-        for key in ("BR-02", "BR-48", "BR-DE-18", "IP-TAX-01", "IP-GUARD-07", "vat-rate-zero"):
+        for key in ("BR-02", "BR-48", "BR-DE-18", "IP-TAX-01", "vat-rate-zero"):
             self.assertIn(key, loaded["rules"])
+        self.assertEqual([key for key in r.reported(loaded) if key.startswith("IP-GUARD-")], [])
 
     def test_a_valid_entry(self):
         self.assertEqual(r.problems(registry(**{"BR-02": entry()})), [])
@@ -239,12 +241,60 @@ class Sources(unittest.TestCase):
         self.assertIsNotNone(r.RULE_ID.match("BR-DE-23-a"))
         self.assertIsNotNone(r.RULE_ID.match("PEPPOL-EN16931-R020"))
 
-    def test_the_guard_rules(self):
-        self.assertEqual(r.guard_ids(), {f"IP-GUARD-{n:02d}" for n in range(14)})
+    def test_the_usual_warnings(self):
+        # A finding without a level is a warning for a key of `_warnings` of
+        # engine.typ, else an error: the list is the keys whose usual (first)
+        # level is "warning".
+        loaded = r.load()
+        keys = r.warning_keys()
+        self.assertIn("IP-PROFILE-01", keys)
+        self.assertEqual(
+            sorted(keys), sorted(key for key, entry in loaded["rules"].items() if r.levels(entry)[0] == "warning")
+        )
+        self.assertEqual(r.warning_problems(loaded), [])
+        # An entry whose usual level changes, without the list.
+        loaded["rules"]["IP-PROFILE-01"]["level"] = ["error", "warning"]
+        loaded["rules"]["BR-02"]["level"] = ["warning", "error"]
+        self.assertEqual(r.warning_problems(loaded), [
+            'BR-02: its usual level is "warning", but `_warnings` of src/zugferd/rules/engine.typ does not list it',
+            'IP-PROFILE-01: in `_warnings` of src/zugferd/rules/engine.typ, but its usual level is "error"',
+        ])
+        self.assertIn(
+            'BR-02: its usual level is "warning", but `_warnings` of src/zugferd/rules/engine.typ does not list it',
+            r.source_problems(loaded),
+        )
+
+    def test_the_list_of_warnings_is_read_as_written(self):
+        def keys(source):
+            with tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / "engine.typ"
+                path.write_text(f"#let x = 1\n{source}\n#let y = (\"IP-X-01\",)\n", encoding="utf-8")
+                return r.warning_keys(path)
+
+        self.assertEqual(keys('#let _warnings = (\n  "IP-A-01",\n  // (a comment)\n  "IP-B-02",\n)'),
+                         ["IP-A-01", "IP-B-02"])
+        self.assertEqual(keys('#let _warnings = ("IP-A-01", /* a comment */ "IP-B-02")'), ["IP-A-01", "IP-B-02"])
+        self.assertEqual(keys('#let _warnings = ("IP-A-01",)'), ["IP-A-01"])
+        self.assertEqual(keys("#let _warnings = ()"), [])
+        # Only string literals: the check cannot evaluate anything else.
+        for source, message in (
+            ('#let _warnings = ("IP-A-01", key)', "is not an array of string literals"),
+            ('#let _warnings = ("IP-A-01",) + more', None),
+            ('#let _warnings = ("IP-A-01")', "is a string, not an array"),
+            ("#let warnings = ()", "no array `#let _warnings = (..)`"),
+        ):
+            with self.subTest(source=source):
+                if message is None:
+                    # What follows the array is not read.
+                    self.assertEqual(keys(source), ["IP-A-01"])
+                    continue
+                with self.assertRaises(ValueError) as caught:
+                    keys(source)
+                self.assertIn(message, str(caught.exception))
 
 
 class Docs(unittest.TestCase):
-    """The tables of the rules in docs/docs/e-invoicing.md."""
+    """The table of the rules of invoice-pro in docs/docs/e-invoicing.md."""
 
     def test_the_tables_are_the_generated_ones(self):
         self.assertEqual(r.docs_problems(r.load()), [])
@@ -274,10 +324,10 @@ class Docs(unittest.TestCase):
         text = r.DOCS.read_text(encoding="utf-8")
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "e-invoicing.md"
-            # A stale row in each table.
-            stale = text.replace("| `IP-TAX-01`", "| `IP-TAX-99`").replace("| `IP-GUARD-09`", "| `IP-GUARD-99`")
+            # A stale row in the table.
+            stale = text.replace("| `IP-TAX-01`", "| `IP-TAX-99`")
             path.write_text(stale, encoding="utf-8")
-            self.assertEqual(len(r.docs_problems(loaded, path)), 2)
+            self.assertEqual(len(r.docs_problems(loaded, path)), 1)
             r.write_docs(loaded, path)
             self.assertEqual(path.read_text(encoding="utf-8"), text)
 
