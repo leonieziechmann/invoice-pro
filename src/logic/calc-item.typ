@@ -82,7 +82,7 @@
     tax-modifier = 1 + tax-ratio
   }
 
-  let price =if ctx.item-price != auto { ctx.item-price * tax-modifier } else {
+  let price = if ctx.item-price != auto { ctx.item-price * tax-modifier } else {
     auto
   }
   let total = if ctx.item-total != auto { ctx.item-total * tax-modifier } else {

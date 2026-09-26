@@ -42,7 +42,7 @@
 // An amount: 2 decimals (BR-DEC-*).
 #let fmt-amount = fmt-number
 
-// A unit price (BT-146, BT-148), never rounded (28 digits).
+// A unit price (BT-146, BT-148), never rounded: a decimal has 28 at most.
 #let fmt-price = fmt-number.with(max-digits: 28)
 
 // A quantity (BT-129, BT-149).

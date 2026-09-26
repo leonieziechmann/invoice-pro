@@ -18,8 +18,8 @@
   errors + warnings
 }
 
-/// Builds and checks the e-invoice: `(profile: .., model: .., diagnostics:
-/// .., xml: ..)`, with the XML built even with errors.
+/// Builds and checks the e-invoice as `(profile: .., model: .., diagnostics:
+/// .., xml: ..)`; the XML is built even with errors.
 ///
 /// -> dictionary
 #let process-zugferd(
@@ -47,7 +47,7 @@
     )
   }
   let diagnostics = run-rules(model)
-  // All but PEPPOL-EN16931-R120 hold for every candidate (XRechnung is first).
+  // All but PEPPOL-EN16931-R120 apply to every candidate (XRechnung is first).
   let invariants = equivalence-findings(model, item-data, printed)
   if invariants != () {
     diagnostics = _with-invariants(diagnostics, invariants)
