@@ -6,8 +6,8 @@
 
 #let _keys = ("days", "percent", "basis")
 
-/// Checks the `discount` of the payment goal, `none`, `(days: .., percent: ..,
-/// basis: ..)` or an array of them; returns an array, `percent` as `2.5`.
+/// Checks and normalizes the `discount` of the payment goal (`none`, a
+/// dictionary or an array of them) into an array, `percent` as `2.5` for 2.5%.
 ///
 /// -> array
 #let normalize(discount) = {

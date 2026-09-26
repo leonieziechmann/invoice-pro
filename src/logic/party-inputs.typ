@@ -22,7 +22,8 @@
 #let _is-typed(value) = "kind" in value and "problems" in value
 
 /// Stops the compilation for an identifier of `party` without text: a
-/// function (`id.siret` not called) or a dictionary without `id`.
+/// function (`id.siret` not called) or a dictionary without `id`, except an
+/// electronic address, which is then derived.
 ///
 /// -> none
 #let check-identifiers(party, field, keys) = {

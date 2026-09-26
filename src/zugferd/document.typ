@@ -159,9 +159,8 @@
   "\u{202f}",
 )
 
-/// The kind of document a title names, as `(kind: .., words: ..)`, or `none`:
-/// the first word that names one decides, with the longest phrase starting
-/// there ("Rechnung zum Angebot 17" is an invoice).
+/// The kind of document a title names as `(kind: .., words: ..)`, or `none`:
+/// the first word naming one decides, with the longest phrase from there.
 ///
 /// -> none | dictionary
 #let title-kind(title) = {

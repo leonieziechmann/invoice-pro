@@ -5,9 +5,9 @@
 
 #let _symbols = ("*", "**", "***", "****")
 
-/// Assigns a marker to every distinct exemption ground of the VAT groups:
-/// `"*"` to `"****"`, then `"*5"`, ... Returns `(grounds: .., itemized: ..)`,
-/// the markers by ground key and the VAT groups whose items are marked.
+/// Assigns a marker to every distinct exemption ground of the VAT groups
+/// `taxes`: `"*"` to `"****"`, then `"*5"`, ... Returns `(grounds: ..,
+/// itemized: ..)`, the markers by ground key and the groups with marked items.
 ///
 /// -> dictionary
 #let assign-markers(
@@ -32,8 +32,8 @@
   (grounds: markers, itemized: itemized)
 }
 
-/// The `markers` (see `assign-markers`) of the exemption grounds of a VAT
-/// group, in their order.
+/// The markers of the exemption grounds of the VAT group `tax`, in their
+/// order; `markers` is the result of `assign-markers`.
 ///
 /// -> array
 #let group-markers(

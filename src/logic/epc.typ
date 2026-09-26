@@ -15,7 +15,7 @@
 )
 
 /// Why the plain text fields of `qr-code` give no EPC-QR code, as
-/// `(short: .., message: ..)`; length limits count UTF-8 bytes, as `sepay`.
+/// `(short: .., message: ..)`; length limits count UTF-8 bytes, as in `sepay`.
 ///
 /// -> array
 #let problems(
@@ -75,8 +75,8 @@
   found
 }
 
-/// The EPC-QR code of a bank transfer as `(payload: .., problems: ..)`, the
-/// fields for `epc-qr-code` of `sepay` or `none` (see `problems`).
+/// The EPC-QR code of a bank transfer: `(payload: .., problems: ..)`, the
+/// fields for `epc-qr-code` of `sepay`, or `none` and the `problems`.
 ///
 /// -> dictionary
 #let qr-code(
