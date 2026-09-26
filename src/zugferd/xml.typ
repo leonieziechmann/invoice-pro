@@ -1,7 +1,6 @@
 #import "../utils/coercion.typ": to-decimal, to-ratio
 #import "../utils/text.typ": invalid-xml-chars, invalid-xml-class, plain-text
 
-/// The characters `xml-escape` changes, as the body of a regex class.
 #let escaped-class = "&<>\"'" + invalid-xml-class
 
 // Compiled on first use (memoized).
@@ -43,17 +42,16 @@
 // An amount: 2 decimals (BR-DEC-*).
 #let fmt-amount = fmt-number
 
-// A unit price (BT-146, BT-148), never rounded: a decimal has 28 at most.
+// A unit price (BT-146, BT-148), never rounded (28 digits).
 #let fmt-price = fmt-number.with(max-digits: 28)
 
 // A quantity (BT-129, BT-149).
 #let fmt-quantity = fmt-number.with(max-digits: 6)
 
-/// The decimals of a VAT rate in percent (BT-96, BT-103, BT-119, BT-152):
-/// 4 state every real rate exactly, e.g. 9.975%.
+/// Decimals of a VAT rate in percent: 4 state every real rate, e.g. 9.975%.
 #let rate-digits = 4
 
-// A rate (e.g. 0.19) as a percentage ("19.00").
+// A rate (e.g. 0.19) in percent (BT-96, BT-103, BT-119, BT-152).
 #let fmt-rate(rate) = fmt-number(
   to-ratio(rate) * 100,
   max-digits: rate-digits,
@@ -111,8 +109,7 @@
 }
 
 /// Serializes the element tree of build.typ into XML without declaration:
-/// `@..` keys are attributes, `""` the text next to them, an array repeats
-/// its element; `none` and blank texts are left out.
+/// `@..` keys are attributes, `""` the text; `none` is left out.
 ///
 /// -> str
 #let dict-to-xml(data) = {

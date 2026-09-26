@@ -1,19 +1,15 @@
-// The service period of an invoice (BT-72 or BG-14), resolved once for the
-// printed `references.service-time` and the e-invoice, so they cannot differ.
+// The service period of an invoice (BT-72 or BG-14), one source for the
+// printed invoice and the e-invoice.
 
-/// Resolves the service period: the invoice's `service-period`, else from the
-/// earliest to the latest date of the items, else the invoice date. Returns
-/// `(start: .., end: .., source: ..)`, or `none` without any date.
+/// The invoice's `service-period`, else the span of the dates of the `items`,
+/// else the invoice date, as `(start: .., end: .., source: ..)` or `none`.
 ///
 /// -> none | dictionary
 #let resolve-service-period(
-  /// The computed items (each with its `date`).
   /// -> array
   items,
-  /// The date of the invoice.
   /// -> datetime | any
   invoice-date,
-  /// The invoice's `service-period`.
   /// -> none | datetime | array
   service-period: none,
 ) = {
@@ -59,8 +55,7 @@
     )
 )
 
-/// The service period of the invoice of the root context `ctx` with its
-/// computed `items`, for `references.service-time` and the e-invoice.
+/// The service period of the invoice of the root context `ctx`.
 ///
 /// -> none | dictionary
 #let service-period-of(ctx, items) = {

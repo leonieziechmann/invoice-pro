@@ -31,7 +31,7 @@
     and (" " + code + " ") in list
 )
 
-// The fallbacks of the printed invoice.
+// The same fallbacks as the printed invoice.
 #let first-of = first-given
 
 // Strings `plain-text` returns as they are.
@@ -49,8 +49,8 @@
   if result == "" { none } else { result }
 }
 
-/// The payment terms (BT-20) with line breaks, or `none`; a Skonto line
-/// (BR-DE-18) ends with one.
+/// The payment terms (BT-20) of a text with its line breaks, or `none`; a
+/// Skonto line (BR-DE-18) needs a final line break.
 ///
 /// -> str | none
 #let payment-terms(value) = {
@@ -448,7 +448,7 @@
     post-code: _key-text(party.at("post-code", default: none), "post-code"),
     state: _key-text(party.at("state", default: none), "state"),
     country: _country-code(party.at("country", default: none)),
-    // Else the locale's or, for a delivery address, the buyer's.
+    // Else the country is the locale's, or the buyer's for a delivery address.
     country-explicit: party.at("country-explicit", default: true) != false,
   )
 }
@@ -735,8 +735,8 @@
   result
 }
 
-/// The exemption reason code (BT-121) of a VAT category: its items' only code,
-/// else the category's; none if taxed.
+/// The exemption reason code (BT-121) of a VAT category: the one its items
+/// give, else the category's; `none` if taxed or the items differ.
 ///
 /// -> none | str
 #let exemption-code(category, codes) = {
@@ -1099,7 +1099,7 @@
   let outside-scope = profile.id != "minimum" and "O" in categories
 
   let seller = seller-model(sender, use-vat-id: not outside-scope)
-  // Whether it prints the seller's VAT ID or tax number (BT-31, BT-32).
+  // Whether the invoice shows the seller's VAT ID or tax number (BT-31, BT-32).
   let printed = ctx.at("printed", default: none)
   seller.insert("printed-tax-id", shows-identifier(printed, (
     seller.vat-id,
@@ -1117,7 +1117,7 @@
   ))
   let payee = payee-model(ctx.at("payee", default: none))
 
-  // `location-id` is another name of `id` (BT-71).
+  // BG-13; `location-id` is another name of its `id` (BT-71).
   let delivery-party = ctx.at("delivery-address", default: none)
   let ship-to = if type(delivery-party) == dictionary {
     party-model(delivery-party, role: "ship-to", use-vat-id: false)
@@ -1165,7 +1165,7 @@
       allowance-total += entry.amount
     }
   }
-  // BT-110 adds up the printed VAT amounts.
+  // The printed totals (BT-109, BT-112); BT-110 adds up the printed VAT.
   let net-total = _decimal(item-data.at("net-total", default: _zero))
   let gross-total = _decimal(item-data.at("gross-total", default: _zero))
   let tax-total = _zero
@@ -1228,7 +1228,7 @@
       terms = payment-terms(goal-date)
       if terms != none { terms-input = "payment-goal" }
     }
-    // Without days or a date, the terms are what it prints (due at once).
+    // Without days or a date, the terms are what the goal prints (due at once).
     if terms == none and due-date == none and goal-date == none {
       let strings = (
         locale.at("strings", default: (:)).at("payment", default: (:))

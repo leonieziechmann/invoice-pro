@@ -18,9 +18,8 @@
   errors + warnings
 }
 
-/// Builds and checks the e-invoice as `(profile: .., model: .., diagnostics:
-/// .., xml: ..)`. The XML is always built; the caller decides what to do with
-/// the diagnostics.
+/// Builds and checks the e-invoice: `(profile: .., model: .., diagnostics:
+/// .., xml: ..)`, with the XML built even with errors.
 ///
 /// -> dictionary
 #let process-zugferd(

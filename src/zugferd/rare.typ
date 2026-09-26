@@ -1,5 +1,4 @@
-// The rarely needed parts of `process-zugferd` (skipped candidate profiles,
-// self-billed invoices), loaded only for an invoice that needs them.
+// Rarely needed parts of `process-zugferd`, loaded only when needed.
 
 // On a self-billed invoice the buyer is the `sender`, but the validator
 // names the seller's inputs `sender`: swap them in the field and texts.

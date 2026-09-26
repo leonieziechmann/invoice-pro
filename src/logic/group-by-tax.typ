@@ -42,9 +42,8 @@
   tax-groups
 }
 
-/// Groups items by VAT group (rate and category) and sums their totals. Each
-/// group keeps the exemption grounds of all its items and counts the items
-/// without (`missing-grounds`).
+/// Groups items by VAT group (rate and category), with their total, the
+/// exemption grounds of all items and the count of those without.
 ///
 /// -> dictionary
 #let group-by-tax(items, include-items: true) = {

@@ -2,7 +2,6 @@
 #import "service-period.typ": format-service-period, service-period-of
 #import "../utils/helper.typ": first-given
 
-// An identifier dictionary (e.g. `id.leitweg(..)`) prints as its `id`.
 #let _identifier-text(value) = {
   if type(value) == dictionary { value.at("id", default: none) } else { value }
 }
@@ -88,8 +87,7 @@
       ctx.locale.strings.reference.service-time
     } else { label }
     let format-date = ctx.locale.format.date
-    // The service period of the e-invoice (BT-72, BG-14), or a date or
-    // period `(start, end)` in the locale's date format; else a text.
+    // The service period of the e-invoice (BT-72, BG-14), or a given one.
     let (val, own-text) = if value == auto {
       let items = ctx.at("items", default: none)
       let period = service-period-of(ctx, if items == none { () } else {
@@ -110,7 +108,6 @@
       (value, true)
     }
     if val in (none, "", []) { return (title, none) }
-    // Marked, so that the e-invoice finds it whatever its title.
     if own-text { (title, [#val<invoice-pro:service-period-text>]) } else {
       (title, [#val<invoice-pro:service-period>])
     }
@@ -175,7 +172,6 @@
   }
 }
 
-// A self-billed invoice is issued by the buyer: the sender is the buyer.
 #let _self-billed(ctx) = {
   let document = ctx.at("document-type", default: none)
   type(document) == dictionary and document.at("self-billed", default: false)
@@ -531,8 +527,7 @@
 
 // --- Presets ---
 // Each prints what the law requires besides the parties and the items
-// (§ 14 Abs. 4 UStG, Art. 226 VAT Directive); references without value are
-// left out.
+// (§ 14 Abs. 4 UStG): `service-time` and the references of the parties.
 
 #let _party-references() = (
   seller-tax-nr(),

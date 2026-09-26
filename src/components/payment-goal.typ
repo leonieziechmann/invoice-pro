@@ -9,7 +9,7 @@
 ///
 /// -> content
 #let payment-goal(
-  /// The days for payment from the invoice date.
+  /// The days allowed for payment, from the invoice date.
   /// -> none | int
   days: none,
 

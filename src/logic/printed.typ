@@ -1,12 +1,10 @@
-// What the printed invoice shows besides the components, for the checks of
-// the seller's tax number or VAT ID (IP-PRINT-03) and the date of the supply
-// (IP-PERIOD-03); known only where the theme says so (`prints`).
+// What the printed invoice shows besides the components, for IP-PRINT-03 and
+// IP-PERIOD-03; known only where the theme says so (`prints`).
 
 #import "../utils/text.typ": plain-text
 
-/// What the root context knows about the printed invoice: whether the theme
-/// prints the reference signs (`known`), the references, the parties' lines
-/// and `extra`, whether it prints content on every page, and the body.
+/// What the root context knows about the printed invoice, `known` if the
+/// theme says that it prints the reference signs.
 ///
 /// -> dictionary
 #let printed-record(theme, references, sender, recipient, body) = {
@@ -45,8 +43,6 @@
   false
 }
 
-// Whether the references (except those titled one of `except`), the parties'
-// lines and `extra` or the body show one of `wanted`.
 #let _search(printed, wanted, except: ()) = {
   for reference in printed.at("references", default: ()) {
     if type(reference) != array or reference.len() != 2 { continue }
@@ -88,9 +84,8 @@
   type(printed) == dictionary and printed.at("known", default: false)
 )
 
-/// Whether the printed invoice shows one of `identifiers`; `none` if that
-/// cannot be known, as the theme does not say what it prints or prints
-/// content of its own on every page (e.g. a footer).
+/// Whether the printed invoice shows one of `identifiers`; `none` if unknown,
+/// also when the theme prints content of its own on every page (a footer).
 ///
 /// -> none | bool
 #let shows-identifier(printed, identifiers) = {

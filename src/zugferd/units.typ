@@ -4,7 +4,7 @@
 #import "../data/unit.typ": unit-db
 #import "../locale/lang/lang.typ" as languages
 
-// The Rec. 20 codes of the units of the `unit` module, by language file key.
+// The Rec. 20 codes of the `unit` module, by language file key.
 #let _unit-codes = (
   piece: "H87",
   "set": "SET",
@@ -26,9 +26,8 @@
   "cubic-metre": "MTQ",
 )
 
-/// The codes of unit texts (lower case, no trailing "."): the unit database,
-/// the unit names of every language and common abbreviations. Built on the
-/// first call (memoized).
+/// The codes of unit texts (lower case, no trailing ".") of every language;
+/// built on the first call (memoized).
 ///
 /// -> dictionary
 #let unit-aliases() = {
@@ -111,9 +110,8 @@
   KT: ("kit", "Karton"),
 )
 
-/// The code of a unit text as `(code: .., issue: ..)`: a code as it is (with
-/// the issue `ambiguous` for e.g. "STK"), the code of a unit name or
-/// abbreviation, else "C62" with the issue `unknown`.
+/// The code of a unit text as `(code: .., issue: ..)`: a code as it is (issue
+/// `ambiguous` for e.g. "STK"), a known name's, else "C62" (issue `unknown`).
 ///
 /// -> dictionary
 #let resolve-text-unit(text) = {

@@ -247,7 +247,7 @@
         if type(date) == datetime { (format.date)(date) } else { date },
       )
 
-      // An invoice states one payment means code (BT-81).
+      // A code of its own must be the component's: one per invoice (BT-81).
       let kind = method-kind(method)
       let means = of-context(ctx)
       if type(method) == dictionary and means != none {

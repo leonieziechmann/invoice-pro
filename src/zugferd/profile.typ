@@ -1,5 +1,4 @@
-// The Factur-X 1.0.07 (ZUGFeRD 2.3) profiles and what the schema of each
-// allows: the builder leaves out the rest.
+// The Factur-X 1.0.07 (ZUGFeRD 2.3) profiles and what each schema allows.
 
 #let _base = (
   // BT-23
@@ -32,7 +31,7 @@
   bic: false,
   // BT-85
   account-name: false,
-  // BG-18; without it, a card payment states only its code (BT-81).
+  // BG-18; else a card payment states only its code (BT-81).
   payment-card: false,
   // BT-155, BT-156
   item-ids: false,
@@ -46,11 +45,11 @@
   procuring-project: false,
   // BT-159
   item-origin: false,
-  // The EN 16931 business rules (BR-*).
+  // BR-*
   en16931: false,
-  // XRechnung (BR-DE-*), on top of EN 16931.
+  // BR-DE-*, on top of EN 16931
   xrechnung: false,
-  // The embedded XML file ("xrechnung.xml" for XRechnung, as in ZUGFeRD 2.3).
+  // "xrechnung.xml" for XRechnung (ZUGFeRD 2.3)
   file-name: "factur-x.xml",
 )
 

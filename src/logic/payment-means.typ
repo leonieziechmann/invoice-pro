@@ -22,8 +22,7 @@
   "59": "direct-debit",
 )
 
-/// The kind of payment means of a code (BT-81): `"transfer"`,
-/// `"direct-debit"`, `"card"` or `"other"`.
+/// The kind of payment means of a code (BT-81), see `method-kinds`.
 ///
 /// -> str
 #let code-kind(code) = _code-kinds.at(code, default: "other")
@@ -37,29 +36,28 @@
   method-kinds.at(method)
 }
 
-/// The payment means code (BT-81) of a credit transfer, SEPA in euro.
+/// The code (BT-81) of a credit transfer, SEPA in euro.
 ///
 /// -> str
 #let transfer-code(currency) = if currency == "EUR" { "58" } else { "30" }
 
-/// The payment means code (BT-81) of a direct debit, SEPA in euro.
+/// The code (BT-81) of a direct debit, SEPA in euro.
 ///
 /// -> str
 #let direct-debit-code(currency) = if currency == "EUR" { "59" } else {
   "49"
 }
 
-/// The payment means code (BT-81) of a payment card (`auto`: any kind, 48).
+/// The code (BT-81) of a payment card (`auto`: of any kind).
 ///
 /// -> str
 #let card-code(kind) = if kind == "credit" { "54" } else if kind == "debit" {
   "55"
 } else { "48" }
 
-// The methods whose code does not depend on the currency.
 #let _method-codes = (cash: "10", cheque: "20", card: "48", online: "68")
 
-/// The payment means code (BT-81) of a method of `paid` in a currency.
+/// The code (BT-81) of a method of `paid` in a currency.
 ///
 /// -> str
 #let method-code(method, currency) = {
@@ -69,8 +67,7 @@
   _method-codes.at(method)
 }
 
-/// Whether problems of an e-invoice are shown in the document
-/// (`zugferd-errors: "report"`) rather than stopping the compilation.
+/// Whether problems are shown in the document (`zugferd-errors: "report"`).
 ///
 /// -> bool
 #let report-problems(ctx) = (
@@ -122,8 +119,7 @@
   )
 }
 
-/// The payment strings with the payment goal sentences (`text`, `text-due`)
-/// of the invoice's payment means, followed by the cash discount notes.
+/// The payment strings with the sentences of the invoice's payment means.
 ///
 /// -> dictionary
 #let goal-strings(payment, means, discount-notes: ()) = {

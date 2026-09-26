@@ -481,7 +481,6 @@
   show-always: show-always,
   parse-city-raw: _digits(4, "CY"),
 )
-// "110 00 Praha 1"
 #let cz(name: "Česko", code: "CZ", show-always: false) = make-country(
   name: name,
   code: code,
@@ -506,7 +505,6 @@
   show-always: show-always,
   parse-city-raw: _digits(5, "FI"),
 )
-// "105 57 Athina"
 #let gr(name: "Greece", code: "GR", show-always: false) = make-country(
   name: name,
   code: code,
@@ -569,7 +567,6 @@
     keep-prefix: true,
   ),
 )
-// "Valletta VLT 1117"
 #let mt(name: "Malta", code: "MT", show-always: false) = make-country(
   name: name,
   code: code,
@@ -578,21 +575,18 @@
   format-inline-city: format-city-trailing,
   parse-city-raw: post-code-parser("[A-Z]{3}\\s?\\d{4}", position: "either"),
 )
-// "1012 AB Amsterdam"
 #let nl(name: "Nederland", code: "NL", show-always: false) = make-country(
   name: name,
   code: code,
   show-always: show-always,
   parse-city-raw: post-code-parser("\\d{4}\\s?[A-Z]{2}", prefixes: ("NL",)),
 )
-// "00-950 Warszawa"
 #let pl(name: "Polska", code: "PL", show-always: false) = make-country(
   name: name,
   code: code,
   show-always: show-always,
   parse-city-raw: post-code-parser("\\d{2}-\\d{3}", prefixes: ("PL",)),
 )
-// "1000-001 Lisboa"
 #let pt(name: "Portugal", code: "PT", show-always: false) = make-country(
   name: name,
   code: code,
@@ -605,7 +599,6 @@
   show-always: show-always,
   parse-city-raw: _digits(6, "RO"),
 )
-// "114 55 Stockholm"
 #let se(name: "Sverige", code: "SE", show-always: false) = make-country(
   name: name,
   code: code,
@@ -618,7 +611,6 @@
   show-always: show-always,
   parse-city-raw: _digits(4, "SI"),
 )
-// "811 01 Bratislava"
 #let sk(name: "Slovensko", code: "SK", show-always: false) = make-country(
   name: name,
   code: code,
@@ -748,8 +740,7 @@
 )
 
 /// Resolves the `country` of a party: `country.fr`, a country dictionary or
-/// an ISO 3166-1 alpha-2 code; `auto`, `none` and `""` give the country of
-/// `default-region`. Any other value is an error, never replaced silently.
+/// an ISO code; `auto`, `none` and `""` give the country of `default-region`.
 ///
 /// -> dictionary
 #let resolve-country(country-opt, default-region, field: "country") = {
@@ -771,8 +762,7 @@
   _complete-country(country, field)
 }
 
-// The `region` key of a party, an alias of `country` that also accepts the
-// regions of the `locale` module (`region.de`).
+// `region`, an alias of `country` that also takes the regions of `locale`.
 #let _resolve-region(region-opt, default-region, field) = {
   if type(region-opt) == function {
     import "../locale/region/region.typ"

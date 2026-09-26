@@ -21,9 +21,8 @@
 // An `id` identifier: the e-invoice reports its problems (IP-ID-01).
 #let _is-typed(value) = "kind" in value and "problems" in value
 
-/// Stops the compilation for an identifier of `party` that produces no text:
-/// a function (e.g. `id.siret` not called) or a dictionary without `id`,
-/// except an electronic address, which is then derived.
+/// Stops the compilation for an identifier of `party` without text: a
+/// function (`id.siret` not called) or a dictionary without `id`.
 ///
 /// -> none
 #let check-identifiers(party, field, keys) = {

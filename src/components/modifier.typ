@@ -22,10 +22,11 @@
   /// Whether an amount is gross; `auto` inherits it.
   /// -> bool | auto
   input-gross: auto,
-  /// Internal; `auto` by the sign of `amount`.
+  /// Internal: whether it is a discount; `auto` by the sign of `amount`.
   /// -> bool | auto
   is-discount: auto,
-  /// The VAT category, e.g. `tax.vat(19%)`; `auto` spreads it over all.
+  /// The VAT category, e.g. `tax.vat(19%)`. `auto` spreads it over the VAT
+  /// categories of the items.
   /// -> ratio | dictionary | auto
   tax: auto,
 ) = {

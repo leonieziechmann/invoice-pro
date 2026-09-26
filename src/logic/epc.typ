@@ -14,25 +14,19 @@
     + " bytes, non-ASCII characters count twice or more)"
 )
 
-/// Why an EPC-QR code cannot be generated from its plain text fields, as
-/// `(short: .., message: ..)` for a placeholder and an error message. Length
-/// limits count bytes (UTF-8), as `sepay` does.
+/// Why the plain text fields of `qr-code` give no EPC-QR code, as
+/// `(short: .., message: ..)`; length limits count UTF-8 bytes, as `sepay`.
 ///
 /// -> array
 #let problems(
-  /// The account holder (beneficiary).
   /// -> str
   beneficiary,
-  /// The IBAN in electronic format.
   /// -> str
   iban,
-  /// The BIC in electronic format.
   /// -> none | str
   bic,
-  /// The structured payment reference (EPC-QR line 10).
   /// -> none | str
   reference,
-  /// The unstructured remittance text (EPC-QR line 11).
   /// -> none | str
   text,
 ) = {
@@ -81,9 +75,8 @@
   found
 }
 
-/// The EPC-QR code of a bank transfer, as `(payload: .., problems: ..)`:
-/// `payload` holds the plain text fields for `epc-qr-code` of `sepay`, or is
-/// `none` if the code cannot be generated (see `problems`).
+/// The EPC-QR code of a bank transfer as `(payload: .., problems: ..)`, the
+/// fields for `epc-qr-code` of `sepay` or `none` (see `problems`).
 ///
 /// -> dictionary
 #let qr-code(
@@ -93,7 +86,7 @@
   /// The IBAN in electronic format.
   /// -> str
   iban,
-  /// The BIC in electronic format; `""` or `none` if there is none.
+  /// The BIC in electronic format, `""` or `none`.
   /// -> none | str
   bic: none,
   /// The structured payment reference (EPC-QR line 10).

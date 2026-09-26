@@ -10,8 +10,7 @@
 #let _integer-digits(value) = str(calc.floor(value)).len()
 
 /// The decimals of the net price of a gross price (BT-146): at least 6 and
-/// `fine`, and enough that its rounding changes the line amount by at most
-/// 0.0005 (PEPPOL-EN16931-R120).
+/// `fine`, more for large quantities (PEPPOL-EN16931-R120).
 ///
 /// -> int
 #let price-digits(quantity, base-quantity, fine: 4) = calc.max(
@@ -66,8 +65,7 @@
 }
 
 // The positive net amounts of a line's allowances and charges (BT-136,
-// BT-141), rounded so that their signed sum comes closest to `target`
-// (PEPPOL-EN16931-R120).
+// BT-141), with their signed sum closest to `target` (PEPPOL-EN16931-R120).
 #let _modifier-nets(amounts, divisor, target, digits) = {
   let unit = calc.pow(decimal("10"), -digits)
   let exact = ()

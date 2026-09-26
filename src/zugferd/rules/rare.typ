@@ -32,7 +32,8 @@
   }
   // Both CEN lists have it: only the Factur-X list lacks it.
   if in-list(xrechnung, code) { return fx }
-  // Withdrawn by CEN 1.3.16 (KoSIT: EN 16931 only); a currency only warns.
+  // Only CEN 1.3.16 lacks it, which KoSIT applies to EN 16931, not to BASIC;
+  // a currency is allowed there with a warning.
   if in-list(withdrawn, code) {
     let factur-x = own == none or in-list(own, code)
     if factur-x and name == "currency" { return "IP-CODE-01" }
@@ -240,7 +241,7 @@
   out
 }
 
-// The rule by where O occurs, or `none` (the items of BASIC WL).
+// The rule of a VAT ID under O by where O occurs, or `none` (BASIC WL items).
 #let _outside-scope-rule(model) = {
   let lines = model.profile.lines
   if lines {
@@ -769,7 +770,7 @@
   let out = ()
   let seller = model.seller
   let home = vat-id-country(seller.at("stated-vat-id", default: seller.vat-id))
-  // Else the member state of the tax representative's VAT ID (BT-63).
+  // A seller without VAT ID ships from its tax representative's state (BT-63).
   let representative = model.at("tax-representative", default: none)
   let whose = "seller"
   if home == none and representative != none {

@@ -96,10 +96,10 @@
   /// -> datetime | array | auto | none
   date: auto,
 
-  /// The price per unit; give it or `total`.
+  /// The price per unit; give it or `total`, not both.
   /// -> int | float | decimal | str | auto
   price: auto,
-  /// The total price; give it or `price`.
+  /// The total price; give it or `price`, not both.
   /// -> int | float | decimal | str | auto
   total: auto,
 

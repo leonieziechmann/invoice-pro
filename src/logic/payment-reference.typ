@@ -32,8 +32,7 @@
   if text != none { text } else { remittance.at("reference", default: none) }
 }
 
-/// The `bank-details` signal of a context: `bank` in the root context, else
-/// in `global` from the second layout pass on.
+/// The `bank-details` signal: `bank` of the root context, else in `global`.
 ///
 /// -> none | dictionary
 #let bank-signal(ctx) = ctx.at(

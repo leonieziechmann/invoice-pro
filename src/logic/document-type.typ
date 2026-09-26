@@ -1,5 +1,4 @@
-// The document type of an invoice (`invoice(document-type: ..)`, BT-3): what
-// it means for the title and for who pays whom.
+// The document type of an invoice (`invoice(document-type: ..)`, BT-3).
 
 /// The named document types and their UNTDID 1001 code (BT-3).
 #let named-types = (
@@ -10,8 +9,7 @@
   self-billed: "389",
 )
 
-// The UNTDID 1001 codes that EN 16931 (BR-CL-01) and every Factur-X profile
-// accept for BT-3, by the kind of document.
+// The codes every profile accepts for BT-3 (BR-CL-01), by kind of document.
 #let _kinds = (
   "71": "invoice",
   "80": "invoice",
@@ -77,7 +75,6 @@
 
 /// Resolves the `document-type` of an invoice: `auto` (an invoice), a named
 /// type or a UNTDID 1001 code, also as integer; panics for any other value.
-/// `title` is the key of the default title in `strings.document`.
 ///
 /// -> dictionary
 #let resolve-document-type(value) = {
@@ -116,8 +113,7 @@
   )
 }
 
-/// Whether the sender of the document pays its recipient (a credit note, a
-/// self-billed invoice); `document` is the resolved `document-type` or `none`.
+/// Whether the sender of a resolved `document` (or `none`) pays its recipient.
 ///
 /// -> bool
 #let sender-pays(document) = (

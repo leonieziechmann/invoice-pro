@@ -220,7 +220,7 @@
         payment-amount: amount,
       )
 
-      // The account name (BT-85) only if given: the default is BT-59 or BT-27.
+      // BT-85 only if `name` is given: the default holder is BT-59 or BT-27.
       let public = (
         iban: iban,
         bic: bic,

@@ -2,7 +2,7 @@
 
 /// Per name (e.g. `currency`) and kind, a string of codes, each between two
 /// spaces: `every` (all validations accept them), `factur-x`, `xrechnung`,
-/// `newer` (only in the newest EN 16931 list) and `withdrawn` (withdrawn there).
+/// `newer` (only in the newest EN 16931 list), `withdrawn` (withdrawn there).
 ///
 /// -> dictionary
 #let lists = {

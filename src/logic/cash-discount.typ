@@ -1,15 +1,13 @@
-// Cash discounts (Skonto) of the payment goal: the printed note and the
-// payment terms of the e-invoice (BT-20, in XRechnung the Skonto syntax of
-// BR-DE-18). A cash discount changes no amount of the invoice.
+// Cash discounts (Skonto) of the payment goal, printed and as payment terms
+// (BT-20, BR-DE-18); they change no amount of the invoice.
 
 #import "../utils/types.typ"
 #import "../utils/coercion.typ": to-decimal, to-ratio
 
 #let _keys = ("days", "percent", "basis")
 
-/// Checks and normalizes the `discount` of the payment goal: `none`, a
-/// dictionary `(days: .., percent: .., basis: ..)` or an array of them, as
-/// an array with `percent` in percent (`2.5` for `2.5%`).
+/// Checks the `discount` of the payment goal, `none`, `(days: .., percent: ..,
+/// basis: ..)` or an array of them; returns an array, `percent` as `2.5`.
 ///
 /// -> array
 #let normalize(discount) = {

@@ -110,7 +110,6 @@
     .to-dict()
 }
 
-// The frames a bundle consumes: its items and its modifiers.
 #let _consumed-kinds = ("item", "modifier", "modifier-applicator")
 
 // Removes the consumed frames at any depth. A nested bundle goes with its

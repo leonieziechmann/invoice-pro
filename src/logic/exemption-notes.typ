@@ -11,7 +11,6 @@
 ///
 /// -> dictionary
 #let assign-markers(
-  /// The VAT groups of the tax applicator by key.
   /// -> dictionary
   taxes,
 ) = {
@@ -33,14 +32,13 @@
   (grounds: markers, itemized: itemized)
 }
 
-/// The markers of the exemption grounds of a VAT group, in their order.
+/// The `markers` (see `assign-markers`) of the exemption grounds of a VAT
+/// group, in their order.
 ///
 /// -> array
 #let group-markers(
-  /// A VAT group of the tax applicator.
   /// -> dictionary
   tax,
-  /// The markers, see `assign-markers`.
   /// -> dictionary
   markers,
 ) = {
@@ -51,15 +49,13 @@
   result
 }
 
-/// The marker of an item's exemption grounds if its VAT group has several,
-/// else `none`.
+/// The marker of the exemption grounds of an item's `tax` if its VAT group
+/// has several, else `none`.
 ///
 /// -> none | str
 #let item-marker(
-  /// The tax of the item.
   /// -> dictionary
   tax,
-  /// The markers, see `assign-markers`.
   /// -> dictionary
   markers,
 ) = {
@@ -88,14 +84,13 @@
   /// The VAT groups of the view of `line-items`.
   /// -> array
   taxes,
-  /// Whether the totals, with a VAT line per category, are shown.
+  /// Whether the totals are shown.
   /// -> bool
   show-total: true,
-  /// Whether the tax column, with the markers of the items, is shown.
+  /// Whether the tax column is shown.
   /// -> bool
   show-tax-rates: false,
-  /// With `tax-exempt-small-biz`, `(clause: .., grounds: .., same-language:
-  /// ..)`: the clause in the document's language, the region's grounds.
+  /// The small business scheme `(clause, grounds, same-language)` or `none`.
   /// -> none | dictionary
   small-business: none,
 ) = {
@@ -104,7 +99,6 @@
 
   if small-business != none {
     let (clause, grounds, same-language) = small-business
-    // The clause is linked to the VAT line of the scheme's category.
     let scheme-tax = none
     for tax in taxes {
       if tax.grounds == grounds {

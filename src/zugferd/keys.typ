@@ -1,5 +1,4 @@
-// The known key an unknown party key most likely stands for (see
-// `_input-keys` of model.typ), loaded only for the first unknown key.
+// The known key an unknown party key most likely stands for.
 
 #let _post-code-hint = "Write the post code into `city`, e.g. `city: \"10115 Berlin\"` or `city: (name: \"Berlin\", post-code: \"10115\")`."
 

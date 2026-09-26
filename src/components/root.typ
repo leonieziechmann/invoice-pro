@@ -365,7 +365,7 @@
           assert(false, message: format-report(result))
         }
 
-        // With errors, "report" attaches a draft; "ignore" attaches it as valid.
+        // With errors, "report" attaches a draft, "ignore" the XML as if valid.
         let draft = errors.len() > 0 and ctx.zugferd-errors == "report"
         // MINIMUM and BASIC WL do not replace the visual invoice either.
         let as-data = draft or result.profile.id in ("minimum", "basic-wl")
