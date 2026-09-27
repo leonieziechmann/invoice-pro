@@ -33,7 +33,7 @@ Items of one tax category may have different grounds (e.g., a medical treatment 
 
 :::info
 The `code` parameter:
-The functions of the categories without VAT (`exempt`, `reverse-charge`, `intra-community`, `export`, `outside-scope`) and `new` also accept `code`, the VAT exemption reason code of the CEF VATEX code list (e.g. `"VATEX-EU-132-1C"` for a medical treatment exempt under Art. 132 (1) (c) of the VAT Directive). An e-invoice states it next to the grounds (BT-121), while the printed invoice shows the grounds. Without `code`, an e-invoice states the code of the category for `reverse-charge` (`VATEX-EU-AE`), `intra-community` (`VATEX-EU-IC`), `export` (`VATEX-EU-G`) and `outside-scope` (`VATEX-EU-O`), and none for an exemption, whose code depends on its legal basis. See [Tax Category Codes](../e-invoicing.md#3-tax-category-codes).
+The functions of the categories without VAT (`exempt`, `reverse-charge`, `intra-community`, `export`, `outside-scope`) and `new` also accept `code`, the VAT exemption reason code of the CEF VATEX code list (e.g. `"VATEX-EU-132-1C"` for a medical treatment exempt under Art. 132 (1) (c) of the VAT Directive). An e-invoice states it next to the grounds (BT-121), while the printed invoice shows the grounds. Without `code`, an e-invoice states the code of the category for `reverse-charge` (`VATEX-EU-AE`), `intra-community` (`VATEX-EU-IC`), `export` (`VATEX-EU-G`) and `outside-scope` (`VATEX-EU-O`), and none for an exemption, whose code depends on its legal basis. See [Tax Category Codes](../e-invoicing/invoice-data/taxes.md#tax-category-codes).
 :::
 
 **Example Usage:**

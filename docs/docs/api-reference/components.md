@@ -32,7 +32,7 @@ In the EPC-QR code, `reference` and the `invoice-nr` fill the structured referen
 :::
 
 :::info IBAN and EPC-QR code
-The IBAN is checked (structure and check digits) whether or not a QR code is shown. It is printed in groups of four, and written to the EPC-QR code and the ZUGFeRD XML without spaces and in upper case, so `"de89 3704 0044 0532 0130 00"` is fine. A missing or invalid IBAN stops the compilation with a message naming it. With an e-invoice and `zugferd-errors: "report"`, it is marked in the bank details instead, the EPC-QR code is replaced by a placeholder, and the report lists it as an error, so the XML is attached as a draft (see [Validation and Error Reporting](../e-invoicing.md#validation-and-error-reporting)).
+The IBAN is checked (structure and check digits) whether or not a QR code is shown. It is printed in groups of four, and written to the EPC-QR code and the ZUGFeRD XML without spaces and in upper case, so `"de89 3704 0044 0532 0130 00"` is fine. A missing or invalid IBAN stops the compilation with a message naming it. With an e-invoice and `zugferd-errors: "report"`, it is marked in the bank details instead, the EPC-QR code is replaced by a placeholder, and the report lists it as an error, so the XML is attached as a draft (see [Validation and Error Reporting](../e-invoicing/validation.md)).
 
 The EPC-QR code is only generated when it is shown and the invoice currency is EUR. It carries the plain text of the account holder, so a styled or multi-line sender name works as well; with `name: auto`, the account holder is the sender name on one line, as in the ZUGFeRD XML. The QR code allows at most 70 bytes for the account holder name (non-ASCII characters such as umlauts count twice), 35 for a structured `reference` and 140 for `text`, and a BIC of 8 or 11 letters and digits. If a value does not fit, the compilation stops and says which one (with an e-invoice and `zugferd-errors: "report"`, the placeholder of the QR code names it instead): set a shorter account name with `name`, or hide the QR code with `qr-code: (display: false)`.
 
@@ -126,7 +126,7 @@ Using the `discount` parameter to grant a discount for an earlier payment. Each 
 
 > Please transfer the total amount of **123.45€** within 30 days to the account listed below. For payment within 7 days, a cash discount of 3% is granted. For payment within 14 days, a cash discount of 2% on 100.00€ is granted.
 
-`days` is a whole number of days, and `percent` a percentage between 0% and 100% with at most two decimals, as the e-invoice states it. A cash discount changes no amount of the invoice: the buyer deducts it when paying in time. In an e-invoice, the discounts are written into the payment terms (BT-20), in XRechnung in the syntax of the KoSIT (e.g. `#SKONTO#TAGE=7#PROZENT=3.00#`, see [Cash Discount](../e-invoicing.md#cash-discount-skonto)).
+`days` is a whole number of days, and `percent` a percentage between 0% and 100% with at most two decimals, as the e-invoice states it. A cash discount changes no amount of the invoice: the buyer deducts it when paying in time. In an e-invoice, the discounts are written into the payment terms (BT-20), in XRechnung in the syntax of the KoSIT (e.g. `#SKONTO#TAGE=7#PROZENT=3.00#`, see [Cash Discount](../e-invoicing/invoice-data/payment.md#cash-discount-skonto)).
 
 ---
 
@@ -156,7 +156,7 @@ Collects the amount of the invoice by SEPA direct debit from the account of the 
 | `creditor-id` | `str` \| `content`           | Your SEPA creditor identifier, with or without spaces. Required. For an invoice in euro, its check digits are checked.        |
 | `debtor-iban` | `none` \| `str` \| `content` | The IBAN of the buyer's account that is debited, with or without spaces. XRechnung requires it. Its check digits are checked. |
 
-An invalid creditor identifier or IBAN stops the compilation with a message naming it, like an invalid IBAN of [`bank-details`](#bank-details). An invoice has one payment means: `direct-debit` next to `bank-details` or `card-payment` is an error of the e-invoice (see [Payment Means](../e-invoicing.md#payment-means)), and the EPC-QR code of `bank-details` is hidden by default. On a credit note or a self-billed invoice, whose sender pays the amount, `direct-debit` stops the compilation.
+An invalid creditor identifier or IBAN stops the compilation with a message naming it, like an invalid IBAN of [`bank-details`](#bank-details). An invoice has one payment means: `direct-debit` next to `bank-details` or `card-payment` is an error of the e-invoice (see [Payment Means](../e-invoicing/invoice-data/payment.md#payment-means)), and the EPC-QR code of `bank-details` is hidden by default. On a credit note or a self-billed invoice, whose sender pays the amount, `direct-debit` stops the compilation.
 
 ---
 

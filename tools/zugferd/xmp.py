@@ -13,7 +13,7 @@ Typst can write it); this check tracks the gap:
      compliant with PDF/A-3, and its only problems the missing Factur-X XMP
      metadata (EXPECTED_PDF_ERRORS).
   3. Mustang adds the Factur-X XMP metadata (`--action combine`, the recipe
-     of docs/docs/e-invoicing.md). The result must be valid in full, so the
+     of docs/docs/e-invoicing/limitations.md). The result must be valid in full, so the
      metadata is all that is missing. Its fx: values and schema description
      must equal tests/zugferd/xmp/mustang-<letter>.xmp, the reference the
      unit test of tools/zugferd/xmp.typ compares with; --update rewrites the
@@ -180,7 +180,7 @@ def xmp_of(pdf):
 
 
 def combine(pdf, xml, letter, out):
-    """Mustang's recipe of docs/docs/e-invoicing.md: embeds the XML again
+    """Mustang's recipe of docs/docs/e-invoicing/limitations.md: embeds the XML again
     together with the Factur-X XMP metadata. Returns (ok, output)."""
     java = common._java_tool("JAVA_BIN", "java")
     cmd = [java, "-jar", str(common.mustang_jar()), "--action", "combine", "--source", str(pdf),

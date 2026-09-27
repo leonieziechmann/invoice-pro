@@ -77,8 +77,9 @@ source without an entry (or an entry without source or tests), on an
 official rule id of the source without a fixture or a [[without-fixture]]
 entry, on an id the rule registry reports or covers in a profile whose
 validators do not have it (`registry_problems`, the backward check of the
-registry's `id-profiles`), and when the table in docs/docs/e-invoicing.md
-differs from the numbers (`--update-docs` writes it). The `open` rules are
+registry's `id-profiles`), and when the table in
+docs/docs/e-invoicing/conformance.md differs from the numbers
+(`--update-docs` writes it). The `open` rules are
 the work list (OPEN_WORK_LIST), which can only become shorter: a rule open
 beyond it fails, like a new rule id without a class, and so does one of the
 list that is no longer open. run.py checks that every fixture passes in every
@@ -111,7 +112,7 @@ import registry  # noqa: E402
 REPO = common.REPO
 TOML = HERE / "rule-coverage.toml"
 RULES_DIR = HERE / "corpus" / "rules"
-DOCS = REPO / "docs" / "docs" / "e-invoicing.md"
+DOCS = REPO / "docs" / "docs" / "e-invoicing" / "conformance.md"
 # The write guard of the test oracle: its generated tables name every rule
 # it compiles, which the package does not report. The files of src/ and the
 # rule registry (registry.REGISTRY) name the rules invoice-pro reports.
@@ -1232,7 +1233,7 @@ def main(argv=None):
     ap.add_argument("--explain", action="store_true", help="list every rule id with its class per profile")
     ap.add_argument("--id", default=None, help="explain these rule ids only (comma separated)")
     ap.add_argument("--json", default=None, help="write the classification as JSON to this file")
-    ap.add_argument("--update-docs", action="store_true", help="rewrite the table in docs/docs/e-invoicing.md")
+    ap.add_argument("--update-docs", action="store_true", help="rewrite the table in docs/docs/e-invoicing/conformance.md")
     ap.add_argument("--toml", default=str(TOML), help=argparse.SUPPRESS)
     args = ap.parse_args(argv)
     try:

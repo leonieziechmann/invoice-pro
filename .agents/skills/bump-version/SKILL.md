@@ -40,7 +40,7 @@ Follow this checklist to update version strings across the entire repository.
    - `docs/docs/contributing.md`
    - `docs/docs/b2b.md`
    - `docs/docs/b2c.md`
-   - `docs/docs/e-invoicing.md`
+   - `docs/docs/e-invoicing/**/*.md`
    - `docs/docs/api-reference/**/*.md`
 
 6. **`docs/DOCUMENTATION.md`**

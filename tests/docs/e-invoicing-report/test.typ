@@ -1,4 +1,5 @@
-// Documentation: e-invoicing.md, "Custom Report Layout". The invoice misses
+// Documentation: e-invoicing/validation.md, "Custom Report Layout". The
+// invoice misses
 // its payment terms, so `zugferd-errors: "report"` hands the problem to the
 // theme's `zugferd-report` function instead of failing.
 

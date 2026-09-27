@@ -150,7 +150,7 @@ A theme says what its `document` layout prints of the invoice data besides the c
 | `party-extra`  | It prints the `extra` details of the sender and the recipient.                                                                                |
 | `page-content` | It prints content of its own on every page, e.g. a footer, whose text `invoice-pro` cannot read. A `header` or `footer` of the theme sets it. |
 
-For a theme that prints the reference signs, the e-invoice checks that the printed invoice shows the seller's tax number or VAT identifier (`IP-PRINT-03`) and the date of the supply (`IP-PERIOD-03`), see [Printed Details](../e-invoicing.md#printed-details). The DIN-5008 theme prints the reference signs and the `extra` of the parties; the blank theme says nothing, so nothing is checked. A `document` layout of your own that prints the reference signs can say so:
+For a theme that prints the reference signs, the e-invoice checks that the printed invoice shows the seller's tax number or VAT identifier (`IP-PRINT-03`) and the date of the supply (`IP-PERIOD-03`), see [Printed Details](../e-invoicing/validation.md#printed-details). The DIN-5008 theme prints the reference signs and the `extra` of the parties; the blank theme says nothing, so nothing is checked. A `document` layout of your own that prints the reference signs can say so:
 
 ```typst
 #import "@preview/invoice-pro:0.4.2": invoice, themes

@@ -294,7 +294,7 @@ class Sources(unittest.TestCase):
 
 
 class Docs(unittest.TestCase):
-    """The table of the rules of invoice-pro in docs/docs/e-invoicing.md."""
+    """The table of the rules of invoice-pro in docs/docs/e-invoicing/validation.md."""
 
     def test_the_tables_are_the_generated_ones(self):
         self.assertEqual(r.docs_problems(r.load()), [])

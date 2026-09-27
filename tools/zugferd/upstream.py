@@ -33,7 +33,7 @@ ARTIFACTS = {
         "(`nix run .#zugferd-corpus`), `nix run .#validate-all-zugferd` and the Factur-X PDF check with "
         "`nix run .#zugferd-xmp -- --update`, review the diff of tests/zugferd/xmp/ and "
         "tools/zugferd/validator-differences.toml (a newer Mustang may agree with KoSIT on more rules), and "
-        "update the version in docs/docs/e-invoicing.md (XMP recipe), tests/TESTING.md and tools/zugferd.",
+        "update the version in docs/docs/e-invoicing/limitations.md (XMP recipe), tests/TESTING.md and tools/zugferd.",
     ),
     "kosit-validator": (
         "KoSIT validator",

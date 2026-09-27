@@ -96,7 +96,7 @@
       "terms": ["BT-3"],
       "level": "error",
       "field": "subject",
-      "summary": "A subject that names another kind of document than an invoice (e.g. \"Gutschrift\", \"Angebot\", \"Credit note\", \"Devis\") without `document-type`: the e-invoice would state a commercial invoice that asks the buyer to pay. See [Document Type](#9-document-type-bt-3).",
+      "summary": "A subject that names another kind of document than an invoice (e.g. \"Gutschrift\", \"Angebot\", \"Credit note\", \"Devis\") without `document-type`: the e-invoice would state a commercial invoice that asks the buyer to pay. See [Document Type](./invoice-data/document.md#document-type-bt-3).",
       "legal": null
     },
     "BR-DE-17": {
@@ -209,7 +209,7 @@
       "terms": ["BT-72", "BG-14"],
       "level": ["error", "warning"],
       "field": "references",
-      "summary": "A printed service period that is not the one the XML states: another date, or a text of its own where the XML states the invoice date. A text of its own besides dated items or a `service-period` is a warning. See [Service Period](#10-service-period-bt-72--bg-14).",
+      "summary": "A printed service period that is not the one the XML states: another date, or a text of its own where the XML states the invoice date. A text of its own besides dated items or a `service-period` is a warning. See [Service Period](./invoice-data/document.md#service-period-bt-72--bg-14).",
       "legal": "§ 14 Abs. 4 Satz 1 Nr. 6 UStG; Art. 226 No. 7 of the VAT Directive 2006/112/EC (the date of the supply)"
     },
     "BR-DE-TMP-32": {
@@ -422,7 +422,7 @@
       "terms": ["BT-29", "BT-30", "BT-46", "BT-47", "BT-60", "BT-61", "BT-71", "BT-10"],
       "level": "error",
       "field": "sender.legal-id",
-      "summary": "An identifier of the [`id` module](./api-reference/invoice/identifiers.md) whose format or check digit is wrong, e.g. a SIRET with a typo. `id.custom(..)` takes an identifier unchecked.",
+      "summary": "An identifier of the [`id` module](../api-reference/invoice/identifiers.md) whose format or check digit is wrong, e.g. a SIRET with a typo. `id.custom(..)` takes an identifier unchecked.",
       "legal": null
     },
     "IP-ID-03": {
@@ -1021,7 +1021,7 @@
       "terms": ["BG-26", "BG-14", "BT-72"],
       "level": "warning",
       "field": "item <id> (<name>)",
-      "summary": "The date of an item outside the `service-period` of the invoice. XRechnung checks it for an invoicing period (BG-14) as `PEPPOL-EN16931-R110` and `R111`. See [Item Notes, Periods and Country of Origin](#12-item-notes-periods-and-country-of-origin).",
+      "summary": "The date of an item outside the `service-period` of the invoice. XRechnung checks it for an invoicing period (BG-14) as `PEPPOL-EN16931-R110` and `R111`. See [Item Notes, Periods and Country of Origin](./invoice-data/line-items.md#item-notes-periods-and-country-of-origin).",
       "legal": null
     },
     "BR-CL-15": {
@@ -1201,7 +1201,7 @@
       "terms": ["BT-121", "BT-118"],
       "level": "error",
       "field": "tax <category> <rate>",
-      "summary": "A VAT exemption reason code (BT-121, `code` of the `tax` module) of another VAT category, e.g. `\"VATEX-EU-IC\"` on an exemption (`E`), or on a taxed category (`S`, `Z`, `L`, `M`). See [Tax Category Codes](#3-tax-category-codes).",
+      "summary": "A VAT exemption reason code (BT-121, `code` of the `tax` module) of another VAT category, e.g. `\"VATEX-EU-IC\"` on an exemption (`E`), or on a taxed category (`S`, `Z`, `L`, `M`). See [Tax Category Codes](./invoice-data/taxes.md#tax-category-codes).",
       "legal": null
     },
     "IP-TAX-03": {

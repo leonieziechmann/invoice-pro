@@ -63,7 +63,7 @@ else
 fi
 # Every rule id of the official validators has a class in
 # tools/zugferd/rule-coverage.toml, every IP rule its basis and tests, and
-# the table in docs/docs/e-invoicing.md the numbers; run.py then checks that
+# the table in docs/docs/e-invoicing/conformance.md the numbers; run.py then checks that
 # the parity fixtures (tools/zugferd/corpus/rules/) pass.
 "$PYTHON" tools/zugferd/rule_coverage.py --json build/zugferd/rule-coverage.json
 "$PYTHON" tools/zugferd/corpus/gen.py --population "$population"

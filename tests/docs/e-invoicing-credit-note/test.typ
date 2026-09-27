@@ -1,4 +1,5 @@
-// Source: docs/docs/e-invoicing.md — "9. Document Type (BT-3)"
+// Source: docs/docs/e-invoicing/invoice-data/document.md — "Document Type
+// (BT-3)"
 // Compile-only: the credit note must compile as documented, with an
 // e-invoice without errors.
 #import "/src/lib.typ": *

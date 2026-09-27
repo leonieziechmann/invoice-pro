@@ -2,9 +2,10 @@
 
   python3 -m unittest discover -s tools/zugferd -p 'test_*.py'
 
-The printed invoice and its XML are one invoice (docs/docs/e-invoicing.md,
-"Printed = Written"): the data model of the e-invoice (src/zugferd/model.typ)
-takes the amounts the invoice computed and prints, and the serializer
+The printed invoice and its XML are one invoice (docs/docs/e-invoicing/
+architecture.md, "The Printed Invoice and Its XML Are One Invoice"): the
+data model of the e-invoice (src/zugferd/model.typ) takes the amounts the
+invoice computed and prints, and the serializer
 (src/zugferd/build.typ) writes the model. No module of the e-invoice path
 computes the amounts of an invoice a second time, so they cannot drift apart:
 none imports a module of src/logic that computes them. The one derivation,

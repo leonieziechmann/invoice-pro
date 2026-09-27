@@ -8,8 +8,8 @@
 // requires for every extension schema, the description of that schema in
 // `pdfaExtension:schemas`. Typst cannot write custom XMP metadata yet, so no
 // package code calls this module: invoice-pro attaches the XML, and validators that
-// check the PDF itself miss the metadata (docs/docs/e-invoicing.md, "Factur-X
-// XMP Metadata").
+// check the PDF itself miss the metadata (docs/docs/e-invoicing/limitations.md,
+// "Factur-X XMP Metadata").
 //
 // Once Typst supports it, this module moves to src/zugferd/, and the
 // attachment of the XML in src/components/root.typ hands

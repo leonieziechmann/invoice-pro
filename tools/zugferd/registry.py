@@ -29,8 +29,8 @@ read it here:
   profiles_of(entry, rule)
                       the profiles in which an id of `covers` counts
   docs_tables(..)     the table of the rules of invoice-pro in
-                      docs/docs/e-invoicing.md, generated from the registry
-                      and sorted by rule id
+                      docs/docs/e-invoicing/validation.md, generated from
+                      the registry and sorted by rule id
   warning_keys()      the keys of `_warnings` of engine.typ, read from its
                       Typst source
   fx_aliases(jar)     the Factur-X rules that implement an official rule of
@@ -100,7 +100,7 @@ MODULES = [
     RULES / "rare.typ",
     RULES / "xrechnung.typ",
 ]
-DOCS = REPO / "docs" / "docs" / "e-invoicing.md"
+DOCS = REPO / "docs" / "docs" / "e-invoicing" / "validation.md"
 
 PROFILES = ("minimum", "basic-wl", "basic", "en16931", "xrechnung")
 # The profiles validated with the Factur-X Schematron (Mustang applies none
@@ -424,7 +424,7 @@ def warning_problems(registry, path=ENGINE):
 
 # ---------------------------------------------------------------- documentation
 
-# The tables of docs/docs/e-invoicing.md that list rules of the registry:
+# The tables of the documentation (DOCS) that list rules of the registry:
 # the line that starts the table, its columns, and the entries (by key) it
 # lists, each with its usual level and its summary. One table: the rules of
 # invoice-pro.

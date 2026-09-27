@@ -15,7 +15,7 @@ in scripts/validate-all-zugferd (one list for both checks). For each one:
 
 --update rewrites the golden files (and removes those of documents that are
 no longer listed). An intended change of the XML updates them in the same
-commit; a change users notice is also documented in docs/docs/e-invoicing.md.
+commit; a change users notice is also documented in docs/docs/e-invoicing/.
 """
 
 import argparse

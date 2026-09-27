@@ -21,7 +21,7 @@ B2B invoicing differs significantly from B2C invoicing due to strict tax auditin
 2. **Mandatory Tax Identifiers**:
    You must provide your tax number or VAT ID. For transactions within the EU, the buyer's VAT ID is also mandatory to validate tax-exempt or reverse-charge transactions.
 3. **Electronic Invoicing Compliance (ZUGFeRD/XRechnung)**:
-   Many jurisdictions (such as Germany and France) are transitioning to mandatory electronic invoicing for all domestic B2B transactions. `invoice-pro` natively supports embedding standard-compliant XML metadata using the `zugferd` option.
+   Many jurisdictions (such as Germany and France) are transitioning to mandatory electronic invoicing for all domestic B2B transactions. `invoice-pro` natively supports embedding standard-compliant XML metadata using the `zugferd` option (see [E-Invoicing](./e-invoicing/index.md)).
 
 ---
 

@@ -10,8 +10,9 @@ on:
       - "template/**"
       - "tools/**"
       - "scripts/**"
-      # The table of the rule coverage (tools/zugferd/rule_coverage.py).
-      - "docs/docs/e-invoicing.md"
+      # The generated tables of the rules, the rule coverage and the business
+      # terms (tools/zugferd/).
+      - "docs/docs/e-invoicing/**"
       - "flake.nix"
       - "flake.lock"
   pull_request:
@@ -24,8 +25,9 @@ on:
       - "template/**"
       - "tools/**"
       - "scripts/**"
-      # The table of the rule coverage (tools/zugferd/rule_coverage.py).
-      - "docs/docs/e-invoicing.md"
+      # The generated tables of the rules, the rule coverage and the business
+      # terms (tools/zugferd/).
+      - "docs/docs/e-invoicing/**"
       - "flake.nix"
       - "flake.lock"
   # Nightly: a larger corpus with random invoices outside the legal

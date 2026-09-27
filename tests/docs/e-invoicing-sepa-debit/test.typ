@@ -1,4 +1,5 @@
-// Documentation: e-invoicing.md, "Direct Debit". An XRechnung collected by
+// Documentation: e-invoicing/invoice-data/payment.md, "Direct Debit". An
+// XRechnung collected by
 // SEPA direct debit: the payment goal announces the debit, and the e-invoice
 // states the mandate reference, the creditor identifier and the debited
 // account. Validated by validate-all-zugferd.

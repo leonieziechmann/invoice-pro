@@ -102,5 +102,67 @@ class Disposition(unittest.TestCase):
         self.assertIn("196 business terms of EN 16931 have a disposition", out.getvalue())
 
 
+class Docs(unittest.TestCase):
+    """The tables of docs/docs/e-invoicing/invoice-data/business-terms.md."""
+
+    def setUp(self):
+        self.committed = bt_disposition.load(bt_disposition.TABLE)
+
+    def test_committed_docs_are_generated(self):
+        self.assertEqual(bt_disposition.docs_problems(self.committed), [])
+
+    def test_block(self):
+        block = bt_disposition.docs_block(self.committed)
+        n = bt_disposition.counts(self.committed)
+        self.assertTrue(
+            block.startswith(
+                f"Of the 196 business terms and groups of EN 16931, `invoice-pro` states {n['input']} from an input, "
+                f"derives {n['derived']} and does not support {n['unsupported']}."
+            ),
+            block[:200],
+        )
+        headings = [line[4:] for line in block.split("\n") if line.startswith("### ")]
+        self.assertEqual(headings, [title for title, _ in bt_disposition.AREAS])
+        # Every term once in the tables of the parts, the unsupported ones
+        # once more in their own table.
+        rows = [line for line in block.split("\n") if line.startswith("| `B")]
+        self.assertEqual(len(rows), len(bt_disposition.TERMS) + n["unsupported"])
+        self.assertRegex(block, r"(?m)^\| `BT-17` +\| Tender or lot reference +\| no input for public procurement")
+        self.assertRegex(block, r"(?m)^\| `BT-1` +\| Invoice number +\| input +\| invoice-nr +\|$")
+
+    def test_cells(self):
+        entry = {"name": "x", "disposition": "input", "input": "a | b", "note": "c"}
+        self.assertEqual(bt_disposition._details(entry), "a \\| b; c")
+        with self.assertRaises(ValueError):
+            bt_disposition._details({"name": "x", "disposition": "input", "input": "<br>"})
+
+    def test_areas_follow_the_table(self):
+        # A table whose first part does not start with BT-1.
+        terms = table()["terms"]
+        terms["BT-1"] = terms.pop("BT-1")
+        with self.assertRaises(ValueError):
+            bt_disposition.docs_block({"terms": terms})
+
+    def test_update(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "business-terms.md"
+            path.write_text("# Business Terms\n")
+            self.assertIn("markers", bt_disposition.docs_problems(self.committed, path)[0])
+            path.write_text(f"# Business Terms\n\n{bt_disposition.DOCS_BEGIN}\n\nold\n\n{bt_disposition.DOCS_END}\n\nAfter.\n")
+            self.assertIn("differ", bt_disposition.docs_problems(self.committed, path)[0])
+            bt_disposition.update_docs(self.committed, path)
+            self.assertEqual(bt_disposition.docs_problems(self.committed, path), [])
+            text = path.read_text()
+            self.assertTrue(text.startswith(f"# Business Terms\n\n{bt_disposition.DOCS_BEGIN}\n\nOf the 196"), text[:120])
+            self.assertTrue(text.endswith(f"|\n\n{bt_disposition.DOCS_END}\n\nAfter.\n"), text[-120:])
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(bt_disposition.main(["--docs", str(path)]), 0)
+            path.write_text("# Business Terms\n")
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(bt_disposition.main(["--docs", str(path)]), 1)
+            self.assertIn("markers of the business-term tables are missing", out.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

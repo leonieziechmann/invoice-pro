@@ -619,15 +619,16 @@ reason = """The phone number of the seller contact (BT-42) has at least three di
 - `derived`: invoice-pro derives the term, `source` says from what;
 - `unsupported`: invoice-pro does not state the term, `reason` says why.
 
-`tools/zugferd/bt_disposition.py` (unit-tested by `test_bt_disposition.py`) fails when a term has no entry, an entry is no term of EN 16931, or a disposition lacks its `input`, `source` or `reason`; `scripts/zugferd-corpus` runs it before the corpus. So every business term has a decision, and a value without an input of its own cannot end up in another business term unnoticed, as the seller's tax number did in the seller identifier (issue #42). A change that adds an input, or starts to write a term, updates the line of the term in the same commit:
+`tools/zugferd/bt_disposition.py` (unit-tested by `test_bt_disposition.py`) fails when a term has no entry, an entry is no term of EN 16931, or a disposition lacks its `input`, `source` or `reason`; `scripts/zugferd-corpus` runs it before the corpus. So every business term has a decision, and a value without an input of its own cannot end up in another business term unnoticed, as the seller's tax number did in the seller identifier (issue #42). A change that adds an input, or starts to write a term, updates the line of the term in the same commit. The tables of the documentation, `docs/docs/e-invoicing/invoice-data/business-terms.md`, are generated from the file: the check also fails when they differ, and `--update-docs` rewrites them.
 
 ```bash
-python3 tools/zugferd/bt_disposition.py   # ✔ 196 business terms of EN 16931 have a disposition (...)
+python3 tools/zugferd/bt_disposition.py                 # ✔ 196 business terms of EN 16931 have a disposition (...)
+python3 tools/zugferd/bt_disposition.py --update-docs   # rewrite the tables of the documentation
 ```
 
 #### The Rule Registry
 
-invoice-pro's own validation checks the invoice data against the business rules before the XML is written (see [the documentation](../docs/docs/e-invoicing.md#validation-and-error-reporting)). Its rules are the checks and messages in `src/zugferd/rules/`, which load as they are needed; their metadata is the rule registry, `tools/zugferd/registry.json`, which the tools and the tests read and the package does not ship:
+invoice-pro's own validation checks the invoice data against the business rules before the XML is written (see [the documentation](../docs/docs/e-invoicing/validation.md)). Its rules are the checks and messages in `src/zugferd/rules/`, which load as they are needed; their metadata is the rule registry, `tools/zugferd/registry.json`, which the tools and the tests read and the package does not ship:
 
 | File                                              | Holds                                                                                                                                                                   | Loaded                                                                                 |
 | :------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
@@ -667,7 +668,7 @@ An entry of `registry.json`, by its key (the rule id, or a name for an entry tha
 | `terms`              | the business terms (BT, BG) the rule is about                                                                                                                                                                             |
 | `level`              | `"error"`, `"warning"`, or both (the first is the usual one)                                                                                                                                                              |
 | `field`              | the input the diagnostic names                                                                                                                                                                                            |
-| `summary`            | what the rule checks; the tables of the rules of invoice-pro in `docs/docs/e-invoicing.md` are generated from it                                                                                                          |
+| `summary`            | what the rule checks; the table of the rules of invoice-pro in `docs/docs/e-invoicing/validation.md` is generated from it                                                                                                 |
 | `legal`              | the legal basis of a rule of invoice-pro that the law requires (e.g. `Art. 226 No. 4 and No. 15 of the VAT Directive 2006/112/EC`), else `null`                                                                           |
 | `note`               | a remark (optional), e.g. where invoice-pro follows one version of an official rule                                                                                                                                       |
 
@@ -684,7 +685,7 @@ registry.covering(rules, "en16931")      # {official id: [key, ..]}: the officia
 ```bash
 python3 tools/zugferd/registry.py --check        # entries, messages, checks, `_warnings`, layout, table of the documentation; with $MUSTANG_JAR the Factur-X aliases
 python3 tools/zugferd/registry.py --format       # rewrite registry.json in its layout: one line per field, a list on one line
-python3 tools/zugferd/registry.py --write-docs   # regenerate the table of the rules of invoice-pro in docs/docs/e-invoicing.md
+python3 tools/zugferd/registry.py --write-docs   # regenerate the table of the rules of invoice-pro in docs/docs/e-invoicing/validation.md
 ```
 
 `tools/zugferd/test_registry.py` (run by `zugferd-corpus`) checks that the entries are valid and in the layout of `--format`, that every entry has a message and a check and every rule id of the checks an entry, that `_warnings` of `engine.typ` is the keys whose usual level is `"warning"` (read from the Typst source), that the table of the documentation is the generated one and, with `$MUSTANG_JAR`, that `covers` names exactly the Factur-X aliases of the rules it covers, each in the profiles of the rules it implements. `tests/zugferd/validate/test.typ` checks the Typst side: the messages are those of the entries, `_warnings` is the keys whose usual level is `"warning"`, and a finding without a message stops the compilation. The helpers of `tests/zugferd/harness.typ` (`rules`, `diagnostic`, `diagnostics`), which most tests of `tests/zugferd/` use, fail a test whose diagnostic names a rule the registry does not list for the profile of the invoice at the level of the diagnostic (its `ids`, the profiles of the id and its `level`).
@@ -835,7 +836,7 @@ A **parity fixture** `tools/zugferd/corpus/rules/<ID>.typ` is the smallest invoi
 - an official rule id that `src/` or the rule registry names (not the tables of the test oracle) without a fixture in any profile or an entry `[[without-fixture]]`, and such an entry for an id that neither of them names any more or that a fixture shows (`NAMED`);
 - an id that the rule registry reports in a profile (see `reported_in` of `registry.py` and `id-profiles`) and that no validator of the profile has, and an official rule it covers there that no validator of the profile has, not even as a Factur-X alias of a rule the entry covers (`REGISTRY`): the backward check of the registry, which also covers the warnings and the checks no case of the corpus shows;
 - a rule classified as `open` beyond the work list `OPEN_WORK_LIST` of `rule_coverage.py`, and a rule of the list that is no longer open (`NEW OPEN`, `OPEN`): the list can only become shorter;
-- a table in `docs/docs/e-invoicing.md` that differs from the classification (`DOCS`).
+- a table in `docs/docs/e-invoicing/conformance.md` that differs from the classification (`DOCS`).
 
 `run.py` fails when a rule classified as `fixture` has, in one of the profiles of its entry, no fixture that passed there (`RULE COVERAGE`, in a run of every fixture). The listed open rules do not fail the gate, but a new one does, and so does a new rule id, as it has no class; the documentation states the numbers and the open rules, so it cannot claim more than the classification.
 
@@ -843,7 +844,7 @@ A **parity fixture** `tools/zugferd/corpus/rules/<ID>.typ` is the smallest invoi
 python3 tools/zugferd/rule_coverage.py                   # the numbers per profile, the open rules, the problems
 python3 tools/zugferd/rule_coverage.py --explain         # every rule id with its class per profile
 python3 tools/zugferd/rule_coverage.py --id BR-DE-16     # one rule, with its assertions
-python3 tools/zugferd/rule_coverage.py --update-docs     # rewrite the table in docs/docs/e-invoicing.md
+python3 tools/zugferd/rule_coverage.py --update-docs     # rewrite the table in docs/docs/e-invoicing/conformance.md
 python3 tools/zugferd/run.py tools/zugferd/corpus/rules  # the parity fixtures only
 ```
 
@@ -862,7 +863,7 @@ Then update the table of the documentation (`--update-docs`) and commit it with 
 
 `tools/zugferd/golden.py` takes the documents of `scripts/validate-all-zugferd` (one list for both checks), compiles each twice with a fixed creation timestamp and requires bit-identical PDFs: the same Typst and package version produce the same document, PDF and XML. It then compares the attached XML, pretty-printed, with `tests/zugferd/golden/<document>.xml` and shows a diff when they differ. Documents that import the published package (the template) are compiled against the checkout.
 
-An intended change of the XML updates the golden files in the same commit, which explains the change; a change users notice is also documented in `docs/docs/e-invoicing.md`:
+An intended change of the XML updates the golden files in the same commit, which explains the change; a change users notice is also documented in `docs/docs/e-invoicing/`:
 
 ```bash
 ./scripts/zugferd-golden --update        # or: nix run .#zugferd-golden -- --update
@@ -894,7 +895,7 @@ The benchmark invoices are valid and have no warnings, so they need none of the 
 Typst cannot write custom XMP metadata yet ([typst/typst#5667](https://github.com/typst/typst/issues/5667)), so the PDFs lack the Factur-X extension schema (`fx:DocumentType`, `fx:DocumentFileName`, `fx:Version`, `fx:ConformanceLevel`) that validators of the PDF itself check. `tools/zugferd/xmp.typ` prepares this metadata from the profile table and its own conformance levels by guideline (`levels`); the package does not ship it, and it moves into the package once Typst can write the metadata. Two checks keep the preparation right and notice when Typst catches up:
 
 - `tests/zugferd/xmp` (tytanic) compares the metadata of every profile with the XMP that Mustang writes with `--action combine` (`tests/zugferd/xmp/mustang-<letter>.xmp`): the `fx:` values and the PDF/A description of the extension schema.
-- `scripts/zugferd-xmp` (`tools/zugferd/xmp.py`) is an expected failure. It compiles one e-invoice test document per profile and validates the PDF with Mustang: the XML must be valid, the PDF must be PDF/A-3 compliant, and its only problems must be the eight messages about the missing XMP metadata. With the metadata that Mustang adds (the recipe of `docs/docs/e-invoicing.md`), the PDF must be valid in full, and Mustang's XMP must still equal the references of the unit test. The check fails when anything else changes: another PDF problem (e.g. a regression of the PDF/A output), a PDF that has the metadata (`XPASS`: move `tools/zugferd/xmp.typ` into the package, write the prepared metadata and turn the check around), an invalid combined PDF, changed references (`--update` rewrites them; review the diff and `tools/zugferd/xmp.typ`), or a new definition in Typst's `pdf` module, which may be the custom XMP support.
+- `scripts/zugferd-xmp` (`tools/zugferd/xmp.py`) is an expected failure. It compiles one e-invoice test document per profile and validates the PDF with Mustang: the XML must be valid, the PDF must be PDF/A-3 compliant, and its only problems must be the eight messages about the missing XMP metadata. With the metadata that Mustang adds (the recipe of `docs/docs/e-invoicing/limitations.md`), the PDF must be valid in full, and Mustang's XMP must still equal the references of the unit test. The check fails when anything else changes: another PDF problem (e.g. a regression of the PDF/A output), a PDF that has the metadata (`XPASS`: move `tools/zugferd/xmp.typ` into the package, write the prepared metadata and turn the check around), an invalid combined PDF, changed references (`--update` rewrites them; review the diff and `tools/zugferd/xmp.typ`), or a new definition in Typst's `pdf` module, which may be the custom XMP support.
 
 ```bash
 ./scripts/zugferd-xmp            # or: nix run .#zugferd-xmp
@@ -936,29 +937,29 @@ nix run .#check-pr
 
 Every non-trivial code block in `docs/docs/` must be registered here. When adding a new code section to the documentation, add it to this list and create a corresponding test under `tests/docs/` if possible. If no test is created yet, mark the entry as **⚠️ not implemented**.
 
-| Source file                            | Code ID                | Description                                                             | Test directory                         | Status             |
-| :------------------------------------- | :--------------------- | :---------------------------------------------------------------------- | :------------------------------------- | :----------------- |
-| `intro.md`                             | `quick-glance`         | Full invoice with items, discount, and bank details                     | `docs/intro-minimal/`                  | ✅                 |
-| `getting-started.md`                   | `first-invoice`        | Minimal invoice with items and tax configuration                        | `docs/getting-started-minimal/`        | ✅                 |
-| `api-reference/index.md`               | `blueprint`            | Architectural blueprint with items, payment, bank, signature            | `docs/api-index-blueprint/`            | ✅                 |
-| `api-reference/invoice.md`             | `minimal-config`       | Minimal valid configuration example                                     | `docs/api-invoice-minimal/`            | ✅                 |
-| `api-reference/components.md`          | `apply-bulk-tax`       | Apply block wrapping items with shared tax rate                         | `docs/api-components-apply/`           | ✅                 |
-| `api-reference/components.md`          | `payment-means`        | Cash discount, direct debit, card payment and paid invoice              | `docs/api-components-payment/`         | ✅                 |
-| `api-reference/theme.md`               | `din5008-example`      | DIN-5008 theme with custom parameters                                   | `docs/api-theme-din5008/`              | ✅                 |
-| `api-reference/theme.md`               | `blank-example`        | Blank theme with native Typst page setup                                | `docs/api-theme-blank/`                | ✅                 |
-| `e-invoicing.md`                       | `custom-report`        | Theme `zugferd-report` function for a custom problem list               | `docs/e-invoicing-report/`             | ✅                 |
-| `e-invoicing.md`                       | `credit-note`          | Credit note (document type 381) with a preceding invoice                | `docs/e-invoicing-credit-note/`        | ✅                 |
-| `e-invoicing.md`                       | `item-data`            | Note, date and country of origin of items                               | `docs/e-invoicing-item-data/`          | ✅                 |
-| `e-invoicing.md`                       | `complete-example`     | Complete ZUGFeRD-compliant invoice                                      | `docs/e-invoicing-complete/`           | ✅                 |
-| `api-reference/invoice/identifiers.md` | `printing-identifiers` | Register number as legal registration identifier and printed in `extra` | `docs/api-identifiers-printing/`       | ✅                 |
-| `e-invoicing.md`                       | `direct-debit`         | XRechnung collected by SEPA direct debit                                | `docs/e-invoicing-sepa-debit/`         | ✅                 |
-| `api-reference/locale/index.md`        | `locale-customize`     | Locale customization with `locale.custom` overrides                     | `integration/locale-custom-overrides/` | ✅                 |
-| `api-reference/locale/index.md`        | `currency-format`      | Custom currency formatting override                                     | —                                      | ⚠️ not implemented |
-| `api-reference/locale/custom.md`       | `pl-language`          | Polish language dictionary definition                                   | —                                      | ⚠️ not implemented |
-| `api-reference/locale/custom.md`       | `pl-region`            | Polish region builder function                                          | —                                      | ⚠️ not implemented |
-| `api-reference/locale/custom.md`       | `pl-factory`           | Building locale with `build-locale` factory                             | —                                      | ⚠️ not implemented |
-| `api-reference/locale/custom.md`       | `pl-usage`             | Using the custom locale in a document                                   | —                                      | ⚠️ not implemented |
-| `api-reference/locale/base.md`         | `schema-override`      | Schema inspection and partial override example                          | —                                      | ⚠️ not implemented |
+| Source file                              | Code ID                | Description                                                             | Test directory                         | Status             |
+| :--------------------------------------- | :--------------------- | :---------------------------------------------------------------------- | :------------------------------------- | :----------------- |
+| `intro.md`                               | `quick-glance`         | Full invoice with items, discount, and bank details                     | `docs/intro-minimal/`                  | ✅                 |
+| `getting-started.md`                     | `first-invoice`        | Minimal invoice with items and tax configuration                        | `docs/getting-started-minimal/`        | ✅                 |
+| `api-reference/index.md`                 | `blueprint`            | Architectural blueprint with items, payment, bank, signature            | `docs/api-index-blueprint/`            | ✅                 |
+| `api-reference/invoice.md`               | `minimal-config`       | Minimal valid configuration example                                     | `docs/api-invoice-minimal/`            | ✅                 |
+| `api-reference/components.md`            | `apply-bulk-tax`       | Apply block wrapping items with shared tax rate                         | `docs/api-components-apply/`           | ✅                 |
+| `api-reference/components.md`            | `payment-means`        | Cash discount, direct debit, card payment and paid invoice              | `docs/api-components-payment/`         | ✅                 |
+| `api-reference/theme.md`                 | `din5008-example`      | DIN-5008 theme with custom parameters                                   | `docs/api-theme-din5008/`              | ✅                 |
+| `api-reference/theme.md`                 | `blank-example`        | Blank theme with native Typst page setup                                | `docs/api-theme-blank/`                | ✅                 |
+| `e-invoicing/validation.md`              | `custom-report`        | Theme `zugferd-report` function for a custom problem list               | `docs/e-invoicing-report/`             | ✅                 |
+| `e-invoicing/invoice-data/document.md`   | `credit-note`          | Credit note (document type 381) with a preceding invoice                | `docs/e-invoicing-credit-note/`        | ✅                 |
+| `e-invoicing/invoice-data/line-items.md` | `item-data`            | Note, date and country of origin of items                               | `docs/e-invoicing-item-data/`          | ✅                 |
+| `e-invoicing/index.md`                   | `complete-example`     | Complete ZUGFeRD-compliant invoice                                      | `docs/e-invoicing-complete/`           | ✅                 |
+| `api-reference/invoice/identifiers.md`   | `printing-identifiers` | Register number as legal registration identifier and printed in `extra` | `docs/api-identifiers-printing/`       | ✅                 |
+| `e-invoicing/invoice-data/payment.md`    | `direct-debit`         | XRechnung collected by SEPA direct debit                                | `docs/e-invoicing-sepa-debit/`         | ✅                 |
+| `api-reference/locale/index.md`          | `locale-customize`     | Locale customization with `locale.custom` overrides                     | `integration/locale-custom-overrides/` | ✅                 |
+| `api-reference/locale/index.md`          | `currency-format`      | Custom currency formatting override                                     | —                                      | ⚠️ not implemented |
+| `api-reference/locale/custom.md`         | `pl-language`          | Polish language dictionary definition                                   | —                                      | ⚠️ not implemented |
+| `api-reference/locale/custom.md`         | `pl-region`            | Polish region builder function                                          | —                                      | ⚠️ not implemented |
+| `api-reference/locale/custom.md`         | `pl-factory`           | Building locale with `build-locale` factory                             | —                                      | ⚠️ not implemented |
+| `api-reference/locale/custom.md`         | `pl-usage`             | Using the custom locale in a document                                   | —                                      | ⚠️ not implemented |
+| `api-reference/locale/base.md`           | `schema-override`      | Schema inspection and partial override example                          | —                                      | ⚠️ not implemented |
 
 ---
 

@@ -1,5 +1,5 @@
-// Source: docs/docs/e-invoicing.md — "12. Item Notes, Periods and
-// Country of Origin"
+// Source: docs/docs/e-invoicing/invoice-data/line-items.md — "Item Notes,
+// Periods and Country of Origin"
 // Compile-only: the example must compile as documented, with an
 // e-invoice without errors.
 #import "/src/lib.typ": *
