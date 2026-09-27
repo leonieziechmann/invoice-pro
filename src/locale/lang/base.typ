@@ -398,7 +398,6 @@
     /// -> dictionary
     classes: (
       data: "Required data",
-      e-invoice: "E-invoice",
       theme: "Theme",
       lint: "Check",
     ),
@@ -413,12 +412,6 @@
       recipient-address: "recipient address",
       recipient-vat-id: "recipient VAT ID",
       line-items: "line items",
-      buyer-electronic-address: "buyer electronic address",
-      seller-electronic-address: "seller electronic address",
-      buyer-reference: "buyer reference / Leitweg-ID",
-      seller-contact-name: "seller contact name",
-      seller-contact-phone: "seller contact phone",
-      seller-contact-email: "seller contact email",
     ),
     /// Report texts of the theme and lint issues (and of data issues that are
     /// not a missing field), keyed by the issue's `key`; each a function of the

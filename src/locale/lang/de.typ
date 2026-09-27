@@ -263,7 +263,6 @@
     fix-or: "oder",
     classes: (
       data: "Pflichtangabe",
-      e-invoice: "E-Rechnung",
       theme: "Theme",
       lint: "Prüfung",
     ),
@@ -276,12 +275,6 @@
       recipient-address: "Anschrift Rechnungsempfänger:in",
       recipient-vat-id: "USt-IdNr. Rechnungsempfänger:in",
       line-items: "Rechnungspositionen",
-      buyer-electronic-address: "elektronische Adresse Käufer:in",
-      seller-electronic-address: "elektronische Adresse Verkäufer:in",
-      buyer-reference: "Käuferreferenz / Leitweg-ID",
-      seller-contact-name: "Kontaktperson Verkäufer:in",
-      seller-contact-phone: "Telefon Verkäufer:in",
-      seller-contact-email: "E-Mail Verkäufer:in",
     ),
     issues: (
       iban: a => [Die IBAN #raw(a.iban) ist ungültig (Prüfziffern nach ISO 13616).],

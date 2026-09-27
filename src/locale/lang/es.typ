@@ -295,7 +295,6 @@
     fix-or: "o",
     classes: (
       data: "Dato obligatorio",
-      e-invoice: "Factura electrónica",
       theme: "Tema",
       lint: "Comprobación",
     ),
@@ -308,12 +307,6 @@
       recipient-address: "dirección (destinatario/a)",
       recipient-vat-id: "NIF-IVA (destinatario/a)",
       line-items: "líneas de factura",
-      buyer-electronic-address: "dirección electrónica (parte compradora)",
-      seller-electronic-address: "dirección electrónica (parte vendedora)",
-      buyer-reference: "referencia del comprador / Leitweg-ID",
-      seller-contact-name: "contacto (parte vendedora)",
-      seller-contact-phone: "teléfono (parte vendedora)",
-      seller-contact-email: "correo electrónico (parte vendedora)",
     ),
     issues: (
       iban: a => [El IBAN #raw(a.iban) no es válido (dígitos de control ISO 13616).],

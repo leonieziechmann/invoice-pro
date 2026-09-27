@@ -22,7 +22,8 @@
   resolve-level(none, inputs: (invoice-pro-validation: "draft")) == "draft",
 )
 #assert(levels == (none, "draft", "strict"))
-#assert(blocking-classes == ("data", "e-invoice"))
+#assert(blocking-classes == ("data",))
+#assert(classes == ("data", "theme", "lint"))
 
 // strict text: one issue verbatim, several with a header and a numbered list
 #let a = issue("a", "data", "A is missing")
@@ -66,16 +67,6 @@
   let f = l.validation.fields
   for r in data-requirements.invoice {
     assert(r.field in f, message: l.meta.lang + ": " + r.field)
-  }
-  for k in (
-    "buyer-electronic-address",
-    "seller-electronic-address",
-    "buyer-reference",
-    "seller-contact-name",
-    "seller-contact-phone",
-    "seller-contact-email",
-  ) {
-    assert(k in f, message: l.meta.lang + ": " + k)
   }
   assert(l.validation.classes.keys() == classes)
   assert(

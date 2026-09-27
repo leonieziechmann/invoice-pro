@@ -282,7 +282,6 @@
     // -> dictionary
     classes: (
       data: "Required data",
-      e-invoice: "E-invoice",
       theme: "Theme",
       lint: "Check",
     ),
@@ -297,12 +296,6 @@
       recipient-address: "recipient address",
       recipient-vat-id: "recipient VAT ID",
       line-items: "line items",
-      buyer-electronic-address: "buyer electronic address",
-      seller-electronic-address: "seller electronic address",
-      buyer-reference: "buyer reference / Leitweg-ID",
-      seller-contact-name: "seller contact name",
-      seller-contact-phone: "seller contact phone",
-      seller-contact-email: "seller contact email",
     ),
     issues: (
       iban: a => [The IBAN #raw(a.iban) is not valid (ISO 13616 check digits).],

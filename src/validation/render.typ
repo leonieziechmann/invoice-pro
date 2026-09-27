@@ -198,7 +198,7 @@
     ..issues
       .enumerate()
       .map(((i, x)) => {
-        let what = if x.field != none and x.class in ("data", "e-invoice") {
+        let what = if x.field != none and x.class == "data" {
           (s.missing)(s.fields.at(x.field, default: x.field))
         } else { localized(s, x) }
         (

@@ -6,19 +6,20 @@
 #import "../utils/patch.typ": did-you-mean
 
 /// Issue classes that follow the validation level.
-/// - data:      a legally required document field is missing (§ 14 UStG, EN 16931)
-/// - e-invoice: data the selected ZUGFeRD/Factur-X profile requires is missing
-/// - theme:     the theme cannot carry required output (unplaced role, empty part)
-/// - lint:      a quality or export guard (contrast, footer fit, overlap, assets)
-#let classes = ("data", "e-invoice", "theme", "lint")
+/// - data:  legally required data is missing or invalid (§ 14 UStG, EN 16931)
+/// - theme: the theme cannot carry required output (unplaced role, empty part)
+/// - lint:  a quality or export guard (contrast, footer fit, overlap, assets)
+/// The rules of the e-invoice are no class: they run once no data issue is
+/// open and follow `zugferd-errors` (see `components/root.typ`).
+#let classes = ("data", "theme", "lint")
 
 /// Classes whose issues make the machine-readable invoice incomplete. While
-/// any of them is open, `draft` withholds the factur-x.xml attachment (`strict`
-/// stops; `none` runs no check and attaches the XML as built).
-#let blocking-classes = ("data", "e-invoice")
+/// any of them is open, `draft` withholds the XML attachment (`strict` stops;
+/// `none` runs no check, and `zugferd-errors` alone decides).
+#let blocking-classes = ("data",)
 
 /// The validation levels, strictest last. `none` switches every check of the
-/// four classes off; misuse still panics.
+/// three classes off; misuse still panics.
 #let levels = (none, "draft", "strict")
 
 /// sys.inputs key that overrides `invoice(validation: ..)`, e.g.
