@@ -181,6 +181,19 @@ The gate is yellow at 5 lines (the share and the module import) and never red; t
 
 After an edit, the preview of an e-invoice with 5 lines is up to date in about an eighth of a second, about 10 ms later than without e-invoice.
 
+### After the XML checks moved to the tests
+
+The package then stopped checking its own XML: the write guard, its round trip and the checks that the model states what the invoice prints moved to the test oracle (`tools/zugferd/guard/`), and `src/` shrank from 1,089 kB to 637 kB. Measured with `scripts/perf-gate --runs 5` on the commit before (9b4b850) and after (1d72fef), one right after the other on the same machine:
+
+| Gate metric                         |         5 lines |       50 lines |        300 lines |
+| :---------------------------------- | --------------: | -------------: | ---------------: |
+| Share of the plain compile          | 17.2 % → 10.3 % |  8.2 % → 6.6 % |    5.2 % → 5.0 % |
+| E-invoice path                      |  50.1 → 28.9 ms | 81.2 → 65.9 ms | 255.8 → 241.7 ms |
+| Module import (budget 12 ms)        |  22.0 → 14.5 ms | 21.0 → 13.9 ms |   21.0 → 13.9 ms |
+| Serializer per line (budget 0.5 ms) |  2.61 → 1.16 ms | 0.56 → 0.49 ms |   0.43 → 0.38 ms |
+
+The gate stays yellow only for the module import. The live preview (`measure.py --watch --runs 21`, alternately on both commits, 5 lines): a recompile after an edit takes 130 to 170 ms, of which the e-invoice takes 5 to 14 ms instead of 12 to 35 ms before; the runs vary by about 10 ms.
+
 ## Keeping the e-invoice path cheap
 
 These rules come from measurements of the e-invoice path. They apply to all code that runs for every invoice or for every line. Instruction counts are from `cachegrind` (see above); on the test machine, the e-invoice path executes about 4 000 instructions per microsecond.
