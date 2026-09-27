@@ -194,6 +194,8 @@ The package then stopped checking its own XML: the write guard, its round trip a
 
 The gate stays yellow only for the module import. The live preview (`measure.py --watch --runs 21`, alternately on both commits, 5 lines): a recompile after an edit takes 130 to 170 ms, of which the e-invoice takes 5 to 14 ms instead of 12 to 35 ms before; the runs vary by about 10 ms.
 
+The comments came back afterwards (9832681): `src/` is 771 kB with them. Measured the same way against the commit without them (37216be), alternately on the same machine: the module import takes 15.3 to 16.4 ms instead of 14.8 ms, and the e-invoice path at 5 lines 33 to 35 ms instead of 30 ms (a share of 11.3 to 11.4 % instead of 10.5 %); at 50 and 300 lines the difference is within the noise. A live preview parses the modules only once, so its recompiles at 5 lines take 134 to 148 ms on both commits (`measure.py --watch --runs 21`, three runs each); the difference is smaller than the spread of the runs.
+
 ## Keeping the e-invoice path cheap
 
 These rules come from measurements of the e-invoice path. They apply to all code that runs for every invoice or for every line. Instruction counts are from `cachegrind` (see above); on the test machine, the e-invoice path executes about 4 000 instructions per microsecond.
