@@ -5,11 +5,11 @@
 ///
 /// -> content
 #let signature(
-  /// The name under the signature line; `auto` is the sender's.
+  /// The name to display under the signature line. Defaults to the sender's name.
   /// -> auto | string | content
   name: auto,
 
-  /// The signature, e.g. an image of a handwritten one.
+  /// The signature content (e.g., an image of a handwritten signature).
   /// -> none | content
   signature: none,
 ) = {

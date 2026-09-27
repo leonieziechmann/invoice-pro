@@ -2,13 +2,14 @@
 
 /// Spanish regional configuration (ES).
 #let es(lang) = {
+  // --- Helper Functions ---
   let infer-tax-es(rate) = {
     if rate == 21% {
-      return tax.vat(21%) // Standard rate
+      return tax.vat(21%) // Standard IVA rate
     } else if rate == 10% {
-      return tax.vat(10%) // Reduced rate
+      return tax.vat(10%) // Reduced rate (e.g., passenger transport, some foods, water)
     } else if rate == 4% {
-      return tax.vat(4%) // Super-reduced rate
+      return tax.vat(4%) // Super-reduced rate (e.g., basic foods, books, medicines)
     } else if rate == 0% {
       panic(
         "Ambiguous 0% tax rate in region 'es'. Please explicitly use tax.zero(), tax.exempt(), tax.export(), or tax.outside-scope() from tax.typ instead of passing 0%.",
@@ -22,6 +23,7 @@
     }
   }
 
+  // --- Regional Data ---
   return (
     meta: (
       region: "es",
@@ -34,8 +36,10 @@
     tax: (
       default-vat: tax.vat(21%),
 
-      // Franquicia del IVA: exempt (category E). The note cites no article;
-      // `locale.custom.tax(..)` can state one.
+      // Small business franchise (franquicia del IVA): the supplies are exempt.
+      // The note is printed and is the exemption reason (BT-120) of VAT
+      // category E in the e-invoice. It cites no statutory article; state the
+      // provision that applies with `locale.custom.tax(..)` where needed.
       small-enterprise-special-scheme: tax.exempt(
         grounds: "Exento de IVA según el régimen especial de franquicia para pequeñas empresas.",
       ),

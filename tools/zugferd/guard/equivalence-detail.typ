@@ -1,5 +1,32 @@
-// The detailed check of equivalence.typ: IP-PRINT-01 (a value differs from
-// the printed one), IP-CALC-01 and IP-CALC-02.
+// Printed = written, in detail: the findings of the invariants that the
+// e-invoice states the amounts and quantities the invoice computed and
+// prints. They compare the data model of the e-invoice, whose XML
+// roundtrip.typ compares with it once more, with the computed invoice it is
+// a projection of: the items, allowances, charges and VAT groups of the line
+// items (`item-data`) and the totals the invoice prints (`ctx.global.total`).
+// A failure is a bug of invoice-pro (or of a component that computes one
+// value for the print and another one for the e-invoice), never a mistake in
+// the invoice data, so every finding is an error.
+//
+// - IP-PRINT-01: an amount or quantity of the XML differs from the printed
+//   one: of a line (quantity, price, base quantity, net amount, allowances
+//   and charges), of a document level allowance or charge, of a VAT group
+//   (category, rate, taxable amount, VAT amount) or a total (net, VAT,
+//   gross, prepaid, due); or the lines, allowances and charges of the XML do
+//   not add up to the printed total without VAT. With gross prices, a net
+//   amount plus VAT must give the printed gross amount within the rounding
+//   of logic/net-amounts.typ: less than a unit of the currency, plus the
+//   rounding of the printed taxable amount of its VAT group.
+// - IP-CALC-01: the parts of a document level allowance or charge per VAT
+//   group add up to its printed amount. A part may have the other sign: a
+//   discount on a VAT group whose lines add up to a credit is stated as a
+//   charge of that group (IP-PRINT-01 compares each part).
+// - IP-CALC-02: the printed amounts of a VAT group add up to its printed
+//   taxable amount (with gross prices: to its gross total).
+//
+// equivalence.typ loads this module only for an invoice that needs it: one
+// whose values differ from the printed ones at first sight, and one with
+// gross prices or with allowances or charges.
 
 #import "/src/zugferd/rules/engine.typ": line-field, tax-field
 #import "/src/zugferd/model.typ": text-or-none
@@ -7,10 +34,13 @@
 #let _zero = decimal("0")
 #let _one = decimal("1")
 
-// A net price derived from a gross price keeps at least 6 decimals.
+// The decimals the net price of a gross price keeps at least (see
+// `price-digits` of logic/net-amounts.typ): its tolerance.
 #let _price-tolerance = decimal("0.000001")
 
-// A finding of IP-PRINT-01; `rate`: the VAT rate of a gross `printed`.
+// A finding of IP-PRINT-01: the `term` of `field` is `stated` in the XML and
+// `printed` on the invoice; with gross prices, `rate` is the VAT rate the net
+// amount `stated` is compared with the gross amount `printed` by.
 #let _differs(field, term, stated, printed, rate: none) = (
   key: "IP-PRINT-01",
   field: field,
@@ -20,7 +50,8 @@
   rate: rate,
 )
 
-// The field of a document level modifier, e.g. `discount (Coupon)`.
+// The field of a document level allowance or charge, e.g. `discount
+// (Coupon)`.
 #let _modifier-field(modifier) = {
   let name = text-or-none(modifier.at("name", default: none))
   let kind = if modifier.at("absolute", default: _zero) < _zero {
@@ -29,16 +60,22 @@
   if name == none { kind } else { kind + " (" + name + ")" }
 }
 
-// A line against its item. `limit`: the tolerance of the net amount with
-// gross prices, else `none`; `unit`: the smallest amount of the currency.
+// The findings of a line of the model against its item: its values and its
+// allowances and charges (in the order the item prints them: its discounts,
+// then its surcharges). `limit` is the tolerance of its net amount with
+// gross prices (`none`: net prices), `unit` the smallest amount of the
+// currency. Called per line with the line and its item only.
 #let _line-findings(line, item, limit, unit) = {
   let out = ()
   let divisor = _one + line.rate
-  // BR-27: a negative price may be stated positive, of a negative quantity.
+  // A negative price is stated as it is printed, or as a positive price of
+  // a negative quantity (BR-27).
   let (price, quantity) = if item.price < _zero and line.price >= _zero {
     (-item.price, -item.quantity)
   } else { (item.price, item.quantity) }
   let rate = if limit != none { line.rate }
+  // Each value: its term, what the XML states, what the invoice prints, and
+  // whether they differ.
   for (term, stated, printed, off) in (
     (
       "invoiced quantity (BT-129)",
@@ -114,7 +151,11 @@
   out
 }
 
-/// The findings of `findings` of equivalence.typ, checked in detail.
+/// The findings of `findings` of equivalence.typ, checked in detail: for the
+/// data model `model` of the computed invoice `item-data` (the line items'
+/// data), whose totals the invoice prints as `printed` (`ctx.global.total`:
+/// net, gross, prepaid, due), in the order of the checks (see the top of
+/// this file).
 ///
 /// -> array
 #let detailed-findings(model, item-data, printed) = {
@@ -127,8 +168,10 @@
     decimal("10"),
     -(if type(digits) == int { digits } else { 2 }),
   )
-  // The printed amounts per VAT group (IP-CALC-02) and, with gross prices,
-  // the tolerance of its net amounts: a unit plus the rounding of its basis.
+  // The printed amounts of each VAT group: its lines and allowances and
+  // charges (IP-CALC-02); with gross prices, how far a net amount may
+  // differ from its gross amount divided by 1 + the rate (a unit, plus the
+  // rounding of the printed taxable amount).
   let sums = (:)
   let tolerance = (:)
   for (key, tax) in taxes {
@@ -141,9 +184,10 @@
     }
   }
 
-  // --- Lines ---
+  // --- Lines ------------------------------------------------------------------
   let lines = model.lines
-  // Without a line per item, neither lines nor sums are compared.
+  // Without a line per item, the lines cannot be compared, nor the sums of
+  // the VAT groups (IP-CALC-02).
   let counted = lines.len() == items.len()
   if not counted {
     out.push(_differs(
@@ -154,6 +198,8 @@
     ))
     lines = ()
   }
+  // The printed amounts of the lines: per VAT group, or of all lines if
+  // there is one group.
   let single = sums.len() == 1
   let total = _zero
   let limit = if inclusive and single { tolerance.values().first() }
@@ -163,7 +209,10 @@
     if not single and line.key != none and line.key in sums {
       sums.at(line.key) += net
     }
-    // Lines that differ or have adjustments are looked at in detail.
+    // The values of the line are those of the item (with gross prices, the
+    // net ones within the rounding). A line that differs, has allowances or
+    // charges, or a negative price (stated as a positive price of a
+    // negative quantity, BR-27) is looked at in detail.
     let detailed = if inclusive {
       if not single {
         limit = if line.key != none {
@@ -216,7 +265,7 @@
   }
   if single { sums.at(sums.keys().first()) += total }
 
-  // --- Allowances and charges ---
+  // --- Document level allowances and charges ---------------------------------
   let entries = model.allowance-charges
   let next = 0
   for modifier in (
@@ -273,7 +322,7 @@
     ))
   }
 
-  // --- VAT breakdown ---
+  // --- VAT breakdown ----------------------------------------------------------
   if model.taxes.len() != taxes.len() {
     out.push(_differs(
       "line-items",
@@ -320,7 +369,7 @@
     }
   }
 
-  // --- Totals ---
+  // --- Totals -----------------------------------------------------------------
   let totals = model.totals
   let net = printed.at("net", default: _zero)
   let gross = printed.at("gross", default: _zero)

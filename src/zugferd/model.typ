@@ -1,5 +1,16 @@
-// Normalizes the computed invoice into the e-invoice data model: amounts are
-// read, never computed again (except BT-106 to BT-108 and gross-price nets).
+// Normalizes the computed invoice into the data model of the e-invoice.
+//
+// The model is a projection of what the invoice computed and prints: the
+// quantities, prices and amounts of its lines, the allowances and charges,
+// the VAT groups and the totals are read from the computed invoice (the
+// line items' `item-data`), never computed a second time. The only amounts
+// the printed invoice does not state are the net amounts of an invoice with
+// gross prices, which logic/net-amounts.typ derives from the printed ones;
+// the sums of the lines, allowances and charges (BT-106 to BT-108) are
+// added up here. The texts and identifiers are made plain once. The
+// validator checks this model and the builder serializes it; the tests
+// compare the XML with it once more (tools/zugferd/guard/roundtrip.typ), so
+// all three agree on what ends up in the XML.
 
 #import "../utils/text.typ": plain-ascii, plain-text
 #import "code-lists.typ": lists
@@ -24,6 +35,8 @@
 #let _zero = decimal("0")
 #let _one = decimal("1")
 
+// Whether `code` is in a code list of code-lists.typ, a string of codes
+// each between two spaces (see `in-list` of rules/engine.typ).
 #let _in-list(list, code) = (
   type(code) == str
     and code != ""
@@ -31,13 +44,19 @@
     and (" " + code + " ") in list
 )
 
-// The same fallbacks as the printed invoice.
+// The first value that is set, or `none`: the same fallbacks as the printed
+// invoice takes (see `first-given`).
 #let first-of = first-given
 
-// Strings `plain-text` returns as they are.
+// A string that `plain-text` returns as it is (`plain-ascii`): printable
+// ASCII words with single spaces between them, as most names, numbers and
+// codes are. The test is cheaper than `plain-text`, which runs three
+// replacements.
 #let _plain-ascii = plain-ascii
 
-// The plain text of a value, or `none` if it has no visible text.
+// The plain text of a value, or `none` if it has no visible text. A text
+// element of such a string, e.g. the name `[Consulting]` of an item, is
+// its string as well.
 #let text-or-none(value) = {
   if type(value) == str and _plain-ascii in value { return value }
   if (
@@ -49,8 +68,11 @@
   if result == "" { none } else { result }
 }
 
-/// The payment terms (BT-20) of a text with its line breaks, or `none`; a
-/// Skonto line (BR-DE-18) needs a final line break.
+/// The payment terms (BT-20) of a text, or `none`. Unlike other texts, they
+/// keep their line breaks: the XRechnung Skonto syntax (BR-DE-18) writes each
+/// cash discount on a line of its own, e.g. "#SKONTO#TAGE=14#PROZENT=2.00#",
+/// followed by a line break, which is added when the text ends with such a
+/// line.
 ///
 /// -> str | none
 #let payment-terms(value) = {
@@ -61,19 +83,26 @@
 }
 
 
-// Compiled on first use (memoized).
+// Invisible format characters (Unicode category Cf: zero width space, byte
+// order mark, word joiner, soft hyphen, ...), which copied identifiers often
+// carry. They are all outside ASCII, so the patterns are compiled (once, on
+// first use) only for texts that are not plain ASCII.
 #let _invisible-patterns() = (
   invisible: regex("\\p{Cf}"),
   spaces: regex(" {2,}"),
 )
 
+// A plain text without invisible characters. The spaces around a removed
+// character are joined, as `plain-text` has collapsed the whitespace before.
 #let _visible(text) = {
   if text.len() == text.codepoints().len() { return text }
   let patterns = _invisible-patterns()
   text.replace(patterns.invisible, "").replace(patterns.spaces, " ").trim()
 }
 
-// An identifier without whitespace or invisible characters.
+// The plain text of an identifier without any whitespace or invisible
+// characters (VAT IDs, IBANs, email addresses, codes). `plain-text` turns all
+// whitespace into single spaces.
 #let compact(value) = {
   if type(value) == str and _plain-ascii in value {
     return value.replace(" ", "")
@@ -82,14 +111,18 @@
   if result == "" { none } else { result }
 }
 
-// An identifier that may contain spaces ("HRB 12345").
+// The plain text of an identifier that may contain spaces (e.g. the tax
+// number "143/123/45678" or "HRB 12345"), without invisible characters.
 #let _identifier(value) = {
   if type(value) == str and _plain-ascii in value { return value }
   let result = _visible(plain-text(value))
   if result == "" { none } else { result }
 }
 
-// `none` for the placeholder of a missing value ("#invoice-nr").
+// The value of the key `key` of a party or the root context, `none` for the
+// placeholder the root context fills a missing value with for the visual
+// invoice, e.g. "#invoice-nr" or "#sender.city-name". Called with the value
+// rather than the dictionary, which Typst would hash on every call.
 #let _unset(value, key) = if (
   type(value) == str
     and (
@@ -98,6 +131,8 @@
     )
 ) { none } else { value }
 
+// ISO 3166-1 alpha-2 code of a country: a country of the `country` module or
+// its code.
 #let _country-code(country) = {
   let code = if type(country) == dictionary {
     country.at("code", default: none)
@@ -106,9 +141,14 @@
   if code == none { none } else { upper(code) }
 }
 
+// ISO 3166-1 alpha-2 code of a party's country.
 #let country-code(party) = _country-code(party.at("country", default: none))
 
-// The EAS of VAT IDs by prefix: only those of `lists.eas.every`.
+// Electronic address schemes (EAS) for national VAT identification numbers,
+// keyed by the VAT ID prefix (Greece uses "EL"). Only schemes of the EAS code
+// list every validator accepts (`eas.every` of code-lists.typ); Denmark and
+// Sweden, for example, have none, so their parties fall back to the email
+// address.
 #let vat-eas-codes = (
   AT: "9914",
   BE: "9925",
@@ -140,7 +180,9 @@
   SK: "9950",
 )
 
-/// The first two characters of a VAT ID in upper case, or `none`.
+/// The prefix of a VAT identifier: its first two characters in upper case,
+/// or `none` if it is shorter. Taken by characters, never by bytes, so that
+/// a VAT ID starting with any character (e.g. "€") is safe to inspect.
 ///
 /// -> none | str
 #let vat-id-prefix(vat-id) = {
@@ -149,7 +191,9 @@
   if chars.len() < 2 { none } else { upper(chars.at(0) + chars.at(1)) }
 }
 
-/// The country that issued a VAT ID ("EL" is GR, "XI" GB), or `none`.
+/// The ISO 3166-1 code of the country that issued a VAT identifier: its
+/// prefix, with "EL" for Greece and "XI" (Northern Ireland) for the United
+/// Kingdom, or `none` if the prefix is not a country code.
 ///
 /// -> none | str
 #let vat-id-country(vat-id) = {
@@ -160,6 +204,8 @@
   if _in-list(lists.country.every, code) { code } else { none }
 }
 
+// Contact details of a party, from `contact` or the flat `contact-name`,
+// `phone` and `email` keys.
 #let contact-model(party) = {
   let contact = party.at("contact", default: none)
   let nested = if type(contact) == dictionary { contact } else if (
@@ -187,8 +233,19 @@
   } else { result }
 }
 
-/// The electronic address (BT-34, BT-49): the explicit one with an id (BR-62,
-/// BR-63), else of the VAT ID, else the email.
+/// Retrieves the electronic address (BT-34, BT-49) of a party: the explicit
+/// `electronic-address`, else one derived from the VAT ID, else the email.
+///
+/// An explicit address without an identifier (`""`, `auto`, `(scheme: "EM")`
+/// or an empty field of imported data) counts as not given, so the address is
+/// derived instead: the XML never gets an address without identifier (BR-62,
+/// BR-63). An address without scheme is an email address (`EM`) if it contains
+/// "@"; otherwise its scheme stays `none` for the validator to report.
+///
+/// The VAT ID is used even when the invoice is not subject to VAT: BR-O-02
+/// leaves out the VAT identifiers (BT-31, BT-48), not the electronic address.
+///
+/// Returns `none` or `(scheme: none | str, id: str)`.
 ///
 /// -> none | dictionary
 #let get-electronic-address(party) = {
@@ -209,7 +266,9 @@
     }
   }
 
-  // Only the scheme of the country that issued the VAT ID fits.
+  // The prefix names the country that issued the VAT ID, and only that
+  // country's scheme fits: a Danish VAT ID of a German company is no German VAT
+  // endpoint. Without a scheme for the prefix, the email is used.
   let vat-id = compact(party.at("vat-id", default: none))
   let prefix = vat-id-prefix(vat-id)
   if prefix != none and vat-id.codepoints().len() > 2 {
@@ -226,7 +285,9 @@
   none
 }
 
-// `(scheme: .., id: ..)`, without spaces if it has a scheme.
+// An identifier with an optional scheme: a dictionary such as a GLN
+// `(scheme: "0088", id: ..)`, or a text without scheme. Identifiers with a
+// scheme are written without spaces; `none` if there is no identifier.
 #let _scheme-id(value) = {
   if type(value) == dictionary {
     let scheme = compact(value.at("scheme", default: none))
@@ -238,7 +299,13 @@
   if id == none { none } else { (scheme: none, id: id) }
 }
 
-// `ram:ID` (BT-29, BT-46, BT-71) without scheme, else `ram:GlobalID`.
+// The identifiers of a party, from the input `keys` in this order. An
+// identifier without scheme is the party identifier written as `ram:ID`
+// (BT-29, BT-46, BT-71), one with scheme the global identifier (`ram:GlobalID`):
+// `id` may be given with a scheme, and a `global-id` without one is an
+// ordinary identifier. The keys each value came from are kept (`id-keys`,
+// `global-id-keys`), so that the validator reports two different values for
+// one of them instead of dropping one.
 #let _party-ids(party, keys) = {
   let ids = ()
   let id-keys = ()
@@ -267,9 +334,11 @@
   )
 }
 
-// --- Party keys ---
+// --- Keys of the party dictionaries ------------------------------------------
 
-// `true` for the keys the e-invoice reads, `false` for printed-only ones.
+// The keys of `sender`, `recipient` and `delivery-address` besides the address:
+// `true` if the e-invoice reads the key, `false` if only the printed invoice
+// uses it.
 #let _address-keys = (
   name: true,
   address: true,
@@ -280,7 +349,11 @@
   extra: false,
 )
 
-/// The keys each party role knows (`seller` is `sender`, `buyer` `recipient`).
+/// The keys each party knows, by role: the seller (`sender`), the buyer
+/// (`recipient`), the ship-to party (`delivery-address`), the seller's tax
+/// representative (`sender.tax-representative`) and the payee (`payee`).
+/// `true` marks the keys the e-invoice reads, `false` those only the printed
+/// invoice uses.
 #let party-keys = (
   seller: _address-keys
     + (
@@ -329,14 +402,20 @@
   payee: (name: true, id: true, global-id: true, legal-id: true),
 )
 
-// The keys of `contact` (BG-6, BG-9).
+// The keys of a party's `contact`, by role. The e-invoice writes the seller
+// contact (BG-6) and the buyer contact (BG-9).
 #let _contact-keys = (
   seller: (name: true, phone: true, email: true),
   buyer: (name: true, phone: true, email: true),
 )
 
+// The keys of an identifier given as a dictionary (`id`, `global-id`,
+// `location-id`, `legal-id`, `electronic-address`), including those of a typed
+// identifier of the `id` module (`kind`, `problems`).
 #let _identifier-keys = (scheme: true, id: true, kind: true, problems: true)
 
+// The keys of each role that take an identifier, possibly a typed one of the
+// `id` module (`id.siret(..)`), whose problems the validator reports.
 #let _typed-id-keys = (
   seller: ("id", "global-id", "legal-id", "electronic-address"),
   buyer: (
@@ -351,7 +430,9 @@
   payee: ("id", "global-id", "legal-id"),
 )
 
-// Keys `normalize-party` sets (replacing any input of the same name).
+// Keys the normalization of a party adds (see `normalize-party`); they are
+// not part of the input. A `post-code`, `city-name` or `state` of the input is
+// replaced by the parts of its `city`.
 #let _derived-keys = (
   name-inline: true,
   address-inline: true,
@@ -363,18 +444,25 @@
   state: true,
 )
 
-// Loads keys.typ only for the first unknown key.
+// An input key a party does not know, described by `unknown-key` of
+// keys.typ, which loads only for the first unknown key: invoices rarely have
+// one.
 #let _unknown-key(key, known, path: none) = {
   import "keys.typ": unknown-key
   unknown-key(key, known, path: path)
 }
 
+// Whether an input value states nothing: the keys of such values are ignored.
 #let _is-unset(value) = value in (none, auto, "", [], ())
 
-// The unknown keys of a party, its `contact` and its identifiers.
+// The keys of a party dictionary, of its `contact` and of its identifiers that
+// the role does not know (see `party-keys`), each described by `unknown-key`
+// of keys.typ, which loads only for the first unknown key.
 #let _input-keys(party, role) = {
   let known = party-keys.at(role)
-  // A post code or country key loses nothing next to a stated one.
+  // A key standing for the city or post code loses nothing next to a city
+  // line whose post code was recognized, one standing for the country (e.g.
+  // `county`) nothing next to a `country` the party states.
   let has-post-code = (
     text-or-none(_unset(party.at("post-code", default: none), "post-code"))
       != none
@@ -403,7 +491,8 @@
       result.push(_unknown-key(key, contact-keys, path: "contact"))
     }
   }
-  // An identifier without `id` is left out, and with it its other keys.
+  // An identifier dictionary without `id` is left out, so any other key of it
+  // loses the identifier.
   for key in (
     "id",
     "global-id",
@@ -425,13 +514,17 @@
   result
 }
 
-// --- Parties ---
+// --- Parties -------------------------------------------------------------------
 
+// The plain text of the value of the key `key` of a party (see `_unset`), or
+// `none`.
 #let _key-text(value, key) = if value == none { none } else {
   text-or-none(_unset(value, key))
 }
 
-// BG-5, BG-8, BG-12, BG-15; three lines at most (BT-35, BT-36, BT-162).
+// The postal address of a party (BG-5, BG-8, BG-12, BG-15). EN 16931 has
+// three address lines (BT-35, BT-36, BT-162): any further lines are joined
+// into the third one, as the XML states them.
 #let _address-model(party) = {
   let raw-lines = party.at("address-lines", default: ())
   let lines = ()
@@ -448,12 +541,15 @@
     post-code: _key-text(party.at("post-code", default: none), "post-code"),
     state: _key-text(party.at("state", default: none), "state"),
     country: _country-code(party.at("country", default: none)),
-    // Else the country is the locale's, or the buyer's for a delivery address.
+    // Whether the party states its country (`country` or `region`); otherwise
+    // it is the country of the locale or, for a delivery address, the buyer's.
     country-explicit: party.at("country-explicit", default: true) != false,
   )
 }
 
-// Lines joined by ", " as `info` prints them.
+// The text of a party detail that may be given as several lines, e.g.
+// `legal-info: ("Sitz: München", "Amtsgericht München, HRB 98765")`: its
+// lines joined by ", ", as `info` prints them.
 #let _lines-text(value) = {
   if value == none { return none }
   if type(value) == array {
@@ -467,17 +563,21 @@
   text-or-none(value)
 }
 
-// BT-27, BT-44, BT-70
+// The name of a party (BT-27, BT-44, BT-70). A name given as several lines is
+// one name, its lines joined by ", " as in the inline sender line.
 #let _party-name(party) = _lines-text(first-of(
   _unset(party.at("name-inline", default: none), "name-inline"),
   _unset(party.at("name", default: none), "name"),
 ))
 
+// A typed identifier of the `id` module (e.g. `id.siret(..)`): a dictionary
+// with the `kind` of the identifier and the `problems` found when it was made.
 #let _is-typed-id(value) = (
   type(value) == dictionary and "kind" in value and "problems" in value
 )
 
-// For the validator (IP-ID-01, IP-ID-03).
+// The typed identifiers a party gives for the identifier keys of its role,
+// with the key each was given for, for the validator (IP-ID-01, IP-ID-03).
 #let _typed-ids(party, role) = {
   let found = ()
   if role == none { return found }
@@ -497,19 +597,34 @@
   found
 }
 
+// The text of an identifier that may be given as a dictionary, e.g. the
+// Leitweg-ID `id.leitweg(..)` as buyer reference (BT-10), which states no
+// scheme.
 #let _id-text(value) = {
   if type(value) == dictionary { value.at("id", default: none) } else { value }
 }
 
-// BG-9: an email alone is where the invoice goes (BT-49), not a contact.
+// Whether a buyer states a contact point (BG-9): a `contact`, or a contact
+// name or phone number of its own. An email address alone is where the
+// invoice goes (it can be the electronic address, BT-49), not a contact.
 #let _states-contact(party) = (
   not _is-unset(party.at("contact", default: none))
     or not _is-unset(party.at("contact-name", default: none))
     or not _is-unset(party.at("phone", default: none))
 )
 
-/// A seller, buyer or ship-to party (`role`); `use-vat-id: false` keeps the
-/// VAT ID out of the XML (BR-O-02), not out of the electronic address.
+/// A seller, buyer or ship-to party (`role`: `"seller"`, `"buyer"` or
+/// `"ship-to"`). `vat-id` is the VAT identifier the party states;
+/// `use-vat-id: false` keeps it out of the XML (BR-O-02), but not out of the
+/// electronic address. With a `role`, the keys of the party dictionary are
+/// checked against those the role knows (`input-keys`).
+///
+/// `legal-id` is the legal registration identifier (BT-30, BT-47), a text or
+/// an identifier with scheme (`id.siret(..)`), `trading-name` the name the
+/// party trades under (BT-28, BT-45) and `legal-info` the additional legal
+/// information of the seller (BT-33). The contact of the buyer (BG-9) is only
+/// given when the buyer states a contact point (`contact`, `contact-name` or
+/// `phone`).
 ///
 /// -> dictionary
 #let party-model(party, role: none, use-vat-id: true) = {
@@ -522,6 +637,7 @@
   } else {
     ("id", "global-id")
   }
+  // The details most parties do not give.
   let trading-name = party.at("trading-name", default: none)
   let legal-id = party.at("legal-id", default: none)
   let legal-info = party.at("legal-info", default: none)
@@ -551,7 +667,9 @@
   )
 }
 
-// BG-4; without BT-29, BT-30 and BT-31, the tax number is its ID (BR-CO-26).
+// The seller (BG-4). Without an own identifier (BT-29), a legal registration
+// identifier (BT-30) or a VAT identifier (BT-31) in the XML, the tax number
+// identifies the seller (BR-CO-26).
 #let seller-model(party, use-vat-id: true) = {
   let seller = party-model(party, role: "seller", use-vat-id: use-vat-id)
   if (
@@ -565,7 +683,9 @@
   seller
 }
 
-/// The seller tax representative (BG-11), or `none`.
+/// The seller tax representative (BG-11), from `sender.tax-representative`
+/// normalized like a party (`normalize-party`): its name (BT-62), VAT
+/// identifier (BT-63) and postal address (BG-12); `none` without one.
 ///
 /// -> none | dictionary
 #let tax-representative-model(party) = {
@@ -579,7 +699,10 @@
   )
 }
 
-/// The payee (BG-10), or `none`.
+/// The payee (BG-10), from `payee` of the invoice: who receives the payment
+/// instead of the seller, e.g. a factoring company. Its name (BT-59), its
+/// identifier (BT-60, `id` or `global-id`) and its legal registration
+/// identifier (BT-61); `none` without a payee.
 ///
 /// -> none | dictionary
 #let payee-model(payee) = {
@@ -595,7 +718,8 @@
   )
 }
 
-// The buyer's address as ship-to party (BR-IC-12).
+// The ship-to party of an intra-community supply without delivery address: the
+// buyer's address (BR-IC-12), without identifiers or input of its own.
 #let _ship-to-buyer(address) = (
   name: none,
   id: none,
@@ -607,7 +731,13 @@
   from-buyer: true,
 )
 
-/// The code of a unit (BT-130, BT-150) as `(code: .., issue: ..)`.
+/// The UN/ECE Recommendation 20 code of a unit (BT-130, BT-150) as `(code:
+/// .., issue: ..)`. A unit of the `unit` module or a dictionary carries its
+/// code; without a unit, the quantity is a number of "one" (C62). A unit
+/// given as text is resolved by `resolve-text-unit` (units.typ, which loads
+/// only for such a unit): a code as it is, or the code of a unit name or
+/// abbreviation invoice-pro knows, else C62 with the issue that the text is
+/// unknown or ambiguous.
 ///
 /// -> dictionary
 #let resolve-unit(unit) = {
@@ -622,12 +752,15 @@
   resolve-text-unit(text)
 }
 
-/// The code of a unit, see `resolve-unit`.
+/// The UN/ECE Recommendation 20 code of a unit, see `resolve-unit`.
 ///
 /// -> str
 #let map-unit-code(unit) = resolve-unit(unit).code
 
-/// The delivery date (BT-72) or invoicing period (BG-14) of a service period.
+/// The delivery date (BT-72) or the invoicing period (BG-14) of the
+/// e-invoice: the service period the invoice prints (see
+/// `resolve-service-period`), as `(date: .., period: ..)`. A single date is
+/// the delivery date, a period its first and last date.
 ///
 /// -> dictionary
 #let _delivery(period) = {
@@ -647,7 +780,12 @@
   items,
 ))
 
-// The service period printed as a reference; `own` if not dates.
+// The service period the invoice prints as a reference, or `none`:
+// `(text: .., own: ..)`, its text and whether it is a text of its own rather
+// than dates in the date format of the locale. That is the one of
+// `references.service-time`, which marks it whatever its title, or a
+// reference of its own with the title of the service period, e.g.
+// `("Leistungszeitraum", "Juni 2026")`.
 #let _printed-service-period(ctx) = {
   let strings = ctx.at("locale", default: (:)).at("strings", default: (:))
   let labels = strings.at("reference", default: (:))
@@ -675,7 +813,13 @@
   none
 }
 
-// Whether the invoice shows the date of the supply (IP-PERIOD-03), or `none`.
+// Whether the printed invoice shows the date of the supply (IP-PERIOD-03):
+// `none` if that cannot be known, as the theme does not say that it prints
+// the reference signs (see `logic/printed.typ`); `true` if it prints a
+// service period as a reference (`printed-period`) or the dates of the items,
+// or shows the text of the service period the e-invoice states
+// (`period-text`) elsewhere, e.g. in a reference of another title or the
+// text of the invoice, but not as the invoice date; else `false`.
 #let _period-shown(ctx, printed, printed-period, period-text, dates-printed) = {
   if type(printed) != dictionary or not printed.at("known", default: false) {
     return none
@@ -691,7 +835,9 @@
   shows-text(printed, period-text, except: except) == true
 }
 
-// BT-22, BT-21 (see `normalize-notes`).
+// The notes of the invoice (BT-22 and BT-21, see `normalize-notes`): the
+// plain text of each note with its line breaks, and its subject code in upper
+// case. A note without text is left out.
 #let _notes(notes) = {
   let result = ()
   for note in notes {
@@ -710,10 +856,12 @@
   result
 }
 
-// No exemption reason (BR-S-10, BR-Z-10, BR-AF-10, BR-AG-10).
+// Categories whose VAT breakdown must not carry an exemption reason
+// (BR-S-10, BR-Z-10, BR-AF-10, BR-AG-10).
 #let _taxed-categories = ("S", "Z", "L", "M")
 
-// BT-121 of a category (BR-AE-10, BR-IC-10, BR-G-10, BR-O-10).
+// The VAT exemption reason code (BT-121) of the categories that have one
+// meaning (BR-AE-10, BR-IC-10, BR-G-10, BR-O-10).
 #let _category-codes = (
   AE: "VATEX-EU-AE",
   K: "VATEX-EU-IC",
@@ -721,7 +869,9 @@
   O: "VATEX-EU-O",
 )
 
-/// The distinct exemption reason codes (BT-121) of the items of a VAT group.
+/// The VAT exemption reason codes (BT-121) the items of a VAT group give
+/// (`code` of the constructors of the `tax` module): distinct, without
+/// whitespace and in upper case, as the validator checks them.
 ///
 /// -> array
 #let exemption-codes(codes) = {
@@ -735,8 +885,12 @@
   result
 }
 
-/// The exemption reason code (BT-121) of a VAT category: the one its items
-/// give, else the category's; `none` if taxed or the items differ.
+/// The VAT exemption reason code (BT-121) of a VAT category: the one code its
+/// items give, else the code of the category for AE, K, G and O (e.g.
+/// "VATEX-EU-IC" for an intra-community supply). A taxed category (S, Z, L,
+/// M) has none, and neither has a group whose items give different codes:
+/// EN 16931 states one per VAT category and rate, so the reasons are stated
+/// as text (BT-120) only; the validator reports both.
 ///
 /// -> none | str
 #let exemption-code(category, codes) = {
@@ -746,7 +900,12 @@
   }
 }
 
-/// The exemption reason (BT-120): the printed grounds, unless taxed.
+/// The exemption reason (BT-120) of a VAT category: the plain text of the
+/// grounds the invoice prints for it. The VAT groups of the line items state
+/// the note of the language for the categories that need a reason (AE, K, G,
+/// O) when their items give no grounds, and print it (see
+/// `calculate-taxes`), so the grounds of a group are the only source. A
+/// taxed category (S, Z, L, M) states none.
 ///
 /// -> str | none
 #let exemption-reason(category, grounds) = {
@@ -754,7 +913,8 @@
   text-or-none(grounds)
 }
 
-// The key of a VAT group, as `group-by-tax` makes it.
+// The key of the VAT group a tax belongs to, as used by `group-by-tax`: its
+// rate as a decimal and its category (see `to-tax-key`).
 #let _tax-key(tax) = {
   if type(tax) != dictionary or "rate" not in tax or "category" not in tax {
     return none
@@ -766,7 +926,8 @@
   to-tax-key((rate: to-ratio(rate), category: tax.category))
 }
 
-// BG-26 as `(start, end)`, or `none`.
+// The invoice line period (BG-26) of an item: its date as a period of one
+// day, or its period, as `(start, end)`; `none` without a date.
 #let _line-period(date) = {
   if type(date) == datetime { return (date, date) }
   if (
@@ -780,13 +941,26 @@
   none
 }
 
-// Computed numbers are decimals already.
+// A decimal of the computed invoice: its numbers are decimals already, so a
+// conversion runs only for a hand-built one.
 #let _decimal(value) = if type(value) == decimal { value } else {
   to-decimal(value)
 }
 
-/// The invoice lines (BG-25) of the computed items (`nets`: net amounts of
-/// gross prices). BR-27: a negative price negates the quantity instead.
+/// The invoice lines (BG-25) of the computed items `items` (`item-data.items`
+/// of the line items), in their order: a projection of what each item prints.
+/// With net prices, the quantity (BT-129), the price (BT-146) and its base
+/// quantity (BT-149), the net amount (BT-131) and the amounts of the item's
+/// own allowances and charges (BT-136, BT-141) are those of the item. With
+/// gross prices, `nets` holds the net amounts of every item (see
+/// logic/net-amounts.typ), which replace the printed gross amounts.
+///
+/// BR-27: a negative price is stated as a positive price of a negative
+/// quantity, which keeps the line's amount.
+///
+/// It runs once per invoice and visits the items in a loop, calling
+/// functions only where there is something to convert: a call per line
+/// would hash the item (with its content) every time.
 ///
 /// -> array
 #let line-models(items, nets: none) = {
@@ -806,7 +980,8 @@
     let base-quantity = _decimal(item.at("base-quantity", default: _one))
     let price = _decimal(item.at("price", default: _zero))
     let net = _decimal(item.at("total", default: _zero))
-    // Discounts are negative, surcharges positive.
+    // The allowances and charges of the item, as it prints them: discounts
+    // are negative, surcharges positive.
     let modifiers = (
       item.at("discounts", default: ()) + item.at("surcharge", default: ())
     )
@@ -832,7 +1007,7 @@
       }
       i += 1
       if stated == _zero { continue }
-      // BR-42, BR-44
+      // The reason as the XML states it (BR-42, BR-44).
       let reason = text-or-none(modifier.at("name", default: none))
       if amount < _zero {
         allowances.push((amount: stated, reason: first-of(reason, "Discount")))
@@ -846,6 +1021,8 @@
     if type(item-id) != dictionary { item-id = (:) }
     let unit = resolve-unit(item.at("unit", default: none))
 
+    // The texts of the item, most of them not given.
+    // The position, e.g. "3" or "2.1".
     let pos = item.at("pos", default: none)
     let id = if type(pos) == str and _plain-ascii in pos { pos } else if (
       pos != none
@@ -869,21 +1046,23 @@
       quantity: quantity,
       base-quantity: base-quantity,
       unit-code: unit.code,
+      // A unit text without a known code, or a code that most likely means
+      // something else (see `resolve-unit`).
       unit-issue: unit.issue,
       price: price,
       net: net,
       key: _tax-key(tax),
       category: category,
       rate: rate,
-      // `tax: none`, see `tax.implicit-zero`.
+      // No tax was set for the item (`tax: none`), see `tax.implicit-zero`.
       implicit: tax.at("implicit", default: false),
       allowances: allowances,
       charges: charges,
-      // BT-127
+      // BT-127: the note of the item, with its line breaks.
       note: if note == "" { none } else { note },
-      // BG-26
+      // BG-26: the date or period of the item as `(start, end)`.
       period: if date != none { _line-period(date) },
-      // BT-159
+      // BT-159: the country of origin, an ISO 3166-1 code.
       origin: item.at("origin", default: none),
     ))
     index += 1
@@ -901,8 +1080,13 @@
   line
 }
 
-/// The document level allowances (BG-20) and charges (BG-21), once per VAT
-/// group (BR-53), without parts of 0; a reason is required (BR-33, BR-38).
+/// The document level allowances (BG-20) and charges (BG-21): every
+/// allowance or charge of the invoice is stated once per VAT group it
+/// applies to (BR-53), with the amount the invoice computed for that group
+/// (`split`); with gross prices, `nets` holds the net amount of each part
+/// (see logic/net-amounts.typ). A part of 0 is left out. The reason is the
+/// name of the allowance or charge, or "Discount" or "Surcharge" as the XML
+/// states it without one (BR-33, BR-38).
 ///
 /// -> array
 #let document-allowance-charges(discounts, surcharges, nets: none) = {
@@ -938,14 +1122,19 @@
   entries
 }
 
-// --- Payment ---
+// --- Payment -------------------------------------------------------------------
 
+// An identifier in upper case (IBAN, BIC, creditor identifier), or `none`.
 #let _upper-id(value) = {
   let id = compact(value)
   if id == none { none } else { upper(id) }
 }
 
-// BG-16 with its code (BT-81).
+// A payment means (BG-16) with its payment means code (BT-81), its kind (see
+// `code-kind`) and the input it comes from, for messages. The details of a
+// credit transfer (BG-17: `iban`, `account-name`, `bic`), a payment card
+// (BG-18: `card`) and a direct debit (the debited account of BG-19,
+// `debtor-iban`) are set by `payment-means-model`.
 #let _means(type-code, kind, field) = (
   type-code: type-code,
   kind: kind,
@@ -957,7 +1146,11 @@
   debtor-iban: none,
 )
 
-/// The payment means (BG-16), and the method of `paid` if none details it.
+/// The payment means (BG-16) of the invoice, in the order of the XML: one for
+/// each account of a credit transfer (`bank-details`, BG-17), the direct
+/// debit, the payment card (BG-18), and the method of `paid` if none of them
+/// details it (e.g. cash). An invoice has one kind of payment means; the
+/// validator reports conflicting ones.
 ///
 /// -> array
 #let payment-means-model(means, currency) = {
@@ -968,9 +1161,9 @@
       _means(transfer-code(currency), "transfer", "bank-details")
         + (
           iban: iban,
-          // BT-85: only an explicit name.
+          // Only an explicit name of `bank-details` (BT-85).
           account-name: text-or-none(bank.at("account-name", default: none)),
-          // BT-86, stated with the account.
+          // The institution of the account (BT-86), stated with the account.
           bic: if iban != none { _upper-id(bank.at("bic", default: none)) },
         ),
     )
@@ -1009,7 +1202,9 @@
   entries
 }
 
-/// A cash discount in the Skonto syntax of XRechnung (BR-DE-18).
+/// A cash discount in the Skonto syntax of XRechnung (BR-DE-18): the days,
+/// the percentage with two decimals and the amount it applies to, if given,
+/// e.g. "#SKONTO#TAGE=14#PROZENT=2.00#".
 ///
 /// -> str
 #let skonto-line(discount) = (
@@ -1023,12 +1218,15 @@
     + "#"
 )
 
+// Payment terms of several parts, each on a line of its own.
 #let _terms-lines(first, lines) = {
   let parts = if first == none { () } else { (first,) }
   payment-terms((parts + lines).join("\n"))
 }
 
-/// The payment terms (BT-20) of a profile: in XRechnung with Skonto lines.
+/// The payment terms (BT-20) a profile states: XRechnung states cash
+/// discounts in its Skonto syntax (`terms-xrechnung`, `none` if the terms
+/// have none), the other profiles as the invoice prints them.
 ///
 /// -> none | str
 #let profile-terms(payment, profile) = {
@@ -1038,7 +1236,14 @@
   }
 }
 
-/// The e-invoice data model of the root context and the computed items.
+/// Builds the e-invoice data model from the root context and the computed
+/// line item data.
+///
+/// `payment-means` are the payment means of the invoice as the root context
+/// resolves them (see `logic/payment-means.typ`); without them, the bank
+/// details `bank` are its only payment means. `nets` are the net amounts of
+/// an invoice with gross prices (`net-amounts` of logic/net-amounts.typ),
+/// derived from `item-data` when `auto`.
 ///
 /// -> dictionary
 #let build-model(
@@ -1051,13 +1256,17 @@
 ) = {
   let sender = ctx.at("sender", default: (:))
   let recipient = ctx.at("recipient", default: (:))
-  // BT-3
+  // The document type (BT-3), see `resolve-document-type`.
   let document = ctx.at("document-type", default: none)
   if type(document) != dictionary { document = resolve-document-type(auto) }
-  // Self-billed: the buyer sends; from here on `sender` is the seller.
+  // The buyer issues a self-billed invoice: the sender of the document is
+  // the buyer and its recipient the seller. From here on, `sender` is the
+  // seller and `recipient` the buyer.
   if document.self-billed {
     (sender, recipient) = (recipient, sender)
-    // The delivery address `invoice` adds is the buyer's (BG-13).
+    // `invoice` adds the delivery address to the recipient; it is the
+    // buyer's delivery (BG-13, `ctx.delivery-address`), not an input of the
+    // seller.
     if type(sender) == dictionary {
       let _ = sender.remove("delivery-address", default: none)
     }
@@ -1076,7 +1285,9 @@
   let inclusive = tax-mode == "inclusive"
   let locale = ctx.at("locale", default: (:))
   let currency-meta = locale.at("currency", default: (:))
-  // Loaded only for gross prices.
+  // With gross prices, the net amounts the XML states, derived once from the
+  // printed gross amounts (logic/net-amounts.typ): loaded only for such an
+  // invoice.
   if inclusive and nets == auto {
     import "../logic/net-amounts.typ": net-amounts
     let discounts = item-data.at("discounts", default: ())
@@ -1091,7 +1302,8 @@
   }
   if not inclusive or nets == auto { nets = none }
 
-  // BR-O-02: no VAT IDs outside the scope of VAT, except in MINIMUM (BR-CO-26).
+  // BR-O-02: an invoice not subject to VAT carries no VAT identifiers. MINIMUM
+  // has no VAT breakdown; there the seller VAT ID is needed for BR-CO-26.
   let categories = ()
   for tax in taxes.values() {
     categories.push(tax.at("category", default: none))
@@ -1099,7 +1311,10 @@
   let outside-scope = profile.id != "minimum" and "O" in categories
 
   let seller = seller-model(sender, use-vat-id: not outside-scope)
-  // Whether the invoice shows the seller's VAT ID or tax number (BT-31, BT-32).
+  // What the printed invoice shows besides the components (see
+  // `logic/printed.typ`): whether it shows the seller's VAT ID or tax number
+  // the XML states (BT-31, BT-32), which the law requires on the invoice;
+  // `none` if that cannot be known, e.g. with the blank theme.
   let printed = ctx.at("printed", default: none)
   seller.insert("printed-tax-id", shows-identifier(printed, (
     seller.vat-id,
@@ -1110,19 +1325,21 @@
     role: "buyer",
     use-vat-id: not outside-scope,
   )
-  // BG-11, BG-10
+  // BG-11 and BG-10: the parties besides seller and buyer, if any.
   let tax-representative = tax-representative-model(sender.at(
     "tax-representative",
     default: none,
   ))
   let payee = payee-model(ctx.at("payee", default: none))
 
-  // BG-13; `location-id` is another name of its `id` (BT-71).
+  // `location-id` is another name of the deliver to location identifier
+  // (BT-71), `id` of the delivery address.
   let delivery-party = ctx.at("delivery-address", default: none)
   let ship-to = if type(delivery-party) == dictionary {
     party-model(delivery-party, role: "ship-to", use-vat-id: false)
   } else if "K" in categories and buyer.address.country != none {
-    // BR-IC-12: without a delivery address, the goods go to the buyer.
+    // BR-IC-12: an intra-community supply names the deliver-to country;
+    // without a delivery address, the goods go to the buyer.
     _ship-to-buyer(buyer.address)
   } else { none }
 
@@ -1148,14 +1365,15 @@
         basis: to-decimal(tax.at("basis", default: 0)),
         amount: to-decimal(tax.at("absolute", default: 0)),
         reason: exemption-reason(category, tax.at("grounds", default: none)),
-        // BT-121; `codes` for the validator.
+        // BT-121, and the codes the items give (for the validator).
         code: exemption-code(category, codes),
         codes: codes,
-        // An item has `tax: none`.
+        // Some item of the group has no tax (`tax: none`).
         implicit: tax.at("implicit", default: false),
       )
     })
 
+  // Loops rather than `map` and `filter`, which call a closure per line.
   let line-total = _zero
   for line in lines { line-total += line.net }
   let allowance-total = _zero
@@ -1165,7 +1383,8 @@
       allowance-total += entry.amount
     }
   }
-  // The printed totals (BT-109, BT-112); BT-110 adds up the printed VAT.
+  // The totals the invoice prints (BT-109, BT-112 and the prepayments of
+  // BT-113); the VAT total (BT-110) is the sum of the printed VAT amounts.
   let net-total = _decimal(item-data.at("net-total", default: _zero))
   let gross-total = _decimal(item-data.at("gross-total", default: _zero))
   let tax-total = _zero
@@ -1178,13 +1397,16 @@
       none,
     )
   }
-  // A `paid` invoice has the total as paid amount (BT-113): nothing is due.
+  // An invoice that is paid already (`paid`) has the total as paid amount
+  // (BT-113), prepayments included, so nothing is due (BT-115).
   let prepaid-total = if means.paid != none { gross-total } else {
     _decimal(item-data.at("prepaid-total", default: _zero))
   }
 
   let currency = currency-code(locale)
-  // To check the printed currency (BT-5).
+  // How the invoice prints an amount (`format.currency`) and a unit price
+  // (`format.currency-fine`), to check that it prints the currency the XML
+  // states (BT-5).
   let printed-currency = (
     symbol: text-or-none(currency-meta.at("symbol", default: none)),
   )
@@ -1195,6 +1417,7 @@
     })
   }
 
+  // The service period and the date format the invoice prints it with.
   let service-period = service-period-of(ctx, items)
   let format-date = locale.at("format", default: (:)).at("date", default: none)
   let period-text = if type(format-date) == function {
@@ -1202,7 +1425,8 @@
   }
   let printed-period = _printed-service-period(ctx)
 
-  // BT-9, BT-20: `due-date` wins over the payment goal.
+  // BT-9 and BT-20: the invoice's own `due-date` wins over the payment goal.
+  // `terms-input` is the input the payment terms come from.
   let due-date = none
   let terms = none
   let terms-input = none
@@ -1228,7 +1452,10 @@
       terms = payment-terms(goal-date)
       if terms != none { terms-input = "payment-goal" }
     }
-    // Without days or a date, the terms are what the goal prints (due at once).
+    // Without days or a date, the payment goal prints that the amount is due
+    // at once ("sofort nach Erhalt"), which are the payment terms. On a
+    // document whose sender pays (a credit note or a self-billed invoice),
+    // it prints that the sender pays at once ("umgehend") instead.
     if terms == none and due-date == none and goal-date == none {
       let strings = (
         locale.at("strings", default: (:)).at("payment", default: (:))
@@ -1241,7 +1468,9 @@
       if terms != none { terms-input = "payment-goal" }
     }
   }
-  // Cash discounts, a line each; for XRechnung in Skonto syntax (BR-DE-18).
+  // The cash discounts of the payment goal follow the terms, each on a line
+  // of its own: as the invoice prints them, and in XRechnung in its Skonto
+  // syntax (BR-DE-18).
   let discounts = if payment-goal != none {
     payment-goal.at("discounts", default: ())
   } else { () }
@@ -1273,19 +1502,24 @@
     tax-mode: tax-mode,
     outside-scope: outside-scope,
     currency: currency,
+    // The input the currency comes from: the invoice's `currency`, or the
+    // locale.
     currency-field: if ctx.at("currency", default: auto) == auto {
       "locale"
     } else { "currency" },
+    // The decimals the amounts of the currency are rounded to.
     currency-decimals: currency-meta.at("decimals", default: 2),
     printed-currency: printed-currency,
     invoice: (
       number: _key-text(ctx.at("invoice-nr", default: none), "invoice-nr"),
       type-code: document.code,
-      // Its title must not name another kind of document (IP-DOC-01).
+      // The resolved `document-type`, and the title printed on the document
+      // (the subject without the invoice number), which must not name
+      // another kind of document (IP-DOC-01).
       document: document,
       title: text-or-none(ctx.at("title", default: none)),
       issue-date: ctx.at("invoice-date", default: none),
-      // A Leitweg-ID of the `id` module without its scheme.
+      // A Leitweg-ID of the `id` module is stated without its scheme.
       buyer-reference: text-or-none(_id-text(first-of(
         ctx.at("buyer-reference", default: none),
         recipient.at("buyer-reference", default: none),
@@ -1309,11 +1543,11 @@
         ctx.at("preceding-invoice-nr", default: none),
         ctx.at("original-invoice-nr", default: none),
       )),
-      // BT-26
+      // BT-26, a `datetime` or `none`.
       preceding-invoice-date: ctx.at("preceding-invoice-date", default: none),
-      // BT-22, BT-21
+      // BT-22 and BT-21: `(content: .., subject-code: ..)` each.
       notes: _notes(ctx.at("notes", default: ())),
-      // BT-11
+      // BT-11: the project reference.
       project: text-or-none(ctx.at("project", default: none)),
     ),
     seller: seller,
@@ -1321,7 +1555,12 @@
     ship-to: ship-to,
     tax-representative: tax-representative,
     payee: payee,
-    // BT-72 or BG-14
+    // The service period (BT-72 or BG-14), see `resolve-service-period` for
+    // its `source`. `text` is how `references.service-time` prints it,
+    // `printed` the text of the service period the invoice prints as a
+    // reference, if any, `printed-own` whether that is a text of its own
+    // rather than dates, and `shown` whether the printed invoice shows the
+    // date of the supply at all (see `_period-shown`).
     delivery: _delivery(service-period)
       + (
         source: if service-period != none { service-period.source },
@@ -1339,7 +1578,9 @@
     lines: lines,
     allowance-charges: allowance-charges,
     taxes: breakdown,
-    // BT-106 to BT-108 add up the XML; the others are the printed totals.
+    // BT-106 to BT-108 add up the lines, allowances and charges of the XML;
+    // the other totals are those the invoice prints (the test oracle checks
+    // that they agree, tools/zugferd/guard/equivalence.typ).
     totals: (
       line: line-total,
       allowance: allowance-total,
@@ -1357,18 +1598,22 @@
     ),
     payment: (
       reference: text-or-none(resolve-payment-reference(ctx, bank: bank)),
-      // BG-16
+      // BG-16: the payment means and their details.
       means: payment-means-model(means, currency),
-      // BG-19: BT-89, BT-90
+      // BG-19: the mandate reference (BT-89) and the creditor identifier
+      // (BT-90) of a direct debit.
       mandate: if debit != none { _identifier(debit.mandate) },
       creditor-id: if debit != none { _upper-id(debit.creditor-id) },
+      // The invoice is paid already (`paid`).
       paid: means.paid != none,
       due-date: due-date,
-      // BT-20 (see `profile-terms`)
+      // BT-20, and in XRechnung, if they differ, the terms with the cash
+      // discounts in its Skonto syntax (see `profile-terms`).
       terms: terms,
       terms-xrechnung: terms-xrechnung,
       terms-input: terms-input,
-      // `percent` in percent, `basis` or `none`.
+      // The cash discounts of the payment goal: `days`, `percent` (in
+      // percent) and `basis` (`none` if not given).
       discounts: discounts.map(discount => (
         days: discount.days,
         percent: discount.percent,

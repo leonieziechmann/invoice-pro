@@ -2,35 +2,38 @@
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
 
-/// An advance payment that reduces the amount due (BT-113, BT-115).
+/// Represents an advance payment or deposit that reduces the final payable amount
+/// (BT-113 / BT-115) without altering the taxable base or VAT calculation.
 ///
 /// -> content
 #let prepayment(
-  /// An amount, e.g. `300`, or a percentage of the gross total.
+  /// The amount of the prepayment. Can be an absolute monetary amount (e.g., 300, 300.50, "300") or a percentage ratio (e.g., 30%).
   /// -> int | float | decimal | str | ratio
   amount,
 
-  /// The name of the prepayment.
+  /// The name or title of the prepayment (e.g., "1. Abschlagszahlung", "Anzahlung").
   /// -> str | content | auto | none
   name: auto,
 
-  /// The label; `auto` is the locale's, `none` omits it.
+  /// Custom label prefix for the prepayment (e.g., "Anzahlung", "Bereits bezahlt").
+  /// If `auto`, it resolves to the default prepayment label from the locale.
+  /// If `none`, no label prefix is displayed.
   /// -> str | content | auto | none
   label: auto,
 
-  /// The date of the prepayment.
+  /// The date when the prepayment was made or agreed upon.
   /// -> datetime | str | content | auto | none
   date: auto,
 
-  /// A reference, e.g. an advance invoice number.
+  /// Transaction ID, bank transfer reference, or preceding advance invoice number.
   /// -> str | content | auto | none
   reference: auto,
 
-  /// A description of the prepayment.
+  /// Additional notes or description for the prepayment.
   /// -> str | content | auto | none
   description: auto,
 
-  /// The payment method, e.g. "PayPal".
+  /// Payment method used (e.g., "Überweisung", "Kreditkarte", "Bar", "PayPal").
   /// -> str | content | auto | none
   method: auto,
 ) = {

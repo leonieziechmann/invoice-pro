@@ -29,7 +29,8 @@
   "\"" + str(value) + "\""
 }
 
-/// Whether `code` is in `list`, a code list of `lists`.
+/// Whether `code` is in a code list of code-lists.typ: a string of codes,
+/// each between two spaces.
 ///
 /// -> bool
 #let in-list(list, code) = (
@@ -39,7 +40,8 @@
     and (" " + code + " ") in list
 )
 
-// One binding per list, so that a check captures only the lists it names.
+// The lists of the checks, one by one: a check captures (and Typst hashes)
+// only the lists it names.
 #let _countries = lists.country.every
 #let _currencies = lists.currency.every
 #let _factur-x-currencies = lists.currency.factur-x
@@ -49,6 +51,7 @@
 #let _vat-categories = lists.vat-category.every
 #let _means-codes = lists.payment-means.every
 
+// A rate in percent as the XML states it, e.g. "19%" or "9.975%".
 #let _percent(rate) = (
   fmt-number(rate * 100, min-digits: 0, max-digits: rate-digits) + "%"
 )
@@ -71,7 +74,9 @@
   )
 }
 
-/// IP-PROFILE-01: an input the profile cannot state (`lowest` can).
+/// IP-PROFILE-01: an input the profile has no business term for, which is
+/// therefore not written into the e-invoice. `lowest` is the lowest profile
+/// that states it; `inputs` names several inputs in the message.
 ///
 /// -> dictionary
 #let not-carried(profile, field, term, lowest, inputs: none) = (
@@ -83,9 +88,14 @@
   inputs: inputs,
 )
 
-// --- Document ---
+// --- Document -------------------------------------------------------------
 
-// ASCII only (a wider class is slow to compile); "’" is removed separately.
+// The characters of a printed amount besides its currency: digits,
+// separators, signs and spaces. The samples are plain text, whose spaces and
+// minus signs are ASCII; the typographic apostrophe (a thousands separator)
+// is removed separately. (ASCII only: a class with other characters, or a
+// Unicode class such as `\d` or `\s`, takes a fraction of a millisecond to
+// compile on every compile.)
 #let _amount-characters = regex("[0-9 .,'+\\-()]")
 
 #let _document(model) = {
@@ -97,6 +107,7 @@
   if type(date) != datetime or date.year() == none {
     out.push((key: "BR-03", field: "date"))
   }
+  // The invoice's `currency`, or the locale.
   let currency-field = model.at("currency-field", default: "locale")
   let currency = model.currency
   if currency == none {
@@ -106,7 +117,9 @@
     out += currency-code(currency, currency-field, model.profile)
   }
 
-  // IP-TAX-01: `tax: none` does not say which VAT category (BT-151) applies.
+  // IP-TAX-01: `tax: none` prints 0%, but does not say why no VAT is charged:
+  // zero rated, exempt or not subject to VAT. An e-invoice must say it with
+  // the VAT category of every item (BT-151).
   let implicit = 0
   for line in model.lines {
     if line.at("implicit", default: false) { implicit += 1 }
@@ -119,7 +132,11 @@
     out.push((key: "IP-TAX-01", field: "tax", count: implicit))
   }
 
-  // IP-PRINT-02: unit prices may use a subunit (e.g. "ct").
+  // IP-PRINT-02: the invoice prints its amounts in the currency the XML
+  // states: with its code or the symbol of the locale, and not with "€" for
+  // another currency. Unit prices may be printed in a subunit instead (e.g.
+  // "ct" for energy tariffs), but not with "€" for another currency either.
+  // A formatter that prints no currency says nothing else.
   let printed = model.at("printed-currency", default: none)
   if (
     type(currency) == str
@@ -153,8 +170,11 @@
   out
 }
 
-// --- Document type ---
+// --- Document type --------------------------------------------------------
 
+// The document type (BT-3): that the title of the document does not name
+// another kind of document (IP-DOC-01), that the profile allows the type
+// (BR-DE-17), and that the amounts have the sign of the type.
 #let _document-type(model) = {
   let invoice = model.invoice
   let document = invoice.at("document", default: none)
@@ -162,7 +182,12 @@
   let out = ()
   let code = invoice.type-code
 
-  // IP-DOC-01: a title such as "Gutschrift" names another kind of document.
+  // IP-DOC-01: the title of a document without `document-type` names another
+  // kind of document than the invoice (BT-3 = 380) the e-invoice states,
+  // e.g. "Gutschrift": the e-invoice would ask the buyer to pay a credit
+  // note. Without a title (the sender sets no `subject`, and the locale
+  // titles an invoice as its language does) there is nothing to check, and
+  // document.typ does not load.
   if document.input == auto and invoice.title != none {
     import "../document.typ": title-kind
     let named = title-kind(invoice.title)
@@ -182,7 +207,11 @@
     out += document-type(code)
   }
 
-  // IP-DOC-05: a date (BT-26) without the number (BT-25) would be lost.
+  // The preceding invoice reference (BG-3), from BASIC WL on, is written
+  // with its number (BT-25) only: a date (BT-26) without it would be lost
+  // (IP-DOC-05). A document that amends an invoice must refer to it (Art.
+  // 219 of the VAT Directive): XRechnung checks it as BR-DE-26, which it
+  // only warns about, but validators such as Mustang reject the invoice.
   if model.profile.document-references {
     let number = invoice.at("preceding-invoice-nr", default: none)
     if (
@@ -199,7 +228,9 @@
     }
   }
 
-  // A negative credit note asks the buyer to pay (IP-DOC-03).
+  // A credit note states the credited amounts as positive amounts: a
+  // negative credit note asks the buyer to pay (IP-DOC-03). An invoice with
+  // a negative total is valid, but a credit note is the document for it.
   let gross = model.totals.gross
   if gross < _zero {
     out.push((
@@ -212,16 +243,22 @@
   out
 }
 
-// --- Document data ---
+// --- Document data --------------------------------------------------------
 
+// The data of the document besides its type: the notes (BT-21, BT-22), the
+// project reference (BT-11), and that the service period the invoice prints
+// is the one the XML states (IP-PERIOD-01).
 #let _document-data(model) = {
   let out = ()
   let profile = model.profile
 
+  // The notes are printed in any case, but only BASIC WL and the richer
+  // profiles can state them.
   let notes = model.invoice.at("notes", default: ())
   if notes.len() > 0 and not profile.notes {
     out.push(not-carried(profile, "notes", "invoice notes (BT-22)", "basic-wl"))
   }
+  // The project reference (BT-11) exists in EN 16931 and XRechnung only.
   if (
     model.invoice.at("project", default: none) != none
       and not profile.procuring-project
@@ -233,6 +270,8 @@
       "en16931",
     ))
   }
+  // MINIMUM states neither the service period (BT-72, BG-14) nor the
+  // preceding invoice (BG-3), which exist from BASIC WL on.
   if (
     not profile.settlement
       and model.at("delivery", default: (:)).at("source", default: none)
@@ -269,7 +308,14 @@
     }
   }
 
-  // IP-PERIOD-01: a text of its own warns, unless the XML has the invoice date.
+  // IP-PERIOD-01: the service period the invoice prints is the one the XML
+  // states (BT-72 or BG-14). Another date or period (e.g.
+  // `references.service-time(value: datetime(..))`) contradicts it, and so
+  // does a text of its own (e.g. `references.service-time(value: "Juni
+  // 2026")`) when the XML states the invoice date for want of any date. A
+  // text of its own besides dates of the items or the invoice's
+  // `service-period` may name the same period in other words: a warning.
+  // The delivery information exists from BASIC WL on.
   let delivery = model.at("delivery", default: (:))
   let printed = delivery.at("printed", default: none)
   let stated = delivery.at("text", default: none)
@@ -277,6 +323,9 @@
   let term = if delivery.at("period", default: none) != none { "BG-14" } else {
     "BT-72"
   }
+  // A credit note or a prepayment invoice without dates states none (see
+  // `service-period-of`): a date printed there is missing from the
+  // e-invoice, a text of its own may be a warning only.
   let document = model.invoice.at("document", default: none)
   if profile.settlement and printed != none and printed != stated {
     let own = delivery.at("printed-own", default: true)
@@ -294,7 +343,11 @@
     ))
   }
 
-  // BR-DE-TMP-32 (an XRechnung information): the date of the supply.
+  // BR-DE-TMP-32 (information in the XRechnung 3.0 Schematron): an invoice
+  // states the date of the supply (BT-72, BG-14, or BG-26 on every line).
+  // An invoice without dates states its invoice date; a credit note, whose
+  // own date is not the date of the supply, states none (see
+  // `service-period-of`), so it needs the date of the supply it credits.
   if (
     profile.xrechnung
       and delivery.at("date", default: none) == none
@@ -307,6 +360,8 @@
     ))
   }
 
+  // IP-PERIOD-03: the printed invoice shows the date of the supply, see
+  // `period-shown` of rare.typ.
   if delivery.at("shown", default: none) == false {
     import "rare.typ": period-shown
     out += period-shown(model, stated, term, document)
@@ -314,9 +369,11 @@
   out
 }
 
-// --- Parties ---
+// --- Parties --------------------------------------------------------------
 
-/// The country of a party: `rule` if missing, BR-CL-14 if not in the list.
+/// The country of a party (`rule`: missing, a safety net: an address
+/// without `country` has the one of the locale) and its code list
+/// (BR-CL-14, see `country-code` of rare.typ).
 ///
 /// -> array
 #let country(code, rule, field, term, profile) = {
@@ -326,7 +383,10 @@
   country-code(code, field, term, profile)
 }
 
-/// IP-COUNTRY-01: a party without `country` and a VAT ID of another country.
+/// IP-COUNTRY-01: a party without `country` is in the country of the
+/// locale. If the VAT ID it states was issued by another country, that
+/// default is most likely wrong. An explicit `country` always settles it,
+/// e.g. for a foreign VAT registration.
 ///
 /// -> array
 #let country-of-vat-id(party, field, term, bt) = {
@@ -354,7 +414,9 @@
 // Patterns of rare checks, compiled once on first use.
 #let _post-code-digits() = regex("[0-9]{3,}")
 
-/// IP-ADDR-01: a post code the country's parser leaves in the city name.
+/// IP-ADDR-01: a city line whose post code the parser of the party's
+/// country does not recognize stays whole: the post code is missing, and
+/// the number is written into the city name.
 ///
 /// -> array
 #let post-code(party, field, term, city-bt, code-bt) = {
@@ -379,6 +441,10 @@
   )
 }
 
+// `rules`: the rule for a missing address and the rule for a missing scheme.
+// `required`: the level of a missing address, or `none`. `represented`: the
+// party is a seller with a tax representative, whose VAT identifier is not
+// the seller's `vat-id` (nor its address).
 #let _electronic-address(
   party,
   required,
@@ -420,14 +486,16 @@
   address-scheme(address.scheme, field, term, profile)
 }
 
-/// The input key a party identifier came from.
+/// The input key a party identifier came from (see `id-keys` and
+/// `global-id-keys` of the model), for the field of a diagnostic.
 ///
 /// -> str
 #let id-key(party, slot) = {
   party.at(slot + "-keys", default: ()).first(default: slot)
 }
 
-/// The scheme of a party's global identifier (`rule`: BR-CL-10 or BR-CL-26).
+/// The scheme of the global identifier of a party. `rule`: BR-CL-10 for the
+/// seller, buyer and payee, BR-CL-26 for the ship-to party.
 ///
 /// -> array
 #let global-id(party, rule, field, profile) = {
@@ -442,7 +510,10 @@
   global-id-scheme(global-id.scheme, rule, field, profile)
 }
 
-/// IP-ID-02: two values for a party identifier that takes one.
+/// IP-ID-02: two different values for one identifier of a party, of which
+/// only one can be written: a `global-id` without scheme next to `id`, a
+/// `location-id` next to `id` of the delivery address, or two identifiers
+/// with scheme.
 ///
 /// -> array
 #let identifiers(party, field, term) = {
@@ -473,7 +544,9 @@
   out
 }
 
-/// CII-SR-449, CII-SR-450, CII-SR-451: `ram:ID` or `ram:GlobalID`, not both.
+/// The buyer (BT-46), the deliver-to location (BT-71) and the payee (BT-60)
+/// have one identifier: either `ram:ID` or `ram:GlobalID` (CII-SR-450,
+/// CII-SR-449, CII-SR-451).
 ///
 /// -> array
 #let single-identifier(party, rule, field, term) = {
@@ -509,7 +582,9 @@
   ((key: "BR-CO-09", field: field, vat-id: vat-id),)
 }
 
-/// BR-CL-11: the scheme of a legal registration identifier.
+/// BR-CL-11: the scheme of a legal registration identifier (BT-30, BT-47,
+/// BT-61) is an ISO/IEC 6523 ICD code. Without a scheme it is stated as it
+/// is.
 ///
 /// -> array
 #let legal-id(party, field, term, bt, profile) = {
@@ -533,6 +608,7 @@
   if seller.name == none { out.push((key: "BR-06", field: "sender.name")) }
   if buyer.name == none { out.push((key: "BR-07", field: "recipient.name")) }
 
+  // Keys a party dictionary does not know (see `input-keys` of the model).
   for (party, field, term) in (
     (seller, "sender", "sender"),
     (buyer, "recipient", "recipient"),
@@ -544,6 +620,8 @@
     }
   }
 
+  // The seller country (BT-40) is written in every profile, the other
+  // addresses from BASIC WL on.
   out += country(
     seller.address.country,
     "BR-09",
@@ -589,7 +667,8 @@
     out += vat-id-prefix-check(buyer.vat-id, "recipient.vat-id")
   }
 
-  // BR-CO-26: a seller identifier; a tax representative's does not count.
+  // BR-CO-26: the buyer must be able to identify the seller. The VAT
+  // identifier of a tax representative (BT-63) does not identify the seller.
   let seller-legal-id = seller.at("legal-id", default: none)
   let represented = model.at("tax-representative", default: none) != none
   if profile.id == "minimum" {
@@ -617,6 +696,11 @@
     ))
   }
 
+  // IP-PRINT-03: the printed invoice shows the seller's VAT ID or tax number
+  // the XML states (BT-31, BT-32), one of which the law requires on the
+  // invoice (§ 14 Abs. 4 Satz 1 Nr. 2 UStG; Art. 226 No. 3 of the VAT
+  // Directive). Only known for a theme that prints the references and no
+  // content of its own on every page, see `logic/printed.typ`.
   if seller.at("printed-tax-id", default: none) == false {
     out.push((
       key: "IP-PRINT-03",
@@ -626,6 +710,8 @@
     ))
   }
 
+  // Identifiers of the `id` module, legal registration identifiers
+  // (BT-30, BT-47) and the details only some profiles state.
   for (party, field, term) in (
     (seller, "sender", "seller"),
     (buyer, "recipient", "buyer"),
@@ -677,6 +763,8 @@
     out += payee(model)
   }
 
+  // Party identifiers (BT-29, BT-46) from BASIC WL on; the ship-to party
+  // (BT-71) with the delivery information.
   if profile.party-ids {
     out += identifiers(seller, "sender", "seller")
     out += identifiers(buyer, "recipient", "buyer")
@@ -705,7 +793,8 @@
   }
 
   if profile.addresses {
-    // Electronic addresses: XRechnung requires them; EN 16931 warns (Peppol).
+    // Required by XRechnung (PEPPOL-EN16931-R020, R010); EN 16931 leaves
+    // them optional, but a delivery over Peppol needs them (IP-EADDR-01).
     let (required, seller-rule, buyer-rule) = if profile.xrechnung {
       ("error", "PEPPOL-EN16931-R020", "PEPPOL-EN16931-R010")
     } else if profile.id == "en16931" {
@@ -736,6 +825,8 @@
     out += parties(model)
   }
 
+  // The buyer of an intra-community supply (K) or a reverse charge (AE),
+  // see `buyer-vat-id` and `intra-community` of rare.typ.
   if profile.settlement {
     let intra-or-reverse = false
     for tax in model.taxes {
@@ -753,7 +844,7 @@
   out
 }
 
-// --- Lines ---
+// --- Lines ----------------------------------------------------------------
 
 #let _lines(model) = {
   if not model.profile.lines { return () }
@@ -761,7 +852,7 @@
   if model.lines.len() == 0 {
     out.push((key: "BR-16", field: "line-items"))
   }
-  // Unit codes checked so far: most lines share one.
+  // Whether a unit code is in the code list, by code: most lines share one.
   let units = (:)
   for line in model.lines {
     if line.name == none {
@@ -780,7 +871,8 @@
     if not known {
       out.push((key: "BR-CL-23", field: line-field(line), code: code))
     } else if unit-issue != none and unit-issue.kind == "unknown" {
-      // IP-UNIT-02: an unknown unit text; "one" (C62) would be a guess.
+      // IP-UNIT-02: a text invoice-pro does not know has no unit code, and
+      // "one" (C62) would be a guess.
       out.push((
         key: "IP-UNIT-02",
         field: line-field(line),
@@ -789,11 +881,14 @@
     } else if unit-issue != none and unit-issue.kind == "ambiguous" {
       out.push((key: "IP-UNIT-01", field: line-field(line), issue: unit-issue))
     }
-    // BR-CO-04, a safety net: `tax: none` is zero rated (IP-TAX-01).
+    // BR-CO-04, a safety net: `tax: none` is zero rated (IP-TAX-01). (A
+    // price base quantity is above 0: `item` and `bundle` stop on any other.)
     if line.key == none or line.category == none {
       out.push((key: "BR-CO-04", field: line-field(line)))
     }
   }
+  // PEPPOL-EN16931-R120, which only the XRechnung Schematron checks: a line
+  // total rounded more coarsely than its price (xrechnung.typ).
   if model.profile.xrechnung {
     import "xrechnung.typ": line-amounts
     out += line-amounts(model, line-field)
@@ -801,6 +896,8 @@
   out
 }
 
+// The period and the country of origin of the lines (BG-26, BT-159), see
+// `line-data` of rare.typ: most lines have neither.
 #let _line-data(model) = {
   if not model.profile.lines { return () }
   let given = ()
@@ -815,8 +912,9 @@
   line-data(model.profile, model.at("delivery", default: (:)), given)
 }
 
-// --- VAT ---
+// --- VAT ------------------------------------------------------------------
 
+// The rule families of the VAT categories: BR-S-*, BR-IC-*, ...
 #let _category-rules = (
   S: "BR-S",
   Z: "BR-Z",
@@ -829,7 +927,8 @@
   M: "BR-AG",
 )
 
-/// A rule of a VAT category's family, e.g. `category-rule("K", 2)`: BR-IC-02.
+/// A rule of the family of a VAT category, e.g. `category-rule("K", 2)` is
+/// BR-IC-02.
 ///
 /// -> str
 #let category-rule(category, number) = (
@@ -839,16 +938,23 @@
     + str(number)
 )
 
-// The categories that need a seller VAT ID or tax number (BR-x-02 to -04).
+// The categories that need a seller VAT identifier or tax number (BR-x-02,
+// -03, -04); K and G need the VAT identifier.
 #let _taxed-categories = ("S", "Z", "E", "AE", "L", "M")
 
-// Rules come in threes (lines, allowances, charges): the offset, or `none`.
+// The rules of the VAT categories come in threes: for invoice lines (e.g.
+// BR-S-02, BR-S-05), document level allowances (BR-S-03, BR-S-06) and
+// document level charges (BR-S-04, BR-S-07). The offset of the rule that
+// applies to where a category occurs, or `none`: BASIC WL has no lines, so
+// there only the rules of allowances and charges apply.
 #let _rule-offset(occurrence, lines) = {
   if lines and occurrence.line { 0 } else if occurrence.allowance {
     1
   } else if occurrence.charge { 2 } else { none }
 }
 
+// Where each VAT category and VAT group (by `key`) occurs: on lines, on
+// document level allowances or charges.
 #let _occurrences(model) = {
   let none-yet = (line: false, allowance: false, charge: false)
   let found = (:)
@@ -882,6 +988,7 @@
   }
   let occurrences = _occurrences(model)
   let none-yet = (line: false, allowance: false, charge: false)
+  // The rule offset of a VAT category or group (see `_rule-offset`).
   let offset(name) = _rule-offset(
     if name == none { none-yet } else {
       occurrences.at(name, default: none-yet)
@@ -889,11 +996,14 @@
     lines,
   )
 
-  // BR-CO-18: with lines, BR-16 (no lines) says the same.
+  // BR-CO-18: an invoice has a VAT breakdown. With lines, BR-16 (no lines)
+  // says the same.
   if model.taxes.len() == 0 and not lines {
     out.push((key: "BR-CO-18", field: "line-items"))
   }
 
+  // The number of VAT groups per category and rate as the XML states them
+  // (`tax-field` names both, also for a group without category).
   let stated-groups = (:)
   for tax in model.taxes {
     let group = tax-field(tax)
@@ -904,12 +1014,16 @@
     let field = tax-field(tax)
     let category = tax.category
 
+    // BR-48: a VAT breakdown has a rate unless it is not subject to VAT.
+    // The test oracle checks the XML for it as well; this names the input.
     if tax.rate == none {
       if category != "O" {
         out.push((key: "BR-48", field: field, category: category))
       }
     } else {
-      // IP-DEC-01: the XML states a rate with up to `rate-digits` decimals.
+      // IP-DEC-01: the XML states a rate with up to `rate-digits` decimals,
+      // so a rate with more would be written as another rate, possibly as
+      // the rate of another VAT group.
       let percent = tax.rate * 100
       if calc.round(percent, digits: rate-digits) != percent {
         out.push((
@@ -923,7 +1037,8 @@
       }
     }
 
-    // BR-CL-18: the category; XRechnung also accepts B (split payment).
+    // The VAT category, e.g. the split payment of Italy (B), which only
+    // XRechnung accepts (see `category-code` of rare.typ).
     if not in-list(_vat-categories, category) {
       import "rare.typ": category-code
       let found = category-code(category, field, model.profile)
@@ -934,7 +1049,10 @@
     }
     if tax.rate == none { continue }
 
-    // The rate: BR-x-05 to -07 by where the group occurs (BR-x-09 in BASIC WL).
+    // The rate of the lines (BR-x-05), allowances (BR-x-06) and charges
+    // (BR-x-07) of the group. In BASIC WL, a group of lines only is left to
+    // the rules of the VAT breakdown (BR-x-09). The split payment (B) has no
+    // rules of its rate.
     let rate-rule = offset(tax.key)
     if rate-rule != none {
       rate-rule = if category in _category-rules {
@@ -962,6 +1080,7 @@
         ))
       }
     }
+    // BR-O-09: items not subject to VAT carry no VAT, so O has no rate.
     if category == "O" and tax.rate != _zero {
       out.push((key: "BR-O-09", field: field))
     }
@@ -972,13 +1091,17 @@
     ) {
       out.push((key: "BR-E-10", field: field))
     }
+    // The exemption reason codes (BT-121) the items give.
     if tax.at("codes", default: ()) != () {
       import "rare.typ": exemption-codes
       out += exemption-codes(tax, field, model.profile)
     }
   }
 
-  // BR-x-02 to -04: a seller identifier, or the tax representative's (BT-63).
+  // The identifiers of the parties each category requires where it occurs:
+  // on lines (BR-x-02), allowances (BR-x-03) or charges (BR-x-04). The VAT
+  // identifier of the seller tax representative (BT-63) stands in for the
+  // seller's own.
   let representative = model.at("tax-representative", default: none)
   let represented = (
     representative != none
@@ -1022,10 +1145,16 @@
       ))
     }
   }
-  // BR-IC-12, a safety net: the model states a deliver-to country for K.
+  // The buyer VAT identifier (BT-48) of K and AE: see `buyer-vat-id` of
+  // rare.typ. BR-IC-12 is a safety net: the model states the buyer's country
+  // as the deliver-to country (BT-80) of K.
   if "K" in categories and model.ship-to == none {
     out.push((key: "BR-IC-12", field: "delivery-address"))
   }
+  // BR-IC-11: an intra-community supply states the date of the supply
+  // (BT-72) or the invoicing period (BG-14). A credit note or a prepayment
+  // invoice, whose own date is not the date of the supply, states none
+  // without a `service-period` or dated items (see `service-period-of`).
   let delivery = model.at("delivery", default: (:))
   if (
     "K" in categories
@@ -1045,7 +1174,8 @@
     }
     out.push((key: "BR-O-11", field: "tax", others: others))
   }
-  // The split payment of Italy (B): BASIC and EN 16931 check its rules too.
+  // The split payment of Italy (B), which only XRechnung accepts; the
+  // validation of BASIC and EN 16931 checks its rules as well.
   if "B" in categories and model.profile.en16931 {
     import "rare.typ": split-payment
     out += split-payment(model, categories)
@@ -1053,8 +1183,11 @@
   out
 }
 
-// --- Payment ---
+// --- Payment --------------------------------------------------------------
 
+// The payment means (BG-16): one kind of payment means, each with the
+// details of its kind (XRechnung: BR-DE-1, BR-DE-19, BR-DE-20, BR-DE-23,
+// BR-DE-24, BR-DE-25, BR-DE-30, BR-DE-31, PEPPOL-EN16931-R061).
 #let _payment-means(model) = {
   let out = ()
   let profile = model.profile
@@ -1064,6 +1197,8 @@
 
   if means.len() == 0 {
     if xrechnung {
+      // On a credit note or a self-billed invoice, the sender pays the
+      // amount: to the recipient's account, or by a set-off.
       let document = model.invoice.at("document", default: none)
       let paid = payment.at("paid", default: false)
       out.push((
@@ -1079,7 +1214,13 @@
     return out
   }
 
-  // One payment means code (BT-81); IP-PAY-03 where the validation allows more.
+  // An invoice states one payment means code (BT-81). XRechnung forbids the
+  // details of a direct debit (BG-19: the mandate reference, the creditor
+  // identifier or a debited account) next to a credit transfer (BR-DE-23-b)
+  // or a payment card (BR-DE-24-b). Kinds of payment means have different
+  // codes (see `code-kind`), which break CII-SR-467 of CEN 1.3.16 in EN 16931
+  // and XRechnung; BASIC WL and BASIC accept them, but the buyer could pay
+  // twice (IP-PAY-03).
   let kinds = ()
   let conflicting = ()
   let debit-details = (
@@ -1113,7 +1254,12 @@
   for entry in means {
     if entry.kind == "transfer" {
       if entry.iban == none {
-        // No account (BG-17). IP-PAY-04: BR-61 of BASIC WL and BASIC misses it.
+        // `paid(method: "transfer")` without bank details, or bank details
+        // without an IBAN (with `zugferd-errors: "report"`; otherwise
+        // `bank-details` stops the compilation): no account (BG-17) is
+        // written. XRechnung: BR-DE-23-a; EN 16931: CII-SR-470 (CEN 1.3.16);
+        // BASIC WL and BASIC accept it, as their BR-61 tests the debited
+        // account: IP-PAY-04.
         let paid = entry.field == "paid"
         out.push((
           key: if xrechnung { "BR-DE-23-a" } else if profile.id == "en16931" {
@@ -1151,6 +1297,7 @@
     }
   }
 
+  // The check digits of a SEPA creditor identifier (BT-90).
   let sepa-debit = false
   for entry in means {
     if entry.kind == "direct-debit" and entry.type-code == "59" {
@@ -1173,6 +1320,7 @@
   let payment = model.payment
   let terms = profile-terms(payment, model.profile)
 
+  // XRechnung: the Skonto syntax of the payment terms (BR-DE-18).
   if model.profile.xrechnung {
     import "xrechnung.typ": payment-terms
     out += payment-terms(payment, terms)
@@ -1191,11 +1339,14 @@
   out
 }
 
-// --- Consistency ---
+// --- Consistency ----------------------------------------------------------
 
+// Whether an amount has more than the 2 decimals the XML states.
 #let _cents-exceeded(amount) = calc.round(amount, digits: 2) != amount
 
-// The first amount with more than 2 decimals, in XML order, and the count.
+// The first amount the XML cannot state because it has more than 2 decimals,
+// in the order of the XML, and how many there are: (count: .., term: ..,
+// place: .., value: ..). Only the amounts the profile writes count.
 #let _excess-decimals(model) = {
   let found = (count: 0)
   let note(found, term, place, value) = {
@@ -1273,10 +1424,17 @@
   found
 }
 
-// IP-DEC-02: the XML states amounts with 2 decimals (BR-DEC-*).
+// IP-DEC-02: the XML states amounts with 2 decimals (BR-DEC-*). Amounts
+// with more (e.g. of KWD, or of a locale that rounds money more finely)
+// would be written rounded, other than printed, and would no longer add up
+// (BR-CO-10, BR-S-08, ...). That the XML states what the invoice prints and
+// adds up in itself is a property of invoice-pro, which the test oracle
+// checks (tools/zugferd/guard/equivalence.typ).
 #let _consistency(model) = {
   let excess = _excess-decimals(model)
   if excess.count == 0 { return () }
+  // A currency with more decimals (e.g. KWD, `invoice(currency: ..)`)
+  // rounds the amounts to them; otherwise the rounding of the locale does.
   let decimals = model.at("currency-decimals", default: 2)
   let by-currency = type(decimals) == int and decimals > 2
   (
@@ -1293,7 +1451,8 @@
   )
 }
 
-/// The findings of the rules for an e-invoice data model.
+/// The findings of the rules for an e-invoice data model, in the order of
+/// the checks.
 ///
 /// -> array
 #let findings(model) = (
@@ -1308,9 +1467,11 @@
     + _consistency(model)
 )
 
-// --- Diagnostics ---
+// --- Diagnostics ------------------------------------------------------------
 
-// The rules whose usual level is "warning" (the first `level` in the registry).
+// The rules whose usual level is "warning" (the first `level` of their entry
+// in tools/zugferd/registry.json, which tools/zugferd/registry.py checks
+// against this list); a finding gives the level of a rule with two.
 #let _warnings = (
   "BR-DE-TMP-32",
   "IP-DOC-04",
@@ -1336,7 +1497,10 @@
   hint: hint,
 )
 
-/// Turns the findings into diagnostics, errors first.
+/// Turns the findings of the checks into diagnostics, errors first. The
+/// messages load only now, and only the module of the rules found: the rules
+/// of XRechnung that no other profile reports are in xrechnung-messages.typ,
+/// every other rule in messages.typ.
 ///
 /// -> array
 #let diagnostics(findings) = {
@@ -1371,7 +1535,8 @@
   errors + warnings
 }
 
-/// Checks an e-invoice data model and returns its diagnostics, errors first.
+/// Checks an e-invoice data model against the rules and returns every
+/// diagnostic, errors first (see the top of this file).
 ///
 /// -> array
 #let run-rules(model) = {

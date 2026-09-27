@@ -1,10 +1,15 @@
-// The codes of units given as text, loaded only for an invoice with one.
+// The codes of units given as text (see `resolve-unit` of model.typ): the
+// unit names and abbreviations invoice-pro knows. Most invoices give their
+// units with the `unit` module, which carry their codes, so model.typ
+// loads this module only for the first unit given as text (Typst parses a
+// module when it is first imported).
 
 #import "code-lists.typ": lists
 #import "../data/unit.typ": unit-db
 #import "../locale/lang/lang.typ" as languages
 
-// The Rec. 20 codes of the `unit` module, by language file key.
+// The UN/ECE Recommendation 20 codes of the units of the `unit` module, by
+// their key in the language files.
 #let _unit-codes = (
   piece: "H87",
   "set": "SET",
@@ -26,8 +31,13 @@
   "cubic-metre": "MTQ",
 )
 
-/// The codes of unit texts (lower case, no trailing ".") of every language;
-/// built on the first call (memoized).
+/// Unit texts and the UN/ECE Recommendation 20 codes they stand for, by the
+/// text in lower case without a trailing ".": the symbols and names of the
+/// unit database, the unit names of every language of invoice-pro and common
+/// abbreviations. Only whole texts match, never a part of one.
+///
+/// It is built on the first call, which Typst memoizes, and only for an
+/// invoice with a unit given as text.
 ///
 /// -> dictionary
 #let unit-aliases() = {
@@ -56,7 +66,8 @@
   ).pairs() {
     for text in texts { table.insert(text, code) }
   }
-  // Plurals the language files lack, other than the singular with "s".
+  // Plurals that the languages list no own form for and that are no singular
+  // with "s" (French, Italian and Spanish).
   for (code, texts) in (
     H87: ("pezzi", "unidades"),
     PR: ("paia", "pares"),
@@ -101,7 +112,9 @@
   table
 }
 
-// Codes that are also German abbreviations: (meaning, abbreviation).
+// Unit codes that are also common German abbreviations of other units, with
+// what the code means and what the abbreviation stands for. Taken verbatim,
+// they most likely do not mean what the code says.
 #let _ambiguous-unit-codes = (
   STK: ("stick", "Stück"),
   PAL: ("pascal", "Palette"),
@@ -110,12 +123,21 @@
   KT: ("kit", "Karton"),
 )
 
-/// The code of a unit text as `(code: .., issue: ..)`: a code as it is (issue
-/// `ambiguous` for e.g. "STK"), a known name's, else "C62" (issue `unknown`).
+/// The UN/ECE Recommendation 20 code of a unit given as text (not empty) as
+/// `(code: .., issue: ..)`, see `resolve-unit` of model.typ: a text that is
+/// exactly a code (e.g. "H87") is taken as it is, but a code that is also a
+/// common abbreviation of another unit (e.g. "STK", the code of sticks) has
+/// the issue `(kind: "ambiguous", ..)`. Any other text is looked up in the
+/// unit names and abbreviations invoice-pro knows ("Std.", "m²", "qm",
+/// "Stück", "pauschal", ...). A text it does not know has the issue
+/// `(kind: "unknown", text: ..)` and the code C62 ("one") as placeholder:
+/// invoice-pro does not guess what it means.
 ///
 /// -> dictionary
 #let resolve-text-unit(text) = {
-  // A code as it is; case-sensitive, so "min" is looked up as a word.
+  // A unit written exactly as a code; case-sensitive, so that "min" is not
+  // looked up as the code "MIN" but as an abbreviation (which gives the
+  // same).
   if (
     not text.contains(" ") and (" " + text + " ") in lists.unit.every
   ) {

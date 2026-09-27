@@ -358,8 +358,11 @@
     description-colspan,
   )
 
-  // Frames the rows of one entry with cap rows and side spacers. Unbreakable
-  // spacers keep a title with its description and modifiers on one page.
+  // Frames the rows of one entry (item, group header or group footer) with
+  // the item inset and stroke: a cap row above and below, and on either side
+  // a spacer cell spanning all of the entry's rows. Unbreakable spacers keep
+  // those rows on one page, so a description or modifier is never carried
+  // over to the next page without its title.
   let frame-rows(
     body-rows,
     fill: none,
@@ -849,8 +852,9 @@
 
   // `layout` is shadowed by the layout information above.
   std.layout(size => {
-    // An unbreakable entry taller than the page (with header and footer)
-    // would overflow it, so it falls back to breakable rows.
+    // An entry kept on one page but taller than a page (next to the
+    // repeated header and footer) would overflow it, so such an entry
+    // falls back to rows that may break across pages.
     let keep-together(build-rows) = {
       let rows = build-rows(false)
       let height(..header-footer) = {
@@ -864,7 +868,9 @@
           ),
         ).height
       }
-      // Measuring the header costs a relayout, so small entries skip it.
+      // Measuring the header as well makes Typst lay out the whole document
+      // once more, so that is only done for entries that are not obviously
+      // small.
       let fits = (
         height() <= size.height / 2
           or height(table-header, ..table-footer) <= size.height

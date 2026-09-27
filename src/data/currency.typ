@@ -1,6 +1,10 @@
-// The currency of an invoice (BT-5): ISO 4217 code, symbol and decimals.
+// The currency of an invoice (`invoice(currency: ..)`): the ISO 4217 code
+// the e-invoice states (BT-5), and the symbol and the decimals the amounts
+// are printed and rounded with.
 
-// Only unambiguous symbols in every common font; others print their code.
+// The symbols of currencies whose symbol is unambiguous and in every common
+// font. Any other currency is printed with its code (e.g. "CHF", "SEK",
+// "CAD"), which cannot be mistaken for another one.
 #let _symbols = (
   CZK: "Kč",
   EUR: "€",
@@ -11,7 +15,8 @@
   USD: "$",
 )
 
-// ISO 4217 minor units other than 2.
+// The decimals (minor units) of the ISO 4217 currencies that do not have
+// two.
 #let _decimals = (
   BHD: 3,
   BIF: 0,
@@ -43,7 +48,9 @@
 
 #let _code-pattern = regex("^[A-Za-z]{3}$")
 
-/// The currency `(code, symbol, decimals)` of an ISO 4217 code (e.g. `"usd"`).
+/// The currency of an ISO 4217 code (e.g. `"usd"`): `(code, symbol,
+/// decimals)` with the code in upper case, its symbol (the code itself if it
+/// has none in `_symbols`) and its decimals.
 ///
 /// -> dictionary
 #let currency-of(code) = {
@@ -62,8 +69,13 @@
   )
 }
 
-/// The evaluated `locale` in the currency `code`, with its formatters and
-/// rounding.
+/// A locale (as `invoice` evaluates it) that invoices in the currency
+/// `code`: its currency (code, symbol and decimals), the formatters of
+/// amounts and unit prices (`format.currency`, `format.currency-fine`, with
+/// the number format and the position of the symbol of the locale) and, if
+/// the decimals differ, the rounding of amounts (`normalize.money`,
+/// `normalize.money-fine`). A locale in this currency already is returned
+/// as it is, with its own symbol and formatters.
 ///
 /// -> dictionary
 #let with-currency(locale, code) = {
@@ -81,7 +93,9 @@
   let currency = current + target + (decimals-fine: decimals-fine)
   locale.currency = currency
 
-  // Without `currency-formatters`, the locale keeps its own (see IP-PRINT-02).
+  // The formatters of the locale for another currency (see
+  // `make-formatters`); a locale without them keeps its own, which the
+  // e-invoice checks against the currency (IP-PRINT-02).
   let format = locale.at("format", default: (:))
   let rebuild = format.at("currency-formatters", default: none)
   if type(rebuild) == function {

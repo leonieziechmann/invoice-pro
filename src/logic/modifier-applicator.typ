@@ -17,9 +17,11 @@
     + " `surcharge([Shipping], amount: 5, tax: tax.vat(19%))`."
 )
 
-// The VAT groups an absolute modifier is spread over: the one it is pinned
-// to, else those whose total has the sign of the whole total, so that a
-// voucher never turns into a charge on credited lines.
+// The VAT groups an absolute modifier is spread over. A modifier pinned with
+// `tax:` goes to that group alone. Otherwise it is spread over the groups whose
+// total has the sign of the whole total (the sales, or the credits of a credit
+// note), so a voucher never turns into a charge on credited lines, and with a
+// single group it goes there even if its total is 0 or negative.
 #let _allocation-keys(modifier, tax-groups) = {
   let pinned = modifier.at("tax", default: none)
   if pinned != none { return (m-tax.to-tax-key(pinned),) }
@@ -85,7 +87,8 @@
     let groups = keys.map(key => tax-groups.groups.at(key))
 
     if needs-adjustment {
-      // Gross to net or back with the mix of VAT rates of its groups.
+      // Convert between gross and net with the mix of VAT rates of the
+      // groups the modifier goes to (a single group: with its own rate).
       let scope-net-total = decimal("0")
       let scope-gross-total = decimal("0")
       for group in groups {
@@ -107,7 +110,8 @@
       effective-amount = (normalize.money)(modifier.amount * conversion-ratio)
     }
 
-    // Spread proportionally over the groups, whose totals share one sign; the
+    // Spread the amount proportionally over the groups. They all have totals
+    // of the same sign, so every share has the sign of the modifier. The
     // rounding difference goes to the largest group.
     let base-total = groups.map(group => group.total).sum()
     let left-over-total = effective-amount
@@ -155,8 +159,9 @@
   )
 }
 
-// The share of every modifier in each VAT group: `(key: (modifier, ..))`,
-// without the modifiers that have none in it.
+// The share of every modifier in each VAT group: `(key: (modifier, ..))`.
+// A modifier without a share in a group (pinned to another one, or spread
+// over the groups of the other sign) is not listed for it.
 #let modifiers-by-tax(modifiers, tax-rates) = {
   return tax-rates
     .keys()
@@ -184,8 +189,9 @@
   let modifiers = loom.query.collect-signals(children, kind: "modifier")
 
   let tax-groups = group-by-tax(items)
-  // An absolute amount pinned to a VAT category no item has adds it; a
-  // percentage of it is 0 and adds none (no empty VAT or bundle line).
+  // An absolute amount pinned to a VAT category no item has adds that
+  // category. A percentage of a category without items is 0: it adds none
+  // (no empty VAT line, no empty bundle line).
   for mod in modifiers {
     let pinned = mod.at("tax", default: none)
     if pinned == none { continue }

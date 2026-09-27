@@ -3,30 +3,41 @@
 #import "../utils/coercion.typ"
 #import "../data/tax.typ" as m-tax
 
-/// A discount or surcharge of an item, a bundle or the whole invoice.
+/// Represents a modifier, such as a discount or a surcharge, to be applied to an item, a bundle, or the entire invoice.
+/// Modifiers can be either relative (percentage-based) or absolute (fixed monetary amount) depending on the data type of the `amount` provided.
 ///
 /// -> content
 #let modifier(
-  /// The name of the modifier.
+  /// The name or title of the modifier (e.g., "Summer Sale Discount", "Shipping Fee").
   /// -> str | content
   name,
-  /// The label; `auto` is the locale's, `none` omits it.
+  /// The label prefix of the modifier (e.g. "Rabatt", "Zuschlag", "Nachlass").
+  /// If `auto`, it resolves to the default discount/surcharge label from the locale.
+  /// If `none`, no label prefix is displayed.
   /// -> none | auto | str | content
   label: auto,
-  /// A description of the modifier.
+  /// Additional description about the modifier.
   /// -> str | content | auto | none
   description: auto,
-  /// A percentage or an amount; negative for a discount.
+  /// The value of the modifier.
+  ///   - If a `ratio` is provided (e.g., `-10%`), it acts as a relative modifier applied to the base total.
+  ///   - If a numeric/decimal value is provided (e.g., `-15.50`), it acts as an absolute monetary modifier.
+  ///   - Negative values represent discounts, while positive values represent surcharges.
   /// -> ratio | int | float | decimal | str | auto
   amount: auto,
-  /// Whether an amount is gross; `auto` inherits it.
+  /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
   /// -> bool | auto
   input-gross: auto,
-  /// Internal: whether it is a discount; `auto` by the sign of `amount`.
+  /// Internal flag indicating whether this modifier is semantically a discount or surcharge.
   /// -> bool | auto
   is-discount: auto,
-  /// The VAT category, e.g. `tax.vat(19%)`. `auto` spreads it over the VAT
-  /// categories of the items.
+  /// The VAT category the modifier belongs to, e.g. `tax.vat(19%)` for
+  /// shipping. If `auto`, a percentage applies to every VAT category, and an
+  /// absolute amount is split over the VAT categories in proportion to their
+  /// totals. On a document or bundle with several VAT categories and a total
+  /// of 0 the split is undefined: then the modifier must be pinned with `tax`.
+  /// On an item, a modifier always has the item's tax. With
+  /// `tax-exempt-small-biz`, it is replaced by the small business scheme.
   /// -> ratio | dictionary | auto
   tax: auto,
 ) = {
@@ -55,7 +66,9 @@
     scope: ctx => loom.mutator.batch(ctx, {
       import loom.mutator: *
 
-      // Not cascaded: the context's `tax` is the items' default.
+      // Not cascaded: the `tax` of the context is the default of the items.
+      // A small business charges no VAT: like the `tax` of its items, a
+      // pinned category is replaced by the small business scheme.
       let small-biz = ctx.at("tax-exempt-small-biz", default: false)
       put("modifier-tax", if tax == auto { none } else if small-biz {
         ctx.locale.tax.small-enterprise-special-scheme
@@ -138,22 +151,25 @@
 }
 
 #let discount(
-  /// The name of the discount.
+  /// The name or title of the discount (e.g., "Summer Sale Discount", "Skonto").
   /// -> str | content
   name,
-  /// The label; `auto` is the locale's, `none` omits it.
+  /// The label prefix of the discount (e.g. "Rabatt", "Nachlass").
+  /// If `auto`, it resolves to the default discount label from the locale.
+  /// If `none`, no label prefix is displayed.
   /// -> none | auto | str | content
   label: auto,
-  /// A description of the discount.
+  /// Additional description about the discount.
   /// -> str | content | auto | none
   description: auto,
   /// The value of the discount. Must be positive.
   /// -> ratio | int | float | decimal | str
   amount: 0,
-  /// Whether an amount is gross; `auto` inherits it.
+  /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
   /// -> bool | auto
   input-gross: auto,
-  /// The VAT category, see `modifier`.
+  /// The VAT category the discount belongs to (see `modifier`). If `auto`, it
+  /// is split over the VAT categories.
   /// -> ratio | dictionary | auto
   tax: auto,
 ) = {
@@ -190,22 +206,26 @@
 }
 
 #let surcharge(
-  /// The name of the surcharge.
+  /// The name or title of the surcharge (e.g., "Shipping Fee", "Express Surcharge").
   /// -> str | content
   name,
-  /// The label; `auto` is the locale's, `none` omits it.
+  /// The label prefix of the surcharge (e.g. "Zuschlag", "Gebühr").
+  /// If `auto`, it resolves to the default surcharge label from the locale.
+  /// If `none`, no label prefix is displayed.
   /// -> none | auto | str | content
   label: auto,
-  /// A description of the surcharge.
+  /// Additional description about the surcharge.
   /// -> str | content | auto | none
   description: auto,
   /// The value of the surcharge. Must be positive.
   /// -> ratio | int | float | decimal | str
   amount: 0,
-  /// Whether an amount is gross; `auto` inherits it.
+  /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
   /// -> bool | auto
   input-gross: auto,
-  /// The VAT category, see `modifier`.
+  /// The VAT category the surcharge belongs to (see `modifier`), e.g.
+  /// `tax.vat(19%)` for shipping. If `auto`, it is split over the VAT
+  /// categories.
   /// -> ratio | dictionary | auto
   tax: auto,
 ) = {

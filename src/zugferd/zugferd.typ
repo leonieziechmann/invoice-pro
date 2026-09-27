@@ -1,4 +1,7 @@
-// Entry point of the e-invoice: builds the model, validates it, writes the XML.
+// Entry point of the e-invoice generation: builds the data model, validates
+// it and serializes the XML. The test suite checks the XML itself against
+// the schema and Schematron of every profile (tools/zugferd/guard/, the
+// corpus of tools/zugferd/).
 
 #import "model.typ": build-model
 #import "profile.typ": switch-profile
@@ -7,8 +10,18 @@
 
 #let _has-errors(diagnostics) = diagnostics.any(d => d.level == "error")
 
-/// Builds and checks the e-invoice as `(profile: .., model: .., diagnostics:
-/// .., xml: ..)`; the XML is built even with errors.
+// What only some invoices need (a fallback of `zugferd: auto`, a self-billed
+// invoice) is in rare.typ, which loads when an invoice needs it.
+
+/// Builds and checks the e-invoice of the computed invoice.
+///
+/// With `zugferd: auto`, the richest candidate profile the invoice satisfies
+/// is chosen (see `resolve-profile`); the errors that ruled out a better one
+/// are listed as warnings.
+///
+/// Returns `(profile: .., model: .., diagnostics: .., xml: ..)`. The XML is
+/// always built; `diagnostics` lists every problem found (errors first), so
+/// the caller decides whether to stop, report or ignore them.
 ///
 /// -> dictionary
 #let process-zugferd(
@@ -27,7 +40,9 @@
   )
   let diagnostics = run-rules(model)
 
-  // `zugferd: auto`: the next candidate while there are errors.
+  // `zugferd: auto`: the next candidate while there are errors. The model
+  // does not depend on the candidate profile, so switching the profile only
+  // repeats the validation.
   let skipped = ()
   for id in model.profile.candidates.slice(1) {
     if not _has-errors(diagnostics) { break }

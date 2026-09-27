@@ -19,7 +19,7 @@
   // Prepared by `line-items`, see `src/logic/exemption-notes.typ`.
   let exemption-notes = data.at("exemption-notes", default: ())
 
-  // The standard tax statement, left out for small businesses and exemptions.
+  // Standard Tax Statement (Suppressed for small businesses and tax exemptions)
   if (
     not layout.show-tax-rates
       and not layout.multiple-tax-rates
@@ -36,7 +36,7 @@
     ))
   }
 
-  // What all items share: unit, quantity, date.
+  // Unit, Quantity, and Date info (Simplified display)
   if (
     not layout.show-units and not layout.multiple-units and data.items.len() > 0
   ) {
@@ -70,8 +70,12 @@
     global-infos.push([#info-str.date #date])
   }
 
-  // Exemption notes (required by law, BT-120) and invoice notes (BT-22),
-  // with their markers: `show-information: false` does not hide them.
+  // Small business clause, tax exemption grounds and the notes of the
+  // invoice, each with the marker of its VAT line or items, if any. The law
+  // requires the exemption notes on the invoice (e.g. § 14 Abs. 4 Satz 1
+  // Nr. 8 and § 14a Abs. 5 UStG), and the e-invoice states them and the
+  // notes (BT-120, BT-22), so `show-information: false`, which hides the
+  // information about the items above, does not hide them.
   let notes = ()
   for note in exemption-notes {
     let marker-str = if note.marker != none {

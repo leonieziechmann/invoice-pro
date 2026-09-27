@@ -19,10 +19,12 @@
 /// Spanish language overrides.
 #let es = (
   meta: (
+    /// El código de idioma ISO 639-1 del archivo.
     lang: "es",
     resolve-plural: resolve-plural,
   ),
 
+  /// Denominaciones para tipos de documentos
   document: (
     invoice: "Factura",
     credit-note: "Factura de abono",
@@ -32,11 +34,13 @@
     self-billed: "Facturación por el destinatario",
   ),
 
+  /// Denominaciones relacionadas con la dirección
   address: (
     recipient: "Facturar a",
     sender: "De",
   ),
 
+  /// Denominaciones para números de referencia y metadatos
   reference: (
     tax-number: "NIF",
     invoice-number: "Número de factura",
@@ -64,6 +68,7 @@
     payee: "Beneficiario del pago",
   ),
 
+  /// Encabezados de columna y etiquetas para la tabla de artículos
   line-items: (
     position: "Pos.",
     description: "Descripción",
@@ -82,6 +87,7 @@
     origin: "País de origen",
   ),
 
+  /// Etiquetas para la sección de resumen (pie de la tabla)
   summary: (
     sum: "Subtotal",
     vat-tax: "IVA",
@@ -92,7 +98,9 @@
     amount-due: "Total a pagar",
   ),
 
+  /// Frases informativas globales
   global-info: (
+    /// Sentencia que especifica el tipo impositivo universal aplicado
     tax-statement: (
       tax-text,
       rate,
@@ -131,6 +139,7 @@
     "cubic-metre": "metro cúbico",
   ),
 
+  /// Denominaciones para detalles bancarios y de pago
   bank-details: (
     account-holder: "Titular de la cuenta",
     bank: "Banco",
@@ -139,6 +148,7 @@
     reference: "Concepto",
   ),
 
+  /// Textos de los medios de pago además de los datos bancarios
   payment-means: (
     method: "Forma de pago",
     transfer: "Transferencia",
@@ -169,17 +179,21 @@
     ) => [Le hemos pagado el importe de *#sum*#if date != none [ el #date].],
   ),
 
+  /// Bloques de texto para condiciones de pago
   payment: (
+    /// Genera la frase final de instrucciones de pago.
     text: (
       sum,
       deadline,
     ) => [Por favor, transfiera el importe total de *#sum* #deadline a la cuenta indicada a continuación.],
 
+    /// Frase de pago cuando los anticipos reducen el importe a pagar.
     text-due: (
       sum,
       deadline,
     ) => [Por favor, transfiera el importe pendiente de *#sum* #deadline a la cuenta indicada a continuación.],
 
+    /// Frase de pago para una domiciliación bancaria.
     text-direct-debit: (
       sum,
       deadline,
@@ -189,6 +203,7 @@
       deadline,
     ) => [El importe pendiente de *#sum* se cargará en su cuenta mediante domiciliación bancaria #deadline.],
 
+    /// Frase de pago para un pago con tarjeta.
     text-card: (
       sum,
       deadline,
@@ -198,38 +213,48 @@
       deadline,
     ) => [El importe pendiente de *#sum* se cargará en su tarjeta #deadline.],
 
+    /// Nota de un descuento por pronto pago.
     cash-discount: (
       percent,
       deadline,
       basis,
     ) => [Por pago #deadline se concede un descuento por pronto pago del #percent#if basis != none [ sobre #basis].],
 
+    /// Texto para una fecha de vencimiento fija.
     deadline-date: date => ("antes del", date).join(" "),
 
+    /// Texto para un plazo relativo (en X días).
     deadline-days: days => (
       "en un plazo de",
       str(days),
       "días",
     ).join(" "),
 
+    /// Texto para pago inmediato.
     deadline-soon: "al recibir la factura",
 
+    /// Frase de pago de una factura de abono o de una factura emitida por el
+    /// destinatario: el remitente paga el importe al destinatario.
     text-credit: (
       sum,
       deadline,
     ) => [Le transferiremos el importe de *#sum* #deadline a la cuenta indicada a continuación.],
 
+    /// Texto para un pago inmediato en `text-credit`.
     deadline-soon-credit: "de inmediato",
   ),
 
+  /// Saludo y área de firma
   signature: (
     closing: "Atentamente,",
   ),
 
+  /// Textos legales estándar (Explicación para el destinatario)
   legal: (
     vat-exemption: "IVA no repercutido por exención para pequeñas empresas.",
   ),
 
+  /// Mensajes de error y advertencia para desarrolladores
   errors: (
     name-missing: "¡Falta el nombre!",
     address-missing: "¡Falta la dirección!",

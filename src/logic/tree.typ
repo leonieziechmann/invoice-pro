@@ -1,7 +1,8 @@
 #import "../loom-wrapper.typ": loom
 
-/// Flattens the tree of items, bundles and groups into ordered entries with
-/// their positions (e.g. 2.1) and the subtotals of the groups.
+/// Recursively traverses the component hierarchy of line items, bundles, and groups
+/// to construct a flattened, ordered list of entries with hierarchical position IDs (e.g. 1, 2.1, 1.1.4)
+/// and calculate group subtotals.
 ///
 /// -> dictionary
 #let resolve-tree-nodes(
@@ -21,6 +22,7 @@
   for node in nodes {
     if node == none { continue }
 
+    // If node is an array (e.g. from apply or nested structures), unpack recursively
     if type(node) == array {
       let sub-result = resolve-tree-nodes(
         node,
@@ -35,6 +37,7 @@
     if type(node) != dictionary { continue }
     let kind = node.at("kind", default: none)
 
+    // Skip non-item motifs
     if (
       kind
         in ("tax-applicator", "modifier-applicator", "prepayment", "modifier")
@@ -124,7 +127,7 @@
   )
 }
 
-/// The flattened entries and the items with positions of the line items.
+/// Resolves the root line-items children into flattened entries and raw items with positions.
 ///
 /// -> dictionary
 #let resolve-tree(children) = {

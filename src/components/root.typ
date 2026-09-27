@@ -2,10 +2,11 @@
 #import "../logic/payment-means.typ": resolve as resolve-payment-means
 
 /// The internal root container that wraps the invoice body.
+/// It initializes the global context and provides the base document structure to the theme.
 ///
 /// -> content
 #let root(
-  /// The invoice body.
+  /// The content to be rendered within the document structure.
   /// -> content
   body,
 ) = {
@@ -115,7 +116,8 @@
       )
       let payment-goal-signal = all-payment-goals.first(default: none)
 
-      // Each `bank-details` is an account; other payment means occur once.
+      // The payment means: each bank details are an account of a credit
+      // transfer; a direct debit, a payment card and `paid` occur once.
       let payment-means-signals = (:)
       for kind in ("direct-debit", "card-payment", "paid") {
         let signals = loom.query.collect-signals(children, kind: kind)
@@ -131,7 +133,10 @@
         payment-means-signals.paid == none or payment-goal-signal == none,
         message: "An invoice that is `paid` has no `payment-goal`: nothing is left to pay. Remove the `payment-goal`.",
       )
-      // Nor a text as `due-date`, which would be the payment terms (BT-20).
+      // Nor payment terms of its own: a text as `due-date` (e.g. "sofort")
+      // would be printed and stated as the payment terms (BT-20) instead of
+      // the sentence that the invoice is paid. A date is the due date the
+      // payment met.
       let due-date = ctx.at("due-date", default: none)
       if (
         payment-means-signals.paid != none
@@ -340,11 +345,14 @@
 
       let body = body
       if ctx.zugferd != none {
-        // Imported here, so invoices without an e-invoice do not load these.
+        // Loaded here rather than at the top of the module, so that invoices
+        // without an e-invoice do not load the e-invoice modules (code lists,
+        // validator, serializer) at all.
         import "../zugferd/zugferd.typ": process-zugferd
         import "../logic/printed.typ": printed-record
 
-        // What the printed invoice shows (IP-PRINT-03, IP-PERIOD-03).
+        // What the printed invoice shows besides the components, for the
+        // checks that it states what the e-invoice states.
         let printed = printed-record(
           ctx.theme,
           ctx.references,
@@ -360,14 +368,21 @@
           payment-means: view.payment-means,
         )
         let errors = result.diagnostics.filter(d => d.level == "error")
+        // The report module loads only when there is something to report.
         if errors.len() > 0 and ctx.zugferd-errors == "panic" {
           import "../zugferd/report.typ": format-report
           assert(false, message: format-report(result))
         }
 
-        // With errors, "report" attaches a draft, "ignore" the XML as if valid.
+        // The e-invoice is "factur-x.xml", or "xrechnung.xml" in the
+        // XRECHNUNG profile (`file-name` of the profile). With errors,
+        // "report" attaches the XML as a draft: under a name that no
+        // receiving software takes for the e-invoice and only as
+        // supplementary data. "ignore" skips the check on purpose and
+        // attaches the XML like a valid one.
         let draft = errors.len() > 0 and ctx.zugferd-errors == "report"
-        // MINIMUM and BASIC WL do not replace the visual invoice either.
+        // MINIMUM and BASIC WL do not replace the visual invoice either, so
+        // their XML is attached as data rather than as an alternative of it.
         let as-data = draft or result.profile.id in ("minimum", "basic-wl")
         pdf.attach(
           if draft { "/invoice-draft.xml" } else {
@@ -392,7 +407,10 @@
             message: "theme::zugferd-report must be `none` or a function `(ctx, result) => content`, got "
               + repr(render-report),
           )
-          // A theme without a report must not hide the errors: they panic.
+          // Whatever the hook returns is shown as content. A theme without
+          // a report (`zugferd-report: none`, or a hook that returns
+          // nothing) must not hide errors: they stop the compilation as with
+          // "panic", so no invalid e-invoice goes out unnoticed.
           let report = if render-report != none {
             render-report(ctx, result)
           }

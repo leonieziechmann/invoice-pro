@@ -22,10 +22,19 @@
 
 /// Defines and renders the bank account information for payments.
 ///
+/// The payment reference is resolved in this order: the `reference` or `text`
+/// argument, the invoice's `payment-reference`, the `invoice-nr`. The resolved
+/// value is printed, encoded in the EPC-QR code and written to the ZUGFeRD XML
+/// (BT-83).
+///
 /// -> content
 #let bank-details(
-  /// The account holder. `auto`: the `payee` (not on a credit note), else the
-  /// sender, or the recipient on a credit note or self-billed invoice.
+  /// The name of the account holder. Defaults to the name of the `payee` of
+  /// the invoice (not on a credit note, which refunds the buyer), else the
+  /// sender's name on one line, as in the e-invoice (BT-59, BT-27), or the
+  /// recipient's on a credit note or a self-billed invoice, which the sender
+  /// pays. A name given here is also the account name of the e-invoice
+  /// (BT-85).
   /// -> auto | none | string
   name: auto,
 
@@ -33,36 +42,43 @@
   /// -> none | string
   bank: none,
 
-  /// The IBAN, with or without spaces. Required; it is checked.
+  /// The International Bank Account Number (IBAN), with or without spaces.
+  /// Required: a missing or invalid IBAN (structure or check digits) stops
+  /// the compilation, unless an e-invoice reports its problems in the
+  /// document (`zugferd-errors: "report"`).
   /// -> none | string
   iban: none,
 
-  /// The BIC; `none` omits it.
+  /// The Bank Identifier Code (BIC/SWIFT). If omitted or `none`, the BIC is not displayed in the bank details block.
   /// -> none | string
   bic: none,
 
-  /// The structured payment reference. `auto` falls back to the invoice's
-  /// `payment-reference`, then to the `invoice-nr`; `none` omits it.
+  /// The structured payment reference to be used by the customer.
+  /// If `auto`, falls back to the invoice's `payment-reference` (as
+  /// unstructured text) and then to the `invoice-nr`. `none` omits it.
   /// -> auto | none | string
   reference: auto,
 
-  /// An unstructured payment reference, instead of `reference`.
+  /// The unstructured payment reference text to be used by the customer.
+  /// Takes precedence over the invoice's `payment-reference` and `invoice-nr`.
   /// -> none | string
   text: none,
 
-  /// The amount to be paid; `auto` is the amount due.
+  /// The specific amount to be paid. If `auto`, it uses the document total.
   /// -> auto | none | decimal | float | int
   payment-amount: auto,
 
-  /// Whether to show the payment reference.
+  /// Whether to display the reference field in the output.
   /// -> bool
   show-reference: true,
 
-  /// A custom label of the account holder.
+  /// Optional custom text to label the account holder field.
   /// -> auto
   account-holder-text: auto,
 
-  /// The EPC-QR code `(size: .., display: ..)`, by default shown on a transfer.
+  /// Configuration for a payment QR code (e.g., EPC-QR). By default, the
+  /// code is shown only when the amount is paid by credit transfer: not
+  /// with a `direct-debit` or a `card-payment`, and not on a `paid` invoice.
   /// -> dictionary
   qr-code: (:),
 ) = {
@@ -125,10 +141,15 @@
       })
     }),
     measure: (ctx, _) => {
-      // Inside the line items, it would be printed but not stated.
+      // The root context collects the payment means of the body; inside the
+      // line items, the bank details would be printed but not stated.
       let _ = loom.guards.assert-not-inside(ctx, "line-items")
+      // The IBAN is checked here, independently of the theme, so that an
+      // invalid one never ends up on an invoice unnoticed.
       let electronic-iban = normalize-iban(iban)
       let valid-iban = iban-valid(electronic-iban)
+      // With an e-invoice and `zugferd-errors: "report"`, problems are shown
+      // in the document instead of stopping the compilation.
       let report = report-problems(ctx)
       if not valid-iban and not report {
         panic(
@@ -144,10 +165,18 @@
         )
       }
 
+      // On a credit note or a self-billed invoice, the sender pays the
+      // amount to the recipient, so the bank details are the recipient's
+      // account, and the recipient scans no EPC-QR code.
       let document = ctx.at("document-type", default: none)
       let recipient-account = sender-pays(document)
 
-      // `auto`: the payee (BG-10), not on a credit note, else the party paid.
+      // The account holder: the explicit `name`, else the name on one line
+      // of whom the amount is paid to: the payee (BG-10, e.g. a factoring
+      // company that receives the payment instead of the seller) of what
+      // the buyer pays, also on a self-billed invoice, but not of a credit
+      // note, which refunds the buyer; else the sender (as in the e-invoice,
+      // BT-27), or the recipient for the recipient's account.
       let credit = (
         type(document) == dictionary and document.at("credit", default: false)
       )
@@ -178,7 +207,11 @@
         payment-amount
       }
 
-      // Generated only when shown, and in EUR only (SEPA).
+      // The EPC-QR code is only generated when it is shown. SEPA credit
+      // transfers are in euro, so it is shown for invoices in EUR only. It
+      // asks the buyer to transfer the amount, so by default it is left out
+      // when the amount is collected otherwise or paid already, and on the
+      // recipient's account.
       let qr-display = qr-code.at(
         "display",
         default: not recipient-account and transfer-requested(of-context(ctx)),
@@ -196,7 +229,18 @@
         (payload: none, problems: ())
       }
 
-      // The view is documented in "Data for Custom Layouts" (theme.md).
+      // The view of the theme layout (`theme.bank-details`), with every value
+      // ready to print, so the layout only draws (see "Data for Custom
+      // Layouts" in docs/docs/api-reference/theme.md):
+      // - `sender`: `name` (the account holder), `bank`, `iban` and `bic` in
+      //   electronic format (`""` if not given) and `iban-valid`, which is
+      //   only `false` with `report-problems`.
+      // - `qr-code`: `size` and `display` as given, and the EPC-QR code as
+      //   its `payload` (see `epc.qr-code`; `none` if no code is generated)
+      //   or the `problems` that prevent it (only with `report-problems`,
+      //   otherwise `draw` stops; the layout shows a placeholder).
+      // - `reference` or `text` (the resolved payment reference),
+      //   `show-reference`, `report-problems` and `payment-amount`.
       let data = (
         sender: (
           name: holder,
@@ -220,7 +264,10 @@
         payment-amount: amount,
       )
 
-      // BT-85 only if `name` is given: the default holder is BT-59 or BT-27.
+      // Expose IBAN/BIC/reference as a public signal so root can embed them in ZUGFeRD XML.
+      // The account name (BT-85) only if it is given: the default holder is
+      // the payee or the seller, whom the e-invoice names already (BT-59,
+      // BT-27).
       let public = (
         iban: iban,
         bic: bic,
@@ -233,7 +280,11 @@
       (public, data)
     },
     draw: (ctx, _, view, ..) => {
-      // Stops in `draw`: the errors of components drawn before come first.
+      // An EPC-QR code that cannot be generated stops the compilation, unless
+      // an e-invoice reports its problems in the document, where the theme
+      // shows a placeholder naming them. It stops while drawing, not while
+      // measuring, so that the errors of components drawn before the bank
+      // details are reported first.
       let problems = view.qr-code.problems
       if problems.len() > 0 and not view.report-problems {
         panic(

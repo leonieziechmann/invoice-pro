@@ -5,19 +5,28 @@
 #import "../logic/document-type.typ": sender-pays
 #import "../logic/payment-means.typ": goal-strings, of-context
 
-/// Displays the payment deadline and terms.
+/// Displays the payment deadline and terms for the invoice.
+///
+/// The sentence follows the payment means of the invoice: a credit transfer
+/// (`bank-details`), a direct debit (`direct-debit`) or a payment card
+/// (`card-payment`). An invoice that is paid already (`paid`) has no payment
+/// goal.
 ///
 /// -> content
 #let payment-goal(
-  /// The days allowed for payment, from the invoice date.
+  /// The number of days allowed for payment from the invoice date.
   /// -> none | int
   days: none,
 
-  /// A fixed date for the payment deadline.
+  /// A specific fixed date for the payment deadline.
   /// -> none | datetime | string | content
   date: none,
 
-  /// A cash discount (Skonto), e.g. `(days: 14, percent: 2%)`, or several.
+  /// A cash discount (Skonto) for a payment within fewer days, e.g.
+  /// `(days: 14, percent: 2%)`, optionally with the `basis`, the amount it
+  /// applies to. An array of them states several steps. Each one is printed
+  /// after the payment sentence and stated in the payment terms of the
+  /// e-invoice (BT-20).
   /// -> none | dictionary | array
   discount: none,
 ) = {
@@ -55,7 +64,9 @@
       })
     }),
     measure: (ctx, _) => {
-      // Its notes would state the discount in the wrong direction.
+      // A cash discount is granted by the seller to the buyer who pays. The
+      // sender of a credit note or a self-billed invoice pays the amount, and
+      // its notes would state the discount in the wrong direction.
       if (
         discounts.len() > 0
           and sender-pays(ctx.at("document-type", default: none))
@@ -69,9 +80,13 @@
         days: days,
         date: date,
         total: ctx.global.total.at("due", default: ctx.global.total.gross),
+        // Prepayments reduce the payable amount, so `total` is the remaining
+        // amount due rather than the gross total.
         has-prepayments: ctx.global.total.prepaid > 0,
-        // "direct-debit", "card", "transfer" or `none`.
+        // The kind of payment means the sentence is for: "direct-debit",
+        // "card", "transfer" or `none` (no payment means is given).
         payment-means: if means != none { means.kinds.first(default: none) },
+        // The cash discounts with the note printed for each (`note`).
         discounts: if discounts.len() > 0 {
           cash-discount.with-notes(discounts, ctx.locale)
         } else { () },
@@ -80,7 +95,11 @@
       (data, data)
     },
     draw: (ctx, _, view, ..) => {
-      // The layout prints `text` or `text-due`, so they get the sentence here.
+      // The layout prints the payment sentence of the language (`text`, or
+      // `text-due` with prepayments), so that is the sentence here. On a
+      // credit note or a self-billed invoice, the sender pays the amount to
+      // the recipient; otherwise it is the sentence of the payment means,
+      // followed by the notes of the cash discounts.
       let ctx = ctx
       let strings = ctx.locale.strings.payment
       ctx.locale.strings.payment = if sender-pays(

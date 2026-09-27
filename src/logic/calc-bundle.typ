@@ -26,8 +26,9 @@
   let base-price = norm-money-fine(group.total)
   let base-total = norm-money(base-price * quantity-modifier)
 
-  // The bundle's modifiers are computed on one unit: as on an item, a
-  // percentage applies to the whole line, an absolute amount once.
+  // The bundle's own modifiers were computed on one unit. Like on an item, a
+  // percentage applies to the whole line (every unit of the bundle), while an
+  // absolute amount applies once per line.
   let scale(modifier) = {
     if modifier.type == "relative" {
       modifier.absolute = norm-money(base-total * modifier.display)
@@ -110,10 +111,14 @@
     .to-dict()
 }
 
+// The frames a bundle consumes: its items (including the virtual items of
+// nested bundles) and its modifiers.
 #let _consumed-kinds = ("item", "modifier", "modifier-applicator")
 
-// Removes the consumed frames at any depth. A nested bundle goes with its
-// virtual items, which the enclosing bundle already contains.
+// Removes the consumed frames from `frames` at any depth, the way
+// `loom.query.collect` finds the items. A nested bundle is dropped together
+// with its virtual items: the enclosing bundle already contains them, so they
+// must not be listed (and counted) a second time.
 #let strip-consumed(frames) = {
   let result = ()
   for frame in frames {
@@ -146,6 +151,7 @@
 #let calculate-bundle(ctx, children, name) = {
   let layout-children = strip-consumed(children)
 
+  // 1. Get Items
   let mod-applicator = loom.query.find-signal(children, "modifier-applicator")
   if mod-applicator == none { return layout-children }
 
@@ -154,9 +160,11 @@
   let tax-groups = mod-applicator.tax-groups
   if tax-groups.groups.len() == 0 { return layout-children }
 
+  // 2. Tax Mode & Modifier Values
   let discounts = mod-applicator.tax-split.discounts
   let surcharges = mod-applicator.tax-split.surcharges
 
+  // 3. Derive Information Based on Children
   let bundle-date = ctx.bundle-date
   if bundle-date == auto {
     let sorted-dates = bundlable-signals
@@ -178,6 +186,7 @@
     description = calculate-description(ctx, bundlable-signals)
   }
 
+  // 4. Emit Item Signal for each Tax Bracket
   let has-multiple-brackets = mod-applicator.tax-rates.len() > 1
 
   let generated-items = tax-groups

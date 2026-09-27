@@ -1,6 +1,7 @@
 #import "../../data/tax.typ"
 
 #let de(lang) = {
+  // --- Helper Functions ---
   let infer-tax-de(rate) = {
     if rate == 19% { return tax.vat(19%) } else if rate == 7% {
       return tax.vat(7%)
@@ -25,6 +26,7 @@
     }
   }
 
+  // --- Regional Data ---
   return (
     meta: (
       region: "de",
@@ -36,8 +38,10 @@
 
     tax: (
       default-vat: tax.vat(19%),
-      // Kleinunternehmer: exempt since 2025 (§ 19 Abs. 1 UStG, category E);
-      // § 34a UStDV requires the note.
+      // Kleinunternehmer: since 2025 (JStG 2024), § 19 Abs. 1 UStG makes the
+      // turnover tax exempt, and the invoice must note that the exemption
+      // applies (§ 34a UStDV). The note is printed and is the exemption reason
+      // (BT-120) of VAT category E in the e-invoice.
       small-enterprise-special-scheme: tax.exempt(
         grounds: "Umsatzsteuerfrei aufgrund der Kleinunternehmerregelung gemäß § 19 Abs. 1 UStG.",
       ),

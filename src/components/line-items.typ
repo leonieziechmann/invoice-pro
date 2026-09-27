@@ -9,32 +9,34 @@
 #import "../utils/types.typ"
 #import "../data/tax.typ" as m-tax
 
-/// The container of all items, bundles, groups, modifiers and prepayments.
+/// The root container for all invoice items, bundles, and modifiers.
+/// It establishes overarching tax settings, manages the global application of modifiers,
+/// and handles the formatting of the generated invoice data.
 ///
 /// -> content
 #let line-items(
-  /// Whether the prices are gross; `auto` follows `tax-mode`.
+  /// Defines whether the input prices within this container are treated as gross (inclusive of tax) by default. Defaults to `false`.
   /// -> bool | auto
   input-gross: auto,
 
-  /// The default tax of the items; `auto` inherits it.
+  /// The default tax rate or tax dictionary applied to the items within this container. Defaults to a zero tax rate.
   /// -> ratio | dictionary | auto
   tax: auto,
-  /// How taxes are calculated; `auto` inherits it.
+  /// Determines how taxes are calculated globally. Defaults to `"exclusive"`.
   /// -> "exclusive" | "inclusive" | auto
   tax-mode: auto,
 
-  /// Overrides which columns are shown.
+  /// Override the automatic calculations if columns should be shown
   /// ->  auto | dictionary
   show-column: auto,
-  /// Whether to show the totals.
+  /// Whether to show the total block below the line items.
   /// -> auto | bool
   show-total: auto,
-  /// Whether to show what all items share, e.g. the tax rate.
+  /// Whether to show the information notices about information that all items have.
   /// -> auto | bool
   show-information: auto,
 
-  /// The line items.
+  /// The content block containing the `item`s, `bundle`s, and `modifier`s.
   /// -> content
   body,
 ) = {
@@ -92,6 +94,8 @@
 
       put("input-gross", resolved-input-gross)
 
+      // Without a tax from anywhere (`tax: none` on the invoice), the items
+      // are zero rated, marked as implicit (see `tax.implicit-zero`).
       derive("tax", tax, default: m-tax.implicit-zero())
       derive("tax-mode", tax-mode, default: "exclusive")
       ensure("tax-exempt-small-biz", false)
@@ -152,9 +156,13 @@
         [#(x.display)]
       } else { [#x] }
 
-      // One marker per exemption ground: it links notes, VAT lines and items.
+      // One marker per distinct exemption ground, in the order of the VAT
+      // groups. It links the notes below the line items to the VAT line of
+      // their category and, if a category has items exempt for different
+      // reasons, to each of these items.
       let markers = assign-markers(tax-applicator.taxes)
 
+      // The label of the country of origin of an item.
       let item-strings = ctx.locale.strings.at("line-items", default: (:))
       let origin-label = item-strings.at("origin", default: none)
 
@@ -162,6 +170,8 @@
         import loom.mutator: *
 
         update("name", x => [#x])
+        // The description, followed by the note and the country of origin of
+        // the item (`item(note: .., origin: ..)`), each on a line of its own.
         let note = item.at("note", default: none)
         let origin = item.at("origin", default: none)
         if note == none and origin == none {
@@ -285,8 +295,10 @@
             raw-amount: tax.absolute,
             category: [#tax.category],
             amount: [#formated-value],
-            // The exemption grounds of the category, joined.
+            // Every distinct exemption ground of the category, joined ...
             grounds: tax.at("grounds", default: none),
+            // ... and one by one with their markers, for the notes below the
+            // line items.
             grounds-list: grounds-list,
             grounds-markers: grounds-markers,
             // With several grounds, each item is marked with its own.
@@ -471,6 +483,8 @@
         ..item-information,
       )
 
+      // The notes that state why a VAT category carries no VAT, with the
+      // markers to print (see `exemption-notes`).
       let notes = exemption-notes(
         formated-taxes,
         show-total: layout-information.show-total,
@@ -488,7 +502,8 @@
           )
         },
       )
-      // Then the notes of the invoice (BT-22).
+      // The notes of the invoice (`invoice(notes: ..)`), which the e-invoice
+      // states as well (BT-22), follow the exemption notes.
       for note in ctx.at("notes", default: ()) {
         notes.push((kind: "note", marker: none, body: note.text))
       }
@@ -500,7 +515,9 @@
         surcharges: formated-surcharges,
         prepayments: formated-prepayments,
         taxes: formated-taxes,
-        // See "Exemption Notes" in theme.md.
+        // Every note is `(kind: .., marker: .., body: ..)`, in print order:
+        // the exemption notes (kind "small-business" or "grounds"), then the
+        // notes of the invoice (kind "note").
         exemption-notes: notes,
         total: formated-total,
         unmodified-total: unmodified-formated-total,
@@ -530,7 +547,9 @@
           tax-mode: ctx.tax-mode,
           discounts: modifier-applicator.modifier.discounts,
           surcharges: modifier-applicator.modifier.surcharges,
-          // Whether the date of supply (BT-72, BG-14) is printed.
+          // Whether the dates of the items are printed: with each item, or
+          // below the items when they share one date. They state the date of
+          // the supply (BT-72, BG-14) the law requires on the invoice.
           dates-printed: layout-information.has-dates
             and (
               layout-information.show-dates

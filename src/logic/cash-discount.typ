@@ -1,13 +1,24 @@
-// Cash discounts (Skonto) of the payment goal, printed and as payment terms
-// (BT-20, BR-DE-18); they change no amount of the invoice.
+// Cash discounts (Skonto) of the payment goal: a lower amount for a payment
+// within fewer days, e.g. 2 % for a payment within 14 days.
+//
+// One structure yields both the note the invoice prints and the payment
+// terms of the e-invoice (BT-20): the note as text, or in XRechnung a line
+// in the Skonto syntax of the KoSIT (BR-DE-18), e.g.
+// "#SKONTO#TAGE=14#PROZENT=2.00#". A cash discount changes no amount of the
+// invoice: the buyer deducts it when paying in time.
 
 #import "../utils/types.typ"
 #import "../utils/coercion.typ": to-decimal, to-ratio
 
+// The keys of a cash discount.
 #let _keys = ("days", "percent", "basis")
 
-/// Checks and normalizes the `discount` of the payment goal (`none`, a
-/// dictionary or an array of them) into an array, `percent` as `2.5` for 2.5%.
+/// Checks and normalizes the `discount` of the payment goal: `none`, a
+/// dictionary `(days: .., percent: .., basis: ..)` or an array of them.
+///
+/// Returns an array of `(days: int, percent: decimal, basis: none |
+/// decimal)`, where `percent` is in percent (e.g. `2.5` for `2.5%`), in the
+/// order given.
 ///
 /// -> array
 #let normalize(discount) = {
@@ -84,8 +95,10 @@
   out
 }
 
-/// The cash discounts with the `note` the invoice prints for each, from the
-/// `cash-discount` sentence of the language.
+/// The cash discounts with the note the invoice prints for each of them
+/// (`note`), from the `cash-discount` sentence of the language: the percent
+/// in the number format of the locale, the deadline as a payment goal of
+/// `days` prints it, and the basis as an amount (`none` if not given).
 ///
 /// -> array
 #let with-notes(discounts, locale) = {
@@ -93,7 +106,7 @@
   let format = locale.format
   let out = ()
   for step in discounts {
-    // Rounded like every amount of the invoice.
+    // The basis is an amount of the invoice, rounded like every amount.
     let basis = if step.basis != none {
       (locale.normalize.money)(step.basis)
     }

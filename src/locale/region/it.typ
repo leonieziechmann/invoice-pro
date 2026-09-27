@@ -2,15 +2,16 @@
 
 /// Italian regional configuration (IT).
 #let it(lang) = {
+  // --- Helper Functions ---
   let infer-tax-it(rate) = {
     if rate == 22% {
-      return tax.vat(22%) // Standard rate
+      return tax.vat(22%) // Standard IVA
     } else if rate == 10% {
-      return tax.vat(10%) // Reduced rate
+      return tax.vat(10%) // Reduced (e.g., hotels, restaurants, specific foods)
     } else if rate == 5% {
-      return tax.vat(5%) // Super-reduced rate
+      return tax.vat(5%) // Super-reduced (e.g., some health services, specific foods)
     } else if rate == 4% {
-      return tax.vat(4%) // Super-reduced rate
+      return tax.vat(4%) // Super-reduced (e.g., basic necessities, books)
     } else if rate == 0% {
       panic(
         lang.errors.ambiguous-tax
@@ -33,6 +34,7 @@
     }
   }
 
+  // --- Regional Data ---
   return (
     meta: (
       region: "it",
@@ -45,7 +47,9 @@
     tax: (
       default-vat: tax.vat(22%),
 
-      // Regime forfettario: not subject to VAT (FatturaPA N2.2): category O.
+      // Regime forfettario: the supplies are not subject to VAT ("non
+      // soggette", nature N2.2 of the FatturaPA), so the e-invoice states VAT
+      // category O with this note as exemption reason (BT-120).
       small-enterprise-special-scheme: tax.outside-scope(
         grounds: "Operazione in franchigia da IVA ai sensi dell'art. 1, commi da 54 a 89, della Legge n. 190/2014.",
       ),

@@ -1,6 +1,7 @@
 #import "../../data/tax.typ"
 
 #let at(lang) = {
+  // --- Helper Functions ---
   let infer-tax-at(rate) = {
     if rate == 20% { return tax.vat(20%) } else if rate == 13% {
       return tax.vat(13%)
@@ -27,6 +28,7 @@
     }
   }
 
+  // --- Regional Data ---
   return (
     meta: (
       region: "at",
@@ -38,7 +40,9 @@
 
     tax: (
       default-vat: tax.vat(20%),
-      // Kleinunternehmer: exempt under § 6 Abs. 1 Z 27 UStG (category E).
+      // Kleinunternehmer: § 6 Abs. 1 Z 27 UStG exempts the turnover of small
+      // businesses. The note is printed and is the exemption reason (BT-120)
+      // of VAT category E in the e-invoice.
       small-enterprise-special-scheme: tax.exempt(
         grounds: "Umsatzsteuerfrei aufgrund der Kleinunternehmerregelung gem. § 6 Abs. 1 Z 27 UStG.",
       ),

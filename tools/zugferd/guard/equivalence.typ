@@ -1,8 +1,16 @@
-// The invariants of the test oracle: the data model of the e-invoice states
-// what the invoice computed and prints (IP-PRINT-01, IP-CALC-01, IP-CALC-02;
-// equivalence-detail.typ checks in detail where needed), and its sums hold
-// (BR-CO-17 and BR-*-08). The model takes these values from the computed
-// invoice, so a finding is a bug in invoice-pro.
+// The invariants of the test oracle (printed = written): the data model of
+// the e-invoice states the amounts and quantities the invoice computed and
+// prints (IP-PRINT-01, IP-CALC-01, IP-CALC-02), and its sums hold (BR-CO-17
+// and BR-*-08).
+//
+// The model takes these values over from the computed invoice (the line
+// items' `item-data` and the totals it prints), so with net prices they are
+// the same values and a finding is a bug in invoice-pro. `findings` compares
+// them in one pass; the detailed check (equivalence-detail.typ) loads only
+// when a value differs, or for the invoices that need it anyway: with gross
+// prices (the net amounts are derived from the printed gross ones) and with
+// allowances or charges (of a line, or of the document, split per VAT
+// group).
 
 #import "/src/zugferd/rules/engine.typ": tax-field
 #import "/src/zugferd/xml.typ": rate-digits
@@ -10,8 +18,10 @@
 #let _zero = decimal("0")
 #let _one = decimal("1")
 
-/// The findings for the model of the computed invoice `item-data`, whose
-/// totals the invoice prints as `printed` (`ctx.global.total`).
+/// The findings of printed = written for the data model `model` of the
+/// computed invoice `item-data` (the line items' data), whose totals the
+/// invoice prints as `printed` (`ctx.global.total`: net, gross, prepaid,
+/// due), in the order of the checks (see equivalence-detail.typ).
 ///
 /// -> array
 #let findings(model, item-data, printed) = {
@@ -26,7 +36,8 @@
       and lines.len() == items.len()
       and model.taxes.len() == taxes.len()
   )
-  // Each line states its item.
+  // Each line states its item, and the lines add up per VAT group (or all
+  // of them, with one group).
   let sums = (:)
   for key in taxes.keys() { sums.insert(key, _zero) }
   let single = sums.len() == 1
@@ -65,7 +76,7 @@
     }
   }
   if single { sums.at(sums.keys().first()) += total }
-  // Each VAT group states its printed amounts.
+  // Each VAT group states its printed amounts, which its lines add up to.
   if same {
     for tax in model.taxes {
       let group = taxes.at(tax.key, default: none)
@@ -85,7 +96,7 @@
       }
     }
   }
-  // The totals are those printed.
+  // The totals are those printed, and the lines add up to them.
   if same {
     let totals = model.totals
     let net = printed.at("net", default: _zero)
@@ -115,6 +126,7 @@
   detailed-findings(model, item-data, printed)
 }
 
+// BR-x-08 (the taxable amount of a VAT group) by VAT category.
 #let _basis-rules = (
   S: "BR-S-08",
   Z: "BR-Z-08",
@@ -133,10 +145,16 @@
 /// allowances and charges of a VAT group add up to its taxable amount
 /// (BR-*-08).
 ///
+/// The oracle checks only models without errors of the rules, so the amounts
+/// have no more decimals than the XML states (IP-DEC-02): the amounts of the
+/// model are exactly those of the XML and are compared as they are.
+///
 /// -> array
 #let consistency-findings(model, printed) = {
   let out = ()
   if model.profile.settlement {
+    // IP-PRINT-01: the VAT breakdown (BT-116) adds up to the printed total
+    // without VAT.
     let basis = _zero
     for tax in model.taxes { basis += tax.basis }
     let net = printed.at("net", default: _zero)
@@ -150,7 +168,10 @@
         rate: none,
       ))
     }
-    // Rates the XML cannot state (IP-DEC-01) and O are left out.
+    // BR-CO-17: the VAT amount is the taxable amount times the rate the XML
+    // states, within the tolerance of 1 the validators allow (the amounts of
+    // gross prices are rounded differently). Categories not subject to VAT
+    // (O) and rates the XML cannot state (IP-DEC-01) are left out.
     for tax in model.taxes {
       if tax.category == "O" or tax.rate == none { continue }
       let percent = calc.round(tax.rate * 100, digits: rate-digits)
@@ -168,6 +189,8 @@
     }
   }
   if model.profile.lines and model.taxes != () {
+    // The net amounts of the lines and the allowances and charges of each
+    // VAT group, in one pass over the lines.
     let sums = (:)
     for line in model.lines {
       if type(line.key) == str {
@@ -180,6 +203,7 @@
         sums.insert(e.key, sums.at(e.key, default: _zero) + amount)
       }
     }
+    // BR-x-08 of each VAT category that has one (not B).
     for tax in model.taxes {
       if type(tax.key) != str or type(tax.category) != str { continue }
       let rule = _basis-rules.at(tax.category, default: none)
@@ -228,6 +252,8 @@
       + str(f.basis)
       + ".",
   ),
+  // The e-invoice states what the invoice prints (`findings`, and the total
+  // of the VAT breakdown in `consistency-findings`).
   "IP-PRINT-01": f => {
     let shown(value) = if value == none { "(none)" } else { str(value) }
     let stated = shown(f.stated)

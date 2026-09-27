@@ -1,10 +1,14 @@
-// The EPC-QR code (GiroCode, EPC069-12) of the bank details: its fields and
-// the reasons it cannot be generated. The theme draws it with `sepay`.
+// The EPC-QR code (GiroCode) of the bank details: the fields it carries and
+// the reasons it cannot be generated (EPC069-12, SEPA Credit Transfer).
+//
+// `bank-details` prepares these data for the theme, which only draws the code
+// from its payload (with `sepay`) or a placeholder naming its problems.
 
 #import "../utils/bic.typ": bic-valid
 #import "../utils/iban.typ": format-iban, iban-valid
 #import "../utils/text.typ": plain-text
 
+// The message for a field that is longer than the EPC-QR code allows.
 #let _too-long(what, value, limit) = (
   what
     + " \""
@@ -14,19 +18,30 @@
     + " bytes, non-ASCII characters count twice or more)"
 )
 
-/// Why the plain text fields of `qr-code` give no EPC-QR code, as
-/// `(short: .., message: ..)`; length limits count UTF-8 bytes, as in `sepay`.
+/// Why an EPC-QR code cannot be generated from its fields, as a list of
+/// `(short: .., message: ..)`: `short` names the problem in a few words (for
+/// a placeholder in the document), `message` explains it (for an error
+/// message). The list is empty if the code can be generated.
+///
+/// The fields are plain text, as `qr-code` prepares them. `sepay` counts the
+/// length limits in bytes (UTF-8), so umlauts and other non-ASCII characters
+/// count twice or more.
 ///
 /// -> array
 #let problems(
+  /// The account holder (beneficiary).
   /// -> str
   beneficiary,
+  /// The IBAN in electronic format (see `normalize-iban`).
   /// -> str
   iban,
+  /// The BIC in electronic format (see `normalize-bic`).
   /// -> none | str
   bic,
+  /// The structured payment reference (EPC-QR line 10).
   /// -> none | str
   reference,
+  /// The unstructured remittance text (EPC-QR line 11).
   /// -> none | str
   text,
 ) = {
@@ -75,27 +90,36 @@
   found
 }
 
-/// The EPC-QR code of a bank transfer: `(payload: .., problems: ..)`, the
-/// fields for `epc-qr-code` of `sepay`, or `none` and the `problems`.
+/// The EPC-QR code of a bank transfer, as `(payload: .., problems: ..)`.
+///
+/// `payload` holds the fields of the code, in plain text, as the
+/// `epc-qr-code` function of `sepay` takes them: `beneficiary` and `iban`
+/// (its positional arguments), `bic`, `amount` (a float), `reference` and
+/// `text` (each `none` if not set). They are the values the invoice prints
+/// and the e-invoice carries. `payload` is `none` if the code cannot be
+/// generated; `problems` then says why (see `problems`).
 ///
 /// -> dictionary
 #let qr-code(
   /// The account holder (beneficiary), as printed.
   /// -> str | content
   holder,
-  /// The IBAN in electronic format.
+  /// The IBAN in electronic format (see `normalize-iban`).
   /// -> str
   iban,
-  /// The BIC in electronic format, `""` or `none`.
+  /// The BIC in electronic format (see `normalize-bic`); `""` or `none` if
+  /// there is none.
   /// -> none | str
   bic: none,
   /// The structured payment reference (EPC-QR line 10).
   /// -> none | str | content
   reference: none,
-  /// The unstructured remittance text (EPC-QR line 11), used over `reference`.
+  /// The unstructured remittance text (EPC-QR line 11). The code carries
+  /// either a reference or a text, so the text takes precedence.
   /// -> none | str | content
   text: none,
-  /// The amount to pay; outside 0.01 to 999 999 999.99, the payer enters it.
+  /// The amount to pay. The code carries amounts from 0.01 to
+  /// 999 999 999.99 (EUR); for any other amount, the payer enters it.
   /// -> none | decimal | float | int
   amount: none,
 ) = {

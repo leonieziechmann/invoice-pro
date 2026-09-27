@@ -19,10 +19,12 @@
 /// Italian language overrides.
 #let it = (
   meta: (
+    /// Il codice lingua ISO 639-1 del file.
     lang: "it",
     resolve-plural: resolve-plural,
   ),
 
+  /// Denominazioni per i tipi di documento
   document: (
     invoice: "Fattura",
     credit-note: "Nota di credito",
@@ -32,11 +34,13 @@
     self-billed: "Autofatturazione",
   ),
 
+  /// Denominazioni relative all'indirizzo
   address: (
     recipient: "Destinatario/a",
     sender: "Mittente",
   ),
 
+  /// Denominazioni per numeri di riferimento e metadati
   reference: (
     tax-number: "Codice Fiscale",
     invoice-number: "Numero fattura",
@@ -64,6 +68,7 @@
     payee: "Beneficiario del pagamento",
   ),
 
+  /// Intestazioni di colonna ed etichette per la tabella degli articoli
   line-items: (
     position: "Art.",
     description: "Descrizione",
@@ -82,6 +87,7 @@
     origin: "Paese di origine",
   ),
 
+  /// Etichette per la sezione riepilogativa (piè di pagina della tabella)
   summary: (
     sum: "Subtotale",
     vat-tax: "IVA",
@@ -92,7 +98,9 @@
     amount-due: "Totale dovuto",
   ),
 
+  /// Frasi informative globali
   global-info: (
+    /// Sentenza che specifica l'aliquota d'imposta universale applicata
     tax-statement: (
       tax-text,
       rate,
@@ -131,6 +139,7 @@
     "cubic-metre": "metro cubo",
   ),
 
+  /// Denominazioni per i dettagli bancari e di pagamento
   bank-details: (
     account-holder: "Intestatario/a del conto",
     bank: "Banca",
@@ -139,6 +148,7 @@
     reference: "Causale",
   ),
 
+  /// Testi dei mezzi di pagamento oltre ai dettagli bancari
   payment-means: (
     method: "Modalità di pagamento",
     transfer: "Bonifico",
@@ -169,17 +179,21 @@
     ) => [Vi abbiamo versato l'importo di *#sum*#if date != none [ il #date].],
   ),
 
+  /// Blocchi di testo per i termini di pagamento
   payment: (
+    /// Genera la frase finale delle istruzioni di pagamento.
     text: (
       sum,
       deadline,
     ) => [Si prega di versare l'importo totale di *#sum* #deadline sul conto indicato di seguito.],
 
+    /// Frase di pagamento quando gli acconti riducono l'importo da versare.
     text-due: (
       sum,
       deadline,
     ) => [Si prega di versare l'importo dovuto di *#sum* #deadline sul conto indicato di seguito.],
 
+    /// Frase di pagamento per un addebito diretto.
     text-direct-debit: (
       sum,
       deadline,
@@ -189,6 +203,7 @@
       deadline,
     ) => [L'importo dovuto di *#sum* sarà addebitato sul Suo conto tramite addebito diretto #deadline.],
 
+    /// Frase di pagamento per un pagamento con carta.
     text-card: (
       sum,
       deadline,
@@ -198,34 +213,44 @@
       deadline,
     ) => [L'importo dovuto di *#sum* sarà addebitato sulla Sua carta #deadline.],
 
+    /// Nota di uno sconto per pagamento anticipato.
     cash-discount: (
       percent,
       deadline,
       basis,
     ) => [Per pagamento #deadline è concesso uno sconto del #percent#if basis != none [ su #basis].],
 
+    /// Testo per una data di scadenza fissa.
     deadline-date: date => ("entro il", date).join(" "),
 
+    /// Testo per una scadenza relativa (in X giorni).
     deadline-days: days => "entro " + str(days) + " giorni",
 
+    /// Testo per pagamento immediato/rapido.
     deadline-soon: "alla ricezione",
 
+    /// Frase di pagamento di una nota di credito o di un'autofattura: il
+    /// mittente versa l'importo al destinatario.
     text-credit: (
       sum,
       deadline,
     ) => [Vi verseremo l'importo di *#sum* #deadline sul conto indicato di seguito.],
 
+    /// Testo per un pagamento immediato in `text-credit`.
     deadline-soon-credit: "senza indugio",
   ),
 
+  /// Saluti e area firma
   signature: (
     closing: "Cordiali saluti,",
   ),
 
+  /// Testi legali standard (Spiegazione per il destinatario)
   legal: (
     vat-exemption: "IVA non addebitata a causa dell'esenzione per le piccole imprese.",
   ),
 
+  /// Messaggi di errore e avviso per gli sviluppatori
   errors: (
     name-missing: "Il nome è mancante!",
     address-missing: "L'indirizzo è mancante!",
