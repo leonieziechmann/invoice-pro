@@ -1,0 +1,397 @@
+---
+sidebar_position: 2
+---
+
+# Line Items API
+
+This section details the functions used to build the core of your invoice: the line items. You can use these components to list services, group them into bundles, organize them into hierarchical groups, apply modifiers like discounts or surcharges, and record advance prepayments.
+
+:::info
+Many parameters (like `input-gross` and `tax`) are **cascading**. This means if you set them on the parent `line-items` container, a `bundle`, or a `group`, all child elements will automatically inherit those settings unless they are manually overridden at the item level.
+
+**Resolution Order:** Item Level → Bundle / Group Level → Line-Items Level → Document/Locale Default.
+:::
+
+---
+
+## `line-items`
+
+The root container that manages the context, column visibility, and overall calculations for all items, bundles, groups, modifiers, and prepayments inside it.
+
+:::tip
+By default, the `show-column` parameter works automatically and tries to minimize the number of shown columns (e.g., hiding the tax column if all items share the exact same tax rate). You only need to provide a dictionary if you want to strictly override this behavior.
+:::
+
+| Key                | Type                                     | Description                                                                                                                                                                                                                                                                                                                                  |
+| ------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `input-gross`      | `bool` \| `auto`                         | If `auto`, it matches the document's `tax-mode`. If manually set, it specifies if prices of items are entered as net or gross, triggering forward or backward tax calculations.                                                                                                                                                              |
+| `tax`              | `ratio` \| `dictionary` \| `auto`        | If `auto`, inherited from the locale default. If a `ratio` (e.g., `19%`), the tax-bracket/code is inferred by the locale system. If a `dictionary`, it should be set by the `tax` module (e.g., `tax.vat(19%)`).                                                                                                                             |
+| `tax-mode`         | `"exclusive"` \| `"inclusive"` \| `auto` | Sets the tax mode. If `auto`, it matches the [document root's `tax-mode`](../invoice/index.md). _It is highly recommended not to change this value here unless absolutely necessary._                                                                                                                                                        |
+| `show-column`      | `dictionary` \| `auto`                   | Overrides the default automatic column visibility. Used to manually toggle columns like `pos`, `quantity`, `unit-price`, etc.                                                                                                                                                                                                                |
+| `show-total`       | `bool` \| `auto`                         | Shows the total summary block of the line items. Defaults to `true`.                                                                                                                                                                                                                                                                         |
+| `show-information` | `bool` \| `auto`                         | Shows the information after the total about what all items share (e.g., the tax rate, the unit or the date). Defaults to `true`. The exemption notes (exemption grounds, reverse charge, small business clause) and the `notes` of the invoice are printed in any case: the law requires them on the invoice, and the e-invoice states them. |
+| `body`             | `content`                                | The main content block containing your `item`, `bundle`, `group`, `modifier`, or `prepayment` calls.                                                                                                                                                                                                                                         |
+
+### `show-column` Dictionary
+
+When overriding the automatic column visibility in `line-items`, you can pass a dictionary to the `show-column` parameter. Each key toggles a specific column in the invoice table.
+
+| Key           | Type             | Description                                                                 |
+| ------------- | ---------------- | --------------------------------------------------------------------------- |
+| `pos`         | `bool` \| `auto` | The position or index number of the item in the list.                       |
+| `description` | `bool` \| `auto` | The detailed description text displayed below the item name.                |
+| `quantity`    | `bool` \| `auto` | The amount being billed for the line item.                                  |
+| `unit`        | `bool` \| `auto` | The unit of measurement (e.g., "h", "pcs").                                 |
+| `unit-price`  | `bool` \| `auto` | The price per single unit of the item.                                      |
+| `tax-rate`    | `bool` \| `auto` | The tax percentage applied to the specific item.                            |
+| `total-price` | `bool` \| `auto` | The calculated total price for the line item (quantity &times; unit-price). |
+
+---
+
+## `item`
+
+Represents a single billable product or service line within your invoice.
+
+:::note
+_Price vs. Total:_
+You must provide either a `price` (unit price) **or** a `total` (fixed line total), but not both. The system will automatically perform forward/backward calculations based on your `input-gross` settings.
+:::
+
+| Key             | Type                                                                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`          | `str` \| `content`                                                   | The primary title of the item.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `description`   | `str` \| `content` \| `auto` \| `none`                               | Detailed text appearing below the name.                                                                                                                                                                                                                                                                                                                                                                                          |
+| `quantity`      | `number` \| `auto`                                                   | The numeric amount being billed (defaults to 1), rounded to 4 decimals before the total is calculated.                                                                                                                                                                                                                                                                                                                           |
+| `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g). Must be greater than 0.                                                                                                                                                                                                                                                                                                                                           |
+| `unit`          | `str` \| `content` \| `dictionary` \| `function` \| `auto` \| `none` | The unit of measurement (e.g., `"h"`, `"pcs"`). Pass a function from the `unit` module or a dictionary for ZUGFeRD compliance — see below. With `auto`, it inherits the unit of an enclosing `group` or `apply`, otherwise it defaults to `unit.piece`.                                                                                                                                                                          |
+| `date`          | `datetime` \| `array` \| `auto` \| `none`                            | When the service was provided. Use a single `datetime` or a range array `(datetime, datetime)`. The e-invoice states it as the period of the line (BG-26).                                                                                                                                                                                                                                                                       |
+| `price`         | `number` \| `auto`                                                   | The price per unit.                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `total`         | `number` \| `auto`                                                   | The fixed total price for the line item.                                                                                                                                                                                                                                                                                                                                                                                         |
+| `note`          | `str` \| `content` \| `auto` \| `none`                               | A note about the item, printed below its description. The e-invoice states it as the note of the line (BT-127). An item inside a `bundle` has none (an error), as the bundle is one line.                                                                                                                                                                                                                                        |
+| `origin`        | `function` \| `dictionary` \| `str` \| `auto` \| `none`              | The country the goods come from: a country of the `country` module (e.g. `country.it`) or an ISO 3166-1 alpha-2 code (e.g. `"IT"`). Printed with its code below the note; the e-invoice states it as the item country of origin (BT-159). An item inside a `bundle` has none (an error). See [Item Notes, Periods and Country of Origin](../../e-invoicing/invoice-data/line-items.md#item-notes-periods-and-country-of-origin). |
+| `item-id`       | `str` \| `dictionary` \| `auto` \| `none`                            | Article identifiers for the ZUGFeRD XML. A `str` is your own article number (seller's item ID). A dictionary `(seller: "id", buyer: "id", standard: "id")` accepts any subset of these keys. `standard` must be a GS1 GTIN. See [below](#the-item-id-parameter-and-zugferd).                                                                                                                                                     |
+| `input-gross`   | `bool` \| `auto`                                                     | Overrides the parent `input-gross` setting specifically for this item.                                                                                                                                                                                                                                                                                                                                                           |
+| `tax`           | `ratio` \| `dictionary` \| `auto`                                    | Overrides the parent `tax` setting specifically for this item.                                                                                                                                                                                                                                                                                                                                                                   |
+| `modifier`      | `dictionary` \| `array` \| `content` \| `auto` \| `none`             | Specific modifiers (discounts or surcharges) applied directly to this item. Can be a single modifier (e.g., `discount(10)`), a tuple/array of modifiers (e.g., `(discount(10), surcharge(5%))`), or a content block containing modifiers (e.g., `[#discount(10) #surcharge(5%)]`).                                                                                                                                               |
+
+### The `unit` Parameter and ZUGFeRD Compliance
+
+Each line item (or bundle) can specify a `unit` of measurement. For ZUGFeRD / Factur-X XML compliance, each line item requires a precise [UN/CEFACT Recommendation 20](https://unece.org/trade/uncefact/cl-recommendations) unit code.
+
+The package provides three ways to pass the `unit` parameter:
+
+1. **The `unit` Module (Recommended for compliance & internationalization):**
+   The package includes a built-in `unit` module offering predefined billing units. Passing a unit function (e.g., `unit: unit.hour` or its shorthand `unit: unit.h`) automatically resolves to a compliant dictionary.
+
+   :::tip
+   The names returned by functions in the `unit` module are **automatically translated** based on the active document locale. For instance, `unit.hour` resolves to `"hour"` in English, `"Stunde"` in German, `"hora"` in Spanish, `"heure"` in French, and `"ora"` in Italian.
+
+   Where the language has a plural form, the name follows the item's `quantity`: `1 Stunde`, `2 Stunden`, `2,5 Stunden`. The "unit for all items" note below the table always uses the singular.
+   :::
+
+2. **Custom Dictionary:**
+   For manual overrides, you can pass a custom dictionary with the `code`, `display`, and optional `name` keys:
+
+   ```typst
+   unit: (code: "HUR", name: "Stunden", display: "Std.")
+   ```
+
+   - `code` (`str`): The UNECE Rec 20 unit code (e.g. `"HUR"`, `"DAY"`) written into the ZUGFeRD XML.
+   - `display` (`str` | `content`): Text shown on the printed invoice PDF.
+   - `name` (`str`, optional): The internal name of the unit. If not provided, it defaults to the `display` value.
+
+3. **Plain String:**
+   A simple string (e.g., `"hrs"` or `"Stk."`), printed as given. For the e-invoice, the package maps it to a standard code by the unit names of its languages and common abbreviations (e.g., `"hrs"` to `"HUR"`). A string it does not recognize stops the e-invoice (`IP-UNIT-02`) rather than being written as a guessed code: give such a unit as a dictionary with its code (see above). Without an e-invoice, any string is fine.
+
+For a full list of predefined units and aliases, see the [Unit API Reference](./unit.md) subpage.
+
+### The `item-id` Parameter and ZUGFeRD
+
+Each line item (or bundle) can carry article identifiers. They are written only into the ZUGFeRD / Factur-X XML and are not printed on the invoice.
+
+| `item-id` value          | XML element (`ram:SpecifiedTradeProduct`) | Business term                              | Profiles                              |
+| :----------------------- | :---------------------------------------- | :----------------------------------------- | :------------------------------------ |
+| `"ART-4711"` (plain str) | `ram:SellerAssignedID`                    | BT-155 Item Seller's identifier            | `"en16931"`, `"xrechnung"`            |
+| `(seller: "ART-4711")`   | `ram:SellerAssignedID`                    | BT-155 Item Seller's identifier            | `"en16931"`, `"xrechnung"`            |
+| `(buyer: "B-778")`       | `ram:BuyerAssignedID`                     | BT-156 Item Buyer's identifier             | `"en16931"`, `"xrechnung"`            |
+| `(standard: "…")`        | `ram:GlobalID` with `schemeID="0160"`     | BT-157 Item standard identifier (GS1 GTIN) | `"basic"`, `"en16931"`, `"xrechnung"` |
+
+The dictionary keys can be combined, e.g. `(seller: "PEN-01", buyer: "B-778", standard: "4006381333931")`.
+
+:::caution
+`standard` is always declared as a GS1 GTIN (scheme `0160`), and its value is not validated. Use it only for real GTIN-8/12/13/14 numbers (EAN/UPC barcodes). Use a plain string or `seller` for internal article numbers.
+:::
+
+:::note
+The `"basic"` profile has no seller or buyer item identifiers, so only `standard` is included there. The `"minimum"` and `"basic-wl"` profiles contain no line items at all.
+:::
+
+### The `tax` Parameter
+
+While items generally inherit their tax settings from the parent `line-items` container or the document's locale, you can explicitly override the `tax` parameter on an individual `item` or `bundle`.
+
+You can define the tax in two ways:
+
+1. **Simple Ratio:** Provide a percentage directly (e.g., `tax: 19%`). The system will attempt to automatically infer the correct standard tax category based on your [locale](../locale/index.md).
+2. **The `tax` Module:** For specialized scenarios—such as reverse charge, tax exemptions, or if your region has multiple tax categories with the same percentage—you must use functions from the `tax` module (e.g., `tax.vat(19%)`, `tax.reverse-charge()`).
+
+:::info
+Passing a simple ratio only works safely if the tax rate is **unambiguous** within your selected locale region. If the system cannot confidently guess the tax category, you will need to use the `tax` module.
+:::
+
+:::tip
+For a complete list of standardized tax functions, margin schemes, and how to create custom tax categories, please read the [Tax Module API Reference](../tax.md).
+:::
+
+---
+
+## `bundle`
+
+Groups multiple items together as a virtual single item while automatically aggregating their totals and dates.
+
+| Key             | Type                                                                 | Description                                                                                                                                 |
+| --------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`          | `str` \| `content`                                                   | The name of the bundle.                                                                                                                     |
+| `description`   | `str` \| `content` \| `auto` \| `none`                               | If set to `auto`, it lists the names of all child items ("A, B and C", in the language of the locale).                                      |
+| `quantity`      | `number` \| `auto`                                                   | The quantity of the bundle itself (defaults to 1), rounded to 4 decimals like the quantity of an item. A nested bundle does not inherit it. |
+| `base-quantity` | `number` \| `auto`                                                   | The reference quantity for the price (e.g., pricing per 100g). Must be greater than 0.                                                      |
+| `unit`          | `str` \| `content` \| `dictionary` \| `function` \| `auto` \| `none` | The unit of measurement for the bundle. Accepts the same dictionary form, function, or string as `item` for ZUGFeRD compliance.             |
+| `item-id`       | `str` \| `dictionary` \| `auto` \| `none`                            | Article identifiers of the bundle for the ZUGFeRD XML. Same forms as on `item`. See [above](#the-item-id-parameter-and-zugferd).            |
+| `date`          | `datetime` \| `array` \| `auto` \| `none`                            | If set to `auto`, calculates the date range based on the earliest and latest dates of the items inside the bundle.                          |
+| `input-gross`   | `bool` \| `auto`                                                     | Overrides the parent `input-gross` setting specifically for children.                                                                       |
+| `tax`           | `ratio` \| `dictionary` \| `auto`                                    | Overrides the parent `tax` setting specifically for children.                                                                               |
+| `body`          | `content`                                                            | The nested items, modifiers, or sub-bundles belonging to this group.                                                                        |
+
+### Mixed Tax Brackets
+
+One of the most powerful features of the `bundle` component is its ability to handle mixed tax brackets automatically.
+
+If you place items with varying tax rates (e.g., mixing 19% and 7% items) or different tax codes into a single bundle, the system will seamlessly manage the complexity. In the background, it splits and creates multiple instances of the bundle grouped by their respective tax brackets.
+
+:::info
+**Why this matters:**
+This automatic splitting ensures that your invoice remains legally compliant. Total amounts, sub-totals, and any modifiers applied to the bundle (such as a 10% bundle-wide discount) are proportionally distributed and calculated correctly across the different tax rates without any manual intervention required from you.
+:::
+
+Each line is named after the bundle and its VAT rate, formatted like everywhere else on the invoice (e.g., `Gift box (5,5% S)`).
+
+### Quantities and Modifiers of a Bundle
+
+The items of a bundle make up **one unit** of it (per `base-quantity`); the bundle's line is that unit price times its `quantity`. Modifiers inside a bundle behave like the modifiers of an item:
+
+- A **percentage** applies to the whole line, i.e. to every unit: 2 packages of 100.00 with `discount(.., amount: 10%)` are billed 200.00 − 20.00 = 180.00.
+- An **absolute amount** applies **once per line**, whatever the quantity: 2 packages of 100.00 with `discount(.., amount: 5)` are billed 195.00. For an amount per package, put the modifier on the items or multiply it yourself.
+
+A bundle can contain other bundles. A nested bundle is part of the enclosing bundle's line only (it is not listed on its own), and its `quantity` is the number of it in **one** enclosing bundle:
+
+```typst
+#bundle([Office kit], quantity: 3)[      // 3 × (2 × 100.00 − 10%) = 540.00
+  #bundle([Chair set], quantity: 2)[
+    #item([Chair], price: 100.00)
+    #discount([Set discount], amount: 10%)
+  ]
+]
+```
+
+---
+
+## `group`
+
+Organizes multiple line items, bundles, or nested groups into a cohesive, hierarchical section with an informative header, multi-level position numbers, and automatic subtotals.
+
+:::info
+**`group` vs. `bundle`:**
+
+- **`bundle`** compresses multiple child items into a **single consolidated line item** with an aggregated price and date range.
+- **`group`** is a **structural and visual container**: every child item inside the group remains its own distinct row, child items receive hierarchical position numbers (e.g., `1`, `2.1`, `2.2`), a visual header row displays the group name and optional description across the table columns, and an automatic subtotal is shown at the end of the group.
+  :::
+
+| Key             | Type                                                                 | Description                                                                                                                                |
+| --------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`          | `str` \| `content`                                                   | The primary title of the group displayed in bold in the header row.                                                                        |
+| `description`   | `str` \| `content` \| `auto` \| `none`                               | Optional detailed description appearing below the group title, spanning across the remaining table columns. Defaults to `none`.            |
+| `show-subtotal` | `bool` \| `auto`                                                     | Whether to display a group subtotal row (`Zwischensumme`) at the bottom of the group. Defaults to `auto` (`true`). Set to `false` to hide. |
+| `tax`           | `ratio` \| `dictionary` \| `auto`                                    | Cascades tax settings to all child items within the group unless overridden at the individual item level.                                  |
+| `input-gross`   | `bool` \| `auto`                                                     | Cascades net/gross price calculation setting down to all child items within the group.                                                     |
+| `unit`          | `str` \| `content` \| `dictionary` \| `function` \| `auto` \| `none` | Cascades a default billing unit to child items and bundles without their own `unit`. Each pluralises it with its own quantity.             |
+| `date`          | `datetime` \| `array` \| `auto` \| `none`                            | Cascades a default performance date or date range down to all child items in the group.                                                    |
+| `body`          | `content`                                                            | The child `item`, `bundle`, or nested `group` calls belonging to this group.                                                               |
+
+### Hierarchical Numbering & Nesting
+
+Groups can be nested to arbitrary depths. Child elements automatically receive hierarchical position identifiers based on their parent group's position:
+
+- Top-level items or groups receive sequential integer positions: `1`, `2`, `3`.
+- Items or nested groups directly inside group `2` receive `2.1`, `2.2`, `2.3`, etc.
+- Items inside nested group `2.3` receive `2.3.1`, `2.3.2`, `2.3.3`, etc.
+- Subsequent siblings outside the group return to the previous level (e.g., `3`).
+
+For electronic invoicing (ZUGFeRD / Factur-X / XRechnung), these hierarchical position strings are automatically used as the line item identifier (`ram:LineID` / BT-126).
+
+### Group Subtotals
+
+By default (`show-subtotal: auto` or `true`), a group renders a subtotal row (`Zwischensumme`) at the end of its items. The subtotal accurately sums all items and bundles inside that group and aligns the sum with the total price column.
+
+If you prefer not to display a subtotal for a specific group (for example, in short groups or purely organizational groupings), set `show-subtotal: false`:
+
+```typst
+#group([Project Management], show-subtotal: false)[
+  #item([Weekly Status Meetings], price: 300.00)
+  #item([Sprint Planning], price: 450.00)
+]
+```
+
+### Context Inheritance
+
+Like `line-items` and `bundle`, a `group` cascades context down to all its children. This makes it effortless to define shared attributes (such as tax rates, dates, or units) once at the group level:
+
+```typst
+#group(
+  [Phase 1: Concept & Design],
+  description: "Initial discovery phase and UI/UX wireframing.",
+  tax: tax.vat(19%),
+  unit: unit.hour,
+)[
+  // These items automatically inherit 19% VAT and unit: hour
+  #item([Stakeholder Workshops], quantity: 8, price: 120.00)
+  #item([Wireframing & Prototyping], quantity: 24, price: 95.00)
+]
+```
+
+### Advanced Nesting & Bundles within Groups
+
+Groups seamlessly accommodate individual items, nested groups, and bundles:
+
+```typst
+#line-items[
+  #item([Setup Fee], price: 250.00) // Position: 1
+
+  #group([Phase 1: Implementation], description: "Core system modules")[
+    #item([Database Migration], price: 800.00) // Position: 2.1
+
+    #bundle([Server Provisioning Package])[ // Position: 2.2
+      #item([Cloud VPS Instance], price: 150.00)
+      #item([SSL Setup], price: 50.00)
+    ]
+
+    #group([Module A: Auth & Permissions])[
+      #item([OAuth2 Integration], price: 600.00) // Position: 2.3.1
+      #item([Role-Based Access], price: 450.00)   // Position: 2.3.2
+    ]
+  ]
+
+  #item([Final Deployment & Handover], price: 500.00) // Position: 3
+]
+```
+
+---
+
+## Adjustments: `modifier`, `discount`, & `surcharge`
+
+Modifiers allow you to apply relative or absolute adjustments to an item, a bundle, or the entire invoice.
+
+:::info
+Helper Functions `discount(..)` and `surcharge(..)` use the exact same parameters as `modifier(..)`. They are convenient semantic wrappers that automatically treat your `amount` as a negative reduction (`discount`) or a positive addition (`surcharge`).
+:::
+
+| Key           | Type                                   | Description                                                                                                                                                                |
+| :------------ | :------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`        | `str` \| `content`                     | The name/title of the adjustment (e.g., "Student Discount", "Express Shipping").                                                                                           |
+| `label`       | `str` \| `content` \| `auto` \| `none` | Custom label prefix (e.g. "Rabatt", "Nachlass", "Bonus"). If `auto`, resolves to locale default. If `none`, no prefix is displayed.                                        |
+| `amount`      | `ratio` \| `decimal-like` \| `auto`    | If a `ratio` (e.g., `-10%`), it acts as a relative percentage. If a `decimal-like` number (e.g., `15.00`), it acts as an absolute monetary amount.                         |
+| `input-gross` | `bool` \| `auto`                       | For absolute monetary amounts (e.g., `10.00` instead of `10%`), this defines if the entered value already includes tax. Follows standard cascading logic if set to `auto`. |
+| `description` | `str` \| `content` \| `auto` \| `none` | Extra context or conditions for the modifier.                                                                                                                              |
+| `tax`         | `ratio` \| `dictionary` \| `auto`      | Pins the modifier to one VAT category (e.g., `tax.vat(19%)` for shipping). If `auto`, it is spread over the VAT categories (see below). Not allowed to differ on an item.  |
+
+### `input-gross`
+
+For absolute monetary amounts (e.g., `10.00` instead of `10%`), the `input-gross` parameter is critical because it determines at which level the adjustment is "anchored."
+
+| Value   | Behavior             | Result                                                                                              |
+| :------ | :------------------- | :-------------------------------------------------------------------------------------------------- |
+| `true`  | **Gross Adjustment** | The final **gross amount** (Total including tax) will be exactly the specified amount lower/higher. |
+| `false` | **Net Adjustment**   | The **net amount** (Total excluding tax) will be exactly the specified amount lower/higher.         |
+| `auto`  | **Inherited**        | Matches the parent container or the document's `tax-mode`.                                          |
+
+#### Examples
+
+- **Gross Discount:** `discount(input-gross: true, amount: 10)`
+  The total amount the customer has to pay (Grand Total) will be exactly 10.00 units less.
+- **Net Discount:** `discount(input-gross: false, amount: 10)`
+  The subtotal before taxes will be exactly 10.00 units less. The final gross impact will depend on the tax rate.
+- **Custom or Omitted Label:**
+  ```typst
+  #discount("Treuerabatt", label: none, amount: 2%) // Renders just "↳ Treuerabatt (-2%)" without prefix
+  #discount("Treueaktion", label: "Sondernachlass", amount: 5%)
+  ```
+
+:::warning
+If your modifier's `input-gross` setting does **not** match the global `tax-mode` of the invoice (e.g., applying a gross discount on a net-based invoice), the system must perform forward or backward tax calculations.
+
+Because the system balances these adjustments across all relevant tax brackets to remain legally compliant, you may occasionally see a **1-cent difference** in the final total due to rounding.
+:::
+
+### VAT Categories of Document and Bundle Modifiers
+
+Every discount or surcharge belongs to a VAT category, just like an item. A modifier of an item always has the item's category. A modifier of the whole invoice or of a bundle is spread over the categories of its items:
+
+- A **percentage** applies to the total of every VAT category.
+- An **absolute amount** goes to the only VAT category, if there is one, even if its items add up to 0 or less (e.g., shipping for a free sample, a handling fee on a credit note). With several categories, it is split in proportion to their totals. Only the categories whose total has the sign of the whole invoice take part: a voucher on an invoice with sales at 19% and a return at 7% reduces the 19% sales only and never turns into a charge.
+
+Use `tax` to pin a modifier to one VAT category instead, e.g. shipping that is taxed at the standard rate although all goods are at a reduced rate. The category does not need any item:
+
+```typst
+#line-items[
+  #item([Book], price: 25.00, tax: tax.vat(7%))
+  #surcharge([Shipping], amount: 4.90, tax: tax.vat(19%))
+]
+```
+
+A pinned percentage applies to the items of its category only (with none, it is 0). On the invoice of a small business (`tax-exempt-small-biz: true`), which charges no VAT, `tax` is replaced by the small business scheme, just like the `tax` of the items.
+
+If the split is undefined (the VAT categories add up to 0, or there are no items at all), the invoice does not compile and asks for `tax`: an amount is never dropped silently.
+
+---
+
+## Partial Payments: `prepayment`
+
+A `prepayment` represents an advance payment, deposit, or installment already received from the customer.
+
+:::tip
+**Discounts vs. Prepayments:**
+While a `discount` reduces the taxable base (net subtotal before VAT), a `prepayment` is deducted **post-tax** from the gross invoice total to determine the remaining amount due (_Fälliger Betrag_ / ZUGFeRD `BT-113` & `BT-115`).
+:::
+
+When a prepayment is specified, downstream components like `#payment-goal()` and the EPC-QR code in `#bank-details()` automatically target the **remaining balance due** rather than the full gross amount.
+
+| Key           | Type                                                 | Description                                                                                                 |
+| :------------ | :--------------------------------------------------- | :---------------------------------------------------------------------------------------------------------- |
+| `amount`      | `ratio` \| `decimal-like`                            | The prepaid amount. Can be an absolute sum (e.g., `300` or `"300.00"`) or a percentage ratio (e.g., `30%`). |
+| `name`        | `str` \| `content` \| `auto` \| `none`               | Title or description of the prepayment (e.g., `"1. Abschlagszahlung"`).                                     |
+| `label`       | `str` \| `content` \| `auto` \| `none`               | Custom prefix label. Defaults to locale string (`"Anzahlung"` / `"Prepayment"`).                            |
+| `date`        | `datetime` \| `str` \| `content` \| `auto` \| `none` | Date the advance payment was received. Automatically formatted if a `datetime` is provided.                 |
+| `reference`   | `str` \| `content` \| `auto` \| `none`               | Preceding advance invoice number, bank reference, or transaction ID.                                        |
+| `description` | `str` \| `content` \| `auto` \| `none`               | Additional details or conditions.                                                                           |
+| `method`      | `str` \| `content` \| `auto` \| `none`               | Payment method used (e.g. `"Bank Transfer"`, `"PayPal"`).                                                   |
+
+### Examples
+
+```typst
+#line-items[
+  #item([Web Development Project], price: 2000.00, tax: tax.vat(19%))
+
+  // Minimal usage
+  #prepayment(500)
+
+  // With date, name, and reference
+  #prepayment(
+    250,
+    name: "2. Abschlagszahlung",
+    date: datetime(year: 2026, month: 8, day: 15),
+    reference: "RE-ADV-001",
+  )
+
+  // Percentage-based deposit (e.g. 10% of gross total)
+  #prepayment(10%, label: "10% Kaution")
+]
+```

@@ -33,7 +33,7 @@ For comprehensive guides, API references, theming instructions, and advanced exa
 Import the package at the top of your Typst file:
 
 ```typst
-#import "@preview/invoice-pro:0.4.2": *
+#import "@preview/invoice-pro:0.5.0": *
 ```
 
 ### Basic Usage
@@ -41,7 +41,7 @@ Import the package at the top of your Typst file:
 Here is an example of how to create an invoice using the new v0.3.0 API:
 
 ```typst
-#import "@preview/invoice-pro:0.4.2": *
+#import "@preview/invoice-pro:0.5.0": *
 
 #show: invoice.with(
   theme: themes.DIN-5008(form: "A"), // or form: "B"
@@ -140,7 +140,7 @@ This activates a shell containing `typst`, `typstyle`, `markdownlint`, and `pret
    The environment automatically links the current directory to a sandboxed local package registry (inside `.typst-data`). You can import the package in your test files immediately without manual installation:
 
 ```typst
-#import "@preview/invoice-pro:0.4.2": *
+#import "@preview/invoice-pro:0.5.0": *
 ```
 
 3. **Quality Control:**
@@ -157,6 +157,7 @@ I am actively working on improving this template. Here is what's planned for fut
 - [x] (v0.2.0) **Refactored API:** Moving away from global states to a more robust, scoped API (inspired by CeTZ) for better stability and flexibility.
 - [x] (v0.3.0) **Internationalization (i18n):** Built-in support for English and other languages (currently creates German invoices by default).
 - [x] (v0.4.0) **ZUGFeRD Support:** (Experimental) Embedding XML data for fully compliant e-invoicing.
+- [x] (v0.5.0) **Validated E-Invoicing:** (Experimental) Checking every e-invoice against the rules of EN 16931, Factur-X and XRechnung before its XML is attached.
 - [ ] (WIP) **Theming Engine:** Allow easy customization of accent colors and fonts to match corporate identities.
 - [ ] **Data Loading:** Helper functions to load invoice items directly from JSON, CSV, or YAML files.
 
