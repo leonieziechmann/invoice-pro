@@ -49,12 +49,13 @@ All code sections in `docs/docs/`, listed by file. Each entry includes:
 
 ### `api-reference/invoice.md`
 
-| Code ID            | Description                                    | Version | Test                        | Notes                             |
-| :----------------- | :--------------------------------------------- | :------ | :-------------------------- | :-------------------------------- |
-| `sender-recipient` | Sender/recipient dictionary structure          | —       | —                           | Snippet (partial), no test needed |
-| `references-dict`  | References as dictionary                       | —       | —                           | Snippet (partial), no test needed |
-| `references-array` | References as array of tuples                  | —       | —                           | Snippet (partial), no test needed |
-| `minimal-config`   | Minimal valid configuration with a single item | `0.4.2` | `docs/api-invoice-minimal/` |                                   |
+| Code ID            | Description                                                 | Version | Test                        | Notes                             |
+| :----------------- | :---------------------------------------------------------- | :------ | :-------------------------- | :-------------------------------- |
+| `sender-recipient` | Sender/recipient dictionary structure                       | —       | —                           | Snippet (partial), no test needed |
+| `references-dict`  | References as dictionary                                    | —       | —                           | Snippet (partial), no test needed |
+| `references-array` | References as array of tuples                               | —       | —                           | Snippet (partial), no test needed |
+| `minimal-config`   | Minimal valid configuration with a single item              | `0.4.2` | `docs/api-invoice-minimal/` |                                   |
+| `document-type`    | Credit note with `document-type` and `preceding-invoice-nr` | —       | —                           | Snippet (partial), no test needed |
 
 ### `api-reference/line-items.md`
 
@@ -75,6 +76,7 @@ No code blocks.
 | :--------------- | :---------------------------------- | :------ | :--- | :-------------------------------------- |
 | `reverse-charge` | Reverse-charge tax usage on an item | `0.4.2` | —    | Snippet only (no full document context) |
 | `custom-tax`     | Custom tax category with `tax.new`  | `0.4.2` | —    | Snippet only (let binding)              |
+| `exemption-code` | Exemption with its VATEX code       | `0.4.2` | —    | Compiled by check-docs-examples         |
 
 ### `api-reference/theme.md`
 
@@ -82,6 +84,77 @@ No code blocks.
 | :---------------- | :--------------------------------------------------- | :------ | :------------------------ | :---- |
 | `din5008-example` | DIN-5008 theme with custom form, font, and hole-mark | `0.4.2` | `docs/api-theme-din5008/` |       |
 | `blank-example`   | Blank theme with native Typst page setup             | `0.4.2` | `docs/api-theme-blank/`   |       |
+| `prints-example`  | Layout of its own that says it prints the references | `0.4.2` | —                         |       |
+
+### `e-invoicing/index.md`
+
+| Code ID            | Description                        | Version | Test                         | Notes                   |
+| :----------------- | :--------------------------------- | :------ | :--------------------------- | :---------------------- |
+| `compile`          | PDF/A-3b compile command           | —       | —                            | Bash command, not Typst |
+| `complete-example` | Complete ZUGFeRD-compliant invoice | `0.4.2` | `docs/e-invoicing-complete/` |                         |
+
+### `e-invoicing/architecture.md`
+
+| Code ID    | Description                                          | Version | Test | Notes                         |
+| :--------- | :--------------------------------------------------- | :------ | :--- | :---------------------------- |
+| `pipeline` | Diagram of the way from the invoice to the e-invoice | —       | —    | Mermaid diagram, not Typst    |
+| `attach`   | How the XML is attached with `pdf.attach`            | —       | —    | Illustration of the internals |
+
+### `e-invoicing/validation.md`
+
+| Code ID                 | Description                                            | Version | Test                       | Notes                             |
+| :---------------------- | :----------------------------------------------------- | :------ | :------------------------- | :-------------------------------- |
+| `error-output`          | Example of the compiler error listing all problems     | —       | —                          | Compiler output, not Typst        |
+| `zugferd-errors-report` | Enabling `zugferd-errors: "report"`                    | —       | —                          | Snippet (partial), no test needed |
+| `custom-report`         | Theme `zugferd-report` function for a custom list      | —       | `docs/e-invoicing-report/` |                                   |
+| `printed-details`       | References with the seller's VAT ID and date of supply | `0.4.2` | —                          | Compiled by check-docs-examples   |
+
+### `e-invoicing/limitations.md`
+
+| Code ID          | Description                                           | Version | Test | Notes                    |
+| :--------------- | :---------------------------------------------------- | :------ | :--- | :----------------------- |
+| `facturx-recipe` | Optional Mustang post-processing for the XMP metadata | —       | —    | Bash commands, not Typst |
+
+### `e-invoicing/invoice-data/parties.md`
+
+| Code ID          | Description                                                                       | Version | Test | Notes              |
+| :--------------- | :-------------------------------------------------------------------------------- | :------ | :--- | :----------------- |
+| `party-snippets` | City, seller identifier, contact, buyer reference, EAS, tax representative, payee | —       | —    | Snippets (partial) |
+
+### `e-invoicing/invoice-data/line-items.md`
+
+| Code ID         | Description                                                      | Version | Test                          | Notes                             |
+| :-------------- | :--------------------------------------------------------------- | :------ | :---------------------------- | :-------------------------------- |
+| `unit-snippets` | Unit builder and dictionary units                                | —       | —                             | Snippets (partial)                |
+| `money-fine`    | Unit prices rounded to 6 decimals with `locale.custom.normalize` | —       | —                             | Snippet (partial), no test needed |
+| `item-data`     | Note, date and country of origin of items                        | `0.4.2` | `docs/e-invoicing-item-data/` |                                   |
+
+### `e-invoicing/invoice-data/taxes.md`
+
+| Code ID          | Description                            | Version | Test | Notes                             |
+| :--------------- | :------------------------------------- | :------ | :--- | :-------------------------------- |
+| `exemption-code` | Exemption with its VATEX code (BT-121) | —       | —    | Snippet (partial), no test needed |
+
+### `e-invoicing/invoice-data/payment.md`
+
+| Code ID         | Description                                                    | Version | Test                           | Notes              |
+| :-------------- | :------------------------------------------------------------- | :------ | :----------------------------- | :----------------- |
+| `direct-debit`  | XRechnung collected by SEPA direct debit                       | `0.4.2` | `docs/e-invoicing-sepa-debit/` |                    |
+| `paid-snippets` | Paid invoices in cash and by card                              | —       | —                              | Snippets (partial) |
+| `cash-discount` | Cash discount of the payment goal, and in a textual `due-date` | —       | —                              | Snippets (partial) |
+
+### `e-invoicing/invoice-data/document.md`
+
+| Code ID          | Description                                              | Version | Test                            | Notes                             |
+| :--------------- | :------------------------------------------------------- | :------ | :------------------------------ | :-------------------------------- |
+| `credit-note`    | Credit note (document type 381) with a preceding invoice | `0.4.2` | `docs/e-invoicing-credit-note/` |                                   |
+| `service-period` | `service-period` printed by `references.service-time()`  | —       | —                               | Snippet (partial), no test needed |
+| `notes`          | Invoice notes, one with a subject code                   | —       | —                               | Snippet (partial), no test needed |
+| `currency`       | Invoice in US dollars                                    | —       | —                               | Snippet (partial), no test needed |
+
+### `e-invoicing/invoice-data/business-terms.md`
+
+No code blocks. The tables are generated by `tools/zugferd/bt_disposition.py --update-docs`.
 
 ### `api-reference/locale/index.md`
 

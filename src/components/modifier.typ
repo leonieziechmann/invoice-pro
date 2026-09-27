@@ -1,6 +1,7 @@
 #import "../loom-wrapper.typ": data-motif, loom
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
+#import "../data/tax.typ" as m-tax
 
 /// Represents a modifier, such as a discount or a surcharge, to be applied to an item, a bundle, or the entire invoice.
 /// Modifiers can be either relative (percentage-based) or absolute (fixed monetary amount) depending on the data type of the `amount` provided.
@@ -30,6 +31,15 @@
   /// Internal flag indicating whether this modifier is semantically a discount or surcharge.
   /// -> bool | auto
   is-discount: auto,
+  /// The VAT category the modifier belongs to, e.g. `tax.vat(19%)` for
+  /// shipping. If `auto`, a percentage applies to every VAT category, and an
+  /// absolute amount is split over the VAT categories in proportion to their
+  /// totals. On a document or bundle with several VAT categories and a total
+  /// of 0 the split is undefined: then the modifier must be pinned with `tax`.
+  /// On an item, a modifier always has the item's tax. With
+  /// `tax-exempt-small-biz`, it is replaced by the small business scheme.
+  /// -> ratio | dictionary | auto
+  tax: auto,
 ) = {
   types.require(name, "modifier::name", types.text-like)
   types.require(label, "modifier::label", none, auto, types.text-like)
@@ -49,12 +59,22 @@
     types.ratio-like,
   )
   types.require(input-gross, "modifier::input-gross", auto, bool)
+  types.require(tax, "modifier::tax", auto, types.tax-like)
 
   data-motif(
     "modifier",
     scope: ctx => loom.mutator.batch(ctx, {
       import loom.mutator: *
 
+      // Not cascaded: the `tax` of the context is the default of the items.
+      // A small business charges no VAT: like the `tax` of its items, a
+      // pinned category is replaced by the small business scheme.
+      let small-biz = ctx.at("tax-exempt-small-biz", default: false)
+      put("modifier-tax", if tax == auto { none } else if small-biz {
+        ctx.locale.tax.small-enterprise-special-scheme
+      } else {
+        m-tax.resolve(ctx, tax, "modifier")
+      })
       derive("modifier-amount", amount, default: decimal("0"))
       derive("description", description)
       derive(
@@ -124,6 +144,7 @@
         amount: amount,
 
         is-gross: ctx.input-gross,
+        tax: ctx.modifier-tax,
       )
     },
   )
@@ -147,6 +168,10 @@
   /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
   /// -> bool | auto
   input-gross: auto,
+  /// The VAT category the discount belongs to (see `modifier`). If `auto`, it
+  /// is split over the VAT categories.
+  /// -> ratio | dictionary | auto
+  tax: auto,
 ) = {
   types.require(label, "discount::label", none, auto, types.text-like)
   types.require(
@@ -176,6 +201,7 @@
     amount: final-amount,
     input-gross: input-gross,
     is-discount: true,
+    tax: tax,
   )
 }
 
@@ -197,6 +223,11 @@
   /// Indicates whether the modifier's absolute amount should be treated as a gross value (inclusive of tax). Automatically defaults to `false`.
   /// -> bool | auto
   input-gross: auto,
+  /// The VAT category the surcharge belongs to (see `modifier`), e.g.
+  /// `tax.vat(19%)` for shipping. If `auto`, it is split over the VAT
+  /// categories.
+  /// -> ratio | dictionary | auto
+  tax: auto,
 ) = {
   types.require(label, "surcharge::label", none, auto, types.text-like)
   types.require(
@@ -214,7 +245,7 @@
     let normalized-amount = coercion.to-decimal(amount)
     assert(
       normalized-amount >= 0,
-      message: "discount::amount must be positive!",
+      message: "surcharge::amount must be positive!",
     )
     final-amount = normalized-amount
   }
@@ -226,5 +257,6 @@
     amount: final-amount,
     input-gross: input-gross,
     is-discount: false,
+    tax: tax,
   )
 }

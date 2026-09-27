@@ -11,6 +11,11 @@ if ! command -v "$VALIDATE_ZUGFERD" &> /dev/null && [ ! -x "$VALIDATE_ZUGFERD" ]
   VALIDATE_ZUGFERD="validate-zugferd"
 fi
 
+# validate-zugferd keeps the compiled PDFs here for KoSIT (end of this script).
+ZUGFERD_PDF_DIR="$(mktemp -d)"
+export ZUGFERD_PDF_DIR
+trap 'rm -rf "$ZUGFERD_PDF_DIR"' EXIT
+
 echo "========================"
 echo " Running all ZUGFeRD validations... "
 echo "========================"
@@ -26,7 +31,54 @@ for test in tests/integration/payment-reference/*/test.typ; do
   "$VALIDATE_ZUGFERD" "$test"
 done
 "$VALIDATE_ZUGFERD" "tests/integration/zugferd-item-ids/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-delivery-address/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-inclusive/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-precision/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-small-biz-modifiers/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-small-biz-xrechnung/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-small-biz-at/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-small-biz-fr/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-small-biz-es/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-intra-community/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-text/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-seller-id/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-auto/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-parties/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-party-details/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-tax-representative/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-minimum-legal-id/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-credit-note/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-direct-debit/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-card-payment/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-paid-cash/test.typ"
+"$VALIDATE_ZUGFERD" "tests/integration/zugferd-cash-discount/test.typ"
+"$VALIDATE_ZUGFERD" "tests/docs/e-invoicing-complete/test.typ"
+"$VALIDATE_ZUGFERD" "tests/docs/e-invoicing-sepa-debit/test.typ"
 "$VALIDATE_ZUGFERD" "template/invoice.typ"
 
 echo ""
 echo "✔ All ZUGFeRD validations passed!"
+
+# KoSIT, the reference validator for XRechnung, checks the XML of the EN 16931
+# and XRechnung documents above in one JVM (tools/zugferd/kosit.py); it has no
+# scenario for MINIMUM, BASIC WL and BASIC. It needs Python 3.11+ with lxml and
+# pypdf ($PYTHON, default python3), Java and $KOSIT_JAR / $KOSIT_CONFIG (see
+# tests/TESTING.md); `nix run .#validate-all-zugferd` provides them. Without
+# them, KoSIT is skipped with a notice, but never in CI.
+echo ""
+echo "========================"
+echo " Running KoSIT... "
+echo "========================"
+if [ -n "${KOSIT_JAR:-}" ] && [ -n "${KOSIT_CONFIG:-}" ]; then
+  "${PYTHON:-python3}" tools/zugferd/kosit.py "$ZUGFERD_PDF_DIR"/*.pdf
+  echo ""
+  echo "✔ KoSIT accepts every EN 16931 and XRechnung document!"
+else
+  case "${CI:-}" in
+    1 | true | TRUE | yes)
+      echo "Error: KOSIT_JAR and KOSIT_CONFIG are not set; CI must validate with KoSIT (nix run .#validate-all-zugferd sets them)." >&2
+      exit 1
+      ;;
+  esac
+  echo "Notice: KoSIT skipped: set KOSIT_JAR and KOSIT_CONFIG (see tests/TESTING.md), or run nix run .#validate-all-zugferd."
+fi

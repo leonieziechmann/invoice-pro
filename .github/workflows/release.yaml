@@ -25,6 +25,15 @@ jobs:
           name: typ-flow
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
+      # The published files compile on their own, offline.
+      - name: Check the package bundle
+        run: nix run --accept-flake-config .#check-package-bundle
+
+      # The PDFs lack only the Factur-X XMP metadata, which Typst cannot
+      # write yet (typst/typst#5667).
+      - name: Check the Factur-X PDF (expected failure)
+        run: nix run --accept-flake-config .#zugferd-xmp
+
       - name: Create Package Archive
         run: nix build --accept-flake-config .#release
 

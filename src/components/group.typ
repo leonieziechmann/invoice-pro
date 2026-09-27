@@ -46,6 +46,7 @@
   types.require(tax, "group::tax", auto, types.tax-like)
   types.require(input-gross, "group::input-gross", auto, bool)
   types.require(date, "group::date", none, auto, types.date-like)
+  types.require-day(date, "group::date")
   types.require(
     unit,
     "group::unit",

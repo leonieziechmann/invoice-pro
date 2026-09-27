@@ -36,6 +36,10 @@
   references: (
     references.invoice-nr(),
     references.delivery-address(),
+    // What the law requires on the invoice and the e-invoice states: the
+    // seller's VAT ID (IP-PRINT-03) and the date of the supply (IP-PERIOD-03)
+    references.seller-vat-id(),
+    references.service-time(),
   ),
 )
 

@@ -64,6 +64,8 @@
   )
 ]
 
+#payment-goal(days: 14)
+
 #bank-details(
   bank: "Global Business Bank",
   iban: "DE89370400440532013000",

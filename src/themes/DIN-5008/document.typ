@@ -1,25 +1,22 @@
 #import "../../loom-wrapper.typ": eval-content
+#import "../../utils/text.typ": plain-text
 #import "@preview/letter-pro:3.0.0": (
   address-duobox, address-tribox, annotations-box, header-simple,
   letter-generic, recipient-box, sender-box,
 )
 
-#let to-string(it) = {
-  if it == none { return "" }
-  if type(it) == str { return it }
-  if type(it) != content { return str(it) }
-  if it.has("text") { return it.text }
-  if it.has("children") {
-    return it.children.map(to-string).join()
-  }
-  if it.has("body") { return to-string(it.body) }
-  if it == [ ] { return " " }
-  return ""
-}
-
 #let extract-city-name(zip-city-string) = {
   let pattern = regex("^\\s*\\d*")
-  to-string(zip-city-string).trim(pattern)
+  plain-text(zip-city-string).trim(pattern)
+}
+
+// The value of a sender field, unless it is missing or the placeholder
+// ("#sender.name") the root context puts in its place.
+#let _field(dict, key) = {
+  let value = dict.at(key, default: none)
+  if value in (none, "", []) { return none }
+  if type(value) == str and value == "#sender." + key { return none }
+  value
 }
 
 #let letter-document(
@@ -69,11 +66,20 @@
     document-keywords.push("Factur-X")
   }
 
+  // PDF metadata takes plain text: names and subjects may be styled content
+  // or, for names, several lines. The author is the seller name of the
+  // e-invoice (BT-27).
+  let author-name = _field(ctx.sender, "name-inline")
+  if author-name == none { author-name = _field(ctx.sender, "name") }
+  let author = plain-text(author-name)
+  let description = plain-text(subject)
   set document(
     title: subject,
-    author: sender.at("name", default: ""),
-    date: ctx.invoice-date,
-    description: subject,
+    author: if author == "" { () } else { author },
+    date: if type(ctx.invoice-date) == datetime { ctx.invoice-date } else {
+      auto
+    },
+    description: if description == "" { none } else { description },
     keywords: document-keywords,
   )
 

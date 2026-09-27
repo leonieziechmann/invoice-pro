@@ -10,10 +10,13 @@ A professional, compliant, and automated invoice template for [Typst](https://ty
 
 - **Internationalization (i18n) (New in v0.3.0):** Built-in support for English and German out of the box, plus a highly flexible `locale` API to inject custom translations for any language.
 - **DIN 5008 Compliant:** Supports both Form A and Form B layouts natively via the flexible Theming API.
-- **ZUGFeRD e-invoicing (New in v0.4.0):** (Experimental) Embed EN 16931-compliant Factur-X/ZUGFeRD XML metadata into your generated PDF/A-3B invoices for automated digital processing.
+- **ZUGFeRD e-invoicing (New in v0.4.0):** (Experimental) Embed EN 16931-compliant Factur-X/ZUGFeRD XML metadata into your generated PDF/A-3B invoices for automated digital processing. The invoice data is checked against the rules of the selected profile, and all problems are reported at once.
 - **Block-based API:** Clean, scoped, and declarative data structure using `#line-items`, `#item`, `#group`, and `#bundle`—inspired by CeTZ, keeping your document clutter-free.
 - **Automatic Calculations:** Effortlessly handles line items, nested bundles, sub-totals, and calculates taxes automatically.
 - **EPC QR-Code (GiroCode):** Automatically generates a scannable banking QR code for quick and easy payments using banking apps.
+- **Payment Means:** Besides bank details for a transfer, `#direct-debit` (SEPA direct debit with mandate reference and creditor identifier), `#card-payment` and `#paid` for invoices that are paid already, and cash discounts with `#payment-goal(discount: ..)`. The printed invoice and the e-invoice state the same payment means.
+- **Legal Content:** The default references print what the law requires on an invoice, such as the seller's tax number or VAT ID and the date of the supply, and an e-invoice checks that the printed invoice shows them. Credit notes, corrected and self-billed invoices (`document-type`), notes, the payee and the VAT exemption reasons with their VATEX codes are stated as well.
+- **Identifiers:** Typed party identifiers, such as `id.gln(..)`, `id.siret(..)`, `id.leitweg(..)` or `id.register(..)` (commercial register), stated in the e-invoice, which checks their format and check digits.
 - **Advanced Modifiers:** Apply specific discounts, surcharges, and custom tax rates at the item, bundle, or global level.
 - **Highly Customizable:** Easy configuration of sender, recipient, payment goals, bank details, and visual themes to match your corporate identity.
 
@@ -103,6 +106,10 @@ With the major refactoring introduced in version 0.2.0, the package structure is
 - **Theming (`theme`):** **Under Construction**. The theming engine is still evolving and will most likely experience breaking changes in the next updates as we refine customization capabilities.
 - **Localization (`locale`):** **Under Construction**. The localization and internationalization systems are actively being worked on and are subject to change.
 
+## Known Limitations
+
+- **Factur-X XMP metadata:** Typst cannot write custom XMP metadata yet, so the PDF lacks the Factur-X extension schema that announces the embedded XML. The embedded XML is valid, but validators that check the PDF itself (Factur-X / ZUGFeRD PDF validation) reject the PDF. An optional post-processing step with the Mustang command line tool, outside the package, is described in the [e-invoicing documentation](https://leonieziechmann.github.io/invoice-pro/e-invoicing/limitations#factur-x-xmp-metadata).
+
 ## 🛠️ Development
 
 This project uses **Nix** to provide a reproducible, sandboxed development environment. You do not need to install Typst, linters, or formatters globally—the flake provides everything.
@@ -161,7 +168,7 @@ This template relies on these amazing packages:
 
 - `letter-pro` for the DIN layout.
 - `sepay` for EPC-QR-Code generation.
-- `ibanator` for IBAN formatting.
+- `ibanator` (through `sepay`) for the IBAN check of the EPC-QR-Code.
 - `loom` for reactive document rendering.
 
 **Acknowledgements:**

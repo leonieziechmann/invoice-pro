@@ -206,18 +206,19 @@
   [#doc]
 }
 
-// 6. Small business exemption: marker links to legal grounds
+// 6. Small business exemption: marker links to legal grounds. § 19 UStG
+//    exempts the turnover (VAT category E).
 #{
   let doc = invoice(
     theme: themes.blank.with(
       line-items: (ctx, data, body) => {
         assert.eq(data.taxes.len(), 1)
         let t = data.taxes.first()
-        assert.eq(t.category, [O])
+        assert.eq(t.category, [E])
         assert.eq(t.marker, "*")
         assert.eq(
           t.grounds,
-          "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.",
+          "Umsatzsteuerfrei aufgrund der Kleinunternehmerregelung gemäß § 19 Abs. 1 UStG.",
         )
         body
       },

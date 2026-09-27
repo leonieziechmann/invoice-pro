@@ -17,6 +17,8 @@ These are the most common tax categories, available directly from the main `tax`
 :::info
 The `grounds` parameter:
 All tax functions accept an optional `grounds` parameter (a string). This is used to provide the legal justification for the tax application. **Providing a `grounds` text is highly recommended (and often legally required) for any 0% tax rate or exemption.**
+
+Items of one tax category may have different grounds (e.g., a medical treatment exempt under § 4 Nr. 14 UStG and a seminar exempt under § 4 Nr. 21 UStG). Every distinct ground is printed below the line items; if a category has several, each item is marked with the ground that applies to it. The e-invoice carries one exemption reason per category (BT-120), so the distinct grounds are joined with `; ` there.
 :::
 
 | Function                         | Code   | Description                                                                                              |
@@ -29,6 +31,11 @@ All tax functions accept an optional `grounds` parameter (a string). This is use
 | `outside-scope(grounds: none)`   | **O**  | **Outside Scope**: Services that fall completely outside the scope of the tax system (always 0%).        |
 | `zero(grounds: none)`            | **Z**  | **Zero Rated Goods**: Standard zero-rated items (always 0%).                                             |
 
+:::info
+The `code` parameter:
+The functions of the categories without VAT (`exempt`, `reverse-charge`, `intra-community`, `export`, `outside-scope`) and `new` also accept `code`, the VAT exemption reason code of the CEF VATEX code list (e.g. `"VATEX-EU-132-1C"` for a medical treatment exempt under Art. 132 (1) (c) of the VAT Directive). An e-invoice states it next to the grounds (BT-121), while the printed invoice shows the grounds. Without `code`, an e-invoice states the code of the category for `reverse-charge` (`VATEX-EU-AE`), `intra-community` (`VATEX-EU-IC`), `export` (`VATEX-EU-G`) and `outside-scope` (`VATEX-EU-O`), and none for an exemption, whose code depends on its legal basis. See [Tax Category Codes](../e-invoicing/invoice-data/taxes.md#tax-category-codes).
+:::
+
 **Example Usage:**
 
 ```typst
@@ -39,6 +46,28 @@ item(
   price: 1500.00,
   tax: tax.reverse-charge(grounds: "Tax liability of the recipient according to...")
 )
+```
+
+An exemption with its VATEX code:
+
+```typst
+#import "@preview/invoice-pro:0.4.2": *
+
+#show: invoice.with(
+  sender: (name: "Praxis Dr. Muster", address: "Hauptstraße 1", city: "10115 Berlin"),
+  recipient: (name: "Erika Mustermann", address: "Weg 5", city: "50667 Köln"),
+)
+
+#line-items[
+  #item(
+    [Physiotherapy],
+    price: 80,
+    tax: tax.exempt(
+      grounds: "Steuerfrei nach § 4 Nr. 14 UStG",
+      code: "VATEX-EU-132-1C",
+    ),
+  )
+]
 ```
 
 ---
@@ -82,7 +111,7 @@ You can access these via `tax.special.<function-name>`.
 
 ## Custom Tax Categories (`tax.new`)
 
-If you encounter a specific requirement that is not covered by the standard library functions above, you can define a custom tax category using the internal `tax.new` function.
+If you encounter a specific requirement that is not covered by the standard library functions above, you can define a custom tax category using the `tax.new` function.
 
 :::warning
 Only use this if you know exactly which UNTDID 5305 tax category code your accounting software or e-invoicing standard expects.
@@ -107,3 +136,11 @@ Only use this if you know exactly which UNTDID 5305 tax category code your accou
   grounds: "Exempt based on local regulation paragraph 42."
 )
 ```
+
+A plain dictionary with the same keys (e.g., `(rate: 19%, category: "S", label: "vat", grounds: none)`) is accepted wherever a tax is expected and is normalized like `tax.new`.
+
+---
+
+## No Tax (`tax: none`)
+
+Setting `tax: none` on the [invoice](./invoice/index.md#tax--tax-exempt-small-biz) means that no tax is defined at all. The printed invoice treats the items as 0%, but "no tax" does not say _why_ no VAT is charged, so the items are marked as having an **implicit** tax. An e-invoice must declare the actual category: state it with a function of the `tax` module instead (e.g., `tax.exempt(grounds: ..)`, `tax.outside-scope()`, `tax.zero()` or `tax-exempt-small-biz: true`).

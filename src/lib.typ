@@ -11,6 +11,7 @@
 #import "components/group.typ": group
 
 #import "components/bank-details.typ": bank-details
+#import "components/payment-means.typ": card-payment, direct-debit, paid
 #import "components/payment-goal.typ": payment-goal
 #import "components/signature.typ": signature
 #import "components/dynamic.typ": dynamic
@@ -20,6 +21,7 @@
 #import "public/tax/tax.typ"
 #import "public/helper.typ": *
 #import "public/country.typ"
+#import "public/id.typ"
 #import "public/unit.typ"
 #import "public/references.typ"
 #import "public/info.typ" as info

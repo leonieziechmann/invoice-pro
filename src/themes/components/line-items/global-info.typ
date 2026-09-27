@@ -11,20 +11,13 @@
 
   let layout = data.layout-information
   let is-net = data.tax-mode == "exclusive"
-  let lang-eq-region = ctx.locale.meta.region == ctx.locale.strings.meta.lang
   let sum-str = ctx.locale.strings.summary
-  let leg-str = ctx.locale.strings.legal
   let info-str = ctx.locale.strings.global-info
 
   let global-infos = ()
 
-  let has-exemption-grounds = data
-    .at("taxes", default: ())
-    .any(t => (
-      t.at("grounds", default: none) != none
-        and t.grounds != ""
-        and t.grounds != []
-    ))
+  // Prepared by `line-items`, see `src/logic/exemption-notes.typ`.
+  let exemption-notes = data.at("exemption-notes", default: ())
 
   // Standard Tax Statement (Suppressed for small businesses and tax exemptions)
   if (
@@ -32,7 +25,7 @@
       and not layout.multiple-tax-rates
       and data.items.len() > 0
       and not data.tax-exempt-small-biz
-      and not has-exemption-grounds
+      and exemption-notes.all(note => note.at("kind", default: none) == "note")
   ) {
     let tax-rate = data.items.first(default: (tax: (rate: [0%]))).tax.rate
     let tax-text = if is-net { sum-str.excluding } else { sum-str.including }
@@ -77,91 +70,32 @@
     global-infos.push([#info-str.date #date])
   }
 
-  let rendered-grounds = ()
-
-  // Small Business Legal Clause
-  if data.tax-exempt-small-biz {
-    let grounds = leg-str.vat-exemption
-    let legal-grounds = ctx
-      .locale
-      .tax
-      .small-enterprise-special-scheme
-      .at("grounds", default: none)
-
-    let sm-tax = data
-      .at("taxes", default: ())
-      .find(t => (
-        t.at("grounds", default: none) == legal-grounds or t.category == "E"
-      ))
-    let sm-tax-is-zero = (
-      sm-tax != none
-        and (
-          sm-tax.at("raw-rate", default: none) == 0%
-            or sm-tax.at("raw-rate", default: none) == 0
-            or sm-tax.rate == [0%]
-            or sm-tax.rate == [0,0%]
-            or sm-tax.rate == [0.0%]
-        )
-    )
-    let marker = if sm-tax != none and not sm-tax-is-zero {
-      sm-tax.at("marker", default: none)
-    } else {
-      none
-    }
-    let marker-str = if marker != none and layout.show-total {
-      super[#marker] + [ ]
+  // Small business clause, tax exemption grounds and the notes of the
+  // invoice, each with the marker of its VAT line or items, if any. The law
+  // requires the exemption notes on the invoice (e.g. § 14 Abs. 4 Satz 1
+  // Nr. 8 and § 14a Abs. 5 UStG), and the e-invoice states them and the
+  // notes (BT-120, BT-22), so `show-information: false`, which hides the
+  // information about the items above, does not hide them.
+  let notes = ()
+  for note in exemption-notes {
+    let marker-str = if note.marker != none {
+      super[#note.marker] + [ ]
     } else {
       []
     }
-
-    // Without regional grounds, fall back to the translated legal clause so
-    // the notice is never dropped (e.g. `tax.outside-scope()` overrides).
-    if legal-grounds == none {
-      global-infos.push([#marker-str#grounds])
-    } else if lang-eq-region {
-      global-infos.push([#marker-str#legal-grounds])
-      rendered-grounds.push(legal-grounds)
-    } else {
-      global-infos.push([#marker-str#grounds (#legal-grounds)])
-      rendered-grounds.push(legal-grounds)
-    }
+    notes.push([#marker-str#note.body])
   }
 
-  // Tax Exemption Grounds
-  for t in data.at("taxes", default: ()) {
-    let grounds = t.at("grounds", default: none)
-    if grounds != none and grounds != "" and grounds != [] {
-      if grounds not in rendered-grounds {
-        rendered-grounds.push(grounds)
-        let t-is-zero = (
-          t.at("raw-rate", default: none) == 0%
-            or t.at("raw-rate", default: none) == 0
-            or t.rate == [0%]
-            or t.rate == [0,0%]
-            or t.rate == [0.0%]
-        )
-        let marker = if not t-is-zero {
-          t.at("marker", default: none)
-        } else {
-          none
-        }
-        let marker-str = if marker != none and layout.show-total {
-          super[#marker] + [ ]
-        } else {
-          []
-        }
-        global-infos.push([#marker-str#grounds])
-      }
-    }
-  }
-
-  if layout.show-global-information and global-infos.len() > 0 {
+  let lines = if layout.show-global-information {
+    global-infos + notes
+  } else { notes }
+  if lines.len() > 0 {
     pad(
       top: 1em,
       text(
         size: size-small,
         fill: color-desc,
-        global-infos.join([\ ]),
+        lines.join([\ ]),
       ),
     )
   }

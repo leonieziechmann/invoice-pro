@@ -1,3 +1,7 @@
+// Small business exemption (§ 19 Abs. 1 UStG, VAT category E) of a seller
+// that states only its tax number, written as seller tax registration (BT-32,
+// BR-E-02). Validated by validate-all-zugferd.
+
 #import "/src/lib.typ": *
 
 #show: invoice.with(

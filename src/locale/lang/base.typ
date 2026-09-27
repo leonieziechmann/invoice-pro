@@ -29,9 +29,19 @@
     resolve-plural: resolve-plural,
   ),
 
-  /// Designations for document types
+  /// Designations for document types: the default title of the document
+  /// (`invoice(document-type: ..)`).
   document: (
     invoice: "Invoice",
+    /// A credit note (381), which credits amounts to the buyer.
+    credit-note: "Credit Note",
+    /// A corrected invoice (384), which replaces the preceding invoice.
+    corrected: "Corrected Invoice",
+    /// A prepayment invoice (386) for an advance payment.
+    prepayment: "Prepayment Invoice",
+    /// A self-billed invoice (389), issued by the buyer. The VAT Directive
+    /// (Art. 226 No. 10a) requires the mention "Self-billing" on it.
+    self-billed: "Self-Billing Invoice",
   ),
 
   /// Address-related designations
@@ -59,11 +69,15 @@
     delivery-note-number: "Delivery Note No.",
     delivery-address: "Delivery Address",
     preceding-invoice-number: "Preceding Invoice No.",
+    preceding-invoice-date: "Preceding Invoice Date",
     due-date: "Due Date",
     payment-reference: "Payment Reference",
     contact-person: "Contact Person",
     contact-phone: "Phone",
     contact-email: "Email",
+    /// Who receives the payment instead of the sender, e.g. a factoring
+    /// company (`invoice(payee: ..)`, BG-10 of the e-invoice).
+    payee: "Payee",
   ),
 
   /// Column headers and labels for the line-items table
@@ -81,6 +95,10 @@
     surcharge: "Surcharge",
     subtotal: "Subtotal",
     prepayment: "Prepayment",
+    /// Joins the last two item names of an automatic bundle description.
+    conjunction: "and",
+    /// Label of the country of origin of an item (`item(origin: ..)`).
+    origin: "Country of origin",
   ),
 
   /// Labels for the summary section (footer of the table)
@@ -106,6 +124,21 @@
     unit: "Unit for all items:",
     quantity: "Quantity for all items:",
     date: "Service date for all items:",
+  ),
+
+  /// Notes on why no VAT is charged, for the VAT categories that need one
+  /// when their items give no `grounds` of their own. The note is printed
+  /// below the line items and written as exemption reason (BT-120) into the
+  /// e-invoice.
+  tax-exemption: (
+    /// Reverse charge (AE), e.g. `tax.new(category: "AE")` without grounds.
+    reverse-charge: "Reverse charge",
+    /// Intra-community supply (K), `tax.intra-community()`.
+    intra-community: "Tax-exempt intra-community supply",
+    /// Export outside the EU (G), `tax.export()`.
+    export: "Tax-exempt export",
+    /// Not subject to VAT (O), `tax.outside-scope()`.
+    outside-scope: "Not subject to VAT",
   ),
 
   /// Designations for common units of measure
@@ -139,10 +172,58 @@
     reference: "Reference",
   ),
 
+  /// Texts of the payment means besides the bank details: `direct-debit`,
+  /// `card-payment` and `paid`.
+  payment-means: (
+    /// Label of the payment method.
+    method: "Payment method",
+    /// Names of the payment methods.
+    transfer: "Bank transfer",
+    direct-debit: "Direct debit",
+    sepa-direct-debit: "SEPA direct debit",
+    card: "Card payment",
+    credit-card: "Credit card",
+    debit-card: "Debit card",
+    cash: "Cash",
+    cheque: "Cheque",
+    online: "Online payment",
+    /// Labels of the details of a direct debit and a payment card.
+    mandate: "Mandate reference",
+    creditor-id: "Creditor identifier",
+    debtor-iban: "Your IBAN",
+    card-number: "Card number",
+    card-holder: "Cardholder",
+    /// The sentence of an invoice that is paid already (`paid`): the paid
+    /// amount and the date of the payment (`none` if not given).
+    /// -> (content|str, none|content|str) => content
+    paid: (
+      sum,
+      date,
+    ) => if date
+      == none [The total amount of *#sum* has been paid.] else [The total amount of *#sum* was paid on #date.],
+    /// `paid` when prepayments reduced the payable amount, so `sum` is the
+    /// remaining amount that was paid.
+    /// -> (content|str, none|content|str) => content
+    paid-due: (
+      sum,
+      date,
+    ) => if date
+      == none [The amount due of *#sum* has been paid.] else [The amount due of *#sum* was paid on #date.],
+    /// `paid` on a credit note or a self-billed invoice, whose sender pays
+    /// the amount to the recipient: the paid amount and the date of the
+    /// payment (`none` if not given).
+    /// -> (content|str, none|content|str) => content
+    paid-credit: (
+      sum,
+      date,
+    ) => if date
+      == none [We have paid the amount of *#sum* to you.] else [We paid the amount of *#sum* to you on #date.],
+  ),
+
   /// Text blocks for payment terms
   payment: (
     /// Generates the final payment instruction sentence.
-    /// -> (content|str, content|str, content|str) => content
+    /// -> (content|str, content|str) => content
     text: (
       sum,
       deadline,
@@ -155,6 +236,47 @@
       sum,
       deadline,
     ) => [Please transfer the amount due of *#sum* #deadline to the account listed below.],
+
+    /// The payment sentence when the amount is collected by direct debit
+    /// (`direct-debit`), in place of `text`.
+    /// -> (content|str, content|str) => content
+    text-direct-debit: (
+      sum,
+      deadline,
+    ) => [The total amount of *#sum* will be collected from your account by direct debit #deadline.],
+
+    /// `text-direct-debit` when prepayments reduce the payable amount.
+    /// -> (content|str, content|str) => content
+    text-direct-debit-due: (
+      sum,
+      deadline,
+    ) => [The amount due of *#sum* will be collected from your account by direct debit #deadline.],
+
+    /// The payment sentence when the amount is charged to a payment card
+    /// (`card-payment`), in place of `text`.
+    /// -> (content|str, content|str) => content
+    text-card: (
+      sum,
+      deadline,
+    ) => [The total amount of *#sum* will be charged to your card #deadline.],
+
+    /// `text-card` when prepayments reduce the payable amount.
+    /// -> (content|str, content|str) => content
+    text-card-due: (
+      sum,
+      deadline,
+    ) => [The amount due of *#sum* will be charged to your card #deadline.],
+
+    /// The note of a cash discount (`payment-goal(discount: ..)`), printed
+    /// after the payment sentence: the percentage, the deadline (as
+    /// `deadline-days` words it) and the amount the discount applies to
+    /// (`none` if not given).
+    /// -> (str, str, none|content|str) => content
+    cash-discount: (
+      percent,
+      deadline,
+      basis,
+    ) => [For payment #deadline, a cash discount of #percent#if basis != none [ on #basis] is granted.],
 
     /// Text for a fixed target date.
     /// -> (content|str) => str
@@ -171,6 +293,18 @@
     /// Text for immediate/prompt payment.
     /// -> str
     deadline-soon: "upon receipt",
+
+    /// The payment sentence of a document whose sender pays the amount to
+    /// its recipient: a credit note or a self-billed invoice.
+    /// -> (content|str, content|str) => content
+    text-credit: (
+      sum,
+      deadline,
+    ) => [We will transfer the amount of *#sum* #deadline to the account listed below.],
+
+    /// Text for an immediate payment in `text-credit`.
+    /// -> str
+    deadline-soon-credit: "promptly",
   ),
 
   /// Greetings and signature area
@@ -180,8 +314,11 @@
 
   /// Standard legal texts that depend on the language
   legal: (
-    // This generic fallback text can be overridden by specific regional language files.
-    // E.g., The DE.typ region will fetch `lang.legal.vat-exemption` for the §19 UStG clause.
+    // The small business note in the invoice language. It is printed in front
+    // of the legal grounds of the region's small business scheme when the
+    // language differs from the region, and on its own when the scheme has no
+    // grounds. It is used with every region, so it must not cite the law of
+    // one country.
     vat-exemption: "No VAT is charged due to small business exemption.",
   ),
 

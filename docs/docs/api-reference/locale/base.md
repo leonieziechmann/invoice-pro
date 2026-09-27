@@ -28,11 +28,15 @@ Contains core metadata about the language configuration.
 
 ### `document`
 
-Designations for primary document types.
+Designations for the document types: the default titles of `invoice(document-type: ..)`.
 
-| Key       | Type  | Description                                               |
-| :-------- | :---- | :-------------------------------------------------------- |
-| `invoice` | `str` | The title used for standard invoices (e.g., `"Invoice"`). |
+| Key           | Type  | Description                                                                                                              |
+| :------------ | :---- | :----------------------------------------------------------------------------------------------------------------------- |
+| `invoice`     | `str` | The title used for standard invoices (e.g., `"Invoice"`).                                                                |
+| `credit-note` | `str` | The title of a credit note (e.g., `"Credit Note"`, in German `"Rechnungskorrektur"`).                                    |
+| `corrected`   | `str` | The title of a corrected invoice (e.g., `"Corrected Invoice"`).                                                          |
+| `prepayment`  | `str` | The title of a prepayment invoice (e.g., `"Prepayment Invoice"`).                                                        |
+| `self-billed` | `str` | The title of a self-billed invoice, the mention the law requires on it (e.g., `"Self-Billing Invoice"`, `"Gutschrift"`). |
 
 ### `address`
 
@@ -47,13 +51,32 @@ Labels indicating the address blocks.
 
 Designations for header metadata.
 
-| Key              | Type  | Description                                                    |
-| :--------------- | :---- | :------------------------------------------------------------- |
-| `tax-number`     | `str` | Label for the sender's tax identification (e.g., `"Tax ID"`).  |
-| `invoice-number` | `str` | Label for the document identifier (e.g., `"Invoice Number"`).  |
-| `vat-id`         | `str` | Label for the Value Added Tax identifier (e.g., `"VAT ID"`).   |
-| `invoice-date`   | `str` | Label for the date of the invoice (e.g., `"Invoice Date"`).    |
-| `service-time`   | `str` | Label for the period of service (e.g., `"Period of Service"`). |
+| Key                        | Type  | Description                                                                                           |
+| :------------------------- | :---- | :---------------------------------------------------------------------------------------------------- |
+| `tax-number`               | `str` | Label for the sender's tax identification (e.g., `"Tax ID"`).                                         |
+| `invoice-number`           | `str` | Label for the document identifier (e.g., `"Invoice Number"`).                                         |
+| `vat-id`                   | `str` | Label for the Value Added Tax identifier (e.g., `"VAT ID"`).                                          |
+| `invoice-date`             | `str` | Label for the date of the invoice (e.g., `"Invoice Date"`).                                           |
+| `service-time`             | `str` | Label for the period of service (e.g., `"Period of Service"`).                                        |
+| `customer-number`          | `str` | Label for the customer number (e.g., `"Customer No."`).                                               |
+| `buyer-reference`          | `str` | Label for the buyer reference or Leitweg-ID (e.g., `"Buyer Reference"`).                              |
+| `recipient-vat-id`         | `str` | Label for the buyer's VAT identifier (e.g., `"Buyer VAT ID"`).                                        |
+| `recipient-tax-number`     | `str` | Label for the buyer's tax number (e.g., `"Buyer Tax ID"`).                                            |
+| `order-number`             | `str` | Label for the order number (e.g., `"Order No."`).                                                     |
+| `order-date`               | `str` | Label for the date of the order (e.g., `"Order Date"`).                                               |
+| `project`                  | `str` | Label for the project (e.g., `"Project"`).                                                            |
+| `contract-number`          | `str` | Label for the contract number (e.g., `"Contract No."`).                                               |
+| `quote-number`             | `str` | Label for the quote number (e.g., `"Quote No."`).                                                     |
+| `delivery-note-number`     | `str` | Label for the delivery note number (e.g., `"Delivery Note No."`).                                     |
+| `delivery-address`         | `str` | Label for the delivery address (e.g., `"Delivery Address"`).                                          |
+| `preceding-invoice-number` | `str` | Label for the number of the preceding invoice (e.g., `"Preceding Invoice No."`).                      |
+| `preceding-invoice-date`   | `str` | Label for the date of the preceding invoice (e.g., `"Preceding Invoice Date"`).                       |
+| `due-date`                 | `str` | Label for the due date (e.g., `"Due Date"`).                                                          |
+| `payment-reference`        | `str` | Label for the payment reference (e.g., `"Payment Reference"`).                                        |
+| `contact-person`           | `str` | Label for the contact person (e.g., `"Contact Person"`).                                              |
+| `contact-phone`            | `str` | Label for the phone number of the contact (e.g., `"Phone"`).                                          |
+| `contact-email`            | `str` | Label for the email address of the contact (e.g., `"Email"`).                                         |
+| `payee`                    | `str` | Label for who receives the payment instead of the sender, e.g. a factoring company (e.g., `"Payee"`). |
 
 ### `line-items`
 
@@ -73,6 +96,8 @@ Column headers and structural labels for the line-items table.
 | `discount`    | `str` | Label for applied discounts.                          |
 | `surcharge`   | `str` | Label for applied surcharges.                         |
 | `subtotal`    | `str` | Label indicating a running subtotal within the table. |
+| `conjunction` | `str` | Word before the last name of a bundle description.    |
+| `origin`      | `str` | Label of the country of origin of an item.            |
 
 ### `summary`
 
@@ -96,6 +121,17 @@ Static labels and dynamic text generators placed below the table.
 | `unit`          | `str`                                    | Fallback text if a uniform unit applies to all items.                                              |
 | `quantity`      | `str`                                    | Fallback text if a uniform quantity applies to all items.                                          |
 | `date`          | `str`                                    | Fallback text if a uniform service date applies to all items.                                      |
+
+### `tax-exemption`
+
+Notes on why no VAT is charged, for the tax categories that need one. When no item of such a category gives its own `grounds`, the note is printed below the line items and written as exemption reason (BT-120) into the e-invoice.
+
+| Key               | Type  | Description                                                                                       |
+| :---------------- | :---- | :------------------------------------------------------------------------------------------------ |
+| `reverse-charge`  | `str` | Reverse charge (`AE`), e.g. a `tax.new(category: "AE")` without grounds (e.g. "Reverse charge").  |
+| `intra-community` | `str` | Intra-community supply (`K`), `tax.intra-community()` (e.g. "Tax-exempt intra-community supply"). |
+| `export`          | `str` | Export outside the EU (`G`), `tax.export()` (e.g. "Tax-exempt export").                           |
+| `outside-scope`   | `str` | Not subject to VAT (`O`), `tax.outside-scope()` (e.g. "Not subject to VAT").                      |
 
 ### `units`
 
@@ -134,17 +170,36 @@ Labels for the payment configuration block.
 | `bic`            | `str` | Label for the Bank Identifier Code.              |
 | `reference`      | `str` | Label for the payment reference string.          |
 
+### `payment-means`
+
+Texts of the payment means besides the bank details: [`direct-debit`](../components.md#direct-debit), [`card-payment`](../components.md#card-payment) and [`paid`](../components.md#paid).
+
+| Key                                                                                                              | Type                            | Description                                                                                                  |
+| :--------------------------------------------------------------------------------------------------------------- | :------------------------------ | :----------------------------------------------------------------------------------------------------------- |
+| `method`                                                                                                         | `str`                           | Label of the payment method (e.g., `"Payment method"`).                                                      |
+| `transfer`, `direct-debit`, `sepa-direct-debit`, `card`, `credit-card`, `debit-card`, `cash`, `cheque`, `online` | `str`                           | Names of the payment methods (e.g., `"SEPA direct debit"`, `"Cash"`).                                        |
+| `mandate`, `creditor-id`, `debtor-iban`                                                                          | `str`                           | Labels of the details of a direct debit (e.g., `"Mandate reference"`).                                       |
+| `card-number`, `card-holder`                                                                                     | `str`                           | Labels of the details of a payment card (e.g., `"Card number"`).                                             |
+| `paid`                                                                                                           | `(content, content) => content` | Sentence of a paid invoice. Parameters map to `(sum, date)`; `date` is `none` if not given.                  |
+| `paid-due`                                                                                                       | `(content, content) => content` | Replaces `paid` when prepayments reduced the payable amount, so `sum` is the remaining amount that was paid. |
+| `paid-credit`                                                                                                    | `(content, content) => content` | Replaces `paid` on a credit note or a self-billed invoice, whose sender paid the amount to the recipient.    |
+
 ### `payment`
 
 Text blocks and phrasing for payment terms.
 
-| Key             | Type                            | Description                                                                                                                                                  |
-| :-------------- | :------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `text`          | `(content, content) => content` | Generates the final payment instruction sentence. Parameters map to `(sum, deadline)`.                                                                       |
-| `text-due`      | `(content, content) => content` | Replaces `text` when prepayments reduce the payable amount, so `sum` is the remaining amount due (e.g., `"the amount due"` instead of `"the total amount"`). |
-| `deadline-date` | `(content) => content`          | Text generator for a fixed target date (e.g., `[no later than #date]`).                                                                                      |
-| `deadline-days` | `(int) => str`                  | Text generator for a relative target date (e.g., `[within #str(days) days]`).                                                                                |
-| `deadline-soon` | `str`                           | Text for immediate/prompt payment.                                                                                                                           |
+| Key                                          | Type                             | Description                                                                                                                                                                                                                     |
+| :------------------------------------------- | :------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `text`                                       | `(content, content) => content`  | Generates the final payment instruction sentence. Parameters map to `(sum, deadline)`.                                                                                                                                          |
+| `text-due`                                   | `(content, content) => content`  | Replaces `text` when prepayments reduce the payable amount, so `sum` is the remaining amount due (e.g., `"the amount due"` instead of `"the total amount"`).                                                                    |
+| `text-direct-debit`, `text-direct-debit-due` | `(content, content) => content`  | `text` and `text-due` when the amount is collected by [`direct-debit`](../components.md#direct-debit).                                                                                                                          |
+| `text-card`, `text-card-due`                 | `(content, content) => content`  | `text` and `text-due` when the amount is charged to a [`card-payment`](../components.md#card-payment).                                                                                                                          |
+| `cash-discount`                              | `(str, str, content) => content` | Note of a cash discount of the payment goal, printed after the payment sentence. Parameters map to `(percent, deadline, basis)`; `basis` is `none` if not given.                                                                |
+| `deadline-date`                              | `(content) => content`           | Text generator for a fixed target date (e.g., `[no later than #date]`).                                                                                                                                                         |
+| `deadline-days`                              | `(int) => str`                   | Text generator for a relative target date (e.g., `[within #str(days) days]`).                                                                                                                                                   |
+| `deadline-soon`                              | `str`                            | Text for immediate/prompt payment.                                                                                                                                                                                              |
+| `text-credit`                                | `(content, content) => content`  | Replaces `text` and `text-due`, and the sentences of a direct debit or a payment card, on a credit note or a self-billed invoice, whose sender pays the amount to the recipient (e.g., `"We will transfer the amount of ..."`). |
+| `deadline-soon-credit`                       | `str`                            | Replaces `deadline-soon` in `text-credit` (e.g., `"promptly"`).                                                                                                                                                                 |
 
 ### `signature`
 
@@ -158,9 +213,9 @@ Greetings and the sign-off area.
 
 Standard legal notices.
 
-| Key             | Type  | Description                                                                 |
-| :-------------- | :---- | :-------------------------------------------------------------------------- |
-| `vat-exemption` | `str` | The legal notice for small business exemptions or zero-rated tax scenarios. |
+| Key             | Type  | Description                                                                                                                                                                                                            |
+| :-------------- | :---- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vat-exemption` | `str` | The small business note in the invoice language. It is printed in front of the region's legal note when the language differs from the region, and alone when the region's scheme has no `grounds`, so it names no law. |
 
 ### `errors`
 
@@ -203,6 +258,21 @@ Metadata for the primary currency used in the region. This is essential for stru
 | `decimals`      | `int` | The standard number of subunits/decimal places for financial totals (e.g., `2`). |
 | `decimals-fine` | `int` | The allowed number of decimal places for singular unit prices (usually `4`).     |
 
+The currency formatters (`format.currency`, `format.currency-fine`) and the rounding (`normalize.money`, `normalize.money-fine`) derive from it. If a region or an override sets the `currency` without these functions, they are rebuilt from it, so the printed amounts always show the currency whose `code` the e-invoice states (BT-5):
+
+```typst
+#import "@preview/invoice-pro:0.4.2": invoice, locale
+
+#show: invoice.with(
+  // Prints "1.234,50 $" and states USD in the e-invoice
+  locale: locale.de-de.with((region: (currency: (code: "USD", symbol: "$")))),
+)
+```
+
+:::tip
+To invoice in another currency with any locale, `currency` on the invoice is enough: `invoice(currency: "USD")` sets the code, the symbol and the decimals of the currency in the same way. Override the `currency` of the region only for a symbol or decimals of your own.
+:::
+
 ### `normalize`
 
 Functions mapping raw inputs to **Normalized** values.
@@ -226,14 +296,16 @@ Functions responsible for converting data types into localized strings.
 | `date`          | `(datetime \| (datetime, datetime)) => str` | Formats a single date or an array defining a date range into a human-readable string. |
 | `time`          | `datetime => str`                           | Formats a time object into a localized string (e.g., 24h or AM/PM).                   |
 
+The regions build `number`, `currency` and `currency-fine` with `make-formatters` (from `utils/format.typ`), which also adds `currency-formatters`: a function that builds `currency` and `currency-fine` with the same number format for another `currency` dictionary. The locale factory uses it when an override changes the currency alone.
+
 ### `tax`
 
 Contains default standard tax objects utilized by the region.
 
-| Key                               | Type  | Description                                                                  |
-| :-------------------------------- | :---- | :--------------------------------------------------------------------------- |
-| `default-vat`                     | `tax` | The standard VAT/Sales Tax rate applied when no specific rate is provided.   |
-| `small-enterprise-special-scheme` | `tax` | The legal tax object used for small businesses or special exemption schemes. |
+| Key                               | Type  | Description                                                                                                                                                                                                                                                                                                            |
+| :-------------------------------- | :---- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default-vat`                     | `tax` | The standard VAT/Sales Tax rate applied when no specific rate is provided.                                                                                                                                                                                                                                             |
+| `small-enterprise-special-scheme` | `tax` | The tax of small businesses (`tax-exempt-small-biz: true`). Its `grounds` are the printed legal note and the exemption reason (BT-120) of the e-invoice. Use `tax.exempt(grounds: ..)` (category E) where the law exempts small businesses and `tax.outside-scope(grounds: ..)` (O) where they are not liable for VAT. |
 
 ---
 
@@ -254,7 +326,7 @@ When building your own tools or customizing a layout, you can leverage the casca
 #show: invoice.with(
   locale: locale.build-locale(
     custom-lang,
-    locale.region.en
+    locale.region.de
   )
 )
 ```

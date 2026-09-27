@@ -16,7 +16,8 @@
           + "`tax.intra-community()` -> EU B2B Delivery (Art. 7 UStG)\n"
           + "`tax.export()` -> Non-EU Export (§6 UStG)\n"
           + "`tax.exempt()` -> VAT Exemptions (§6 UStG)\n"
-          + "`tax.outside-scope()` -> Small Business/Kleinunternehmer (§6 Abs. 1 Z 27 UStG) or out of scope.",
+          + "`tax-exempt-small-biz: true` -> Small Business/Kleinunternehmer (§6 Abs. 1 Z 27 UStG)\n"
+          + "`tax.outside-scope()` -> Not subject to VAT (nicht steuerbar).",
       )
     } else {
       panic(
@@ -39,7 +40,10 @@
 
     tax: (
       default-vat: tax.vat(20%),
-      small-enterprise-special-scheme: tax.outside-scope(
+      // Kleinunternehmer: § 6 Abs. 1 Z 27 UStG exempts the turnover of small
+      // businesses. The note is printed and is the exemption reason (BT-120)
+      // of VAT category E in the e-invoice.
+      small-enterprise-special-scheme: tax.exempt(
         grounds: "Umsatzsteuerfrei aufgrund der Kleinunternehmerregelung gem. § 6 Abs. 1 Z 27 UStG.",
       ),
     ),

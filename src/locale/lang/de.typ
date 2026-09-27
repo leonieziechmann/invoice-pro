@@ -25,6 +25,13 @@
 
   document: (
     invoice: "Rechnung",
+    // The German VAT law reserves "Gutschrift" for self-billed invoices
+    // (§ 14 Abs. 2 Satz 2 UStG), so a credit note is a "Rechnungskorrektur".
+    credit-note: "Rechnungskorrektur",
+    corrected: "Korrigierte Rechnung",
+    prepayment: "Anzahlungsrechnung",
+    // Required on a self-billed invoice (§ 14 Abs. 4 Satz 1 Nr. 10 UStG).
+    self-billed: "Gutschrift",
   ),
 
   address: (
@@ -50,11 +57,13 @@
     delivery-note-number: "Lieferscheinnummer",
     delivery-address: "Lieferadresse",
     preceding-invoice-number: "Vorherige Rechnungsnummer",
+    preceding-invoice-date: "Datum der vorherigen Rechnung",
     due-date: "Fälligkeitsdatum",
     payment-reference: "Verwendungszweck",
     contact-person: "Ansprechpartner:in",
     contact-phone: "Telefon",
     contact-email: "E-Mail",
+    payee: "Zahlungsempfänger",
   ),
 
   line-items: (
@@ -71,6 +80,8 @@
     surcharge: "Zuschlag",
     subtotal: "Zwischensumme",
     prepayment: "Anzahlung",
+    conjunction: "und",
+    origin: "Ursprungsland",
   ),
 
   summary: (
@@ -92,6 +103,13 @@
     unit: "Einheit für alle Artikel:",
     quantity: "Menge für alle Artikel:",
     date: "Leistungsdatum für alle Artikel:",
+  ),
+
+  tax-exemption: (
+    reverse-charge: "Steuerschuldnerschaft des Leistungsempfängers",
+    intra-community: "Steuerfreie innergemeinschaftliche Lieferung",
+    export: "Steuerfreie Ausfuhrlieferung",
+    outside-scope: "Nicht steuerbarer Umsatz",
   ),
 
   units: (
@@ -123,6 +141,36 @@
     reference: "Verwendungszweck",
   ),
 
+  payment-means: (
+    method: "Zahlungsart",
+    transfer: "Überweisung",
+    direct-debit: "Lastschrift",
+    sepa-direct-debit: "SEPA-Lastschrift",
+    card: "Kartenzahlung",
+    credit-card: "Kreditkarte",
+    debit-card: "Debitkarte",
+    cash: "Barzahlung",
+    cheque: "Scheck",
+    online: "Online-Zahlung",
+    mandate: "Mandatsreferenz",
+    creditor-id: "Gläubiger-ID",
+    debtor-iban: "Ihre IBAN",
+    card-number: "Kartennummer",
+    card-holder: "Karteninhaber:in",
+    paid: (
+      sum,
+      date,
+    ) => [Der Gesamtbetrag in Höhe von *#sum* wurde#if date != none [ am #date] bezahlt.],
+    paid-due: (
+      sum,
+      date,
+    ) => [Der fällige Betrag in Höhe von *#sum* wurde#if date != none [ am #date] bezahlt.],
+    paid-credit: (
+      sum,
+      date,
+    ) => [Den Betrag in Höhe von *#sum* haben wir Ihnen#if date != none [ am #date] ausgezahlt.],
+  ),
+
   payment: (
     text: (
       sum,
@@ -132,6 +180,27 @@
       sum,
       deadline,
     ) => [Bitte überweisen Sie den fälligen Betrag in Höhe von *#sum* #deadline auf das unten angegebene Konto.],
+    text-direct-debit: (
+      sum,
+      deadline,
+    ) => [Der Gesamtbetrag in Höhe von *#sum* wird #deadline per Lastschrift von Ihrem Konto eingezogen.],
+    text-direct-debit-due: (
+      sum,
+      deadline,
+    ) => [Der fällige Betrag in Höhe von *#sum* wird #deadline per Lastschrift von Ihrem Konto eingezogen.],
+    text-card: (
+      sum,
+      deadline,
+    ) => [Der Gesamtbetrag in Höhe von *#sum* wird Ihrer Karte #deadline belastet.],
+    text-card-due: (
+      sum,
+      deadline,
+    ) => [Der fällige Betrag in Höhe von *#sum* wird Ihrer Karte #deadline belastet.],
+    cash-discount: (
+      percent,
+      deadline,
+      basis,
+    ) => [Bei Zahlung #deadline gewähren wir #percent Skonto#if basis != none [ auf #basis].],
     deadline-date: date => ("bis zum", date).join(" "),
     deadline-days: days => (
       "innerhalb von",
@@ -139,6 +208,11 @@
       "Tagen",
     ).join(" "),
     deadline-soon: "sofort nach Erhalt",
+    text-credit: (
+      sum,
+      deadline,
+    ) => [Den Betrag in Höhe von *#sum* überweisen wir #deadline auf das unten angegebene Konto.],
+    deadline-soon-credit: "umgehend",
   ),
 
   signature: (
@@ -146,7 +220,7 @@
   ),
 
   legal: (
-    vat-exemption: "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.",
+    vat-exemption: "Aufgrund der Kleinunternehmerregelung wird keine Umsatzsteuer berechnet.",
   ),
 
   errors: (

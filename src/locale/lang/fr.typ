@@ -27,6 +27,11 @@
   /// Designations for document types
   document: (
     invoice: "Facture",
+    credit-note: "Avoir",
+    corrected: "Facture rectificative",
+    prepayment: "Facture d'acompte",
+    // Mention required on a self-billed invoice (art. 242 nonies A CGI).
+    self-billed: "Autofacturation",
   ),
 
   /// Address-related designations
@@ -54,11 +59,13 @@
     delivery-note-number: "N° de bon de livraison",
     delivery-address: "Adresse de livraison",
     preceding-invoice-number: "N° facture rectifiée",
+    preceding-invoice-date: "Date de la facture rectifiée",
     due-date: "Date d'échéance",
     payment-reference: "Référence de paiement",
     contact-person: "Personne de contact",
     contact-phone: "Téléphone",
     contact-email: "E-mail",
+    payee: "Bénéficiaire du paiement",
   ),
 
   /// Column headers and labels for the line-items table
@@ -76,6 +83,8 @@
     surcharge: "Supplément",
     subtotal: "Sous-total",
     prepayment: "Acompte",
+    conjunction: "et",
+    origin: "Pays d'origine",
   ),
 
   /// Labels for the summary section (footer of the table)
@@ -99,6 +108,13 @@
     unit: "Unité pour tous les articles :",
     quantity: "Quantité pour tous les articles :",
     date: "Date de prestation pour tous les articles :",
+  ),
+
+  tax-exemption: (
+    reverse-charge: "Autoliquidation",
+    intra-community: "Livraison intracommunautaire exonérée de TVA",
+    export: "Exportation exonérée de TVA",
+    outside-scope: "Opération non soumise à la TVA",
   ),
 
   units: (
@@ -131,6 +147,37 @@
     reference: "Référence",
   ),
 
+  /// Texts of the payment means besides the bank details
+  payment-means: (
+    method: "Mode de paiement",
+    transfer: "Virement",
+    direct-debit: "Prélèvement",
+    sepa-direct-debit: "Prélèvement SEPA",
+    card: "Paiement par carte",
+    credit-card: "Carte de crédit",
+    debit-card: "Carte de débit",
+    cash: "Espèces",
+    cheque: "Chèque",
+    online: "Paiement en ligne",
+    mandate: "Référence unique du mandat",
+    creditor-id: "Identifiant créancier",
+    debtor-iban: "Votre IBAN",
+    card-number: "Numéro de carte",
+    card-holder: "Titulaire de la carte",
+    paid: (
+      sum,
+      date,
+    ) => [Le montant total de *#sum* a été payé#if date != none [ le #date].],
+    paid-due: (
+      sum,
+      date,
+    ) => [Le montant restant dû de *#sum* a été payé#if date != none [ le #date].],
+    paid-credit: (
+      sum,
+      date,
+    ) => [Nous vous avons versé le montant de *#sum*#if date != none [ le #date].],
+  ),
+
   /// Text blocks for payment terms
   payment: (
     text: (
@@ -141,6 +188,27 @@
       sum,
       deadline,
     ) => [Veuillez transférer le montant restant dû de *#sum* #deadline sur le compte indiqué ci-dessous.],
+    text-direct-debit: (
+      sum,
+      deadline,
+    ) => [Le montant total de *#sum* sera prélevé sur votre compte #deadline.],
+    text-direct-debit-due: (
+      sum,
+      deadline,
+    ) => [Le montant restant dû de *#sum* sera prélevé sur votre compte #deadline.],
+    text-card: (
+      sum,
+      deadline,
+    ) => [Le montant total de *#sum* sera débité de votre carte #deadline.],
+    text-card-due: (
+      sum,
+      deadline,
+    ) => [Le montant restant dû de *#sum* sera débité de votre carte #deadline.],
+    cash-discount: (
+      percent,
+      deadline,
+      basis,
+    ) => [En cas de paiement #deadline, un escompte de #percent#if basis != none [ sur #basis] est accordé.],
 
     deadline-date: date => ("au plus tard le", date).join(" "),
     deadline-days: days => (
@@ -149,6 +217,11 @@
       "jours",
     ).join(" "),
     deadline-soon: "dès réception",
+    text-credit: (
+      sum,
+      deadline,
+    ) => [Nous vous virerons le montant de *#sum* #deadline sur le compte indiqué ci-dessous.],
+    deadline-soon-credit: "sans délai",
   ),
 
   /// Greetings and signature area

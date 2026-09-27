@@ -1,5 +1,5 @@
 #import "../loom-wrapper.typ": loom, managed-motif
-#import "../zugferd/build.typ": build-zugferd-xml
+#import "../logic/payment-means.typ": resolve as resolve-payment-means
 
 /// The internal root container that wraps the invoice body.
 /// It initializes the global context and provides the base document structure to the theme.
@@ -70,6 +70,7 @@
 
       ensure("theme", "document", (.., body) => body)
       ensure("zugferd", none)
+      ensure("zugferd-errors", "panic")
 
       // Internally Calculated
       nest("global", {
@@ -99,13 +100,11 @@
       )
       let line-items = all-line-itmes.first(default: (:))
 
-      let bank-signal = loom
-        .query
-        .collect-signals(
-          children,
-          kind: "bank-details",
-        )
-        .first(default: none)
+      let bank-signals = loom.query.collect-signals(
+        children,
+        kind: "bank-details",
+      )
+      let bank-signal = bank-signals.first(default: none)
 
       let all-payment-goals = loom.query.collect-signals(
         children,
@@ -116,6 +115,45 @@
         message: "There can only be one `payment-goal` element in the document!",
       )
       let payment-goal-signal = all-payment-goals.first(default: none)
+
+      // The payment means: each bank details are an account of a credit
+      // transfer; a direct debit, a payment card and `paid` occur once.
+      let payment-means-signals = (:)
+      for kind in ("direct-debit", "card-payment", "paid") {
+        let signals = loom.query.collect-signals(children, kind: kind)
+        assert(
+          signals.len() <= 1,
+          message: "There can only be one `"
+            + kind
+            + "` element in the document!",
+        )
+        payment-means-signals.insert(kind, signals.first(default: none))
+      }
+      assert(
+        payment-means-signals.paid == none or payment-goal-signal == none,
+        message: "An invoice that is `paid` has no `payment-goal`: nothing is left to pay. Remove the `payment-goal`.",
+      )
+      // Nor payment terms of its own: a text as `due-date` (e.g. "sofort")
+      // would be printed and stated as the payment terms (BT-20) instead of
+      // the sentence that the invoice is paid. A date is the due date the
+      // payment met.
+      let due-date = ctx.at("due-date", default: none)
+      if (
+        payment-means-signals.paid != none
+          and type(due-date) in (str, content)
+          and due-date not in ("", [])
+      ) {
+        assert(
+          false,
+          message: "An invoice that is `paid` has no payment terms: nothing is left to pay, but `due-date` is a text of payment terms. Remove `due-date`, or give the date the payment was due as a `datetime`.",
+        )
+      }
+      let payment-means = resolve-payment-means(
+        bank-signals,
+        payment-means-signals.direct-debit,
+        payment-means-signals.card-payment,
+        payment-means-signals.paid,
+      )
 
       let item-data = loom.mutator.batch(
         line-items.at("item-data", default: (:)),
@@ -138,12 +176,14 @@
         total: line-items.at("total", default: (:)),
         formated-total: line-items.at("formated-total", default: (:)),
         bank: bank-signal,
+        payment-means: payment-means,
       )
 
       let view = (
         item-data: item-data,
         payment-goal: payment-goal-signal,
         bank: bank-signal,
+        payment-means: payment-means,
         total: line-items.at("total", default: (:)),
         formated-total: line-items.at("formated-total", default: (:)),
       )
@@ -187,11 +227,16 @@
         public-references.delivery-note-nr,
         public-references.delivery-address,
         public-references.preceding-invoice-nr,
+        public-references.preceding-invoice-date,
         public-references.due-date,
         public-references.payment-reference,
         public-references.contact-person,
         public-references.contact-phone,
         public-references.contact-email,
+        public-references.seller-tax-nr,
+        public-references.seller-vat-id,
+        public-references.buyer-vat-id,
+        public-references.payee,
       )
       let all-preset-fns = (
         public-references.preset-b2b,
@@ -298,18 +343,87 @@
           )
       )
 
+      let body = body
       if ctx.zugferd != none {
-        pdf.attach(
-          "/factur-x.xml",
-          build-zugferd-xml(
-            ctx,
-            view.item-data,
-            view.payment-goal,
-          ),
-          relationship: "alternative",
-          mime-type: "text/xml",
-          description: "ZUGFeRD / Factur-X invoice data",
+        // Loaded here rather than at the top of the module, so that invoices
+        // without an e-invoice do not load the e-invoice modules (code lists,
+        // validator, serializer) at all.
+        import "../zugferd/zugferd.typ": process-zugferd
+        import "../logic/printed.typ": printed-record
+
+        // What the printed invoice shows besides the components, for the
+        // checks that it states what the e-invoice states.
+        let printed = printed-record(
+          ctx.theme,
+          ctx.references,
+          ctx.sender,
+          ctx.recipient,
+          body,
         )
+        let result = process-zugferd(
+          ctx + (printed: printed),
+          view.item-data,
+          payment-goal: view.payment-goal,
+          bank: view.bank,
+          payment-means: view.payment-means,
+        )
+        let errors = result.diagnostics.filter(d => d.level == "error")
+        // The report module loads only when there is something to report.
+        if errors.len() > 0 and ctx.zugferd-errors == "panic" {
+          import "../zugferd/report.typ": format-report
+          assert(false, message: format-report(result))
+        }
+
+        // The e-invoice is "factur-x.xml", or "xrechnung.xml" in the
+        // XRECHNUNG profile (`file-name` of the profile). With errors,
+        // "report" attaches the XML as a draft: under a name that no
+        // receiving software takes for the e-invoice and only as
+        // supplementary data. "ignore" skips the check on purpose and
+        // attaches the XML like a valid one.
+        let draft = errors.len() > 0 and ctx.zugferd-errors == "report"
+        // MINIMUM and BASIC WL do not replace the visual invoice either, so
+        // their XML is attached as data rather than as an alternative of it.
+        let as-data = draft or result.profile.id in ("minimum", "basic-wl")
+        pdf.attach(
+          if draft { "/invoice-draft.xml" } else {
+            "/" + result.profile.at("file-name", default: "factur-x.xml")
+          },
+          result.xml,
+          relationship: if as-data { "data" } else { "alternative" },
+          mime-type: "text/xml",
+          description: if draft {
+            "Draft of the ZUGFeRD / Factur-X invoice data with errors, not a valid e-invoice"
+          } else { "ZUGFeRD / Factur-X invoice data" },
+        )
+
+        if ctx.zugferd-errors == "report" and result.diagnostics.len() > 0 {
+          import "../zugferd/report.typ": format-report, render-zugferd-report
+          let render-report = ctx.theme.at(
+            "zugferd-report",
+            default: render-zugferd-report,
+          )
+          assert(
+            render-report == none or type(render-report) == function,
+            message: "theme::zugferd-report must be `none` or a function `(ctx, result) => content`, got "
+              + repr(render-report),
+          )
+          // Whatever the hook returns is shown as content. A theme without
+          // a report (`zugferd-report: none`, or a hook that returns
+          // nothing) must not hide errors: they stop the compilation as with
+          // "panic", so no invalid e-invoice goes out unnoticed.
+          let report = if render-report != none {
+            render-report(ctx, result)
+          }
+          if report in (none, "", []) {
+            assert(
+              errors.len() == 0,
+              message: "The theme shows no e-invoice report (theme::zugferd-report is `none` or returns nothing), so the errors below stop the compilation even with `zugferd-errors: \"report\"`.\n"
+                + format-report(result),
+            )
+          } else {
+            body = [#report] + body
+          }
+        }
       }
 
       (ctx.theme.document)(ctx, body)

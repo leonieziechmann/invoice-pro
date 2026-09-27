@@ -25,6 +25,10 @@
 
   document: (
     invoice: "Invoice",
+    credit-note: "Credit Note",
+    corrected: "Corrected Invoice",
+    prepayment: "Prepayment Invoice",
+    self-billed: "Self-Billing Invoice",
   ),
 
   address: (
@@ -50,11 +54,13 @@
     delivery-note-number: "Delivery Note No.",
     delivery-address: "Delivery Address",
     preceding-invoice-number: "Preceding Invoice No.",
+    preceding-invoice-date: "Preceding Invoice Date",
     due-date: "Due Date",
     payment-reference: "Payment Reference",
     contact-person: "Contact Person",
     contact-phone: "Phone",
     contact-email: "Email",
+    payee: "Payee",
   ),
 
   line-items: (
@@ -71,6 +77,8 @@
     surcharge: "Surcharge",
     subtotal: "Subtotal",
     prepayment: "Prepayment",
+    conjunction: "and",
+    origin: "Country of origin",
   ),
 
   summary: (
@@ -123,6 +131,39 @@
     reference: "Reference",
   ),
 
+  payment-means: (
+    method: "Payment method",
+    transfer: "Bank transfer",
+    direct-debit: "Direct debit",
+    sepa-direct-debit: "SEPA direct debit",
+    card: "Card payment",
+    credit-card: "Credit card",
+    debit-card: "Debit card",
+    cash: "Cash",
+    cheque: "Cheque",
+    online: "Online payment",
+    mandate: "Mandate reference",
+    creditor-id: "Creditor identifier",
+    debtor-iban: "Your IBAN",
+    card-number: "Card number",
+    card-holder: "Cardholder",
+    paid: (
+      sum,
+      date,
+    ) => if date
+      == none [The total amount of *#sum* has been paid.] else [The total amount of *#sum* was paid on #date.],
+    paid-due: (
+      sum,
+      date,
+    ) => if date
+      == none [The amount due of *#sum* has been paid.] else [The amount due of *#sum* was paid on #date.],
+    paid-credit: (
+      sum,
+      date,
+    ) => if date
+      == none [We have paid the amount of *#sum* to you.] else [We paid the amount of *#sum* to you on #date.],
+  ),
+
   payment: (
     text: (
       sum,
@@ -132,6 +173,27 @@
       sum,
       deadline,
     ) => [Please transfer the amount due of *#sum* #deadline to the account listed below.],
+    text-direct-debit: (
+      sum,
+      deadline,
+    ) => [The total amount of *#sum* will be collected from your account by direct debit #deadline.],
+    text-direct-debit-due: (
+      sum,
+      deadline,
+    ) => [The amount due of *#sum* will be collected from your account by direct debit #deadline.],
+    text-card: (
+      sum,
+      deadline,
+    ) => [The total amount of *#sum* will be charged to your card #deadline.],
+    text-card-due: (
+      sum,
+      deadline,
+    ) => [The amount due of *#sum* will be charged to your card #deadline.],
+    cash-discount: (
+      percent,
+      deadline,
+      basis,
+    ) => [For payment #deadline, a cash discount of #percent#if basis != none [ on #basis] is granted.],
     deadline-date: date => ("no later than", date).join(" "),
     deadline-days: days => (
       "within",
@@ -139,6 +201,11 @@
       "days",
     ).join(" "),
     deadline-soon: "upon receipt",
+    text-credit: (
+      sum,
+      deadline,
+    ) => [We will transfer the amount of *#sum* #deadline to the account listed below.],
+    deadline-soon-credit: "promptly",
   ),
 
   signature: (

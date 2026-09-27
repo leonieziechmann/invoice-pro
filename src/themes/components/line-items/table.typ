@@ -506,7 +506,10 @@
           [#item.quantity]
         }
       } else if key == "unit-price" { item.price } else if key == "tax-rate" {
-        [#item.tax.rate #item.tax.category]
+        // The marker of the item's own exemption ground, if its category
+        // has items exempt for different reasons.
+        let marker = item.tax.at("marker", default: none)
+        [#item.tax.rate #item.tax.category#if marker != none { super[#marker] }]
       } else if key == "total-price" {
         if has-mods and "unmodified-total" in item {
           item.unmodified-total

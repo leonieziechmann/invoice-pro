@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Performance gate of the e-invoice path: compares traced compiles of
+# benchmark invoices with and without e-invoice against the budget of the
+# concept (tools/perf/gate.py). See tests/TESTING.md.
+#
+# Usage: perf-gate [--runs 5] [--nightly] [--plain-limit-ms MS] [--yellow-fails]
+#
+# Needs Python 3 ($PYTHON, default python3; standard library only) and Typst
+# ($TYPST_BIN, default typst). The Nix app `nix run .#perf-gate` provides both.
+set -euo pipefail
+
+if [ ! -f "typst.toml" ]; then
+  echo "Error: perf-gate must be run from the root of the invoice-pro repository." >&2
+  exit 1
+fi
+
+PYTHON="${PYTHON:-python3}"
+"$PYTHON" -m unittest discover --quiet -s tools/perf -p 'test_gate.py'
+exec "$PYTHON" tools/perf/gate.py "$@"

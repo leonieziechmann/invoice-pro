@@ -78,87 +78,55 @@
 
 // --- Test ZUGFeRD address lines formatting ---
 #{
-  import "/src/zugferd/build.typ": (
-    build-buyer-trade-party, build-seller-trade-party,
-  )
+  import "/src/zugferd/build.typ": build-buyer-trade-party, build-postal-address
+  import "/src/zugferd/model.typ": party-model
+  import "/src/zugferd/profile.typ": resolve-profile
+  import "/src/logic/country.typ": normalize-party
 
-  // 1. Test Seller Trade Party with single string address
-  let seller-single = build-seller-trade-party(
-    "Name",
-    "Street 1",
-    "City",
-    "12345",
-    "DE",
-    "12/345/6789",
-    "DE987654321",
-    true,
-  )
-  assert.eq(
-    seller-single.at("ram:PostalTradeAddress").at("ram:LineOne"),
-    "Street 1",
-  )
-  assert.eq(
-    seller-single.at("ram:PostalTradeAddress").at("ram:LineTwo", default: none),
-    none,
-  )
+  let party(address) = party-model(normalize-party(
+    (
+      name: "Name",
+      address: address,
+      city: "12345 City",
+      vat-id: "DE987654321",
+    ),
+    "de",
+  ))
+  let postal(address) = build-postal-address(party(address).address)
 
-  // 2. Test Seller Trade Party with array address <= 3 elements
-  let seller-array-3 = build-seller-trade-party(
-    "Name",
-    ("Street 1", "Suite 100", "Floor 3"),
-    "City",
-    "12345",
-    "DE",
-    "12/345/6789",
-    "DE987654321",
-    true,
-  )
+  // 1. A single string address maps to ram:LineOne, in XSD order
+  let single = postal("Street 1")
+  assert.eq(single.at("ram:LineOne"), "Street 1")
+  assert.eq(single.at("ram:LineTwo", default: none), none)
   assert.eq(
-    seller-array-3.at("ram:PostalTradeAddress").at("ram:LineOne"),
-    "Street 1",
+    single.keys(),
+    ("ram:PostcodeCode", "ram:LineOne", "ram:CityName", "ram:CountryID"),
   )
-  assert.eq(
-    seller-array-3.at("ram:PostalTradeAddress").at("ram:LineTwo"),
-    "Suite 100",
-  )
-  assert.eq(
-    seller-array-3.at("ram:PostalTradeAddress").at("ram:LineThree"),
-    "Floor 3",
-  )
+  assert.eq(single.at("ram:PostcodeCode"), "12345")
+  assert.eq(single.at("ram:CityName"), "City")
+  assert.eq(single.at("ram:CountryID"), "DE")
 
-  // 3. Test Seller Trade Party with array address > 3 elements
-  let seller-array-4 = build-seller-trade-party(
-    "Name",
-    ("Street 1", "Suite 100", "Floor 3", "Apartment 4B"),
-    "City",
-    "12345",
-    "DE",
-    "12/345/6789",
-    "DE987654321",
-    true,
-  )
-  assert.eq(
-    seller-array-4.at("ram:PostalTradeAddress").at("ram:LineOne"),
-    "Street 1",
-  )
-  assert.eq(
-    seller-array-4.at("ram:PostalTradeAddress").at("ram:LineTwo"),
-    "Suite 100",
-  )
-  assert.eq(
-    seller-array-4.at("ram:PostalTradeAddress").at("ram:LineThree"),
-    "Floor 3, Apartment 4B",
-  )
+  // 2. An array address with <= 3 elements maps to one line each
+  let array-3 = postal(("Street 1", "Suite 100", "Floor 3"))
+  assert.eq(array-3.at("ram:LineOne"), "Street 1")
+  assert.eq(array-3.at("ram:LineTwo"), "Suite 100")
+  assert.eq(array-3.at("ram:LineThree"), "Floor 3")
 
-  // 4. Test Buyer Trade Party with array address
+  // 3. Further elements are joined into ram:LineThree
+  let array-4 = postal(("Street 1", "Suite 100", "Floor 3", "Apartment 4B"))
+  assert.eq(array-4.at("ram:LineOne"), "Street 1")
+  assert.eq(array-4.at("ram:LineTwo"), "Suite 100")
+  assert.eq(array-4.at("ram:LineThree"), "Floor 3, Apartment 4B")
+
+  // 4. Content lines are written as their plain text
+  let styled = postal(([*Street* 1], [Suite #h(1em) 100]))
+  assert.eq(styled.at("ram:LineOne"), "Street 1")
+  assert.eq(styled.at("ram:LineTwo"), "Suite 100")
+
+  // 5. Buyer Trade Party with array address
   let buyer-array = build-buyer-trade-party(
-    "Name",
-    ("Street A", "Suite B"),
-    "City",
-    "54321",
-    "FR",
-    "FR123456789",
-    true,
+    party(("Street A", "Suite B")),
+    resolve-profile("en16931", "FR"),
   )
   assert.eq(
     buyer-array.at("ram:PostalTradeAddress").at("ram:LineOne"),
@@ -271,6 +239,10 @@
     build-allowance-charge, build-header-allowance-charges, build-line-item,
     build-monetary-summation,
   )
+  import "/src/zugferd/model.typ": document-allowance-charges, line-model
+  import "/src/zugferd/profile.typ": resolve-profile
+
+  let profile = resolve-profile("en16931", "FR")
 
   // 1. build-allowance-charge: ActualAmount is always a positive magnitude —
   //    ChargeIndicator alone carries the discount/surcharge sign.
@@ -314,18 +286,39 @@
     ),
   )
 
-  // 3. build-header-allowance-charges fans a global modifier's per-tax-category
-  //    `split` out into one SpecifiedTradeAllowanceCharge per category (BR-53).
+  // 3. A reason is mandatory (BR-33, BR-38) even if the modifier name has no
+  //    text, and amounts not subject to VAT carry no rate (BR-O-06, BR-O-07).
+  let unnamed = build-allowance-charge(
+    false,
+    decimal("5"),
+    [],
+    tax-category: "O",
+    tax-rate: 0%,
+  )
+  assert.eq(unnamed.at("ram:Reason"), "Discount")
+  assert.eq(unnamed.at("ram:CategoryTradeTax"), (
+    "ram:TypeCode": "VAT",
+    "ram:CategoryCode": "O",
+  ))
+  assert.eq(
+    build-allowance-charge(true, decimal("5"), none).at("ram:Reason"),
+    "Surcharge",
+  )
+
+  // 4. A global modifier's per-tax-category `split` is fanned out into one
+  //    SpecifiedTradeAllowanceCharge per category (BR-53).
   let discounts = (
     (
       name: "Volume Discount",
       split: (
         "19-S": (tax: (rate: 19%, category: "S"), absolute: decimal("-10.00")),
-        "7-AA": (tax: (rate: 7%, category: "AA"), absolute: decimal("-5.00")),
+        "7-S": (tax: (rate: 7%, category: "S"), absolute: decimal("-5.00")),
       ),
     ),
   )
-  let header-entries = build-header-allowance-charges(discounts, ())
+  let header-entries = build-header-allowance-charges(
+    document-allowance-charges(discounts, ()),
+  )
   assert.eq(header-entries.len(), 2)
   for entry in header-entries {
     assert.eq(entry.at("ram:ChargeIndicator"), ("udt:Indicator": "false"))
@@ -335,8 +328,60 @@
     ("10.00", "5.00").sorted(),
   )
 
-  // 4. build-line-item embeds line-level SpecifiedTradeAllowanceCharge between
+  // 5. With gross amounts (tax-mode "inclusive"), the parts are stated with
+  //    the net amounts of logic/net-amounts.typ, which add up to the taxable
+  //    amount of each category.
+  import "/src/logic/net-amounts.typ": net-amounts
+  let nets = net-amounts(
+    (),
+    (
+      "19-S": (basis: decimal("-8.40")),
+      "7-S": (basis: decimal("-4.67")),
+    ),
+    discounts,
+  )
+  assert.eq(
+    document-allowance-charges(discounts, (), nets: nets.modifiers).map(e => {
+      e.amount
+    }),
+    (decimal("8.40"), decimal("4.67")),
+  )
+  // No net amount of an allowance or charge turns to 0, which the XML would
+  // leave out: the unit the rounded amounts exceed goes to another one. A
+  // line may turn to 0 (`nonzero: false`), as it was rounded furthest up.
+  import "/src/logic/net-amounts.typ": allocate
+  assert.eq(allocate((decimal("0.006"), decimal("5")), decimal("5")), (
+    decimal("0.01"),
+    decimal("4.99"),
+  ))
+  assert.eq(
+    allocate(
+      (decimal("0.006"), decimal("5")),
+      decimal("5"),
+      nonzero: (false, true),
+    ),
+    (decimal("0.00"), decimal("5.00")),
+  )
+
+  // 6. build-line-item embeds line-level SpecifiedTradeAllowanceCharge between
   //    ApplicableTradeTax and the monetary summation, only when non-empty.
+  let widget(..fields) = line-model(
+    (
+      pos: "1",
+      name: "Widget",
+      price: decimal("100.00"),
+      quantity: decimal("1"),
+      base-quantity: decimal("1"),
+      unit: "C62",
+      tax: (rate: 19%, category: "S"),
+      total: decimal("100.00"),
+      discounts: (),
+      surcharge: (),
+      item-id: none,
+    )
+      + fields.named(),
+    0,
+  )
   let item-discounts = (
     (
       name: "Rebate",
@@ -357,17 +402,12 @@
   )
 
   let line-with-modifiers = build-line-item(
-    1,
-    "Widget",
-    none,
-    decimal("100.00"),
-    decimal("1"),
-    "C62",
-    "S",
-    19%,
-    decimal("95.00"),
-    item-discounts,
-    item-surcharges,
+    widget(
+      total: decimal("95.00"),
+      discounts: item-discounts,
+      surcharge: item-surcharges,
+    ),
+    profile,
   )
   assert.eq(
     line-with-modifiers.at("ram:SpecifiedLineTradeAgreement").keys(),
@@ -385,19 +425,7 @@
   )
   assert.eq(settlement.at("ram:SpecifiedTradeAllowanceCharge").len(), 2)
 
-  let line-without-modifiers = build-line-item(
-    1,
-    "Widget",
-    none,
-    decimal("100.00"),
-    decimal("1"),
-    "C62",
-    "S",
-    19%,
-    decimal("100.00"),
-    (),
-    (),
-  )
+  let line-without-modifiers = build-line-item(widget(), profile)
   assert.eq(
     line-without-modifiers.at("ram:SpecifiedLineTradeSettlement").keys(),
     (
@@ -406,16 +434,66 @@
     ),
   )
 
-  // 5. build-monetary-summation: LineTotalAmount vs TaxBasisTotalAmount only
-  //    diverge (and Charge/AllowanceTotalAmount only appear) when there are
-  //    document-level allowances/charges (BR-CO-13).
+  // 7. A price per base quantity (BT-149) is stated with the unit of the
+  //    billed quantity, and prices keep their decimals (BT-146).
+  let per-hundred = build-line-item(
+    widget(
+      price: decimal("4.9912"),
+      quantity: decimal("250"),
+      base-quantity: decimal("100"),
+      unit: "H87",
+      total: decimal("12.48"),
+    ),
+    profile,
+  )
+  assert.eq(
+    per-hundred
+      .at("ram:SpecifiedLineTradeAgreement")
+      .at("ram:NetPriceProductTradePrice"),
+    (
+      "ram:ChargeAmount": "4.9912",
+      "ram:BasisQuantity": ("@unitCode": "H87", "": "100.00"),
+    ),
+  )
+  assert.eq(per-hundred.at("ram:SpecifiedLineTradeDelivery"), (
+    "ram:BilledQuantity": ("@unitCode": "H87", "": "250.00"),
+  ))
+
+  // 8. BR-27: a negative price is written as a positive price of a negative
+  //    quantity, which keeps the line total.
+  let refund = widget(
+    price: decimal("-50"),
+    quantity: decimal("2"),
+    total: decimal("-100"),
+  )
+  assert.eq(
+    (refund.price, refund.quantity, refund.net),
+    (decimal("50"), decimal("-2"), decimal("-100")),
+  )
+
+  // 9. Lines not subject to VAT carry no rate (BR-O-05).
+  assert.eq(
+    build-line-item(widget(tax: (rate: 0%, category: "O")), profile)
+      .at("ram:SpecifiedLineTradeSettlement")
+      .at("ram:ApplicableTradeTax"),
+    ("ram:TypeCode": "VAT", "ram:CategoryCode": "O"),
+  )
+
+  // 10. build-monetary-summation: LineTotalAmount vs TaxBasisTotalAmount only
+  //     diverge (and Charge/AllowanceTotalAmount only appear) when there are
+  //     document-level allowances/charges (BR-CO-13).
+  let totals(line, net, gross, tax, allowance, charge, prepaid: 0) = (
+    line: decimal(line),
+    net: decimal(net),
+    gross: decimal(gross),
+    tax: decimal(tax),
+    allowance: decimal(allowance),
+    charge: decimal(charge),
+    prepaid: decimal(prepaid),
+    due: decimal(gross) - decimal(prepaid),
+  )
   let summation-plain = build-monetary-summation(
-    decimal("1000.00"),
-    decimal("1000.00"),
-    decimal("1190.00"),
-    decimal("190.00"),
-    decimal("0"),
-    decimal("0"),
+    totals("1000.00", "1000.00", "1190.00", "190.00", "0", "0"),
     "EUR",
   )
   assert.eq(
@@ -430,12 +508,7 @@
   )
 
   let summation-modified = build-monetary-summation(
-    decimal("1000.00"),
-    decimal("950.00"),
-    decimal("1130.50"),
-    decimal("180.50"),
-    decimal("100.00"),
-    decimal("50.00"),
+    totals("1000.00", "950.00", "1130.50", "180.50", "100.00", "50.00"),
     "EUR",
   )
   assert.eq(
@@ -455,18 +528,20 @@
   assert.eq(summation-modified.at("ram:ChargeTotalAmount"), "50.00")
   assert.eq(summation-modified.at("ram:AllowanceTotalAmount"), "100.00")
 
-  // 6. build-monetary-summation without breakdown (MINIMUM profile): only
-  //    BT-109, BT-110, BT-112 and BT-115; the amount due still subtracts
-  //    prepayments although TotalPrepaidAmount (BT-113) is omitted.
+  // 11. build-monetary-summation without breakdown (MINIMUM profile): only
+  //     BT-109, BT-110, BT-112 and BT-115; the amount due still subtracts
+  //     prepayments although TotalPrepaidAmount (BT-113) is omitted.
   let summation-minimum = build-monetary-summation(
-    decimal("1000.00"),
-    decimal("950.00"),
-    decimal("1130.50"),
-    decimal("180.50"),
-    decimal("100.00"),
-    decimal("50.00"),
+    totals(
+      "1000.00",
+      "950.00",
+      "1130.50",
+      "180.50",
+      "100.00",
+      "50.00",
+      prepaid: "300.00",
+    ),
     "EUR",
-    prepaid-total: decimal("300.00"),
     include-breakdown: false,
   )
   assert.eq(
@@ -485,6 +560,8 @@
 #{
   import "/src/utils/coercion.typ": to-item-id
   import "/src/zugferd/build.typ": build-line-item
+  import "/src/zugferd/model.typ": line-model
+  import "/src/zugferd/profile.typ": resolve-profile
 
   // 1. A plain string is the seller's article number, never a GTIN; dictionary
   //    item-ids are kept instead of being dropped.
@@ -506,19 +583,24 @@
   assert.eq(to-item-id(none), none)
   assert.eq(to-item-id(auto), auto)
 
-  let product(item-id, ..args) = build-line-item(
-    1,
-    "Widget",
-    to-item-id(item-id),
-    decimal("100.00"),
-    decimal("1"),
-    "C62",
-    "S",
-    19%,
-    decimal("100.00"),
-    (),
-    (),
-    ..args,
+  let product(item-id, profile: "en16931") = build-line-item(
+    line-model(
+      (
+        pos: "1",
+        name: "Widget",
+        price: decimal("100.00"),
+        quantity: decimal("1"),
+        base-quantity: decimal("1"),
+        unit: "C62",
+        tax: (rate: 19%, category: "S"),
+        total: decimal("100.00"),
+        discounts: (),
+        surcharge: (),
+        item-id: to-item-id(item-id),
+      ),
+      0,
+    ),
+    resolve-profile(profile, "FR"),
   ).at("ram:SpecifiedTradeProduct")
 
   // 2. IDs follow the TradeProduct XSD sequence and precede ram:Name.
@@ -692,20 +774,15 @@
     (date: datetime(year: 2026, month: 7, day: 9), period: none),
   )
 
-  // 3. Items with single shared date
+  // 3. Items with single shared date and an undated item, which does not
+  // count (as for the printed service period)
   assert.eq(
     determine-delivery-dates(ctx, (
       (name: "A", date: datetime(year: 2026, month: 7, day: 1)),
       (name: "B", date: datetime(year: 2026, month: 7, day: 1)),
-      (name: "C", date: auto), // resolves to invoice date
+      (name: "C", date: auto),
     )),
-    (
-      date: none,
-      period: (
-        datetime(year: 2026, month: 7, day: 1),
-        datetime(year: 2026, month: 7, day: 9),
-      ),
-    ),
+    (date: datetime(year: 2026, month: 7, day: 1), period: none),
   )
 
   // 4. Items with single shared date (without auto falling back to invoice-date)
@@ -742,6 +819,7 @@
 // --- Test dynamic references module ---
 #{
   import "/src/public/references.typ"
+  import "/src/utils/text.typ": plain-text
 
   let mock-locale = (
     strings: (
@@ -786,10 +864,30 @@
     "INV-001",
   ))
   assert.eq((references.invoice-date())(mock-ctx), ("Mock Date", "2026-7-15"))
-  assert.eq((references.service-time())(mock-ctx), (
+  // The service period is marked, so that the e-invoice finds it among the
+  // printed references whatever its title (IP-PERIOD-01)
+  let service-time(..args) = {
+    let (title, value) = (references.service-time(..args))(mock-ctx)
+    assert.eq(value.at("label", default: none), <invoice-pro:service-period>)
+    (title, plain-text(value))
+  }
+  assert.eq(service-time(), (
     "Mock Service Time",
     "2026-7-10 " + sym.dash + " 2026-7-14",
   ))
+  // A date or period given as `value` is printed in the date format
+  assert.eq(
+    service-time(value: datetime(year: 2026, month: 6, day: 30)),
+    ("Mock Service Time", "2026-6-30"),
+  )
+  assert.eq(
+    service-time(value: (
+      datetime(year: 2026, month: 6, day: 1),
+      datetime(year: 2026, month: 6, day: 30),
+    )),
+    ("Mock Service Time", "2026-6-1 " + sym.dash + " 2026-6-30"),
+  )
+  assert.eq((references.service-time(value: none))(mock-ctx).last(), none)
 
   // 2. Test resolution with overrides
   assert.eq(
@@ -809,18 +907,70 @@
     "Custom Date Label",
     "2026-7-15",
   ))
-  assert.eq((references.service-time(value: "Custom Service Time"))(mock-ctx), (
-    "Mock Service Time",
-    "Custom Service Time",
-  ))
+  // A text of its own is marked apart from dates
+  let (title, custom) = (references.service-time(value: "Custom Service Time"))(
+    mock-ctx,
+  )
+  assert.eq(
+    (title, plain-text(custom)),
+    (
+      "Mock Service Time",
+      "Custom Service Time",
+    ),
+  )
+  assert.eq(
+    custom.at("label", default: none),
+    <invoice-pro:service-period-text>,
+  )
 
   // 3. Test service-time fallback to invoice-date when no items/dates are present
   let mock-ctx-no-dates = mock-ctx
   mock-ctx-no-dates.items = ()
-  assert.eq((references.service-time())(mock-ctx-no-dates), (
-    "Mock Service Time",
+  assert.eq(
+    plain-text((references.service-time())(mock-ctx-no-dates).last()),
     "2026-7-15",
+  )
+
+  // 4. The seller's and the buyer's tax identifiers: the sender's and the
+  // recipient's, and on a self-billed invoice, which the buyer issues, the
+  // recipient's and the sender's, with the label of the party
+  let labels = (
+    tax-number: "Tax ID",
+    vat-id: "VAT ID",
+    recipient-tax-number: "Buyer Tax ID",
+    recipient-vat-id: "Buyer VAT ID",
+    payee: "Payee",
+  )
+  let party-ctx = (
+    locale: (strings: (reference: labels)),
+    sender: (tax-nr: "S-TAX", vat-id: "DE1"),
+    recipient: (tax-nr: "R-TAX", vat-id: "FR2"),
+  )
+  let self-billed = (
+    party-ctx
+      + (document-type: (self-billed: true, credit: false, sender-pays: true))
+  )
+  let refs(ctx) = (
+    (references.seller-tax-nr())(ctx),
+    (references.seller-vat-id())(ctx),
+    (references.buyer-vat-id())(ctx),
+  )
+  assert.eq(refs(party-ctx), (
+    ("Tax ID", "S-TAX"),
+    ("VAT ID", "DE1"),
+    ("Buyer VAT ID", "FR2"),
   ))
+  assert.eq(refs(self-billed), (
+    ("Buyer Tax ID", "R-TAX"),
+    ("Buyer VAT ID", "FR2"),
+    ("VAT ID", "DE1"),
+  ))
+  // The payee on one line, `none` without one
+  assert.eq(
+    (references.payee())(party-ctx + (payee: (name: ("Factor", "Bank")))),
+    ("Payee", "Factor, Bank"),
+  )
+  assert.eq((references.payee())(party-ctx), ("Payee", none))
 }
 
 // --- Test bank-details BIC visibility ---
@@ -877,117 +1027,106 @@
 // --- Test ZUGFeRD seller trade party tax registrations (outside-scope and fallback) ---
 #{
   import "/src/zugferd/build.typ": build-seller-trade-party
+  import "/src/zugferd/model.typ": seller-model
+  import "/src/zugferd/profile.typ": resolve-profile
+  import "/src/logic/country.typ": normalize-party
+
+  let seller(outside-scope: false, ..fields) = build-seller-trade-party(
+    seller-model(
+      normalize-party(
+        (
+          name: "Seller GmbH",
+          address: ("Street 1",),
+          city: "80339 München",
+        )
+          + fields.named(),
+        "de",
+      ),
+      use-vat-id: not outside-scope,
+    ),
+    resolve-profile("en16931", "FR"),
+  )
+  let registrations(party) = party.at(
+    "ram:SpecifiedTaxRegistration",
+    default: none,
+  )
 
   // 1. Both vat-id and tax-nr provided (standard case)
-  let party-both = build-seller-trade-party(
-    "Seller GmbH",
-    ("Street 1",),
-    "München",
-    "80339",
-    "DE",
-    "123/456/78901",
-    "DE123456789",
-    true,
-    is-outside-scope: false,
-  )
-  assert.eq(party-both.at("ram:SpecifiedTaxRegistration", default: none), (
+  let party-both = seller(tax-nr: "123/456/78901", vat-id: "DE123456789")
+  assert.eq(registrations(party-both), (
     ("ram:ID": ("@schemeID": "VA", "": "DE123456789")),
     ("ram:ID": ("@schemeID": "FC", "": "123/456/78901")),
   ))
+  assert.eq(party-both.at("ram:ID", default: none), none)
 
   // 2. Only vat-id provided, not outside-scope
-  let party-vat-only = build-seller-trade-party(
-    "Seller GmbH",
-    ("Street 1",),
-    "München",
-    "80339",
-    "DE",
-    none,
-    "DE123456789",
-    true,
-    is-outside-scope: false,
-  )
-  assert.eq(party-vat-only.at("ram:SpecifiedTaxRegistration", default: none), (
+  assert.eq(registrations(seller(vat-id: "DE123456789")), (
     ("ram:ID": ("@schemeID": "VA", "": "DE123456789")),
   ))
 
-  // 3. vat-id provided, no tax-nr, is-outside-scope: true (Bug: used to panic on none.len())
-  let party-outside-scope-no-tax-nr = build-seller-trade-party(
-    "Seller GmbH",
-    ("Street 1",),
-    "München",
-    "80339",
-    "DE",
-    none,
-    "DE123456789",
-    true,
-    is-outside-scope: true,
+  // 3. vat-id provided, no tax-nr, outside-scope (used to panic on none.len())
+  let party-outside-no-tax-nr = seller(
+    vat-id: "DE123456789",
+    outside-scope: true,
   )
-  assert.eq(
-    party-outside-scope-no-tax-nr.at(
-      "ram:SpecifiedTaxRegistration",
-      default: none,
-    ),
-    none,
-  )
+  assert.eq(registrations(party-outside-no-tax-nr), none)
+  assert.eq(party-outside-no-tax-nr.at("ram:ID", default: none), none)
 
-  // 4. vat-id and tax-nr provided, is-outside-scope: true (vat-id dropped per BR-O-02, tax-nr kept)
-  let party-outside-scope-with-tax-nr = build-seller-trade-party(
-    "Seller GmbH",
-    ("Street 1",),
-    "München",
-    "80339",
-    "DE",
-    "123/456/78901",
-    "DE123456789",
-    true,
-    is-outside-scope: true,
+  // 4. vat-id and tax-nr, outside-scope: the VAT ID is dropped (BR-O-02) and
+  //    the tax number is kept, which also identifies the seller (BT-29)
+  let party-outside-with-tax-nr = seller(
+    tax-nr: "123/456/78901",
+    vat-id: "DE123456789",
+    outside-scope: true,
   )
+  assert.eq(registrations(party-outside-with-tax-nr), (
+    ("ram:ID": ("@schemeID": "FC", "": "123/456/78901")),
+  ))
   assert.eq(
-    party-outside-scope-with-tax-nr.at(
-      "ram:SpecifiedTaxRegistration",
-      default: none,
-    ),
-    (
-      ("ram:ID": ("@schemeID": "FC", "": "123/456/78901")),
-    ),
-  )
-  assert.eq(
-    party-outside-scope-with-tax-nr.at("ram:ID", default: none),
+    party-outside-with-tax-nr.at("ram:ID", default: none),
     "123/456/78901",
   )
 
   // 5. Neither vat-id nor tax-nr provided
-  let party-no-tax = build-seller-trade-party(
-    "Seller GmbH",
-    ("Street 1",),
-    "München",
-    "80339",
-    "DE",
-    none,
-    none,
-    true,
-    is-outside-scope: false,
+  assert.eq(registrations(seller()), none)
+
+  // 6. An explicit seller identifier (BT-29) needs no tax registration (#42)
+  let party-id = seller(id: "70025")
+  assert.eq(party-id.at("ram:ID"), "70025")
+  assert.eq(registrations(party-id), none)
+
+  // 7. The explicit identifier wins over the tax number fallback
+  let party-id-tax-nr = seller(id: "70025", tax-nr: "12345")
+  assert.eq(party-id-tax-nr.at("ram:ID"), "70025")
+  assert.eq(registrations(party-id-tax-nr), (
+    ("ram:ID": ("@schemeID": "FC", "": "12345")),
+  ))
+
+  // 8. A global identifier with scheme (e.g. a GLN) precedes the name
+  let party-gln = seller(
+    vat-id: "DE123456789",
+    global-id: (scheme: "0088", id: "4000001123452"),
   )
-  assert.eq(
-    party-no-tax.at("ram:SpecifiedTaxRegistration", default: none),
-    none,
-  )
+  assert.eq(party-gln.at("ram:GlobalID"), (
+    "@schemeID": "0088",
+    "": "4000001123452",
+  ))
+  assert.eq(party-gln.keys().slice(0, 2), ("ram:GlobalID", "ram:Name"))
 }
 
 
-// --- Test ZUGFeRD mandatory field validations (BT-49, BT-10, BG-6, BT-41, BT-42, BT-43, BT-34) ---
+// --- Test ZUGFeRD validation lists every problem at once (BT-49, BT-10, BG-6, BT-41, BT-42, BT-43, BT-34, BR-CO-26) ---
 #{
   import "/src/lib.typ": (
     bank-details, country, invoice, item, line-items, locale, payment-goal, tax,
     themes,
   )
 
-  // Repro invoice from bug report (missing BT-49, BT-10, BG-6)
+  // Repro invoice from bug report (missing BT-49, BT-10, BG-6), as XRechnung
   let test-e-invoice(
     sender-overrides: (:),
     recipient-overrides: (:),
-    zugferd: "en16931",
+    zugferd: "xrechnung",
   ) = {
     let base-sender = (
       name: "Seller GmbH",
@@ -1023,142 +1162,148 @@
     )
   }
 
-  // 1. Initial bug repro: missing buyer electronic address (BT-49)
-  let res-bt49 = catch(() => test-e-invoice())
+  // The rules of all errors in the compiler error, sorted; `()` if the
+  // invoice compiles.
+  let failed-rules(..args) = {
+    let message = catch(() => test-e-invoice(..args))
+    if message == none { return () }
+    assert(
+      message.starts-with("assertion failed: The e-invoice"),
+      message: "Unexpected error: " + message,
+    )
+    message
+      .split("\nWarnings:")
+      .first()
+      .matches(regex("\n  [0-9]+\\. \\[([A-Za-z0-9-]+)\\]"))
+      .map(m => m.captures.first())
+      .sorted()
+  }
+
+  // 1. Initial bug repro: all missing XRechnung fields are reported at once
   assert.eq(
-    res-bt49,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a buyer electronic address (BT-49). Set 'electronic-address', 'vat-id', or 'email' on the recipient.\"",
+    failed-rules(),
+    ("BR-DE-15", "BR-DE-2", "PEPPOL-EN16931-R010").sorted(),
   )
 
-  // 2. Add email to recipient: next missing field is buyer reference (BT-10)
-  let res-bt10 = catch(() => test-e-invoice(
-    recipient-overrides: (email: "buyer@example.de"),
-  ))
+  // 2. Add email to recipient: buyer reference (BT-10) and seller contact
+  //    (BG-6) are still missing
   assert.eq(
-    res-bt10,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a buyer reference (BT-10). Set 'buyer-reference' or 'leitweg-id' on the recipient.\"",
+    failed-rules(recipient-overrides: (email: "buyer@example.de")),
+    ("BR-DE-15", "BR-DE-2"),
   )
 
-  // 3. Add buyer-reference to recipient: next missing field is seller contact (BG-6)
-  let res-bg6 = catch(() => test-e-invoice(
-    recipient-overrides: (
-      email: "buyer@example.de",
-      buyer-reference: "DE123456789-12345-12",
+  // 3. Add buyer-reference to recipient: only the seller contact (BG-6) is left
+  assert.eq(
+    failed-rules(
+      recipient-overrides: (
+        email: "buyer@example.de",
+        buyer-reference: "DE123456789-12345-12",
+      ),
     ),
-  ))
-  assert.eq(
-    res-bg6,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires seller contact information (BG-6). Set 'contact' (with name, phone, and email) or 'contact-name', 'phone', and 'email' on the sender.\"",
+    ("BR-DE-2",),
   )
 
   // 4. Incomplete seller contact (missing name BT-41, phone BT-42, email BT-43)
-  let res-bt41 = catch(() => test-e-invoice(
-    recipient-overrides: (
-      email: "buyer@example.de",
-      buyer-reference: "DE123456789-12345-12",
-    ),
-    sender-overrides: (
-      contact: (phone: "+49 89 123456", email: "seller@example.de"),
-    ),
-  ))
-  assert.eq(
-    res-bt41,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller contact name (BT-41). Set 'contact.name' or 'contact-name' on the sender.\"",
+  let complete-recipient = (
+    email: "buyer@example.de",
+    buyer-reference: "DE123456789-12345-12",
   )
-
-  let res-bt42 = catch(() => test-e-invoice(
-    recipient-overrides: (
-      email: "buyer@example.de",
-      buyer-reference: "DE123456789-12345-12",
-    ),
-    sender-overrides: (
-      contact: (name: "Max Mustermann", email: "seller@example.de"),
-    ),
-  ))
   assert.eq(
-    res-bt42,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller contact phone number (BT-42). Set 'contact.phone' or 'phone' on the sender.\"",
-  )
-
-  let res-bt43 = catch(() => test-e-invoice(
-    recipient-overrides: (
-      email: "buyer@example.de",
-      buyer-reference: "DE123456789-12345-12",
-    ),
-    sender-overrides: (
-      contact: (name: "Max Mustermann", phone: "+49 89 123456"),
-    ),
-  ))
-  assert.eq(
-    res-bt43,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller contact email address (BT-43). Set 'contact.email' or 'email' on the sender.\"",
-  )
-
-  // 5. Missing seller electronic address (BT-34)
-  let res-bt34 = catch(() => test-e-invoice(
-    recipient-overrides: (
-      email: "buyer@example.de",
-      buyer-reference: "DE123456789-12345-12",
-    ),
-    sender-overrides: (
-      vat-id: none,
-      contact: (
-        name: "Max Mustermann",
-        phone: "+49 89 123456",
-        email: "seller@example.de",
+    failed-rules(
+      recipient-overrides: complete-recipient,
+      sender-overrides: (
+        contact: (phone: "+49 89 123456", email: "seller@example.de"),
       ),
     ),
-  ))
-  // When sender has contact.email, seller-eas derives from email so it should succeed:
-  assert.eq(res-bt34, none)
-
-  // But if sender has no vat-id, no electronic-address, and no email anywhere:
-  let res-no-seller-eas = catch(() => test-e-invoice(
-    recipient-overrides: (
-      email: "buyer@example.de",
-      buyer-reference: "DE123456789-12345-12",
-    ),
-    sender-overrides: (
-      vat-id: none,
-      contact-name: "Max Mustermann",
-      phone: "+49 89 123456",
-      email: none,
-    ),
-  ))
-  assert.eq(
-    res-no-seller-eas,
-    "panicked with: \"e-invoicing (profile 'xrechnung') requires a seller electronic address (BT-34). Set 'electronic-address', 'vat-id', or 'email' on the sender.\"",
+    ("BR-DE-5",),
   )
-
-  // 6. Complete valid invoice with all mandatory fields satisfied
-  let res-valid = catch(() => test-e-invoice(
-    recipient-overrides: (
-      email: "buyer@example.de",
-      buyer-reference: "DE123456789-12345-12",
-    ),
-    sender-overrides: (
-      contact: (
-        name: "Max Mustermann",
-        phone: "+49 89 123456",
-        email: "seller@example.de",
+  assert.eq(
+    failed-rules(
+      recipient-overrides: complete-recipient,
+      sender-overrides: (
+        contact: (name: "Max Mustermann", email: "seller@example.de"),
       ),
     ),
-  ))
-  assert.eq(res-valid, none)
+    ("BR-DE-6",),
+  )
+  assert.eq(
+    failed-rules(
+      recipient-overrides: complete-recipient,
+      sender-overrides: (
+        contact: (name: "Max Mustermann", phone: "+49 89 123456"),
+      ),
+    ),
+    ("BR-DE-7",),
+  )
 
-  // 7. MINIMUM needs neither electronic addresses, buyer reference nor seller
+  // 5. Without VAT ID and tax number, the seller electronic address (BT-34) is
+  //    derived from the contact email, but the seller can neither be
+  //    identified (BR-CO-26) nor charge VAT (BR-S-02)
+  assert.eq(
+    failed-rules(
+      recipient-overrides: complete-recipient,
+      sender-overrides: (
+        vat-id: none,
+        contact: (
+          name: "Max Mustermann",
+          phone: "+49 89 123456",
+          email: "seller@example.de",
+        ),
+      ),
+    ),
+    ("BR-CO-26", "BR-S-02"),
+  )
+
+  // 6. ... and without any email, the seller electronic address (BT-34) and
+  //    the contact email (BT-43) are missing as well
+  assert.eq(
+    failed-rules(
+      recipient-overrides: complete-recipient,
+      sender-overrides: (
+        vat-id: none,
+        contact-name: "Max Mustermann",
+        phone: "+49 89 123456",
+        email: none,
+      ),
+    ),
+    ("BR-CO-26", "BR-DE-7", "BR-S-02", "PEPPOL-EN16931-R020").sorted(),
+  )
+
+  // 7. Complete valid invoice with all mandatory fields satisfied
+  assert.eq(
+    failed-rules(
+      recipient-overrides: complete-recipient,
+      sender-overrides: (
+        contact: (
+          name: "Max Mustermann",
+          phone: "+49 89 123456",
+          email: "seller@example.de",
+        ),
+      ),
+    ),
+    (),
+  )
+
+  // 8. Outside XRechnung, EN 16931 only recommends electronic addresses:
+  //    an invoice without them compiles, domestic or cross-border
+  assert.eq(failed-rules(zugferd: "en16931"), ())
+  assert.eq(
+    failed-rules(zugferd: "en16931", recipient-overrides: (
+      country: country.fr,
+    )),
+    (),
+  )
+
+  // 9. MINIMUM needs neither electronic addresses, buyer reference nor seller
   //    contact, but has no seller identifier (BT-29), so BR-CO-26 requires the
   //    seller VAT identifier (BT-31).
-  let res-minimum = catch(() => test-e-invoice(zugferd: "minimum"))
-  assert.eq(res-minimum, none)
-
-  let res-minimum-no-vat = catch(() => test-e-invoice(
-    zugferd: "minimum",
-    sender-overrides: (vat-id: none, tax-nr: "123/456/78901"),
-  ))
+  assert.eq(failed-rules(zugferd: "minimum"), ())
   assert.eq(
-    res-minimum-no-vat,
-    "panicked with: \"e-invoicing (profile 'minimum') requires a seller VAT identifier (BT-31). Set 'vat-id' on the sender, or use the 'basic-wl' profile or higher to identify the seller by 'tax-nr'.\"",
+    failed-rules(
+      zugferd: "minimum",
+      sender-overrides: (vat-id: none, tax-nr: "123/456/78901"),
+    ),
+    ("BR-CO-26",),
   )
 }
 
@@ -1199,4 +1344,56 @@
 
   // 6. Empty dictionary returns none
   assert.eq(de-res((:), 1), none)
+}
+
+// --- Argument checks and identifiers of the utilities ---
+#import "/src/utils/types.typ"
+#import "/src/utils/iban.typ": iban-valid, mod97
+#import "/src/utils/creditor-id.typ": creditor-id-valid
+#{
+  // `types.require` builds its message only when the check fails, and the
+  // message is the same as before
+  types.require(5, "unit::value", none, int)
+  types.require([content], "unit::value", str, content)
+  assert.eq(
+    catch(() => types.require(5, "unit::value", none, str)),
+    "assertion failed: variable `unit::value`(5) must be of none | str",
+  )
+  assert.eq(
+    catch(() => types.require("x", "unit::mode", "inclusive", "exclusive")),
+    "assertion failed: variable `unit::mode`(\"x\") must be of \"inclusive\" | \"exclusive\"",
+  )
+  // A value of a listed type or a listed literal passes at once; any other
+  // value is matched against the patterns, also a pattern given as a value
+  types.require(none, "unit::value", none, int)
+  types.require("exclusive", "unit::mode", "inclusive", "exclusive")
+  let day = datetime(year: 2026, month: 9, day: 1)
+  types.require((day, day), "unit::date", none, types.date-like)
+  types.require((name: "Muster"), "unit::party", (name: str))
+  assert.ne(
+    catch(() => types.require((name: 1), "unit::party", (name: str))),
+    none,
+  )
+  assert.ne(
+    catch(() => types.require((day, 1), "unit::date", types.date-like)),
+    none,
+  )
+  assert.ne(
+    catch(() => types.require(types.date-like, "unit::date", types.date-like)),
+    none,
+  )
+
+  // ISO 7064 MOD 97-10 by code point: digits and letters A to Z
+  assert.eq(mod97("123456"), calc.rem(123456, 97))
+  assert.eq(mod97("A"), 10)
+  assert.eq(mod97("Z9"), calc.rem(359, 97))
+  assert(iban-valid("DE89370400440532013000"))
+  assert(iban-valid("GB82WEST12345698765432"))
+  assert(iban-valid("NL91ABNA0417164300"))
+  assert(iban-valid("FR1420041010050500013M02606"))
+  assert(not iban-valid("DE89370400440532013001"))
+  assert(not iban-valid("GB82WEST1234569876543Z"))
+  assert(not iban-valid("de89370400440532013000"))
+  assert(creditor-id-valid("DE98ZZZ09999999999"))
+  assert(not creditor-id-valid("DE99ZZZ09999999999"))
 }

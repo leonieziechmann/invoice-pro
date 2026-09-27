@@ -2,6 +2,9 @@
 #import "../logic/modifier-applicator.typ": modifier-applicator
 #import "../logic/tax-applicator.typ": tax-applicator
 #import "../logic/tree.typ": resolve-tree
+#import "../logic/exemption-notes.typ": (
+  assign-markers, exemption-notes, group-markers, item-marker,
+)
 #import "../utils/coercion.typ"
 #import "../utils/types.typ"
 #import "../data/tax.typ" as m-tax
@@ -26,7 +29,7 @@
   /// Override the automatic calculations if columns should be shown
   /// ->  auto | dictionary
   show-column: auto,
-  /// Wether to show the total block below the line items.
+  /// Whether to show the total block below the line items.
   /// -> auto | bool
   show-total: auto,
   /// Whether to show the information notices about information that all items have.
@@ -91,7 +94,9 @@
 
       put("input-gross", resolved-input-gross)
 
-      derive("tax", tax, default: m-tax.zero())
+      // Without a tax from anywhere (`tax: none` on the invoice), the items
+      // are zero rated, marked as implicit (see `tax.implicit-zero`).
+      derive("tax", tax, default: m-tax.implicit-zero())
       derive("tax-mode", tax-mode, default: "exclusive")
       ensure("tax-exempt-small-biz", false)
 
@@ -151,12 +156,39 @@
         [#(x.display)]
       } else { [#x] }
 
+      // One marker per distinct exemption ground, in the order of the VAT
+      // groups. It links the notes below the line items to the VAT line of
+      // their category and, if a category has items exempt for different
+      // reasons, to each of these items.
+      let markers = assign-markers(tax-applicator.taxes)
+
+      // The label of the country of origin of an item.
+      let item-strings = ctx.locale.strings.at("line-items", default: (:))
+      let origin-label = item-strings.at("origin", default: none)
+
       let format-item(item) = loom.mutator.batch(item, {
         import loom.mutator: *
 
         update("name", x => [#x])
-        put("has-description", item.description != none)
-        update("description", x => [#x])
+        // The description, followed by the note and the country of origin of
+        // the item (`item(note: .., origin: ..)`), each on a line of its own.
+        let note = item.at("note", default: none)
+        let origin = item.at("origin", default: none)
+        if note == none and origin == none {
+          put("has-description", item.description != none)
+          update("description", x => [#x])
+        } else {
+          let details = ()
+          if item.description != none { details.push([#item.description]) }
+          if note != none { details.push([#note]) }
+          if origin != none {
+            details.push(if origin-label == none { [#origin] } else {
+              [#origin-label: #origin]
+            })
+          }
+          put("has-description", true)
+          put("description", details.join(linebreak()))
+        }
 
         put("has-date", item.date != none)
         update("date", format.date)
@@ -174,6 +206,7 @@
         update("tax", x => (
           rate: (format.percent)(x.rate),
           category: x.category,
+          marker: item-marker(x, markers),
         ))
 
         put("has-discounts", item.discounts.len() >= 1)
@@ -248,42 +281,31 @@
 
       let formated-items = formated-entries.filter(e => e.kind == "item")
 
-      let unique-grounds = tax-applicator
-        .taxes
-        .values()
-        .map(t => t.at("grounds", default: none))
-        .filter(g => g != none and g != "" and g != [])
-        .dedup()
-
-      let marker-symbols = ("*", "**", "***", "****")
-
       let formated-taxes = tax-applicator
         .taxes
         .pairs()
         .map(((key, tax)) => {
           let formated-rate = (format.percent)(tax.rate)
           let formated-value = (format.currency)(tax.absolute)
-          let grounds = tax.at("grounds", default: none)
-          let marker = if grounds != none and grounds != "" and grounds != [] {
-            let idx = unique-grounds.position(g => g == grounds)
-            if idx != none and idx < marker-symbols.len() {
-              marker-symbols.at(idx)
-            } else if idx != none {
-              "*" + str(idx + 1)
-            } else {
-              none
-            }
-          } else {
-            none
-          }
+          let grounds-list = m-tax.grounds-of(tax)
+          let grounds-markers = group-markers(tax, markers)
           (
             rate: [#formated-rate],
             raw-rate: tax.rate,
             raw-amount: tax.absolute,
             category: [#tax.category],
             amount: [#formated-value],
-            grounds: grounds,
-            marker: marker,
+            // Every distinct exemption ground of the category, joined ...
+            grounds: tax.at("grounds", default: none),
+            // ... and one by one with their markers, for the notes below the
+            // line items.
+            grounds-list: grounds-list,
+            grounds-markers: grounds-markers,
+            // With several grounds, each item is marked with its own.
+            itemized-grounds: grounds-list.len() > 1,
+            marker: if grounds-markers.len() == 0 { none } else {
+              grounds-markers.join(",")
+            },
           )
         })
 
@@ -461,6 +483,31 @@
         ..item-information,
       )
 
+      // The notes that state why a VAT category carries no VAT, with the
+      // markers to print (see `exemption-notes`).
+      let notes = exemption-notes(
+        formated-taxes,
+        show-total: layout-information.show-total,
+        show-tax-rates: layout-information.show-tax-rates,
+        small-business: if ctx.tax-exempt-small-biz {
+          (
+            clause: ctx.locale.strings.legal.vat-exemption,
+            grounds: ctx
+              .locale
+              .tax
+              .small-enterprise-special-scheme
+              .at("grounds", default: none),
+            same-language: ctx.locale.meta.region
+              == ctx.locale.strings.meta.lang,
+          )
+        },
+      )
+      // The notes of the invoice (`invoice(notes: ..)`), which the e-invoice
+      // states as well (BT-22), follow the exemption notes.
+      for note in ctx.at("notes", default: ()) {
+        notes.push((kind: "note", marker: none, body: note.text))
+      }
+
       let view = (
         items: formated-items,
         entries: formated-entries,
@@ -468,6 +515,10 @@
         surcharges: formated-surcharges,
         prepayments: formated-prepayments,
         taxes: formated-taxes,
+        // Every note is `(kind: .., marker: .., body: ..)`, in print order:
+        // the exemption notes (kind "small-business" or "grounds"), then the
+        // notes of the invoice (kind "note").
+        exemption-notes: notes,
         total: formated-total,
         unmodified-total: unmodified-formated-total,
         layout-information: layout-information,
@@ -496,6 +547,17 @@
           tax-mode: ctx.tax-mode,
           discounts: modifier-applicator.modifier.discounts,
           surcharges: modifier-applicator.modifier.surcharges,
+          // Whether the dates of the items are printed: with each item, or
+          // below the items when they share one date. They state the date of
+          // the supply (BT-72, BG-14) the law requires on the invoice.
+          dates-printed: layout-information.has-dates
+            and (
+              layout-information.show-dates
+                or (
+                  not layout-information.multiple-dates
+                    and layout-information.show-global-information
+                )
+            ),
         ),
       )
 

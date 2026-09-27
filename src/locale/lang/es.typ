@@ -27,6 +27,11 @@
   /// Denominaciones para tipos de documentos
   document: (
     invoice: "Factura",
+    credit-note: "Factura de abono",
+    corrected: "Factura rectificativa",
+    prepayment: "Factura de anticipo",
+    // Mention required on a self-billed invoice (art. 6 RD 1619/2012).
+    self-billed: "Facturación por el destinatario",
   ),
 
   /// Denominaciones relacionadas con la dirección
@@ -54,11 +59,13 @@
     delivery-note-number: "Nº de albarán",
     delivery-address: "Dirección de entrega",
     preceding-invoice-number: "Nº de factura rectificada",
+    preceding-invoice-date: "Fecha de la factura rectificada",
     due-date: "Fecha de vencimiento",
     payment-reference: "Concepto de pago",
     contact-person: "Persona de contacto",
     contact-phone: "Teléfono",
     contact-email: "Correo electrónico",
+    payee: "Beneficiario del pago",
   ),
 
   /// Encabezados de columna y etiquetas para la tabla de artículos
@@ -76,6 +83,8 @@
     surcharge: "Recargo",
     subtotal: "Subtotal",
     prepayment: "Anticipo",
+    conjunction: "y",
+    origin: "País de origen",
   ),
 
   /// Etiquetas para la sección de resumen (pie de la tabla)
@@ -100,6 +109,13 @@
     unit: "Unidad para todos los artículos:",
     quantity: "Cantidad para todos los artículos:",
     date: "Fecha de servicio para todos los artículos:",
+  ),
+
+  tax-exemption: (
+    reverse-charge: "Inversión del sujeto pasivo",
+    intra-community: "Entrega intracomunitaria exenta de IVA",
+    export: "Exportación exenta de IVA",
+    outside-scope: "Operación no sujeta a IVA",
   ),
 
   units: (
@@ -132,6 +148,37 @@
     reference: "Concepto",
   ),
 
+  /// Textos de los medios de pago además de los datos bancarios
+  payment-means: (
+    method: "Forma de pago",
+    transfer: "Transferencia",
+    direct-debit: "Domiciliación bancaria",
+    sepa-direct-debit: "Adeudo directo SEPA",
+    card: "Pago con tarjeta",
+    credit-card: "Tarjeta de crédito",
+    debit-card: "Tarjeta de débito",
+    cash: "Efectivo",
+    cheque: "Cheque",
+    online: "Pago en línea",
+    mandate: "Referencia del mandato",
+    creditor-id: "Identificador del acreedor",
+    debtor-iban: "Su IBAN",
+    card-number: "Número de tarjeta",
+    card-holder: "Titular de la tarjeta",
+    paid: (
+      sum,
+      date,
+    ) => [El importe total de *#sum* ha sido pagado#if date != none [ el #date].],
+    paid-due: (
+      sum,
+      date,
+    ) => [El importe pendiente de *#sum* ha sido pagado#if date != none [ el #date].],
+    paid-credit: (
+      sum,
+      date,
+    ) => [Le hemos pagado el importe de *#sum*#if date != none [ el #date].],
+  ),
+
   /// Bloques de texto para condiciones de pago
   payment: (
     /// Genera la frase final de instrucciones de pago.
@@ -146,6 +193,33 @@
       deadline,
     ) => [Por favor, transfiera el importe pendiente de *#sum* #deadline a la cuenta indicada a continuación.],
 
+    /// Frase de pago para una domiciliación bancaria.
+    text-direct-debit: (
+      sum,
+      deadline,
+    ) => [El importe total de *#sum* se cargará en su cuenta mediante domiciliación bancaria #deadline.],
+    text-direct-debit-due: (
+      sum,
+      deadline,
+    ) => [El importe pendiente de *#sum* se cargará en su cuenta mediante domiciliación bancaria #deadline.],
+
+    /// Frase de pago para un pago con tarjeta.
+    text-card: (
+      sum,
+      deadline,
+    ) => [El importe total de *#sum* se cargará en su tarjeta #deadline.],
+    text-card-due: (
+      sum,
+      deadline,
+    ) => [El importe pendiente de *#sum* se cargará en su tarjeta #deadline.],
+
+    /// Nota de un descuento por pronto pago.
+    cash-discount: (
+      percent,
+      deadline,
+      basis,
+    ) => [Por pago #deadline se concede un descuento por pronto pago del #percent#if basis != none [ sobre #basis].],
+
     /// Texto para una fecha de vencimiento fija.
     deadline-date: date => ("antes del", date).join(" "),
 
@@ -158,6 +232,16 @@
 
     /// Texto para pago inmediato.
     deadline-soon: "al recibir la factura",
+
+    /// Frase de pago de una factura de abono o de una factura emitida por el
+    /// destinatario: el remitente paga el importe al destinatario.
+    text-credit: (
+      sum,
+      deadline,
+    ) => [Le transferiremos el importe de *#sum* #deadline a la cuenta indicada a continuación.],
+
+    /// Texto para un pago inmediato en `text-credit`.
+    deadline-soon-credit: "de inmediato",
   ),
 
   /// Saludo y área de firma

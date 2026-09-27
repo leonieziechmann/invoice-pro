@@ -1,6 +1,7 @@
 // `date: none` on items and bundles resolves to no date, overriding any date
-// inherited from a surrounding group, and undated items fall back to the
-// invoice date in the ZUGFeRD delivery date determination.
+// inherited from a surrounding group. In the ZUGFeRD delivery date
+// determination, undated items do not count, and the invoice date is the
+// delivery date only if no item has a date.
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/build.typ": determine-delivery-dates
@@ -52,7 +53,7 @@
     )
   }
 
-  // ZUGFeRD: undated items fall back to the invoice date
+  // ZUGFeRD: without any dated item, the invoice date is the delivery date
   let undated = items.filter(i => i.date == none)
   let undated-delivery = determine-delivery-dates(ctx, undated)
   assert.eq(
@@ -62,12 +63,13 @@
       + repr(undated-delivery),
   )
 
+  // Undated items do not count when others are dated
   let delivery = determine-delivery-dates(ctx, items)
   assert.eq(
     delivery,
-    (date: none, period: (group-date, invoice-date)),
+    (date: none, period: (group-date, bundle-date)),
     message: "Delivery period: expected "
-      + repr((group-date, invoice-date))
+      + repr((group-date, bundle-date))
       + ", got "
       + repr(delivery),
   )

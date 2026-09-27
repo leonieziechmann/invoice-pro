@@ -40,7 +40,13 @@
   theme: capturing-theme,
   locale: locale.de-de,
   zugferd: "en16931",
-  references: (references.payment-reference(),),
+  references: (
+    references.payment-reference(),
+    // What the law requires on the invoice (IP-PRINT-03, IP-PERIOD-03)
+    references.seller-tax-nr(),
+    references.seller-vat-id(),
+    references.service-time(),
+  ),
   sender: (
     name: "Test GmbH",
     address: "Musterstraße 1",
@@ -87,7 +93,9 @@
   let func = it.func()
   if func == text { it.text } else if func in (linebreak, parbreak) {
     "\n"
-  } else if func == [ ].func() { " " } else if it.has("children") {
+  } else if func == [ ].func() { " " } else if func == smartquote {
+    if it.at("double", default: true) { "\"" } else { "'" }
+  } else if it.has("children") {
     it.children.map(plain).join(default: "")
   } else if it.has("child") { plain(it.child) } else if it.has("body") {
     plain(it.body)

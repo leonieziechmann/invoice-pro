@@ -1,5 +1,5 @@
 /// The base region serves as the 'Master Schema' for all regional configurations.
-/// Every regional file (e.g., DE.typ, US.typ) should mirror this structure.
+/// Every regional file (e.g., de.typ, fr.typ) should mirror this structure.
 #let base-region = {
   import "../../data/tax.typ"
   import "../../utils/format.typ"
@@ -22,8 +22,9 @@
     /// The standard number of subunits/decimal places for financial totals (e.g., 2).
     decimals: 2,
 
-    /// The allowed number of decimal places for singular unit prices.
-    /// EN 16931 allows up to 4 decimal places for unit prices (BT-146).
+    /// The number of decimal places of unit prices (BT-146), used by
+    /// `normalize.money-fine` and the `currency-fine` format. EN 16931 does
+    /// not limit these decimals; 4 is the common precision of unit prices.
     decimals-fine: 4,
   )
 
@@ -88,8 +89,13 @@
       /// -> tax
       default-vat: tax.vat(21%),
 
-      /// The legal tax object/exemption text used for small businesses or
-      /// "Kleinunternehmer" schemes where VAT is not collected.
+      /// The tax of small businesses ("Kleinunternehmer") that charge no VAT
+      /// (`tax-exempt-small-biz: true`). Its `grounds` are the legal note the
+      /// invoice prints and the exemption reason (BT-120) of the e-invoice.
+      /// Use `tax.exempt(grounds: ..)` (VAT category E) where the law exempts
+      /// the turnover of small businesses (e.g. DE, AT, FR) and
+      /// `tax.outside-scope(grounds: ..)` (O) where they are not liable for
+      /// VAT (e.g. CH). This neutral fallback claims no exemption.
       /// -> tax
       small-enterprise-special-scheme: tax.outside-scope(),
     ),

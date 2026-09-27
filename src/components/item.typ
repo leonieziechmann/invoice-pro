@@ -1,5 +1,7 @@
 #import "../loom-wrapper.typ": data-motif, loom, loom-key
-#import "../logic/calc-item.typ": calculate-item-data
+#import "../logic/calc-item.typ": (
+  calculate-item-data, require-positive-base-quantity,
+)
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
 #import "../data/tax.typ" as m-tax
@@ -34,6 +36,7 @@
         s.amount
       },
       description: s.description,
+      tax: s.at("tax", default: none),
     ))
   } else if modifier-type == dictionary {
     modifier
@@ -117,6 +120,19 @@
   /// -> str | auto | none
   reference: auto, // str optional
 
+  /// A note about the item, printed below its description and written into
+  /// the e-invoice (BT-127). Not for an item inside a `bundle`, which is no
+  /// line of its own.
+  /// -> str | content | auto | none
+  note: auto,
+  /// The country of origin of the item: a country of the `country` module
+  /// (e.g. `country.de`) or an ISO 3166-1 alpha-2 code such as `"DE"`.
+  /// Printed with its code below the description and written into the
+  /// e-invoice (BT-159). Not for an item inside a `bundle`, which is no line
+  /// of its own.
+  /// -> function | dictionary | str | auto | none
+  origin: auto,
+
   /// An array of specific modifiers (discounts or surcharges) applied specifically to this item.
   /// -> array | auto | none
   modifier: auto,
@@ -126,6 +142,7 @@
 
   types.require(quantity, "item::quantity", auto, types.decimal-like)
   types.require(base-quantity, "item::base-quantity", auto, types.decimal-like)
+  require-positive-base-quantity(base-quantity, "item")
   types.require(
     unit,
     "item::unit",
@@ -138,6 +155,7 @@
   )
 
   types.require(date, "item::date", none, auto, types.date-like)
+  types.require-day(date, "item::date")
 
   types.require(price, "item::price", auto, types.decimal-like)
   types.require(total, "item::total", auto, types.decimal-like)
@@ -151,6 +169,18 @@
 
   types.require(item-id, "item::item-id", none, auto, str, dictionary)
   types.require(reference, "item::reference", none, auto, str)
+  // Checked only if given, as most items have neither.
+  if note != auto { types.require(note, "item::note", none, types.text-like) }
+  if origin != auto {
+    types.require(
+      origin,
+      "item::origin",
+      none,
+      types.text-like,
+      dictionary,
+      function,
+    )
+  }
 
   types.require(
     modifier,
@@ -215,31 +245,13 @@
         input-gross,
         default: ctx.at("tax-mode", default: "exclusive") == "inclusive",
       )
-      update("tax", t => if type(t) != ratio { t } else {
-        let infer-tax = ctx
-          .at("locale", default: (:))
-          .at("normalize", default: (:))
-          .at("infer-tax", default: (..) => panic(
-            "item::tax can not be of type `ratio`.",
-          ))
-        infer-tax(t)
-      })
+      // Without a tax from anywhere (`tax: none` on the invoice), the item is
+      // zero rated, marked as implicit (see `tax.implicit-zero`).
+      update("tax", t => m-tax.resolve(ctx, t, "item"))
       derive(
         "tax",
-        {
-          if type(tax) == ratio {
-            let infer-tax = ctx
-              .at("locale", default: (:))
-              .at("normalize", default: (:))
-              .at("infer-tax", default: (..) => panic(
-                "item::tax can not be of type `ratio`.",
-              ))
-            infer-tax(tax)
-          } else {
-            m-tax.to-tax(tax)
-          }
-        },
-        default: m-tax.zero(),
+        m-tax.resolve(ctx, tax, "item"),
+        default: m-tax.implicit-zero(),
       )
 
       if ctx.at("tax-exempt-small-biz", default: false) {
@@ -248,6 +260,21 @@
 
       derive("item-id", item-id)
       derive("reference", reference)
+      // Set only if given, so that items without them carry no extra keys
+      // (`calculate-item-data` reads them with a default).
+      if note != auto { put("note", note) }
+      if origin != auto { put("origin", origin) }
+      // The items of a bundle are no lines of their own: the bundle is
+      // printed and written as one line, which names its items, so a note or
+      // a country of origin of one of them would be lost.
+      if (
+        (note not in (auto, none) or origin not in (auto, none))
+          and ctx.at("bundle-quantity", default: none) != none
+      ) {
+        panic(
+          "item::note and item::origin are not supported on an item inside a `bundle`: the bundle is one line of the invoice, which prints and states neither the note nor the country of origin of its items. Mention them in the `description` of the bundle, or list the item outside the bundle.",
+        )
+      }
 
       derive("modifier", evaluate-modifier(ctx, modifier), default: ())
       update("modifier", evaluate-modifier.with(ctx))

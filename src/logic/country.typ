@@ -1,7 +1,34 @@
+// Countries of the parties: the ISO 3166-1 alpha-2 code, the printed name and
+// how the city line (post code and city name) is parsed and printed.
+
+// The plain text of the city line as it reads on the page, the same text the
+// e-invoice writes.
+#import "../utils/text.typ": plain-text
+
 // --- Regional Parsers and Formatters ---
 
+// The patterns of the parsers below. Each is compiled once, when a party of
+// its country is parsed for the first time: compiling a regular expression
+// costs far more than matching it, and most invoices need none of them.
+#let _euro-city-pattern() = regex("^\\s*(?:[A-Z]{1,2}-)?(\\d{4,5})\\s+(.+)$")
+#let _uk-city-pattern() = regex(
+  "(?i)^\\s*(.+?)(?:,\\s*|\\s+|\\n)\\s*([a-z]{1,2}\\d[a-z\\d]?\\s*\\d[a-z]{2})\\s*$",
+)
+#let _us-city-patterns() = (
+  with-state: regex(
+    "(?i)^\\s*(.+?)(?:,\\s*|\\s+)([a-z]{2})\\s+(\\d{5}(?:-\\d{4})?)\\s*$",
+  ),
+  without-state: regex("(?i)^\\s*(.+?)(?:,\\s*|\\s+)(\\d{5}(?:-\\d{4})?)\\s*$"),
+)
+
+// A city line without a post code of the expected format: the whole text is
+// the city name.
+#let _unparsed-city(city-str) = (name: city-str.trim(), post-code: none)
+
+// The generic parser of custom countries: a post code of 4 or 5 digits,
+// optionally with a country marker ("D-10115"), before the city name.
 #let parse-city-euro(city-str) = {
-  let m = city-str.match(regex("^\\s*(?:[A-Z]{1,2}-)?(\\d{4,5})\\s+(.+)$"))
+  let m = city-str.match(_euro-city-pattern())
   if m != none {
     let pc-raw = m.captures.at(0, default: none)
     let name-raw = m.captures.at(1, default: none)
@@ -10,13 +37,72 @@
       post-code: if pc-raw != none { pc-raw.trim() } else { none },
     )
   } else {
-    (
-      name: city-str.trim(),
-      post-code: none,
-    )
+    _unparsed-city(city-str)
   }
 }
 
+/// Builds a parser that splits a city line into the post code and the city
+/// name of one country.
+///
+/// - `pattern`: regular expression of the post code, without anchors and
+///   capturing groups (e.g. `"\\d{5}"`).
+/// - `position`: where the post code stands: `"before"` the city name
+///   ("10115 Berlin"), `"after"` it ("Valletta VLT 1117") or `"either"`.
+/// - `prefixes`: country markers that may precede the post code ("D-10115").
+///   They are dropped, unless `keep-prefix` is set because the marker is part
+///   of the official post code ("LV-1050").
+/// - `ignore-case`: letters of the post code may be written in lower case;
+///   the post code is returned in upper case.
+///
+/// -> function
+#let post-code-parser(
+  pattern,
+  position: "before",
+  prefixes: (),
+  keep-prefix: false,
+  ignore-case: false,
+) = {
+  let flags = if ignore-case { "(?i)" } else { "" }
+  let prefix = if prefixes.len() == 0 { "()" } else {
+    "(?:(" + prefixes.join("|") + ")-)?"
+  }
+  let before = regex(
+    flags + "^" + prefix + "(" + pattern + ")\\s+(.+)$",
+  )
+  let after = regex(
+    flags + "^(.+?)(?:,\\s*|\\s+)" + prefix + "(" + pattern + ")$",
+  )
+  let result(name, marker, code) = {
+    let code = if ignore-case { upper(code) } else { code }
+    (
+      name: name.trim(),
+      post-code: if keep-prefix and marker not in (none, "") {
+        marker + "-" + code
+      } else { code },
+    )
+  }
+
+  city-str => {
+    let city-str = city-str.trim()
+    if position in ("before", "either") {
+      let m = city-str.match(before)
+      if m != none {
+        let (marker, code, name) = m.captures
+        return result(name, marker, code)
+      }
+    }
+    if position in ("after", "either") {
+      let m = city-str.match(after)
+      if m != none {
+        let (name, marker, code) = m.captures
+        return result(name, marker, code)
+      }
+    }
+    _unparsed-city(city-str)
+  }
+}
+
+// Post code, then city name on one line: "10115 Berlin".
 #let format-city-euro(parsed-city) = {
   if parsed-city == none { return none }
   let parts = ()
@@ -29,12 +115,21 @@
   parts.join(" ")
 }
 
+// City name, then post code on one line: "Valletta VLT 1117".
+#let format-city-trailing(parsed-city) = {
+  if parsed-city == none { return none }
+  let parts = ()
+  if parsed-city.at("name", default: none) != none {
+    parts.push(parsed-city.name)
+  }
+  if parsed-city.at("post-code", default: none) != none {
+    parts.push(parsed-city.post-code)
+  }
+  parts.join(" ")
+}
+
 #let parse-city-uk(city-str) = {
-  let m = city-str.match(
-    regex(
-      "(?i)^\\s*(.+?)(?:,\\s*|\\s+|\\n)\\s*([a-z]{1,2}\\d[a-z\\d]?\\s*\\d[a-z]{2})\\s*$",
-    ),
-  )
+  let m = city-str.match(_uk-city-pattern())
   if m != none {
     let name-raw = m.captures.at(0, default: none)
     let pc-raw = m.captures.at(1, default: none)
@@ -43,13 +138,11 @@
       post-code: if pc-raw != none { upper(pc-raw).trim() } else { none },
     )
   } else {
-    (
-      name: city-str.trim(),
-      post-code: none,
-    )
+    _unparsed-city(city-str)
   }
 }
 
+// City name and post code on separate lines: "London \ SW1A 2AA".
 #let format-city-uk(parsed-city) = {
   if parsed-city == none { return none }
   let lines = ()
@@ -75,11 +168,8 @@
 }
 
 #let parse-city-us(city-str) = {
-  let m1 = city-str.match(
-    regex(
-      "(?i)^\\s*(.+?)(?:,\\s*|\\s+)([a-z]{2})\\s+(\\d{5}(?:-\\d{4})?)\\s*$",
-    ),
-  )
+  let patterns = _us-city-patterns()
+  let m1 = city-str.match(patterns.with-state)
   if m1 != none {
     let name-raw = m1.captures.at(0, default: none)
     let state-raw = m1.captures.at(1, default: none)
@@ -90,9 +180,7 @@
       post-code: if pc-raw != none { pc-raw.trim() } else { none },
     )
   } else {
-    let m2 = city-str.match(
-      regex("(?i)^\\s*(.+?)(?:,\\s*|\\s+)(\\d{5}(?:-\\d{4})?)\\s*$"),
-    )
+    let m2 = city-str.match(patterns.without-state)
     if m2 != none {
       let name-raw = m2.captures.at(0, default: none)
       let pc-raw = m2.captures.at(1, default: none)
@@ -140,16 +228,6 @@
   format-inline-city: format-city-euro,
   parse-city-raw: parse-city-euro,
 ) = {
-  let to-string(it) = {
-    if type(it) == str { it } else if it == none or it == auto { "" } else if (
-      type(it) != content
-    ) {
-      str(it)
-    } else if it.has("text") { it.text } else if it.has("children") {
-      it.children.map(to-string).join()
-    } else if it.has("body") { to-string(it.body) } else { "" }
-  }
-
   let parse-city(city) = {
     if city == none or city == "" or city == () {
       none
@@ -163,7 +241,10 @@
       }
       result
     } else {
-      parse-city-raw(to-string(city))
+      // Composed or styled content ([#plz #ort], [10115 *Berlin*]) is parsed
+      // as the text it shows, spaces and line breaks included.
+      let text = plain-text(city)
+      if text == "" { none } else { parse-city-raw(text) }
     }
   }
 
@@ -233,161 +314,269 @@
   )
 }
 
+// A country code must be an ISO 3166-1 alpha-2 code: two letters.
+#let _code-pattern = regex("^[A-Za-z]{2}$")
+
+// The upper-case ISO 3166-1 alpha-2 code of `code` (a string or content).
+// "UK", reserved in ISO 3166-1 for the United Kingdom, is its code "GB".
+// `field` names the input in the error message.
+#let normalize-code(code, field) = {
+  let text = if type(code) in (str, content) { plain-text(code) } else { none }
+  if text == none or text.match(_code-pattern) == none {
+    panic(
+      "`"
+        + field
+        + "`: "
+        + repr(code)
+        + " is not an ISO 3166-1 alpha-2 country code (two letters such as \"DE\" or \"FR\").",
+    )
+  }
+  let code = upper(text)
+  if code == "UK" { "GB" } else { code }
+}
+
+// The characters that have a meaning in a regular expression, which a post
+// code mask escapes.
+#let _regex-syntax = (
+  "\\": true,
+  ".": true,
+  "+": true,
+  "*": true,
+  "?": true,
+  "(": true,
+  ")": true,
+  "|": true,
+  "[": true,
+  "]": true,
+  "{": true,
+  "}": true,
+  "^": true,
+  "$": true,
+  "#": true,
+  "&": true,
+  "~": true,
+  "-": true,
+)
+
+// Turns a post code mask of `country.custom` into a regular expression:
+// `9` is a digit, `A` a letter, a space an optional space, anything else
+// stands for itself ("9999", "A9A 9A9", "999-9999").
+#let _mask-pattern(mask) = {
+  let pattern = ""
+  for char in mask.clusters() {
+    pattern += if char == "9" { "\\d" } else if char == "A" {
+      "[A-Z]"
+    } else if char == " " { "\\s?" } else if char in _regex-syntax {
+      "\\" + char
+    } else { char }
+  }
+  pattern
+}
+
+/// A country that is not predefined in the `country` module.
+///
+/// - `code`: the ISO 3166-1 alpha-2 code, e.g. `"NO"` (required).
+/// - `name`: the printed name of the country.
+/// - `show-always`: print the country line even for domestic addresses.
+/// - `post-code`: the format of the post code as a mask, `9` for a digit and
+///   `A` for a letter (e.g. `"9999"`, `"A9A 9A9"`, `"999-9999"`), or an array
+///   of masks. `auto` accepts 4 or 5 digits.
+/// - `post-code-position`: `"before"` the city name ("0154 Oslo") or
+///   `"after"` it ("Toronto ON M5V 2T6").
+///
+/// -> dictionary
+#let custom(
+  code: none,
+  name: none,
+  show-always: false,
+  post-code: auto,
+  post-code-position: "before",
+) = {
+  let code = normalize-code(code, "country.custom: code")
+  if name != none and type(name) not in (str, content) {
+    panic(
+      "`country.custom: name` must be a string or content, got "
+        + repr(name)
+        + ".",
+    )
+  }
+  if post-code-position not in ("before", "after") {
+    panic(
+      "`country.custom: post-code-position` must be \"before\" or \"after\", got "
+        + repr(post-code-position)
+        + ".",
+    )
+  }
+  let masks = if type(post-code) == array { post-code } else { (post-code,) }
+  if (
+    post-code != auto
+      and (masks.len() == 0 or masks.any(mask => type(mask) != str))
+  ) {
+    panic(
+      "`country.custom: post-code` must be a mask such as \"9999\" or \"A9A 9A9\" (9 = digit, A = letter), an array of masks or auto, got "
+        + repr(post-code)
+        + ".",
+    )
+  }
+  // Like the predefined countries, the post code may carry the country code
+  // as marker ("NO-0154 Oslo").
+  let parse-city-raw = if post-code == auto {
+    if post-code-position == "before" { parse-city-euro } else {
+      post-code-parser("\\d{4,5}", position: "after", prefixes: (code,))
+    }
+  } else {
+    post-code-parser(
+      masks.map(_mask-pattern).join("|"),
+      position: post-code-position,
+      prefixes: (code,),
+      ignore-case: true,
+    )
+  }
+  let format-city = if post-code-position == "before" {
+    format-city-euro
+  } else { format-city-trailing }
+  make-country(
+    name: if name == none { "" } else { name },
+    code: code,
+    show-always: show-always,
+    format-city: format-city,
+    format-inline-city: format-city,
+    parse-city-raw: parse-city-raw,
+  )
+}
+
 // --- Exported Country Functions ---
+//
+// Each country parses the post code in its own format, so that a city line
+// such as "1012 AB Amsterdam" is split into the complete post code and the
+// city name. A post code of another format is not taken apart: the whole line
+// is the city name.
 
-#let de(name: "Deutschland", code: "DE", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let at(name: "Österreich", code: "AT", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let ch(name: "Schweiz", code: "CH", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let fr(name: "France", code: "FR", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let it(name: "Italia", code: "IT", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let es(name: "España", code: "ES", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
+// Post codes of 4 or 5 digits before the city name, optionally with the
+// country markers `prefixes` ("D-10115").
+#let _digits(count, ..prefixes) = post-code-parser(
+  "\\d{" + str(count) + "}",
+  prefixes: prefixes.pos(),
 )
 
-#let be(name: "België", code: "BE", show-always: false) = make-country(
+// A predefined country: its function takes `name`, `code` and `show-always`;
+// `parser` builds the parser of its city lines when the country is used.
+#let _country(name, code, parser, format: format-city-euro, inline: auto) = (
+  name: name,
+  code: code,
+  show-always: false,
+) => make-country(
   name: name,
   code: code,
   show-always: show-always,
-)
-#let bg(name: "Bulgaria", code: "BG", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let cy(name: "Cyprus", code: "CY", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let cz(name: "Česko", code: "CZ", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let dk(name: "Danmark", code: "DK", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let ee(name: "Eesti", code: "EE", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let gr(name: "Greece", code: "GR", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let hr(name: "Hrvatska", code: "HR", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let hu(name: "Magyarország", code: "HU", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let ie(name: "Ireland", code: "IE", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let lt(name: "Lietuva", code: "LT", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let lu(name: "Luxembourg", code: "LU", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let lv(name: "Latvija", code: "LV", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let mt(name: "Malta", code: "MT", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let nl(name: "Nederland", code: "NL", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let pl(name: "Polska", code: "PL", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let pt(name: "Portugal", code: "PT", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let ro(name: "România", code: "RO", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let se(name: "Sverige", code: "SE", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let si(name: "Slovenija", code: "SI", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-)
-#let sk(name: "Slovensko", code: "SK", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
+  format-city: format,
+  format-inline-city: if inline == auto { format } else { inline },
+  parse-city-raw: parser(),
 )
 
-#let uk(name: "United Kingdom", code: "GB", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  format-city: format-city-uk,
-  format-inline-city: format-inline-city-uk,
-  parse-city-raw: parse-city-uk,
-)
+#let de = _country("Deutschland", "DE", () => _digits(5, "D", "DE"))
+#let at = _country("Österreich", "AT", () => _digits(4, "A", "AT"))
+#let ch = _country("Schweiz", "CH", () => _digits(4, "CH"))
+#let fr = _country("France", "FR", () => _digits(5, "F", "FR"))
+#let it = _country("Italia", "IT", () => _digits(5, "I", "IT"))
+#let es = _country("España", "ES", () => _digits(5, "E", "ES"))
 
-#let us(name: "United States", code: "US", show-always: false) = make-country(
-  name: name,
-  code: code,
-  show-always: show-always,
-  format-city: format-city-us,
-  format-inline-city: format-city-us,
-  parse-city-raw: parse-city-us,
+#let be = _country("België", "BE", () => _digits(4, "B", "BE"))
+#let bg = _country("Bulgaria", "BG", () => _digits(4, "BG"))
+#let cy = _country("Cyprus", "CY", () => _digits(4, "CY"))
+// "110 00 Praha 1"
+#let cz = _country("Česko", "CZ", () => post-code-parser(
+  "\\d{3}\\s?\\d{2}",
+  prefixes: ("CZ",),
+))
+#let dk = _country("Danmark", "DK", () => _digits(4, "DK"))
+#let ee = _country("Eesti", "EE", () => _digits(5, "EE"))
+#let fi = _country("Suomi", "FI", () => _digits(5, "FI"))
+// "105 57 Athina"
+#let gr = _country("Greece", "GR", () => post-code-parser(
+  "\\d{3}\\s?\\d{2}",
+  prefixes: ("GR",),
+))
+#let hr = _country("Hrvatska", "HR", () => _digits(5, "HR"))
+#let hu = _country("Magyarország", "HU", () => _digits(4, "H", "HU"))
+// The Eircode follows the city (or county) line: "Dublin 2 D02 X285".
+#let ie = _country(
+  "Ireland",
+  "IE",
+  () => post-code-parser(
+    "(?:[AC-FHKNPRTV-Y]\\d{2}|D6W)\\s?[0-9AC-FHKNPRTV-Y]{4}",
+    position: "either",
+    ignore-case: true,
+  ),
+  format: format-city-uk,
+  inline: format-inline-city-uk,
+)
+// The official post codes of Lithuania, Luxembourg and Latvia include the
+// country marker: "LT-01100", "L-1648", "LV-1050".
+#let lt = _country("Lietuva", "LT", () => post-code-parser(
+  "\\d{5}",
+  prefixes: ("LT",),
+  keep-prefix: true,
+))
+#let lu = _country("Luxembourg", "LU", () => post-code-parser(
+  "\\d{4}",
+  prefixes: ("L",),
+  keep-prefix: true,
+))
+#let lv = _country("Latvija", "LV", () => post-code-parser(
+  "\\d{4}",
+  prefixes: ("LV",),
+  keep-prefix: true,
+))
+// "Valletta VLT 1117"
+#let mt = _country(
+  "Malta",
+  "MT",
+  () => post-code-parser("[A-Z]{3}\\s?\\d{4}", position: "either"),
+  format: format-city-trailing,
+)
+// "1012 AB Amsterdam"
+#let nl = _country("Nederland", "NL", () => post-code-parser(
+  "\\d{4}\\s?[A-Z]{2}",
+  prefixes: ("NL",),
+))
+// "00-950 Warszawa"
+#let pl = _country("Polska", "PL", () => post-code-parser(
+  "\\d{2}-\\d{3}",
+  prefixes: ("PL",),
+))
+// "1000-001 Lisboa"
+#let pt = _country("Portugal", "PT", () => post-code-parser(
+  "\\d{4}-\\d{3}",
+  prefixes: ("PT",),
+))
+#let ro = _country("România", "RO", () => _digits(6, "RO"))
+// "114 55 Stockholm"
+#let se = _country("Sverige", "SE", () => post-code-parser(
+  "\\d{3}\\s?\\d{2}",
+  prefixes: ("S", "SE"),
+))
+#let si = _country("Slovenija", "SI", () => _digits(4, "SI"))
+// "811 01 Bratislava"
+#let sk = _country("Slovensko", "SK", () => post-code-parser(
+  "\\d{3}\\s?\\d{2}",
+  prefixes: ("SK",),
+))
+
+#let uk = _country(
+  "United Kingdom",
+  "GB",
+  () => parse-city-uk,
+  format: format-city-uk,
+  inline: format-inline-city-uk,
+)
+#let gb = uk
+
+#let us = _country(
+  "United States",
+  "US",
+  () => parse-city-us,
+  format: format-city-us,
 )
 
 // --- Helper mapping ---
@@ -404,6 +593,7 @@
   cz: cz,
   dk: dk,
   ee: ee,
+  fi: fi,
   gr: gr,
   hr: hr,
   hu: hu,
@@ -424,81 +614,201 @@
   us: us,
 )
 
-#let normalize-region-to-string(region-opt, fallback) = {
-  if region-opt == none or region-opt == auto {
-    return fallback
-  }
-  if type(region-opt) == str {
-    return region-opt
-  }
-  if type(region-opt) == dictionary {
-    if (
-      "meta" in region-opt
-        and type(region-opt.meta) == dictionary
-        and "region" in region-opt.meta
-    ) {
-      return region-opt.meta.region
-    }
-    if "code" in region-opt and type(region-opt.code) == str {
-      return region-opt.code
-    }
-  }
-  if type(region-opt) == function {
-    import "../locale/region/region.typ"
-    if region-opt == region.at { "at" } else if region-opt == region.ch {
-      "ch"
-    } else if region-opt == region.de { "de" } else if region-opt == region.es {
-      "es"
-    } else if region-opt == region.fr { "fr" } else if region-opt == region.it {
-      "it"
-    } else if region-opt == de { "de" } else if region-opt == at {
-      "at"
-    } else if region-opt == ch { "ch" } else if region-opt == fr {
-      "fr"
-    } else if region-opt == it { "it" } else if region-opt == es {
-      "es"
-    } else if region-opt == be { "be" } else if region-opt == bg {
-      "bg"
-    } else if region-opt == cy { "cy" } else if region-opt == cz {
-      "cz"
-    } else if region-opt == dk { "dk" } else if region-opt == ee {
-      "ee"
-    } else if region-opt == gr { "gr" } else if region-opt == hr {
-      "hr"
-    } else if region-opt == hu { "hu" } else if region-opt == ie {
-      "ie"
-    } else if region-opt == lt { "lt" } else if region-opt == lu {
-      "lu"
-    } else if region-opt == lv { "lv" } else if region-opt == mt {
-      "mt"
-    } else if region-opt == nl { "nl" } else if region-opt == pl {
-      "pl"
-    } else if region-opt == pt { "pt" } else if region-opt == ro {
-      "ro"
-    } else if region-opt == se { "se" } else if region-opt == si {
-      "si"
-    } else if region-opt == sk { "sk" } else if region-opt == uk {
-      "gb"
-    } else if region-opt == us { "us" } else { fallback }
+// The country of a locale region such as "de" (the default of the parties).
+#let country-from-region(region) = {
+  let key = lower(region)
+  if key in region-to-country {
+    region-to-country.at(key)()
   } else {
-    fallback
+    make-country(code: upper(region))
   }
 }
 
-#let resolve-country(country-opt, default-region) = {
-  if type(country-opt) == function {
-    country-opt()
-  } else if type(country-opt) == dictionary {
-    country-opt
+// The country of an ISO 3166-1 alpha-2 code: the predefined country, or a
+// custom one without name. "UK" is accepted for the United Kingdom (GB).
+#let country-from-code(code, field) = {
+  let code = normalize-code(code, field)
+  let key = lower(code)
+  if key in region-to-country {
+    region-to-country.at(key)()
   } else {
-    // country-opt is auto
-    let region-lower = lower(default-region)
-    if region-lower in region-to-country {
-      region-to-country.at(region-lower)()
-    } else {
-      make-country(code: upper(default-region))
+    custom(code: code)
+  }
+}
+
+#let _invalid-country(value, field) = panic(
+  "`"
+    + field
+    + "` must be a country of the `country` module (e.g. `country.fr`), `country.custom(code: \"NO\", name: \"Norge\")` or an ISO 3166-1 alpha-2 code such as \"FR\", got "
+    + repr(value)
+    + ".",
+)
+
+// Completes a country dictionary: missing parsers and formatters are taken
+// from the country of its code, the code is validated and upper-cased.
+#let _complete-country(country, field) = {
+  if "code" not in country {
+    panic(
+      "`"
+        + field
+        + "`: the country dictionary has no `code`. Use e.g. `country.custom(code: \"NO\", name: \"Norge\")`.",
+    )
+  }
+  let code = normalize-code(country.code, field + ".code")
+  for key in ("parse-city", "format-address", "format-inline") {
+    if key in country and type(country.at(key)) != function {
+      panic(
+        "`"
+          + field
+          + "."
+          + key
+          + "` must be a function, got "
+          + repr(country.at(key))
+          + ".",
+      )
     }
   }
+  let base = if ("parse-city", "format-address", "format-inline").all(key => (
+    key in country
+  )) { (name: "", show-always: false) } else {
+    country-from-code(code, field + ".code")
+  }
+  base + country + (code: code)
+}
+
+// Whether a `country` (or `region`) value states no country: `auto`, `none`,
+// or an empty string or content (e.g. an empty column of imported data), which
+// is the same as leaving the key out.
+#let _states-no-country(value) = (
+  value == auto
+    or value == none
+    or (type(value) in (str, content) and plain-text(value) == "")
+)
+
+/// Resolves the `country` of a party: a function of the `country` module
+/// (`country.fr`), a country dictionary (`country.custom(..)`,
+/// `(code: "NO", name: "Norge")`) or an ISO 3166-1 alpha-2 code as string or
+/// content (`"FR"`). `auto`, `none` and an empty string give the country of
+/// `default-region`.
+///
+/// Any other value is an error: a country must never be replaced silently.
+///
+/// -> dictionary
+#let resolve-country(country-opt, default-region, field: "country") = {
+  if _states-no-country(country-opt) {
+    return country-from-region(default-region)
+  }
+  let kind = type(country-opt)
+  if kind in (str, content) {
+    let code = plain-text(country-opt)
+    if code.match(_code-pattern) == none {
+      _invalid-country(country-opt, field)
+    }
+    return country-from-code(code, field)
+  }
+  let country = if kind == function { country-opt() } else if (
+    kind == dictionary
+  ) { country-opt } else { _invalid-country(country-opt, field) }
+  if type(country) != dictionary { _invalid-country(country-opt, field) }
+  _complete-country(country, field)
+}
+
+// The `region` key of a party, an older alias of `country`: also accepts the
+// regions of the `locale` module (`region.de`) and their dictionaries.
+#let _resolve-region(region-opt, default-region, field) = {
+  if type(region-opt) == function {
+    import "../locale/region/region.typ"
+    let locale-regions = (
+      (region.at, "at"),
+      (region.ch, "ch"),
+      (region.de, "de"),
+      (region.es, "es"),
+      (region.fr, "fr"),
+      (region.it, "it"),
+    )
+    for (region-fn, code) in locale-regions {
+      if region-opt == region-fn { return country-from-region(code) }
+    }
+  }
+  if (
+    type(region-opt) == dictionary
+      and type(region-opt.at("meta", default: none)) == dictionary
+      and "region" in region-opt.meta
+  ) {
+    return country-from-region(region-opt.meta.region)
+  }
+  resolve-country(region-opt, default-region, field: field)
+}
+
+/// The country of a party and whether the party states it (`country` or
+/// `region`). Without, the party gets `default-country` (e.g. the recipient's
+/// country for a delivery address) or the country of `default-region`.
+///
+/// -> dictionary
+#let resolve-party-country(
+  party,
+  default-region,
+  default-country: auto,
+  field: "party",
+) = {
+  let country-opt = party.at("country", default: auto)
+  if not _states-no-country(country-opt) {
+    return (
+      country: resolve-country(
+        country-opt,
+        default-region,
+        field: field + ".country",
+      ),
+      explicit: true,
+    )
+  }
+  let region-opt = party.at("region", default: none)
+  if not _states-no-country(region-opt) {
+    return (
+      country: _resolve-region(region-opt, default-region, field + ".region"),
+      explicit: true,
+    )
+  }
+  if default-country != auto {
+    return (country: default-country, explicit: false)
+  }
+  (country: country-from-region(default-region), explicit: false)
+}
+
+// Checks the `city` of a party: a string, content or a dictionary whose parts
+// are strings or content. A post code given as a number would lose its leading
+// zeros ("01067 Dresden"), so it is rejected instead of converted.
+#let _check-city(city, field) = {
+  if city == () { return none }
+  if city == none or type(city) in (str, content) { return city }
+  if type(city) != dictionary {
+    panic(
+      "`"
+        + field
+        + ".city` must be a string such as \"10115 Berlin\", content or a dictionary `(name: \"Berlin\", post-code: \"10115\")`, got "
+        + repr(city)
+        + ".",
+    )
+  }
+  for key in ("name", "post-code", "state", "display", "inline-display") {
+    let value = city.at(key, default: none)
+    if value != none and type(value) not in (str, content) {
+      panic(
+        "`"
+          + field
+          + ".city."
+          + key
+          + "` must be a string"
+          + if key == "post-code" {
+            " such as \"01067\", so that leading zeros are kept"
+          } else { "" }
+          + ", got "
+          + repr(value)
+          + ".",
+      )
+    }
+  }
+  city
 }
 
 #let normalize-party(
@@ -507,31 +817,40 @@
   is-recipient: false,
   sender-country-code: none,
   recipient-country-code: none,
+  // The country of a party without `country` (and `region`); `auto` is the
+  // country of `default-region`.
+  default-country: auto,
+  // The name of the party in error messages; `auto` is "sender" or
+  // "recipient".
+  field: auto,
 ) = {
   if type(party) != dictionary { return party }
+  let field = if field != auto { field } else if is-recipient {
+    "recipient"
+  } else { "sender" }
 
   let has-street = "street" in party and party.street != none
   let has-address = "address" in party and party.address != none
   if has-street and has-address {
     panic(
       "Both 'street' and 'address' are populated for "
-        + (if is-recipient { "recipient" } else { "sender" })
+        + field
         + ", but they are mutually exclusive.",
     )
   }
 
   // 1. Resolve country
-  let party-region-raw = party.at("region", default: none)
-  let party-region = normalize-region-to-string(
-    party-region-raw,
-    default-region,
+  let (country: resolved-country, explicit: country-explicit) = (
+    resolve-party-country(
+      party,
+      default-region,
+      default-country: default-country,
+      field: field,
+    )
   )
 
-  let country-opt = party.at("country", default: auto)
-  let resolved-country = resolve-country(country-opt, party-region)
-
   // 2. Parse / extract city data
-  let city-raw = party.at("city", default: none)
+  let city-raw = _check-city(party.at("city", default: none), field)
   let parsed-city = none
   if city-raw != none {
     if type(city-raw) == dictionary {
@@ -564,13 +883,13 @@
   let address-vertical = format-poly-block(address-raw)
   let address-inline = format-poly-inline(address-raw)
 
-  import "../utils/coercion.typ": to-string
+  // The raw lines; the e-invoice extracts their plain text itself.
   let address-lines = if address-raw == none {
     ()
   } else if type(address-raw) == array {
-    address-raw.map(to-string)
+    address-raw
   } else {
-    (to-string(address-raw),)
+    (address-raw,)
   }
 
   // 4. Format city (handling international country name printing)
@@ -648,6 +967,10 @@
       address-inline: address-inline,
       city-inline: city-inline,
       country: resolved-country,
+      // Whether the party states its country; otherwise it is the default
+      // (the locale region, or the recipient's country for a delivery
+      // address).
+      country-explicit: country-explicit,
       city-name: none,
       post-code: none,
       state: none,
@@ -666,4 +989,3 @@
     }
   }
 }
-

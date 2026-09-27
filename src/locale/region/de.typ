@@ -14,7 +14,8 @@
           + "`tax.intra-community()` -> EU B2B Delivery (§4 Nr. 1b UStG)\n"
           + "`tax.export()` -> Non-EU Export (§4 Nr. 1a UStG)\n"
           + "`tax.exempt()` -> VAT Exemptions (§4 UStG)\n"
-          + "`tax.outside-scope()` -> Small Business/Kleinunternehmer (§19 UStG) or out of scope.",
+          + "`tax-exempt-small-biz: true` -> Small Business/Kleinunternehmer (§19 UStG)\n"
+          + "`tax.outside-scope()` -> Not subject to VAT (nicht steuerbar).",
       )
     } else {
       panic(
@@ -37,8 +38,12 @@
 
     tax: (
       default-vat: tax.vat(19%),
-      small-enterprise-special-scheme: tax.outside-scope(
-        grounds: "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.",
+      // Kleinunternehmer: since 2025 (JStG 2024), § 19 Abs. 1 UStG makes the
+      // turnover tax exempt, and the invoice must note that the exemption
+      // applies (§ 34a UStDV). The note is printed and is the exemption reason
+      // (BT-120) of VAT category E in the e-invoice.
+      small-enterprise-special-scheme: tax.exempt(
+        grounds: "Umsatzsteuerfrei aufgrund der Kleinunternehmerregelung gemäß § 19 Abs. 1 UStG.",
       ),
     ),
   )

@@ -1,5 +1,5 @@
 // Copied code from loom
-// Can be import in later versions when display is published
+// Can be imported in later versions when display is published
 
 #let _SIG_KEY = "__loom_matcher_sig__"
 #let _SIG_VAL = "loom-matcher-v1-7600d448"
@@ -8,7 +8,7 @@
 ///
 /// # Example
 /// ```typ
-/// display(matcher.many(int)) // -> "array<int>"
+/// display(matcher.many(int)) // -> "array<(int)>"
 /// display(matcher.choice("a", "b")) // -> "\"a\" | \"b\""
 /// ```
 ///

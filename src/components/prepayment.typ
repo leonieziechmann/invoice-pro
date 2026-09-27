@@ -53,6 +53,7 @@
     types.date-like,
     types.text-like,
   )
+  types.require-day(date, "prepayment::date")
   types.require(reference, "prepayment::reference", none, auto, types.text-like)
   types.require(
     description,

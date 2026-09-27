@@ -17,6 +17,7 @@
 #let quote-nr = dynamic("quote-nr")
 #let delivery-note-nr = dynamic("delivery-note-nr")
 #let preceding-invoice-nr = dynamic("preceding-invoice-nr")
+#let preceding-invoice-date = dynamic("preceding-invoice-date")
 #let payment-reference = dynamic("payment-reference")
 #let buyer-reference = dynamic("buyer-reference")
 #let subject = dynamic("subject")
@@ -28,6 +29,9 @@
 // --- Sender Details
 #let sender = (
   name: dynamic("sender", "name"),
+  trading-name: dynamic("sender", "trading-name"),
+  legal-id: dynamic("sender", "legal-id"),
+  legal-info: dynamic("sender", "legal-info"),
   tax-nr: dynamic("sender", "tax-nr"),
   vat-id: dynamic("sender", "vat-id"),
   address: dynamic("sender", "address"),
@@ -40,6 +44,8 @@
 // --- Recipient Details
 #let recipient = (
   name: dynamic("recipient", "name"),
+  trading-name: dynamic("recipient", "trading-name"),
+  legal-id: dynamic("recipient", "legal-id"),
   tax-nr: dynamic("recipient", "tax-nr"),
   vat-id: dynamic("recipient", "vat-id"),
   address: dynamic("recipient", "address"),
