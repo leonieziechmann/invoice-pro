@@ -699,6 +699,8 @@ The package checks the input, not the XML: the rules of `src/zugferd/rules/` dec
 - the conformance corpus validates the XML with the official validators (see [The Conformance Corpus](#the-conformance-corpus));
 - the mutation test checks the write guard of the oracle against the XSD and Mustang (below).
 
+The package ran these checks itself on every e-invoice until they moved into the tests; what only that runtime version needed is parked in `extras/zugferd-guard/` for an optional companion package (see its README).
+
 The oracle checks:
 
 | Check      | Modules                                     | What it checks                                                                                                                                                                                                                                                                 |
