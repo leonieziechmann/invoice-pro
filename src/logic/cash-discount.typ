@@ -1,4 +1,4 @@
-// Cash discounts (Skonto) of the payment goal: a lower amount for a payment
+// Cash discounts (Skonto) of `payment-terms`: a lower amount for a payment
 // within fewer days, e.g. 2 % for a payment within 14 days.
 //
 // One structure yields both the note the invoice prints and the payment
@@ -13,7 +13,7 @@
 // The keys of a cash discount.
 #let _keys = ("days", "percent", "basis")
 
-/// Checks and normalizes the `discount` of the payment goal: `none`, a
+/// Checks and normalizes the `discount` of `payment-terms`: `none`, a
 /// dictionary `(days: .., percent: .., basis: ..)` or an array of them.
 ///
 /// Returns an array of `(days: int, percent: decimal, basis: none |
@@ -97,7 +97,7 @@
 
 /// The cash discounts with the note the invoice prints for each of them
 /// (`note`), from the `cash-discount` sentence of the language: the percent
-/// in the number format of the locale, the deadline as a payment goal of
+/// in the number format of the locale, the deadline as `payment-terms` with
 /// `days` prints it, and the basis as an amount (`none` if not given).
 ///
 /// -> array

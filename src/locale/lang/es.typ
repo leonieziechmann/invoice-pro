@@ -319,6 +319,8 @@
       iban: a => [El IBAN #raw(a.iban) no es válido (dígitos de control ISO 13616).],
       iban-missing: a => [Falta el IBAN de los datos bancarios.],
       epc-qr: a => [No se puede generar el código QR EPC: #a.problems.],
+      creditor-id: a => [El identificador de acreedor #raw(a.creditor-id) del adeudo directo no es válido (dígitos de control).],
+      debtor-iban: a => [El IBAN #raw(a.iban) de la cuenta de cargo (`debtor-iban`) no es válido (dígitos de control ISO 13616).],
       part-empty: a => [La parte #raw(a.part) no produce contenido, pero contiene menciones obligatorias por ley.],
       part-none: a => [La parte #raw(a.part) contiene menciones obligatorias por ley y no puede ser `none`; envolverla (`wrap`) o sustituir su renderizador.],
       role: a => [El diseño #raw(a.layout) debe colocar #a.parts.map(raw).join[ o ] en #if a.exactly [exactamente un área] else [al menos un área] #if a.tagged [etiquetada (primera página o flujo)] else [dibujada en la página 1] (encontradas: #a.found). Contiene menciones obligatorias por ley: #a.why. Su aspecto puede cambiarse sustituyendo el renderizador, pero debe seguir colocada.],

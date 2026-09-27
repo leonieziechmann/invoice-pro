@@ -65,11 +65,11 @@ A single problem is reported with its message alone. An invalid value panics; co
 
 Every problem that follows the level belongs to one of three classes:
 
-| Class   | What                                                               | Examples (issue ids)                                                                                                                                                                      | Withholds the XML in a draft |
-| :------ | :----------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------- |
-| `data`  | A legally required invoice field is missing (§ 14 UStG, EN 16931). | `invoice-number`, `sender-name`, `sender-address`, `sender-tax-id`, `recipient-name`, `recipient-address`, `line-items`, `recipient-vat-id` (reverse charge), `iban` (missing or invalid) | yes                          |
-| `theme` | The theme cannot carry required output.                            | `theme/role-*`, `theme/part-*`, `theme/empty-*`, `theme/identity-number`, `theme/identity-date`                                                                                           | no                           |
-| `lint`  | A quality or export guard.                                         | `lint/contrast-*`, `lint/footer-fit`, `lint/overprint-*`, `lint/window-*`, `lint/envelope-*`, `lint/qr-bill-paper`, `lint/fine-size`, `lint/logo-alt`, `lint/pdf-image-*`, `lint/cmyk-*`  | no                           |
+| Class   | What                                                               | Examples (issue ids)                                                                                                                                                                                                    | Withholds the XML in a draft |
+| :------ | :----------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------- |
+| `data`  | A legally required invoice field is missing (§ 14 UStG, EN 16931). | `invoice-number`, `sender-name`, `sender-address`, `sender-tax-id`, `recipient-name`, `recipient-address`, `line-items`, `recipient-vat-id` (reverse charge), `iban` (missing or invalid), `creditor-id`, `debtor-iban` | yes                          |
+| `theme` | The theme cannot carry required output.                            | `theme/role-*`, `theme/part-*`, `theme/empty-*`, `theme/identity-number`, `theme/identity-date`                                                                                                                         | no                           |
+| `lint`  | A quality or export guard.                                         | `lint/contrast-*`, `lint/footer-fit`, `lint/overprint-*`, `lint/window-*`, `lint/envelope-*`, `lint/qr-bill-paper`, `lint/fine-size`, `lint/logo-alt`, `lint/pdf-image-*`, `lint/cmyk-*`                                | no                           |
 
 The data checks of an invoice:
 
@@ -84,6 +84,8 @@ The data checks of an invoice:
 | `line-items`        | The invoice has at least one line item.                                                                                                                                                | § 14 Abs. 4 Nr. 5 UStG | BG-25        |
 | `recipient-vat-id`  | `recipient.vat-id` is set when reverse charge or an intra-community supply applies.                                                                                                    | § 14a Abs. 1, 3 UStG   | BT-48        |
 | `iban`              | The IBAN of `bank-details` is given and has valid check digits. An invalid IBAN also gets no QR code.                                                                                  | –                      | BT-84        |
+| `creditor-id`       | The SEPA creditor identifier of `direct-debit` has valid check digits (an invoice in euro).                                                                                            | –                      | BT-90        |
+| `debtor-iban`       | The IBAN of the debited account of `direct-debit` (`debtor-iban`) has valid check digits.                                                                                              | –                      | BT-91        |
 
 With a locale for AT, CH, FR, IT or ES, the report cites the national invoicing rule instead of the German one. The checks read the normalized parties, so every spelling of an address (`address` or `street`, a string or a dictionary for `city`) is covered.
 

@@ -48,7 +48,7 @@
 /// of the buyer (BT-81 = 59, BG-19).
 ///
 /// Prints the payment method, the mandate reference, the creditor
-/// identifier and the debited account, and the payment goal announces the
+/// identifier and the debited account, and `payment-terms` announces the
 /// direct debit instead of asking for a transfer. The e-invoice states the
 /// mandate reference (BT-89), the creditor identifier (BT-90) and the
 /// debited account (BT-91).
@@ -102,24 +102,11 @@
       }
       let valid-iban = iban == none or iban-valid(iban)
 
-      // A wrong identifier makes the printed invoice wrong as well, so it
-      // stops the compilation, unless an e-invoice reports its problems in
-      // the document (`zugferd-errors: "report"`).
+      // A wrong identifier makes the printed invoice wrong as well: like an
+      // invalid IBAN of `bank-details`, it is a data issue of the root (see
+      // `validation`), which the validation level handles. With an e-invoice
+      // and `zugferd-errors: "report"`, the part marks it where it is printed.
       let report = report-problems(ctx)
-      if not report and not creditor-valid {
-        panic(
-          "direct-debit: the creditor identifier \""
-            + creditor
-            + "\" is not a valid SEPA creditor identifier (wrong check digits or format). Check it for typos.",
-        )
-      }
-      if not report and not valid-iban {
-        panic(
-          "direct-debit: the IBAN \""
-            + format-iban(iban)
-            + "\" of `debtor-iban` is not valid (wrong check digits or format). Check it for typos.",
-        )
-      }
 
       let details = (
         (
@@ -143,8 +130,19 @@
         mandate: mandate,
         creditor-id: creditor,
         debtor-iban: iban,
+        // for the data issues of the root
+        creditor-id-valid: creditor-valid,
+        debtor-iban-valid: valid-iban,
       )
-      (public, (kind: "direct-debit", text: none, details: details))
+      (
+        public,
+        (
+          kind: "direct-debit",
+          text: none,
+          details: details,
+          report-problems: report,
+        ),
+      )
     },
     draw: _draw,
     none,
@@ -155,7 +153,7 @@
 /// payment card (BT-81 = 48, 54 or 55, BG-18).
 ///
 /// Prints the kind of card, the last digits of the card number and the card
-/// holder, and the payment goal says that the amount is charged to the card
+/// holder, and `payment-terms` says that the amount is charged to the card
 /// instead of asking for a transfer. The e-invoice states the last digits
 /// of the card number (BT-87) and the card holder (BT-88); the profiles
 /// below EN 16931 state only the payment means code.
@@ -236,7 +234,7 @@
 
 /// States that the invoice is paid already: the paid amount (BT-113) is the
 /// total, and nothing is due (BT-115). An invoice that is paid has no
-/// payment goal and no text as `due-date`.
+/// `payment-terms` and no text as `due-date`.
 ///
 /// Prints that the amount was paid, and how, and that nothing is due; on a
 /// credit note or a self-billed invoice, that the sender paid it to the

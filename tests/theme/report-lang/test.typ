@@ -18,6 +18,8 @@
 #let issue-keys = (
   "contrast",
   "cmyk",
+  "creditor-id",
+  "debtor-iban",
   "envelope",
   "epc-qr",
   "fine-size",
@@ -46,6 +48,8 @@
     min: 4.5,
   ),
   cmyk: (path: "theme::tokens::colors::primary"),
+  creditor-id: (creditor-id: "DE00ZZZ09999999999"),
+  debtor-iban: (iban: "DE00 1203 0000 0000 2020 51"),
   envelope: (
     envelope: "din-c6",
     packet-w: 210.0,

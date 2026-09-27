@@ -158,7 +158,7 @@ Collects the amount of the invoice by SEPA direct debit from the account of the 
 | `creditor-id` | `str` \| `content`           | Your SEPA creditor identifier, with or without spaces. Required. For an invoice in euro, its check digits are checked.        |
 | `debtor-iban` | `none` \| `str` \| `content` | The IBAN of the buyer's account that is debited, with or without spaces. XRechnung requires it. Its check digits are checked. |
 
-An invalid creditor identifier or IBAN stops the compilation with a message naming it, like an invalid IBAN of [`bank-details`](#bank-details). An invoice has one payment means: `direct-debit` next to `bank-details` or `card-payment` is an error of the e-invoice (see [Payment Means](../e-invoicing/invoice-data/payment.md#payment-means)), and the EPC-QR code of `bank-details` is hidden by default. On a credit note or a self-billed invoice, whose sender pays the amount, `direct-debit` stops the compilation.
+An invalid creditor identifier or IBAN is a problem of the invoice data, like an invalid IBAN of [`bank-details`](#bank-details): a draft lists it on its report page and withholds the ZUGFeRD XML, and `validation: "strict"` stops the compilation with a message naming it. With `validation: none`, an e-invoice with `zugferd-errors: "report"` marks it where it is printed. An invoice has one payment means: `direct-debit` next to `bank-details` or `card-payment` is an error of the e-invoice (see [Payment Means](../e-invoicing/invoice-data/payment.md#payment-means)), and the EPC-QR code of `bank-details` is hidden by default. On a credit note or a self-billed invoice, whose sender pays the amount, `direct-debit` stops the compilation.
 
 ---
 

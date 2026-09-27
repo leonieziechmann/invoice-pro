@@ -308,6 +308,8 @@
       iban: a => [The IBAN #raw(a.iban) is not valid (ISO 13616 check digits).],
       iban-missing: a => [The IBAN of the bank details is missing.],
       epc-qr: a => [The EPC-QR code cannot be generated: #a.problems.],
+      creditor-id: a => [The creditor identifier #raw(a.creditor-id) of the direct debit is not valid (check digits).],
+      debtor-iban: a => [The IBAN #raw(a.iban) of the debited account (`debtor-iban`) is not valid (ISO 13616 check digits).],
       part-empty: a => [The part #raw(a.part) rendered nothing, but it carries legally required output.],
       part-none: a => [The part #raw(a.part) carries legally required output and cannot be `none`; wrap it or replace its renderer instead.],
       role: a => [The layout #raw(a.layout) must place #a.parts.map(raw).join[ or ] in #if a.exactly [exactly one] else [at least one] #if a.tagged [tagged area (first page or flow)] else [area drawn on page 1] (found: #a.found). It carries legally required output: #a.why. Restyle it by replacing its renderer, but keep it placed.],

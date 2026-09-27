@@ -1430,7 +1430,7 @@
   }
   let printed-period = _printed-service-period(ctx)
 
-  // BT-9 and BT-20: the invoice's own `due-date` wins over the payment goal.
+  // BT-9 and BT-20: the invoice's own `due-date` wins over `payment-terms`.
   // `terms-input` is the input the payment terms come from.
   let due-date = none
   let terms = none
@@ -1457,7 +1457,7 @@
       terms = payment-terms(goal-date)
       if terms != none { terms-input = "payment-terms" }
     }
-    // Without days or a date, the payment goal prints that the amount is due
+    // Without days or a date, `payment-terms` prints that the amount is due
     // at once ("sofort nach Erhalt"), which are the payment terms. On a
     // document whose sender pays (a credit note or a self-billed invoice),
     // it prints that the sender pays at once ("umgehend") instead.
@@ -1473,7 +1473,7 @@
       if terms != none { terms-input = "payment-terms" }
     }
   }
-  // The cash discounts of the payment goal follow the terms, each on a line
+  // The cash discounts of `payment-terms` follow the terms, each on a line
   // of its own: as the invoice prints them, and in XRechnung in its Skonto
   // syntax (BR-DE-18).
   let discounts = if payment-goal != none {
@@ -1617,7 +1617,7 @@
       terms: terms,
       terms-xrechnung: terms-xrechnung,
       terms-input: terms-input,
-      // The cash discounts of the payment goal: `days`, `percent` (in
+      // The cash discounts of `payment-terms`: `days`, `percent` (in
       // percent) and `basis` (`none` if not given).
       discounts: discounts.map(discount => (
         days: discount.days,

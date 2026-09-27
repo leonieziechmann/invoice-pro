@@ -381,7 +381,7 @@
 ///   `text-due` of an amount collected by `direct-debit`: (sum, deadline) => content
 /// - text-card, text-card-due (auto, fn): `text` and `text-due` of an amount
 ///   charged to a `card-payment`: (sum, deadline) => content
-/// - cash-discount (auto, fn): Note of a cash discount of the payment goal:
+/// - cash-discount (auto, fn): Note of a cash discount of `payment-terms`:
 ///   (percent, deadline, basis) => content, `basis` is `none` if not given
 /// - deadline-date (auto, fn): Function formatting a fixed date: (date) => str
 /// - deadline-days (auto, fn): Function formatting relative days: (days) => str

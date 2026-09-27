@@ -3,7 +3,8 @@
 // for a transfer, a paid invoice says that it is paid and that nothing is
 // due, the components print their details, and the bank details show no
 // EPC-QR code when the buyer is not asked to transfer the amount. Wrong
-// input stops the compilation with a message.
+// input stops the compilation with a message; an invalid identifier of a
+// direct debit is a data issue that the validation level handles.
 
 #import "/src/lib.typ": *
 #import "/tests/integration/payment-reference/harness.typ": find-all, plain
@@ -146,6 +147,25 @@
     payment-means(card-number: "Card", paid: (sum, date) => [Paid: #sum.])
   }),
 )[#items #payment-terms(days: 3) #card]
+// An invalid identifier of a direct debit is a data issue, like an invalid
+// IBAN of the bank details: a draft prints it as given and lists it in its
+// report, an e-invoice that reports its problems in the document marks it
+// (strict: section 2)
+#let bad-debit = direct-debit(
+  mandate: "M-1",
+  creditor-id: "DE00ZZZ09999999999",
+  debtor-iban: "DE00120300000000202051",
+)
+#test-invoice("debit-draft", validation: "draft")[
+  #items
+  #payment-terms(days: 14)
+  #bad-debit
+]
+#test-invoice("debit-report", zugferd: "en16931", zugferd-errors: "report")[
+  #items
+  #payment-terms(days: 14)
+  #bad-debit
+]
 
 #context {
   // Amounts are printed with a narrow no-break space before the currency.
@@ -277,6 +297,23 @@
   expect("direct-debit-bank/bank", "no QR")
   expect("direct-debit-bank-qr/bank", "QR")
 
+  // An invalid identifier of a direct debit: printed as given in a draft,
+  // which lists it in its report (the only draft of this document), and
+  // marked in an e-invoice that reports its problems
+  expect(
+    "debit-draft/direct-debit",
+    "Zahlungsart: SEPA-Lastschrift\nMandatsreferenz: M-1\nGläubiger-ID: DE00ZZZ09999999999\nIhre IBAN: DE00 1203 0000 0000 2020 51",
+  )
+  let draft-ids = query(<ip-issue>).map(it => it.value.id).dedup()
+  assert(
+    "creditor-id" in draft-ids and "debtor-iban" in draft-ids,
+    message: repr(draft-ids),
+  )
+  expect(
+    "debit-report/direct-debit",
+    "Zahlungsart: SEPA-Lastschrift\nMandatsreferenz: M-1\nGläubiger-ID: DE00ZZZ09999999999 (invalid)\nIhre IBAN: DE00 1203 0000 0000 2020 51 (invalid)",
+  )
+
   // The texts of the language can be customized, several groups in one block
   expect("custom/goal", "Charged: 119,00 € within 3 days.")
   expect(
@@ -288,6 +325,24 @@
 // --- 2. Wrong input stops the compilation, naming the problem ---
 #{
   let error(body) = catch(() => test-invoice("error", body))
+  // An invalid identifier of a direct debit stops it under
+  // `validation: "strict"` (the fixture's sender gets a VAT ID, so that it is
+  // the only problem)
+  let strict = (
+    validation: "strict",
+    sender: (
+      name: "Muster GmbH",
+      address: "Hauptstraße 1",
+      city: "10115 Berlin",
+      vat-id: "DE123456789",
+    ),
+  )
+  let strict-error(lang: locale.de-de, body) = catch(() => test-invoice(
+    "error",
+    lang: lang,
+    ..strict,
+    body,
+  ))
   assert.eq(
     error[#items #payment-terms(days: 14) #paid(method: "cash")],
     "assertion failed: An invoice that is `paid` has no `payment-terms`: nothing is left to pay. Remove the `payment-terms`.",
@@ -326,10 +381,10 @@
   // "eur" is the euro: the creditor identifier of a SEPA direct debit is
   // checked
   assert(
-    catch(() => test-invoice("error", lang: lower-case-euro)[
+    strict-error(lang: lower-case-euro)[
       #items
       #direct-debit(mandate: "M-1", creditor-id: "DE00ZZZ09999999999")
-    ]).contains("is not a valid SEPA creditor identifier"),
+    ].contains("is not a valid SEPA creditor identifier"),
   )
   assert.eq(
     error[#items #payment-terms(days: 14) #debit #debit],
@@ -340,14 +395,14 @@
     "panicked with: \"Component `card-payment` must NOT be nested within `line-items`.\"",
   )
   assert.eq(
-    error[#items #direct-debit(
+    strict-error[#items #direct-debit(
         mandate: "M-1",
         creditor-id: "DE00ZZZ09999999999",
       )],
     "panicked with: \"direct-debit: the creditor identifier \\\"DE00ZZZ09999999999\\\" is not a valid SEPA creditor identifier (wrong check digits or format). Check it for typos.\"",
   )
   assert.eq(
-    error[#items #direct-debit(
+    strict-error[#items #direct-debit(
         mandate: "M-1",
         creditor-id: "DE98ZZZ09999999999",
         debtor-iban: "DE00120300000000202051",

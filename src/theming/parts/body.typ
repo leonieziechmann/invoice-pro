@@ -26,7 +26,8 @@
 //     sentence is for: "transfer" | "direct-debit" | "card" | none), view.discounts
 //     (the cash discounts with their printed `note`); v1: days, date, total
 //   payment-means (direct-debit, card-payment, paid): view.kind, view.text (a
-//     sentence or none), view.details: array of (label, value, valid)
+//     sentence or none), view.details: array of (label, value, valid),
+//     view.report-problems (mark an invalid identifier where it is printed)
 //   zugferd-report: the result of the e-invoice (`zugferd-errors: "report"`):
 //     view.profile, view.diagnostics (errors first); called by core, not by a
 //     component

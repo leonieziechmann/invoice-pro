@@ -299,6 +299,8 @@
       iban: a => [L'IBAN #raw(a.iban) n'est pas valide (chiffres de contrôle ISO 13616).],
       iban-missing: a => [L'IBAN des coordonnées bancaires manque.],
       epc-qr: a => [Le code QR EPC ne peut pas être généré : #a.problems.],
+      creditor-id: a => [L'identifiant créancier SEPA #raw(a.creditor-id) du prélèvement n'est pas valide (chiffres de contrôle).],
+      debtor-iban: a => [L'IBAN #raw(a.iban) du compte débité (`debtor-iban`) n'est pas valide (chiffres de contrôle ISO 13616).],
       part-empty: a => [La partie #raw(a.part) ne produit rien, alors qu'elle porte des mentions légalement obligatoires.],
       part-none: a => [La partie #raw(a.part) porte des mentions légalement obligatoires et ne peut pas être `none` ; l'envelopper (`wrap`) ou remplacer son moteur de rendu.],
       role: a => [La mise en page #raw(a.layout) doit placer #a.parts.map(raw).join[ ou ] dans #if a.exactly [exactement une] else [au moins une] #if a.tagged [zone balisée (première page ou flux)] else [zone dessinée sur la page 1] (trouvé : #a.found). Elle porte des mentions légalement obligatoires : #a.why. Son apparence peut changer via son moteur de rendu, mais elle doit rester placée.],

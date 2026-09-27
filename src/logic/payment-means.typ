@@ -10,7 +10,7 @@
 //
 // `resolve` combines their signals into the description the root context
 // publishes (`global.payment-means`). It is the one source for the sentence
-// the payment goal prints, for whether the bank details show an EPC-QR code
+// `payment-terms` prints, for whether the bank details show an EPC-QR code
 // and for the payment means the e-invoice states (BT-81 and its groups).
 
 /// The methods of `paid`, with the kind of payment means each one is: a

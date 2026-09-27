@@ -287,6 +287,8 @@
       iban: a => [Die IBAN #raw(a.iban) ist ungültig (Prüfziffern nach ISO 13616).],
       iban-missing: a => [Die IBAN der Bankverbindung fehlt.],
       epc-qr: a => [Der EPC-QR-Code kann nicht erzeugt werden: #a.problems.],
+      creditor-id: a => [Die Gläubiger-Identifikationsnummer #raw(a.creditor-id) der Lastschrift ist ungültig (Prüfziffern).],
+      debtor-iban: a => [Die IBAN #raw(a.iban) des belasteten Kontos (`debtor-iban`) ist ungültig (Prüfziffern nach ISO 13616).],
       part-empty: a => [Der Part #raw(a.part) liefert keine Ausgabe, trägt aber gesetzlich vorgeschriebene Angaben.],
       part-none: a => [Der Part #raw(a.part) trägt gesetzlich vorgeschriebene Angaben und darf nicht `none` sein; stattdessen umhüllen (`wrap`) oder den Renderer ersetzen.],
       role: a => [Das Layout #raw(a.layout) muss #a.parts.map(raw).join[ oder ] in #if a.exactly [genau einem] else [mindestens einem] #if a.tagged [getaggten Bereich (erste Seite oder Textfluss)] else [auf Seite 1 gezeichneten Bereich] platzieren (gefunden: #a.found). Er trägt gesetzlich vorgeschriebene Angaben: #a.why. Das Aussehen lässt sich über den Renderer ändern, die Platzierung muss bleiben.],

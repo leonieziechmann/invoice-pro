@@ -59,6 +59,43 @@
   issues
 }
 
+// The data issues of a direct debit: an invalid creditor identifier or an
+// invalid IBAN of the debited account makes the printed invoice wrong as
+// well (data class, as an invalid IBAN of the bank details).
+#let _direct-debit-issues(debit) = {
+  if debit == none { return () }
+  let issues = ()
+  if not debit.at("creditor-id-valid", default: true) {
+    let creditor = debit.creditor-id
+    issues.push(issue(
+      "creditor-id",
+      "data",
+      "direct-debit: the creditor identifier \""
+        + creditor
+        + "\" is not a valid SEPA creditor identifier (wrong check digits or format). Check it for typos.",
+      ref: "EN 16931 BT-90",
+      fix: "direct-debit(.., creditor-id: \"DE98ZZZ09999999999\")",
+      key: "creditor-id",
+      args: (creditor-id: creditor),
+    ))
+  }
+  if not debit.at("debtor-iban-valid", default: true) {
+    let iban = format-iban(debit.debtor-iban)
+    issues.push(issue(
+      "debtor-iban",
+      "data",
+      "direct-debit: the IBAN \""
+        + iban
+        + "\" of `debtor-iban` is not valid (wrong check digits or format). Check it for typos.",
+      ref: "EN 16931 BT-91",
+      fix: "direct-debit(.., debtor-iban: \"DE02 1203 0000 0000 2020 51\")",
+      key: "debtor-iban",
+      args: (iban: iban),
+    ))
+  }
+  issues
+}
+
 /// The internal root container that wraps the invoice body.
 /// It initializes the global context and provides the base document structure to the theme.
 ///
@@ -434,6 +471,7 @@
               region: lower(str(ctx.locale.meta.at("region", default: "de"))),
             )
             + _bank-issues(view.banks)
+            + _direct-debit-issues(view.payment-means.direct-debit)
         )
       }
       let issues = enforce(issues, level)
