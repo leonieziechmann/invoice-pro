@@ -25,7 +25,7 @@ The API reference is divided into specialized modules, reflecting the technical 
 | **[Identifiers](api-reference/invoice/identifiers)** | Typed identifiers of parties (`id` module): GLN, D-U-N-S, SIREN, SIRET, Swiss UID, register numbers and Leitweg-IDs with their ISO/IEC 6523 scheme and check digit, for the e-invoice.                                                                      |
 | **[Unit](api-reference/line-items/unit)**            | Localized billing units. Details the standard builders and shorthands/aliases mapped to UN/ECE Recommendation 20 codes, resolved dynamically using the global locale context.                                                                               |
 | **[Locales](api-reference/locale)**                  | Language and regional localization. Covers translation overrides, native currency formatting, and regional default overrides.                                                                                                                               |
-| **[Theming](api-reference/theme)**                   | Presets, brand customization, page layouts for window envelopes, and replaceable parts. Details how the theme places and styles the structured data on the page.                                                                                            |
+| **[Theming](api-reference/theme)**                   | Brand customization, page layouts for window envelopes, and replaceable parts. Details how the theme places and styles the structured data on the page. The ten presets are presented under [Themes](../themes/index.md).                                   |
 
 ## Core Architectural Concepts
 

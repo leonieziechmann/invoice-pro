@@ -136,7 +136,7 @@ theme: theme.classic.with(
 ),
 ```
 
-_See the [Theming API](../theme/index.md) for presets, customization, layouts and parts._
+_See [Themes](../../themes/index.md) for the ten presets and the [Theming API](../theme/index.md) for customization, layouts and parts._
 
 ### `validation`
 

@@ -112,7 +112,7 @@ The default theme, `theme.classic`, picks its page layout from the sender's coun
 
 ![The ten presets on identical data](https://leonieziechmann.github.io/invoice-pro/img/themes/fig-presets.png)
 
-Presets: `classic` (default), `plain`, `corporate`, `elegant`, `prestige`, `bold`, `technical`, `soft`, `compact`, `boxed`. See the [Theming API](https://leonieziechmann.github.io/invoice-pro/api-reference/theme) for layouts, parts, and the migration from 0.4.
+Presets: `classic` (default), `plain`, `corporate`, `elegant`, `prestige`, `bold`, `technical`, `soft`, `compact`, `boxed`. The [Themes](https://leonieziechmann.github.io/invoice-pro/themes) section has a page with a quick start for each of them, and the [Theming API](https://leonieziechmann.github.io/invoice-pro/api-reference/theme) covers layouts, parts, and the migration from 0.5.
 
 ## API Stability
 

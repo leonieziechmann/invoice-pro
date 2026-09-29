@@ -25,6 +25,7 @@ When releasing a new version, the version string must be updated in multiple loc
   - `e-invoicing/invoice-data/document.md`
   - `e-invoicing/invoice-data/line-items.md`
   - `e-invoicing/invoice-data/payment.md`
+  - `themes/*.md` (the ten theme pages; not `themes/index.md`)
   - `api-reference/index.md`
   - `api-reference/invoice/index.md`
   - `api-reference/invoice/validation.md`

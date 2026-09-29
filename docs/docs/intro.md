@@ -64,7 +64,7 @@ The power of `invoice-pro` lies in its conciseness. Below is a minimal example o
 - **Locale:** An advanced and extensible locale system that contains not just language translations, but also regional formatting and legal information/behavior.
 - **Payment Automation:** Quality-of-life features like automatic EPC-QR-Code (GiroCode) generation make it easier for clients to pay instantly via mobile banking applications.
 - **E-Invoicing:** Experimental support for standard e-invoicing formats (such as ZUGFeRD / Factur-X), allowing digital readability alongside human-readable invoices.
-- **Theming:** Ten presets, brand colors, fonts and logos in one line, page layouts for window envelopes in several countries, and replaceable parts. See the [Theming API](./api-reference/theme/index.md).
+- **Theming:** Ten themes, from a classic business letter to a poster look for agencies, brand colors, fonts and logos in one line, page layouts for window envelopes in several countries, and replaceable parts. See [Themes](./themes/index.md) and the [Theming API](./api-reference/theme/index.md).
 - **Validation:** Missing invoice data is marked in a draft, or stops the build under `validation: "strict"`. See [Validation](./api-reference/invoice/validation.md).
 
 ## Compliance and Ecosystem
@@ -74,7 +74,7 @@ Generating compliant invoices requires handling specific tax logic and regional 
 The template helps you establish the correct **Grounds** for tax justifications easily. Because our data logic is decoupled from the layout layer, the visual layout can be entirely swapped out without altering your business data. This separation of concerns allows us to offer experimental support for **EN 16931** compliant e-invoicing standards (such as ZUGFeRD / Factur-X). See the [E-Invoicing](./e-invoicing/index.md) guide for more details.
 
 :::info
-The visual layout (such as the German **DIN 5008** standard) is merely a presentation layer. You can swap themes at any time, and your underlying data structure remains perfectly intact. By default, the layout follows the sender's country: DIN 5008 for a German sender, SN 010130 for a Swiss one, US Letter for an American one.
+The visual layout (such as the German **DIN 5008** standard) is merely a presentation layer. You can swap [themes](./themes/index.md) at any time, and your underlying data structure remains perfectly intact. By default, the layout follows the sender's country: DIN 5008 for a German sender, SN 010130 for a Swiss one, US Letter for an American one.
 :::
 
 ## Path Forward

@@ -6,6 +6,10 @@ sidebar_position: 6
 
 A theme decides how an invoice looks: the page master (paper, envelope window, letterhead and footer zones), the brand (colors, fonts, logo) and the style of every block (table, totals, bank details). It never decides what the invoice says. The data comes from [`invoice`](../invoice/index.md) and the components, and the compliance output (PDF metadata, the ZUGFeRD XML, legal notes, the EPC-QR payload) is produced by the core, where no theme can drop it.
 
+:::tip
+Looking for a theme to use? The [Themes](../../themes/index.md) section shows all ten presets, each with a sample and a quick start. This page explains how themes work and how to change them.
+:::
+
 :::info
 The theming API was redesigned in v0.6.0: `themes.DIN-5008` and `themes.blank` are gone. The [migration guide](./migration.md) maps every 0.5 parameter to its replacement.
 :::
@@ -69,7 +73,7 @@ A **preset** such as `theme.classic` is a _look_ (patches for tokens, options, p
 
 | Step | What you do                                                          | Example                                                                                                                             |
 | :--- | :------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | Pick a preset.                                                       | `theme.elegant`                                                                                                                     |
+| 1    | Pick a preset.                                                       | `theme.elegant` ([Themes](../../themes/index.md))                                                                                   |
 | 2    | Apply your brand.                                                    | `.with(theme.custom.brand(color: .., logo: ..))` ([Customization](./customization.md#brand))                                        |
 | 3    | Pick another page master, drop the marks, print on letterhead paper. | `.with(layout: theme.layout.din-5008-b)`, `marks(none)`, `stationery(..)` ([Layouts](./layouts.md))                                 |
 | 4    | Move parts between areas.                                            | `area("letterhead", parts: ("sender", "logo"))` ([Areas](./layouts.md#areas))                                                       |
@@ -93,56 +97,22 @@ Layout patches (`area`, `page`, `marks`, …) always apply to the final layout, 
 
 ## Presets
 
-Ten presets ship. `classic` and `plain` are frozen. The other eight keep their names and default layout families, but their appearance may still change in a minor release.
+Ten presets ship. Each one has its own page under [Themes](../../themes/index.md), with a sample invoice, a copy-paste quick start, branding tips and its fonts. `classic` and `plain` are frozen. The other eight keep their names and default layout families, but their appearance may still change in a minor release.
 
-| Preset            | For                                              | Look                                                                                                     | Default layout (DE / US)                 |
-| :---------------- | :----------------------------------------------- | :------------------------------------------------------------------------------------------------------- | :--------------------------------------- |
-| `theme.classic`   | everyone; the default                            | Business letter with legal footer, continuation header on following pages and "Page 1 of 2".             | by region: `din-5008-a` / `us-letter-10` |
-| `theme.plain`     | own letterhead paper, flow-only output           | The classic look without furniture: sender, title and recipient in the flow, registration in the footer. | `plain` on A4 / Letter                   |
-| `theme.corporate` | larger companies, PO-driven B2B                  | Two colors, a brand rail with all legal data, filled table header, payable bar, serif display title.     | `a4-sidebar` / `us-letter-sidebar`       |
-| `theme.elegant`   | law firms, notaries, tax advisers, consultancies | Serif letter: centered letterhead, ink blue, hairlines, no fills.                                        | `din-5008-b` / `us-letter-10`            |
-| `theme.prestige`  | premium brands, hotels, fine dining              | Full-bleed onyx band with champagne type, serif display title; digital first.                            | `a4-band` / `us-letter-band`             |
-| `theme.bold`      | agencies and studios                             | Poster block in the brand color with the document word and the amount due, mono labels, heavy rules.     | `a4-digital` / `us-letter-digital`       |
-| `theme.technical` | IT freelancers, software houses, engineering     | Spec sheet: mono labels and figures, fine rule grid, section markers, inverted payable amount.           | `a4-digital` / `us-letter-digital`       |
-| `theme.soft`      | cafés, practices, small retail, B2C              | Serif headings, rounded cards, number and date in pills, a "how to pay" card.                            | `a4-digital` / `us-letter-digital`       |
-| `theme.compact`   | wholesale and distribution, long invoices        | 8.5 pt, item number and unit columns, filled repeating header, boxed totals.                             | `a4-dense` / `us-letter-dense`           |
-| `theme.boxed`     | trades and crafts, print and fax                 | Ruled form boxes, heavy title, mono form labels; no fill carries meaning.                                | by region: `din-5008-a` / `us-letter-10` |
+| Preset            | Page                                   | Default layout (DE / US)                 |
+| :---------------- | :------------------------------------- | :--------------------------------------- |
+| `theme.classic`   | [Classic](../../themes/classic.md)     | by region: `din-5008-a` / `us-letter-10` |
+| `theme.plain`     | [Plain](../../themes/plain.md)         | `plain` on A4 / Letter                   |
+| `theme.corporate` | [Corporate](../../themes/corporate.md) | `a4-sidebar` / `us-letter-sidebar`       |
+| `theme.elegant`   | [Elegant](../../themes/elegant.md)     | `din-5008-b` / `us-letter-10`            |
+| `theme.prestige`  | [Prestige](../../themes/prestige.md)   | `a4-band` / `us-letter-band`             |
+| `theme.bold`      | [Bold](../../themes/bold.md)           | `a4-digital` / `us-letter-digital`       |
+| `theme.technical` | [Technical](../../themes/technical.md) | `a4-digital` / `us-letter-digital`       |
+| `theme.soft`      | [Soft](../../themes/soft.md)           | `a4-digital` / `us-letter-digital`       |
+| `theme.compact`   | [Compact](../../themes/compact.md)     | `a4-dense` / `us-letter-dense`           |
+| `theme.boxed`     | [Boxed](../../themes/boxed.md)         | by region: `din-5008-a` / `us-letter-10` |
 
 The default layout follows the sender's country (`layout: auto`); see [Layout by region](./layouts.md#layout-by-region). `elegant` uses DIN 5008 form B where the region rule picks form A, because its centered letterhead needs the taller zone.
-
-### Gallery
-
-All ten presets on identical data (same body, brand color and logo), page 1, each on its default layout for a German sender:
-
-![The ten presets on identical data](/img/themes/fig-presets.png)
-
-Each preset with sample data from the kind of business it is designed for, page 1:
-
-|                                                            |                                                      |
-| :--------------------------------------------------------: | :--------------------------------------------------: |
-|    ![classic](/img/themes/preset-classic.png) `classic`    |    ![plain](/img/themes/preset-plain.png) `plain`    |
-| ![corporate](/img/themes/preset-corporate.png) `corporate` | ![elegant](/img/themes/preset-elegant.png) `elegant` |
-|  ![prestige](/img/themes/preset-prestige.png) `prestige`   |     ![bold](/img/themes/preset-bold.png) `bold`      |
-| ![technical](/img/themes/preset-technical.png) `technical` |     ![soft](/img/themes/preset-soft.png) `soft`      |
-|    ![compact](/img/themes/preset-compact.png) `compact`    |    ![boxed](/img/themes/preset-boxed.png) `boxed`    |
-
-### Fonts
-
-Typst packages cannot ship fonts, and Typst embeds only Libertinus Serif, New Computer Modern and DejaVu Sans Mono. Every font chain of every preset therefore ends in an embedded family, so each preset renders on any machine. Install the preferred family to get the intended look.
-
-| Preset             | Preferred fonts (the embedded fallback in brackets)                                        |
-| :----------------- | :----------------------------------------------------------------------------------------- |
-| `classic`, `plain` | Liberation Sans (Libertinus Serif)                                                         |
-| `corporate`        | Liberation Sans (Libertinus Serif); headings in Libertinus Serif                           |
-| `elegant`          | Libertinus Serif (embedded)                                                                |
-| `prestige`         | EB Garamond; headings in Playfair Display or Bodoni Moda (Libertinus Serif)                |
-| `bold`             | Inter, Arial or Liberation Sans (Libertinus Serif); labels in DejaVu Sans Mono             |
-| `technical`        | Inter, Liberation Sans or Arial (Libertinus Serif); labels and figures in DejaVu Sans Mono |
-| `soft`             | Segoe UI or Liberation Sans (Libertinus Serif); headings in Libertinus Serif               |
-| `compact`          | Inter, Arial or Liberation Sans (Libertinus Serif)                                         |
-| `boxed`            | Liberation Sans (Libertinus Serif); labels in DejaVu Sans Mono                             |
-
-When you set your own fonts, end the chain in an embedded family as well, for example `("Inter", "Liberation Sans", "Libertinus Serif")`.
 
 ## Passing a Theme
 
@@ -196,6 +166,7 @@ To pick a preset by name, for example from `--input preset=elegant`, look it up 
 
 ## Where to Go Next
 
+- [Themes](../../themes/index.md): the ten presets, how to choose one, and a quick start for each.
 - [Customization](./customization.md): `theme.custom`, tokens, options, `brand()`, brand files, checks.
 - [Layouts](./layouts.md): built-in layouts, areas, layout by region, envelopes and print proofs, stationery, your own formats.
 - [Parts](./parts.md): the part contract, wrapping and replacing parts, views, `themed`, theme packages.

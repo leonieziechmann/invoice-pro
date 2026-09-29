@@ -109,4 +109,4 @@ The default theme, `theme.classic`, picks its page layout from the sender's coun
 )
 ```
 
-The [Theming API](./api-reference/theme/index.md) shows all ten presets and every way to customize them.
+The [Themes](./themes/index.md) section shows all ten themes, each with a quick start. The [Theming API](./api-reference/theme/index.md) explains every way to customize them.
