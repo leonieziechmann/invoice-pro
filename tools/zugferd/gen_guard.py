@@ -31,7 +31,7 @@ business rules itself) and XRechnung (both); the XRechnung Schematron for
 XRechnung, which uses the EN 16931 XSD. No validator applies the CEN
 Schematron to BASIC (KoSIT has no scenario for it). An assertion
 counts unless its flag is `warning` or `information`: Mustang 2.26.0 reports
-those as warnings and accepts the invoice (Mustang 2.14.0 reported them as
+those as warnings and accepts the invoice (Mustang 2.14.0 still reported them as
 errors), and so does KoSIT, so the tables leave them to the validators
 (disposition `warning`). The reports of the Factur-X Schematron mark
 elements and attributes as not used in a profile; Mustang ignores them, the

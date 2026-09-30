@@ -19,17 +19,17 @@ The validation decides whether an invoice is valid. When it reports no error, th
 
 | Artefact or validator                                        | Version                                          | Profiles                           |
 | :----------------------------------------------------------- | :----------------------------------------------- | :--------------------------------- |
-| Factur-X XSD and Schematron                                  | 1.0.07 (ZUGFeRD 2.3)                             | MINIMUM, BASIC WL, BASIC, EN 16931 |
-| CEN Schematron of EN 16931 (CII)                             | 1.3.12 in Mustang, 1.3.16 in KoSIT               | BASIC, EN 16931, XRechnung         |
-| XRechnung Schematron                                         | XRechnung 3.0 in Mustang, 2.6.0 in KoSIT         | XRechnung                          |
-| [Mustang](https://www.mustangproject.org/) command line tool | 2.14.0                                           | every profile                      |
+| Factur-X XSD and Schematron                                  | 1.09.2 (ZUGFeRD 2.5.2)                           | MINIMUM, BASIC WL, BASIC, EN 16931 |
+| CEN Schematron of EN 16931 (CII)                             | 1.3.16 (KoSIT; Mustang for XRechnung)            | EN 16931, XRechnung                |
+| XRechnung Schematron                                         | 2.4.0 in Mustang, 2.6.0 in KoSIT                 | XRechnung                          |
+| [Mustang](https://www.mustangproject.org/) command line tool | 2.26.0                                           | every profile                      |
 | [KoSIT validator](https://github.com/itplr-kosit/validator)  | 1.6.3, with the configuration of XRechnung 3.0.2 | EN 16931, XRechnung                |
 
-An XML is officially valid only if all of them accept it: the XSD of its profile, Mustang and, for EN 16931 and XRechnung, KoSIT, the reference validator of XRechnung. The versions are pinned with their checksums, and a weekly job reports new releases, so that the tests follow the validators that recipients use.
+An XML is officially valid only if all of them accept it: the XSD of its profile, Mustang and, for EN 16931 and XRechnung, KoSIT, the reference validator of XRechnung. Mustang checks MINIMUM to EN 16931 with the Factur-X Schematron alone, which states the business rules of EN 16931 itself; the rules the validators only warn about (a warning or information in the Schematron) do not make an invoice invalid. The versions are pinned with their checksums, and a weekly job reports new releases, so that the tests follow the validators that recipients use.
 
 ## The Test Oracle
 
-The e-invoice tests of the Typst test suite (some 180 invoices) run the test oracle on every invoice whose validation reports no error. It checks the XML against tables compiled from the official artefacts of its profile (the Factur-X 1.0.07 XSD and Schematron, the CEN Schematron of EN 16931 and, for `"xrechnung"`, the XRechnung 3.0 Schematron):
+The e-invoice tests of the Typst test suite (some 180 invoices) run the test oracle on every invoice whose validation reports no error. It checks the XML against tables compiled from the official artefacts of its profile (the Factur-X 1.09.2 XSD and Schematron, the CEN Schematron of EN 16931 for `"en16931"` and `"xrechnung"` and, for `"xrechnung"`, the XRechnung 3.0.2 Schematron; the rules the validators only warn about are left to them):
 
 - **Structure:** every element is known to the schema at its position and in schema order and number, with the children and attributes it requires.
 - **Values:** decimals, indicators and dates have their lexical form, and amounts the decimals the `BR-DEC-*` rules allow; every code is in the code lists of its position; every tax element has what its VAT category requires.
@@ -70,7 +70,7 @@ Mustang and KoSIT do not always agree: they bundle different versions of the CEN
 
 ## Coverage of the Official Rules
 
-The tests of `invoice-pro` account for every rule of the official validators, profile by profile: the rule ids of the Factur-X, EN 16931 and XRechnung Schematron files that the Mustang CLI 2.14.0 and KoSIT's XRechnung configuration apply to each profile. Each rule is either reported by `invoice-pro`, checked by the test oracle on the XML of every test invoice (rules on the structure, values and codes of the elements `invoice-pro` writes), excluded by construction (e.g. a negative price is written as a negative quantity), or unable to occur because `invoice-pro` never writes the element it tests (e.g. a gross price). For every rule counted in the column "Reported by invoice-pro", a test invoice in that profile proves that the official validators of the profile reject it with the rule and that `invoice-pro` names the same one; where one mistake breaks several rules at once, `invoice-pro` may name another of them (e.g. `BR-S-02` for the XRechnung rule `BR-DE-16`). The coverage is not complete yet: the rules in the column "Open" are not handled, or `invoice-pro` reports them under another id.
+The tests of `invoice-pro` account for every rule of the official validators, profile by profile: the rule ids of the Factur-X, EN 16931 and XRechnung Schematron files that the Mustang CLI 2.26.0 and KoSIT's XRechnung configuration apply to each profile. Each rule is either reported by `invoice-pro`, checked by the test oracle on the XML of every test invoice (rules on the structure, values and codes of the elements `invoice-pro` writes), excluded by construction (e.g. a negative price is written as a negative quantity), unable to occur because `invoice-pro` never writes the element it tests (e.g. a gross price), or only a warning of every validator, which accepts the invoice (most rules of the CII syntax, e.g. that an element should not be present). For every rule counted in the column "Reported by invoice-pro", a test invoice in that profile proves that the official validators of the profile reject it with the rule and that `invoice-pro` names the same one; where one mistake breaks several rules at once, `invoice-pro` may name another of them (e.g. `BR-S-02` for the XRechnung rule `BR-DE-16`). The coverage is not complete yet: the rules in the column "Open" are not handled, or `invoice-pro` reports them under another id.
 
 [//]: # "rule-coverage table: generated by tools/zugferd/rule_coverage.py --update-docs"
 

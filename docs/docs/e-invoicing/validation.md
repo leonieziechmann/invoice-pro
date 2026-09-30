@@ -28,22 +28,24 @@ Problems come in two levels:
 - **Errors** make the XML invalid for the profile (e.g. a missing invoice number, an unknown unit code or a VAT breakdown that does not add up), or the invoice wrong in a way the official validators cannot see (see below).
 - **Warnings** point out data that is valid but most likely not intended (e.g. an EN 16931 invoice without the electronic addresses Peppol expects, a key of a party that `invoice-pro` does not know, or a unit code that is also a common abbreviation of another unit). Warnings never stop the compilation.
 
-For XRechnung, the seller contact phone number must contain at least three digits (`BR-DE-27`), and the email address must match the pattern of the XRechnung Schematron (`BR-DE-28`, ASCII only: write a domain with umlauts in punycode, e.g. `info@xn--mller-bau-q9a.de` for `info@müller-bau.de`). XRechnung only warns about these two rules, and the KoSIT validator accepts such an invoice, but other validators, such as Mustang, reject it. `invoice-pro` therefore reports them as errors.
+For XRechnung, the seller contact phone number should contain at least three digits (`BR-DE-27`), and the email address should match the pattern of the XRechnung Schematron (`BR-DE-28`: one `@` and a domain with a dot, without spaces). The validators only warn about these two rules, and so does `invoice-pro`.
+
+Some rules are warnings of the validators, which accept the invoice (e.g. the document types of XRechnung, `BR-DE-17`, or one identifier per party, `CII-SR-449` to `CII-SR-451`): `invoice-pro` reports them as warnings as well. Where such a rule concerns a value that would make the invoice wrong, `invoice-pro` reports its own rule as an error: an IBAN with wrong check digits (`IP-PAY-01`), a corrected invoice without the invoice it corrects (`IP-DOC-02`) or an amount due without a payment due date or terms (`IP-PAY-06`, formerly `BR-CO-25`, which the current validators no longer check).
 
 ## Code Lists
 
 Codes (currencies, countries, units, schemes of identifiers and electronic addresses, payment means and VAT exemption reasons) must be in the code lists that the validation of the profile applies, and the error names the rule of the validator that rejects the code:
 
-| Profile                   | Code lists                                                                          | Rule of an unknown code, e.g. of a currency                                   |
-| :------------------------ | :---------------------------------------------------------------------------------- | :---------------------------------------------------------------------------- |
-| `"minimum"`, `"basic-wl"` | the lists of Factur-X 1.0.07 alone                                                  | `FX-SCH-A-000040`                                                             |
-| `"basic"`, `"en16931"`    | all of them: Factur-X 1.0.07 and both versions of the EN 16931 code lists           | `BR-CL-04`, or `FX-SCH-A-000040` for a code that only the Factur-X list lacks |
-| `"xrechnung"`             | both versions of the EN 16931 code lists alone (1.3.12 in Mustang, 1.3.16 in KoSIT) | `BR-CL-04`                                                                    |
+| Profile                              | Code lists                                            | Rule of an unknown code, e.g. of a currency                                       |
+| :----------------------------------- | :---------------------------------------------------- | :-------------------------------------------------------------------------------- |
+| `"minimum"`, `"basic-wl"`, `"basic"` | the lists of Factur-X 1.09.2 alone                    | the rule of the Factur-X Schematron of the position, e.g. `FX-SCH-A-000040`       |
+| `"en16931"`                          | Factur-X 1.09.2 (Mustang) and EN 16931 1.3.16 (KoSIT) | `BR-CL-04`, or the rule of the Factur-X Schematron for a code only its list lacks |
+| `"xrechnung"`                        | the lists of EN 16931 1.3.16 alone                    | `BR-CL-04`                                                                        |
 
-- `"xrechnung"` accepts codes that the Factur-X lists lack, such as the electronic address schemes `0219` and `0220`, the Netherlands Antilles (`AN`) or the São Tomé dobra (`STD`), and `"minimum"` and `"basic-wl"` accept South Sudan (`SS`), which the EN 16931 lists lack.
-- A currency that the newest EN 16931 list has withdrawn, such as `BGN` or `HRK` (replaced by the euro), is allowed wherever the Factur-X validation of the profile accepts it: in `"minimum"` and `"basic-wl"`, and with a warning in `"basic"` and `"en16931"` (`IP-CODE-01`), as a validator with the current list, such as KoSIT, rejects it; `"xrechnung"` rejects it (`BR-CL-04`).
-- Any other code the newest list has withdrawn is rejected even where the validation of the profile still accepts it: the electronic address scheme `9901` in every profile (`IP-CODE-01` in `"basic-wl"` and `"basic"`).
-- A code that only the newest list has, e.g. the Caribbean guilder `XCG` (2025), is reported as a code the validation of the profile does not know yet.
+Since Factur-X 1.09, a rule of a Factur-X code list has an id of its own at each position and in each profile, e.g. `FX-SCH-A-000040` for the invoice currency in `"minimum"`, `FX-SCH-A-000464` in `"basic-wl"`, `FX-SCH-A-000514` in `"basic"` and `FX-SCH-A-000595` in `"en16931"`; `invoice-pro` names the one the validator reports.
+
+- `"xrechnung"` accepts codes that the Factur-X lists lack, such as the electronic address schemes `0219` and `0220`, the Netherlands Antilles (`AN`) or the São Tomé dobra (`STD`), and `"minimum"`, `"basic-wl"` and `"basic"` accept South Sudan (`SS`), which the EN 16931 lists lack.
+- The codes withdrawn from the lists, such as the currencies `BGN` and `HRK` (replaced by the euro) or the electronic address scheme `9901`, are rejected in every profile.
 
 ## Rules of invoice-pro
 

@@ -2,8 +2,8 @@
 // warns: BR-DE-17
 // profiles: xrechnung
 //
-// XRechnung has no prepayment invoice (BT-3 = 386); KoSIT only warns (see
-// tools/zugferd/validator-differences.toml).
+// XRechnung has no prepayment invoice (BT-3 = 386): a warning of the
+// validators, and of invoice-pro.
 
 #import "_base.typ": *
 

@@ -3,8 +3,8 @@
 // finding: amounts-doctype-gutschrift-written-as-380
 //
 // XRechnung allows eight document types (BR-DE-17), and a prepayment invoice
-// (386) is none of them. KoSIT only warns, but Mustang rejects it, so
-// invoice-pro reports an error.
+// (386) is none of them. Both validators only warn (Mustang
+// 2.14.0 reported an error), and so does invoice-pro.
 
 #import "_base.typ": *
 
