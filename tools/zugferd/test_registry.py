@@ -50,7 +50,7 @@ class Entries(unittest.TestCase):
         self.assertEqual(r.problems(loaded), [])
         # Every rule of the validator has an entry. The findings of the test
         # oracle (IP-GUARD-*) have none: the package never reports them.
-        self.assertGreaterEqual(len(loaded["rules"]), 120)
+        self.assertGreaterEqual(len(loaded["rules"]), 110)
         for key in ("BR-02", "BR-48", "BR-DE-18", "IP-TAX-01", "vat-rate-zero"):
             self.assertIn(key, loaded["rules"])
         self.assertEqual([key for key in r.reported(loaded) if key.startswith("IP-GUARD-")], [])

@@ -610,10 +610,9 @@
       }
     }
     if entry.debtor-iban != none and not iban-valid(entry.debtor-iban) {
+      // An error in every profile, as XRechnung's BR-DE-20 is a warning.
       out.push((
-        key: if xrechnung and entry.type-code == "59" { "BR-DE-20" } else {
-          "IP-PAY-01"
-        },
+        key: "IP-PAY-01",
         field: "direct-debit.debtor-iban",
         iban: entry.debtor-iban,
         debtor: true,

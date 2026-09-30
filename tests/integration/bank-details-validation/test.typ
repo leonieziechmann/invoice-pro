@@ -113,8 +113,8 @@
   // Outside the euro area there is no EPC-QR code; the IBAN is checked anyway.
   assert.eq(error(iban: invalid, region-locale: locale.de-ch), expected)
   // The printed invoice would be wrong as well, so the bank details stop the
-  // compilation before the e-invoice reports it (IP-PAY-01, in XRechnung
-  // BR-DE-19), also when its problems are ignored.
+  // compilation before the e-invoice reports it (IP-PAY-01), also when its
+  // problems are ignored.
   assert.eq(error(iban: invalid, zugferd: "en16931"), expected)
   assert.eq(
     error(iban: invalid, zugferd: "en16931", zugferd-errors: "ignore"),

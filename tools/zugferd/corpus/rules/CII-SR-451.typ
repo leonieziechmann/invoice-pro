@@ -1,4 +1,5 @@
-// expect: AGREE_INVALID CII-SR-451
+// expect: AGREE_VALID
+// warns: CII-SR-451
 // profiles: basic en16931 xrechnung
 //
 // A payee with both an identifier and a global identifier (BT-60).

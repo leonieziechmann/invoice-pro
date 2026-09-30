@@ -1,4 +1,5 @@
-// expect: AGREE_INVALID CII-SR-449
+// expect: AGREE_VALID
+// warns: CII-SR-449
 // profiles: basic en16931 xrechnung
 //
 // A deliver-to location with both a location identifier (BT-71) and a global

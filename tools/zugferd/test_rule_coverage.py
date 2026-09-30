@@ -712,13 +712,14 @@ class PinnedArtefacts(unittest.TestCase):
         self.assertNotIn("BR-DE-15", levels["en16931"])
         self.assertEqual(levels["xrechnung"]["BR-DE-15"], {"mustang": "error", "kosit": "error"})
         self.assertEqual(levels["xrechnung"]["BR-CL-23"], {"mustang": "error", "kosit": "warning"})
-        self.assertEqual(levels["xrechnung"]["BR-DE-TMP-32"], {"mustang": "error", "kosit": "information"})
-        self.assertEqual(levels["xrechnung"]["BR-DE-17"], {"mustang": "error", "kosit": "warning"})
+        # Mustang 2.26.0 reports an assertion at the level of its flag.
+        self.assertEqual(levels["xrechnung"]["BR-DE-TMP-32"], {"mustang": "information", "kosit": "information"})
+        self.assertEqual(levels["xrechnung"]["BR-DE-17"], {"mustang": "warning", "kosit": "warning"})
 
     def test_twins(self):
         # KoSIT reports the assertion id, Mustang the id its message names.
         self.assertEqual(self.levels["en16931"]["CII-SR-04"], {"kosit": "warning"})
-        self.assertEqual(self.levels["en16931"]["CII-SR-004"], {"mustang": "error"})
+        self.assertEqual(self.levels["en16931"]["CII-SR-004"], {"mustang": "warning"})
 
 
 if __name__ == "__main__":

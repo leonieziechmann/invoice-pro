@@ -1,4 +1,5 @@
-// expect: AGREE_INVALID CII-SR-450
+// expect: AGREE_VALID
+// warns: CII-SR-450
 // profiles: basic en16931 xrechnung
 //
 // A buyer with both an identifier and a global identifier (BT-46).

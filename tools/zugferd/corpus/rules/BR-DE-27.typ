@@ -1,4 +1,5 @@
-// expect: AGREE_INVALID BR-DE-27
+// expect: AGREE_VALID
+// warns: BR-DE-27
 // profiles: xrechnung
 //
 // An XRechnung whose seller contact phone number (BT-42) has fewer than three

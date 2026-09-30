@@ -139,7 +139,8 @@
     global-id: (scheme: "0088", id: "3000001123459"),
   ),
   result => {
-    assert.eq(rules(result), ("CII-SR-449", "CII-SR-450", "IP-ID-02"))
+    assert.eq(rules(result), ("IP-ID-02",))
+    assert.eq(rules(result, level: "warning"), ("CII-SR-449", "CII-SR-450"))
   },
 )
 

@@ -1,4 +1,5 @@
-// expect: AGREE_INVALID BR-DE-27
+// expect: AGREE_VALID
+// warns: BR-DE-27
 // finding: fidelity-cat-xr-warning-rules
 //
 // XRechnung: a seller phone number needs at least three digits (BR-DE-27).

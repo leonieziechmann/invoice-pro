@@ -2,8 +2,9 @@
 // direct debit (BG-19), a payment card (BG-18) and an invoice that is paid
 // already (BT-113, BT-115), the account name of a credit transfer (BT-85),
 // and the rules that keep them consistent: one kind of payment means per
-// invoice, and the XRechnung rules BR-DE-1, BR-DE-19, BR-DE-20, BR-DE-23 to
-// BR-DE-25, BR-DE-30, BR-DE-31 and PEPPOL-EN16931-R061.
+// invoice, and the XRechnung rules BR-DE-1, BR-DE-23 to BR-DE-25, BR-DE-30,
+// BR-DE-31 and PEPPOL-EN16931-R061; an invalid IBAN is IP-PAY-01 in every
+// profile.
 
 #import "/src/lib.typ": *
 #import "/src/zugferd/profile.typ": resolve-profile
@@ -90,7 +91,7 @@
   // Identifiers with wrong check digits, for `zugferd-errors: "report"`
   let m = model
   m.payment.means.at(0).debtor-iban = "DE00120300000000202051"
-  assert.eq(rules(m), ("BR-DE-20",))
+  assert.eq(rules(m), ("IP-PAY-01",))
   m.profile = en16931
   assert.eq(rules(m), ("IP-PAY-01",))
   let m = model
@@ -298,7 +299,7 @@
   assert.eq(rules(m), ("BR-CL-16",))
   // BASIC WL checks the code with the list of the Factur-X Schematron
   m.profile = resolve-profile("basic-wl", "DE")
-  assert.eq(rules(m), ("FX-SCH-A-000023",))
+  assert.eq(rules(m), ("FX-SCH-A-000489",))
 })[#items #paid(method: (code: "97", name: [Verrechnung]))]
 
 // A credit note is paid by its sender: the terms state that the amount was

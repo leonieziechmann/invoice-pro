@@ -1,4 +1,5 @@
-// expect: AGREE_INVALID BR-DE-28
+// expect: AGREE_VALID
+// warns: BR-DE-28
 // profiles: xrechnung
 //
 // An XRechnung whose seller contact email address (BT-43) does not match the

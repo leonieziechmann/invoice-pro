@@ -1,4 +1,5 @@
-// expect: AGREE_INVALID BR-DE-28
+// expect: AGREE_VALID
+// warns: BR-DE-28
 // finding: fidelity-cat-xr-warning-rules
 //
 // XRechnung: the seller e-mail address must match the official pattern

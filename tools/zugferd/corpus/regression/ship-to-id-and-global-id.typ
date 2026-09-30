@@ -1,4 +1,5 @@
-// expect: AGREE_INVALID CII-SR-449
+// expect: AGREE_VALID
+// warns: CII-SR-449
 // finding: verify-robustness-shipto-id-and-globalid-cii-sr-449
 //
 // The deliver-to location identifier (BT-71) can be given once: either `id`

@@ -5,7 +5,7 @@
 // invoice whose XRechnung checks fail (e.g. `zugferd: auto` for a buyer
 // without buyer reference, which then falls back to EN 16931) does not parse
 // the messages of every rule. A rule of XRechnung that shares its message
-// with a rule of the other profiles (e.g. BR-DE-19 with IP-PAY-01) is in
+// with a rule of the other profiles (e.g. BR-DE-23-a with CII-SR-470) is in
 // messages.typ. See engine.typ for the registry and the form of a finding.
 
 #import "engine.typ": quoted as _quoted
@@ -72,8 +72,8 @@
   "BR-DE-28": f => (
     "The seller contact email address (BT-43) "
       + _quoted(f.email)
-      + " does not have the format XRechnung requires.",
-    "Write one \"@\" between the name and a domain of ASCII letters, digits, hyphens and dots, and a domain with umlauts in punycode, e.g. \"info@xn--mller-bau-q9a.de\" for \"info@müller-bau.de\".",
+      + " does not have the format XRechnung expects.",
+    "Write one \"@\" between the name and a domain with at least one dot, without spaces, e.g. \"info@mueller-bau.de\".",
   ),
   "BR-DE-3": _xrechnung-city,
   "BR-DE-4": _xrechnung-post-code,

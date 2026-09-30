@@ -210,8 +210,8 @@
   // The preceding invoice reference (BG-3), from BASIC WL on, is written
   // with its number (BT-25) only: a date (BT-26) without it would be lost
   // (IP-DOC-05). A document that amends an invoice must refer to it (Art.
-  // 219 of the VAT Directive): XRechnung checks it as BR-DE-26, which it
-  // only warns about, but validators such as Mustang reject the invoice.
+  // 219 of the VAT Directive): IP-DOC-02 in every profile, as XRechnung's
+  // BR-DE-26 is a warning of the validators.
   if model.profile.document-references {
     let number = invoice.at("preceding-invoice-nr", default: none)
     if (
@@ -221,7 +221,7 @@
       out.push((key: "IP-DOC-05", field: "preceding-invoice-nr"))
     } else if number == none and code == "384" {
       out.push((
-        key: if model.profile.xrechnung { "BR-DE-26" } else { "IP-DOC-02" },
+        key: "IP-DOC-02",
         field: "preceding-invoice-nr",
         code: code,
       ))
@@ -1190,8 +1190,9 @@
 // --- Payment --------------------------------------------------------------
 
 // The payment means (BG-16): one kind of payment means, each with the
-// details of its kind (XRechnung: BR-DE-1, BR-DE-19, BR-DE-20, BR-DE-23,
-// BR-DE-24, BR-DE-25, BR-DE-30, BR-DE-31, PEPPOL-EN16931-R061).
+// details of its kind (XRechnung: BR-DE-1, BR-DE-23, BR-DE-24, BR-DE-25,
+// BR-DE-30, BR-DE-31, PEPPOL-EN16931-R061); an IBAN with wrong check digits
+// is IP-PAY-01 in every profile.
 #let _payment-means(model) = {
   let out = ()
   let profile = model.profile
@@ -1268,10 +1269,10 @@
           paid: paid,
         ))
       } else if not iban-valid(entry.iban) {
+        // An error in every profile: XRechnung's BR-DE-19 is a warning of
+        // the validators, but the amount could not be paid.
         out.push((
-          key: if xrechnung and entry.type-code == "58" { "BR-DE-19" } else {
-            "IP-PAY-01"
-          },
+          key: "IP-PAY-01",
           field: "bank-details.iban",
           iban: entry.iban,
           debtor: false,
@@ -1474,8 +1475,17 @@
 // The rules whose usual level is "warning" (the first `level` of their entry
 // in tools/zugferd/registry.json, which tools/zugferd/registry.py checks
 // against this list); a finding gives the level of a rule with two.
+// The rules the validators report as warnings only (their flag `warning`;
+// Mustang 2.26.0 accepts the invoice, as KoSIT does), besides invoice-pro's
+// own warnings.
 #let _warnings = (
+  "BR-DE-17",
+  "BR-DE-27",
+  "BR-DE-28",
   "BR-DE-TMP-32",
+  "CII-SR-449",
+  "CII-SR-450",
+  "CII-SR-451",
   "IP-DOC-04",
   "IP-EADDR-01",
   "IP-KEY-01",

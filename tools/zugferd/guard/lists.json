@@ -103,21 +103,16 @@
 "9949 9950 9951 9952 9953 9957 9959 AN AQ AS AU EM"
 ],
 "guideline":[
-"urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0",
-"urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0#compliant#urn:xeinkauf.de:kosit:xrechnung:cvd_0.9",
-"urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0#conformant#urn:xeinkauf.de:kosit:extension:xrechnung_3.0"
-],
-"guideline-2":[
 "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic",
 "urn:cen.eu:en16931:2017#compliant#urn:zugferd.de:2p0:basic"
 ],
-"guideline-3":[
+"guideline-2":[
 "urn:factur-x.eu:1p0:basicwl urn:zugferd.de:2p0:basicwl"
 ],
-"guideline-4":[
+"guideline-3":[
 "urn:factur-x.eu:1p0:minimum urn:zugferd.de:2p0:minimum"
 ],
-"guideline-5":[
+"guideline-4":[
 "urn:cen.eu:en16931:2017"
 ],
 "icd":[

@@ -40,7 +40,7 @@
 
 # The document and its references.
 [[rule]]
-ids = ["BR-02", "BR-05", "BR-CL-04", "BR-CL-08", "BR-DE-17", "BR-DE-26", "BR-DE-TMP-32"]
+ids = ["BR-02", "BR-05", "BR-CL-04", "BR-CL-08", "BR-DE-17", "BR-DE-TMP-32"]
 class = "fixture"
 
 # The parties: names, addresses, identifiers, electronic addresses and the
@@ -75,7 +75,7 @@ profiles = ["en16931", "xrechnung"]
 [[rule]]
 ids = [
   "BR-CL-16", "CII-SR-467",
-  "BR-DE-1", "BR-DE-18", "BR-DE-19", "BR-DE-20", "BR-DE-23-a", "BR-DE-23-b", "BR-DE-24-a",
+  "BR-DE-1", "BR-DE-18", "BR-DE-23-a", "BR-DE-23-b", "BR-DE-24-a",
   "BR-DE-24-b", "BR-DE-25-a", "BR-DE-31", "PEPPOL-EN16931-R061",
 ]
 class = "fixture"
@@ -221,15 +221,6 @@ profiles = ["basic-wl"]
 # compiled: the test oracle checks Mustang's version, KoSIT's differs
 # ======================================================================
 
-[[rule]]
-ids = ["CII-SR-282"]
-class = "compiled"
-profiles = ["en16931", "xrechnung"]
-reason = """Mustang's copy of the CEN Schematron 1.3.16 forbids the identifier of the seller's tax \
-representative (ram:SellerTaxRepresentativeTradeParty/ram:ID), which the test oracle checks; KoSIT's \
-forbids the buyer's tax representative (ram:BuyerTaxRepresentativeTradeParty), which the builder \
-never writes."""
-
 # ======================================================================
 # construction: the builder cannot produce the violation
 # ======================================================================
@@ -335,15 +326,6 @@ evidence = [
 ]
 
 [[rule]]
-ids = ["BR-DE-21"]
-class = "construction"
-reason = "The builder writes the specification identifier (BT-24) of XRechnung 3.0 for `zugferd: \"xrechnung\"`."
-evidence = [
-  "src/zugferd/profile.typ: the guideline of the profile",
-  "tests/zugferd/golden/integration/zugferd-credit-note.xml",
-]
-
-[[rule]]
 ids = ["BR-DE-25-b"]
 class = "construction"
 reason = """A direct debit (59) is written as a payment means of its own, with the debited account \
@@ -371,18 +353,21 @@ evidence = [
 ]
 
 [[rule]]
-ids = ["BR-TMP-7"]
-class = "construction"
-reason = """The builder writes every date with the format 102 as YYYYMMDD, and the test oracle \
-checks each one on the XML of every test invoice (its finding IP-GUARD-08)."""
-evidence = ["src/zugferd/build.typ: _date", "tools/zugferd/guard/write.typ"]
-
-[[rule]]
 ids = ["CII-DT-033"]
 class = "construction"
 reason = """The test holds once the invoiced quantity (BT-129) has its unit code, which the builder \
 always writes."""
 evidence = ["src/zugferd/build.typ: build-line-item"]
+
+[[rule]]
+ids = ["CII-SR-452", "CII-SR-453", "CII-SR-454"]
+class = "construction"
+profiles = ["xrechnung"]
+reason = """The builder writes one payment terms (ram:SpecifiedTradePaymentTerms) with one \
+description, and one ram:ApplicableTradeTax per line (one entry of a dictionary each). A warning \
+of the CEN Schematron, which Mustang reports as such; the scenario of KoSIT for XRechnung raises \
+them to errors."""
+evidence = ["src/zugferd/build.typ: build-payment-terms, build-line-item"]
 
 [[rule]]
 ids = ["CII-SR-469", "PEPPOL-EN16931-R053"]
@@ -419,7 +404,7 @@ evidence = ["src/zugferd/build.typ: build-line-item"]
 # ======================================================================
 
 [[rule]]
-ids = ["BR-28", "BR-TMP-3", "CII-SR-119", "PEPPOL-EN16931-R044", "PEPPOL-EN16931-R046"]
+ids = ["BR-28", "BR-TMP-3", "PEPPOL-EN16931-R044", "PEPPOL-EN16931-R046"]
 class = "unreachable"
 reason = "The builder never writes the gross price (BT-148, ram:GrossPriceProductTradePrice)."
 
@@ -453,10 +438,7 @@ profiles = ["en16931"]
 reason = "The builder never writes the item classification (BT-158, ram:DesignatedProductClassification)."
 
 [[rule]]
-ids = [
-  "BR-DE-22", "BR-TMP-2", "BR-TMP-4", "BR-TMP-5", "CII-SR-475", "CII-SR-476",
-  "PEPPOL-EN16931-R101",
-]
+ids = ["BR-DE-22", "BR-TMP-2", "PEPPOL-EN16931-R101"]
 class = "unreachable"
 reason = """The builder never writes additional supporting documents (BG-24) or the invoiced object \
 identifier of a line (BT-128, ram:AdditionalReferencedDocument)."""
@@ -788,7 +770,7 @@ tests = [
 
 [ip."IP-PAY-01"]
 level = "error"
-summary = "An IBAN with wrong check digits or format, where BR-DE-19 and BR-DE-20 do not check it."
+summary = "An IBAN with wrong check digits or format (in XRechnung, BR-DE-19 and BR-DE-20 are warnings only)."
 basis = "ISO 13616 (IBAN): the amount could not be paid or collected."
 tests = ["tests/zugferd/payment-means/test.typ"]
 

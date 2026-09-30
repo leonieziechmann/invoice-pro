@@ -1,4 +1,5 @@
-// expect: AGREE_INVALID CII-SR-450
+// expect: AGREE_VALID
+// warns: CII-SR-450
 // finding: robustness-buyer-id-and-globalid-cii-sr-450
 //
 // The buyer identifier (BT-46) can be given once: either `id` or

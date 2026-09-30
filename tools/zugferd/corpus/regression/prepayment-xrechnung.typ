@@ -1,4 +1,5 @@
-// expect: AGREE_INVALID BR-DE-17
+// expect: AGREE_VALID
+// warns: BR-DE-17
 // finding: amounts-doctype-gutschrift-written-as-380
 //
 // XRechnung allows eight document types (BR-DE-17), and a prepayment invoice

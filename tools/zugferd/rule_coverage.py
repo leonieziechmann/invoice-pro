@@ -23,10 +23,11 @@ way each validator selects them:
 
 A rule id is the id a validator reports: the id of the assertion, or for
 the Factur-X Schematron the business rule its message names (Mustang reports
-"[BR-CO-26]..." as BR-CO-26), else its FX-SCH-A-* id. Mustang reports every
-failed assertion as an error, whatever its flag; the XRechnung Schematron
-only for XRechnung documents (a notice elsewhere). KoSIT reports a rule at
-the level of its flag or of the scenario's customLevel. The reports of the
+"[BR-CO-26]..." as BR-CO-26), else its FX-SCH-A-* id. Mustang reports a
+failed assertion at the level of its flag (an assertion without one as an
+error; Mustang 2.14.0 reported every one as an error); the XRechnung
+Schematron only for XRechnung documents (a notice elsewhere). KoSIT reports
+a rule at the level of its flag or of the scenario's customLevel. The reports of the
 Factur-X Schematron that mark an element as not used have no id; they are
 counted apart (gen_guard.py compiles them, and the test oracle reports such
 an element as IP-GUARD-05).
@@ -137,6 +138,7 @@ CLASSES = {
     "compiled": "checked by the test oracle on the XML of every test invoice (compiled from the artefact)",
     "construction": "the builder cannot produce the violation",
     "unreachable": "cannot fire on an XML invoice-pro writes",
+    "warning": "the validators only warn about it and accept the invoice",
     "open": "not handled yet",
 }
 # Dispositions of gen_guard.py that settle a rule without an entry.
@@ -152,6 +154,7 @@ NEEDS = {
     "compiled": ("reason",),
     "construction": ("reason", "evidence"),
     "unreachable": ("reason",),
+    "warning": ("reason",),
     "open": ("reason",),
 }
 # The rules classified as open, by profile: the work list, which can only
@@ -282,7 +285,7 @@ def mustang_assertions(jar, profile, schemas=None, guard=True):
             context=rule.context,
             test=normalize(rule.test),
             flag=rule.flag,
-            level="error",
+            level=KOSIT_LEVELS.get(rule.flag or "error"),
             text=rule.text,
             dispositions=tuple(sorted({d for d, _ in records})),
             details=tuple(detail for _, detail in records),
@@ -687,9 +690,14 @@ def automatic(assertions, twins=None):
     """(class, reason) of a rule in a profile that the guard's dispositions
     settle, or None. Every assertion of Mustang must be compiled or unable
     to fire, and every assertion of KoSIT the same (context and test) as one
-    of Mustang's in the profile (`twins`, see twins_of)."""
-    mustang = [a for a in assertions if a.validator == "mustang"]
-    kosit = [a for a in assertions if a.validator == "kosit"]
+    of Mustang's in the profile (`twins`, see twins_of). Only the
+    assertions a validator reports as errors count: a rule that every
+    validator only warns about (or informs of) is `warning`."""
+    errors = [a for a in assertions if a.level == "error"]
+    if not errors:
+        return "warning", "every validator reports it as a warning or information only and accepts the invoice"
+    mustang = [a for a in errors if a.validator == "mustang"]
+    kosit = [a for a in errors if a.validator == "kosit"]
     twins = twins if twins is not None else twins_of([assertions])
     for a in kosit:
         same = twins.get(a.signature())
@@ -1049,12 +1057,12 @@ def summarize(decisions):
 
 def markdown_table(summary):
     header = ["Profile", "Rule ids", "Reported by invoice-pro", "Checked by the tests", "Excluded by construction",
-              "Cannot occur", "Open"]
+              "Cannot occur", "Only warnings", "Open"]
     rows = [header, [":--"] + ["--:"] * (len(header) - 1)]
     for profile in PROFILES:
         c = summary[profile]
         rows.append([PROFILE_NAMES[profile], str(c["total"]), str(c["fixture"]), str(c["compiled"]),
-                     str(c["construction"]), str(c["unreachable"]), str(c["open"])])
+                     str(c["construction"]), str(c["unreachable"]), str(c["warning"]), str(c["open"])])
     widths = [max(len(r[i]) for r in rows) for i in range(len(header))]
     lines = []
     for k, r in enumerate(rows):

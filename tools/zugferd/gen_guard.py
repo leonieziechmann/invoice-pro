@@ -26,9 +26,11 @@ and from the unpacked XRechnung configuration of the KoSIT validator
 Which artefacts apply to which profile mirrors Mustang's validator: the
 Factur-X Schematron of the profile for MINIMUM, BASIC WL, BASIC and
 EN 16931; the CEN Schematron for BASIC, EN 16931 and XRechnung; the
-XRechnung Schematron for XRechnung, which uses the EN 16931 XSD. Every failed
-assertion counts, whatever its flag: Mustang reports the warnings of these
-Schematrons as errors too. The reports of the Factur-X Schematron mark
+XRechnung Schematron for XRechnung, which uses the EN 16931 XSD. An assertion
+counts unless its flag is `warning` or `information`: Mustang 2.26.0 reports
+those as warnings and accepts the invoice (Mustang 2.14.0 reported them as
+errors), and so does KoSIT, so the tables leave them to the validators
+(disposition `warning`). The reports of the Factur-X Schematron mark
 elements and attributes as not used in a profile; Mustang ignores them, the
 guard does not, since they define the profile.
 
@@ -1373,6 +1375,8 @@ class Compiler:
                 raise GenError(f"the currency list of the VAT total differs from the list of ram:{ref}: {r.label()}")
 
     def compile_rule(self, r):
+        if r.flag in ("warning", "information"):
+            return self.record(r, "warning", "the validators report it as a warning")
         test = strip_parens(r.test)
         if r.kind == "assert" and test == "true()":
             return self.record(r, "tautology")
@@ -3247,6 +3251,7 @@ DISPOSITIONS = {
     "conservative": "compiled, although a rule of higher priority may take the position (stricter)",
     "defect": "compiled as corrected (see DEFECTS)",
     "business": "a condition on values, sums or other elements: left to the validator",
+    "warning": "a warning of the validators, which accept the invoice: left to them",
     "tautology": "always true",
     "shadowed": "a rule of higher priority takes every position",
     "unmatched": "no position of the profile",

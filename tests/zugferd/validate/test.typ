@@ -122,26 +122,29 @@
   m.seller.contact.phone = none
   m.seller.contact.email = none
   assert.eq(rules(m), ("BR-DE-5", "BR-DE-6", "BR-DE-7"))
-  // BR-DE-27 and BR-DE-28 are errors (Mustang rejects the invoice), with the
-  // official e-mail syntax of XRechnung (XR-EMAIL-REGEX)
+  // BR-DE-27 and BR-DE-28 are warnings, as the validators report them, with
+  // the e-mail syntax of the XRechnung Schematron 3.0.2 (XR-EMAIL-REGEX)
   let m = base
   m.seller.contact.phone = "12"
   m.seller.contact.email = "seller.example.de"
-  assert.eq(rules(m), ("BR-DE-27", "BR-DE-28"))
-  assert.eq(rules(m, level: "warning"), ())
-  for email in (
-    "info@müller-bau.de",
-    ".max@seller.de",
-    "max@seller",
-    "a@b@c.de",
-  ) {
+  assert.eq(rules(m), ())
+  assert.eq(rules(m, level: "warning"), ("BR-DE-27", "BR-DE-28"))
+  for email in ("max@seller", "a@b@c.de", "max muster@seller.de") {
     m.seller.contact.email = email
-    assert.eq(rules(m), ("BR-DE-27", "BR-DE-28"), message: email)
+    assert.eq(
+      rules(m, level: "warning"),
+      ("BR-DE-27", "BR-DE-28"),
+      message: email,
+    )
   }
   m.seller.contact.phone = "(089) 12"
-  for email in ("info@xn--mller-bau-q9a.de", "max.m+rechnung@seller-gmbh.de") {
+  for email in (
+    "info@müller-bau.de",
+    "info@xn--mller-bau-q9a.de",
+    "max.m+rechnung@seller-gmbh.de",
+  ) {
     m.seller.contact.email = email
-    assert.eq(rules(m), (), message: email)
+    assert.eq(rules(m) + rules(m, level: "warning"), (), message: email)
   }
   let m = base
   m.seller.address.city = none
@@ -264,11 +267,11 @@
   assert.eq(rules(m), ("BR-DE-1",))
   m.profile = resolve-profile("en16931", "FR")
   assert.eq(rules(m), ())
-  // An invalid IBAN is an error: the buyer could not pay (XRechnung: BR-DE-19
-  // for a SEPA credit transfer)
+  // An invalid IBAN is an error: the buyer could not pay (in XRechnung as
+  // well, whose BR-DE-19 is a warning of the validators)
   let m = base
   m.payment.means.at(0).iban = "DE00512108001245126199"
-  assert.eq(rules(m), ("BR-DE-19",))
+  assert.eq(rules(m), ("IP-PAY-01",))
   m.profile = resolve-profile("en16931", "FR")
   assert.eq(rules(m), ("IP-PAY-01",))
   // Prepayments above the total: BR-CO-16 holds (the amount due is the total

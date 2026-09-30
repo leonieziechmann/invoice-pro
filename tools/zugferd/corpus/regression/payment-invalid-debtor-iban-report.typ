@@ -1,8 +1,9 @@
-// expect: AGREE_INVALID BR-DE-20
+// expect: STRICTER IP-PAY-01
 // finding: amounts-payment-means-api-gap
 //
-// The debited account of a SEPA direct debit must be a valid IBAN in
-// XRechnung (BR-DE-20).
+// The debited account of a SEPA direct debit must be a valid IBAN:
+// invoice-pro reports an error (IP-PAY-01), as the amount could not be
+// collected; the validators only warn in XRechnung (BR-DE-20).
 
 #import "_base.typ": *
 

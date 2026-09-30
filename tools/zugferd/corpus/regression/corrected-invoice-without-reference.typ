@@ -1,9 +1,9 @@
-// expect: AGREE_INVALID BR-DE-26
+// expect: STRICTER IP-DOC-02
 // finding: amounts-doctype-gutschrift-written-as-380
 //
-// A corrected invoice (384) replaces a preceding invoice, which XRechnung
-// requires it to name (BR-DE-26). KoSIT only warns, but Mustang rejects it,
-// so invoice-pro reports an error.
+// A corrected invoice (384) replaces a preceding invoice, which it must name
+// (Art. 219 of the VAT Directive). The validators only warn (XRechnung's
+// BR-DE-26), so invoice-pro reports its own rule as an error.
 
 #import "_base.typ": *
 

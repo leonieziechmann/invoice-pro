@@ -1,4 +1,5 @@
-// expect: AGREE_INVALID BR-DE-17
+// expect: AGREE_VALID
+// warns: BR-DE-17
 // profiles: xrechnung
 //
 // XRechnung has no prepayment invoice (BT-3 = 386); KoSIT only warns (see

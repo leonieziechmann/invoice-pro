@@ -2,7 +2,7 @@
 // CIUS XRechnung 3.0 (BR-DE-*) and PEPPOL-EN16931-R120 of its Schematron;
 // engine.typ loads this module for it. The other rules of XRechnung are in
 // engine.typ and rare.typ, where they replace a rule of the same check in
-// the other profiles (e.g. BR-DE-26 for IP-DOC-02). See engine.typ for the
+// the other profiles (e.g. BR-DE-23-a for CII-SR-470). See engine.typ for the
 // findings and the registry.
 
 // The document types XRechnung allows (BR-DE-17).
@@ -19,12 +19,10 @@
 }
 
 // XR-TELEPHONE-REGEX (three digits, BR-DE-27) and XR-EMAIL-REGEX (BR-DE-28)
-// of the XRechnung 3.0 Schematron, compiled on first use.
+// of the XRechnung Schematron 3.0.2, compiled on first use.
 #let _patterns() = (
   digit: regex("[0-9]"),
-  email: regex(
-    "^[a-zA-Z0-9!#$%&\"*+/=?^_`{|}~-]+(\\.[a-zA-Z0-9!#$%&\"*+/=?^_`{|}~-]+)*@([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\\.)+[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$",
-  ),
+  email: regex("^[^@\\s]+@([^@.\\s]+\\.)+[^@.\\s]+$"),
 )
 
 /// The seller contact (BG-6), the cities and post codes of the addresses
@@ -48,8 +46,8 @@
         out.push((key: rule, field: "sender.contact." + key, input: key))
       }
     }
-    // XRechnung only warns about BR-DE-27 and BR-DE-28, but validators such
-    // as Mustang reject the invoice, so invoice-pro reports errors.
+    // XRechnung only warns about BR-DE-27 and BR-DE-28, and so do the
+    // validators and invoice-pro.
     if (
       contact.phone != none
         and contact.phone.matches(_patterns().digit).len() < 3

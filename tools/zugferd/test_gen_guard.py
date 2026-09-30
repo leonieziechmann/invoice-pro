@@ -956,7 +956,9 @@ class Tables(unittest.TestCase):
             for d, rules in info["dispositions"].items()
             for r in rules
         }
-        self.assertEqual(disposition[("xrechnung", "BR-DE-21")], "compiled")
+        # BR-DE-21 is a warning of the XRechnung Schematron, which Mustang
+        # 2.26.0 reports as such: left to the validators.
+        self.assertEqual(disposition[("xrechnung", "BR-DE-21")], "warning")
         self.assertEqual(disposition[("xrechnung", "PEPPOL-EN16931-R053")], "compiled")
 
 

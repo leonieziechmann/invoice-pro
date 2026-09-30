@@ -446,7 +446,8 @@
       "4000001123452",
     ),
   )
-  assert.eq(rules(m), ("CII-SR-451",))
+  assert.eq(rules(m), ())
+  assert.eq(rules(m, level: "warning"), ("CII-SR-451",))
   m.payee = payee(
     name: "Factor AG",
     global-id: (scheme: "9999", id: "1"),
