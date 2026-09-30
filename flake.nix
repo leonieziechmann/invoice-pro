@@ -308,7 +308,7 @@
           buildInputs = with pkgs; [
             typstEnv
             typstyle
-            nodePackages.prettier
+            prettier
             nodejs
             yarn
             ripgrep

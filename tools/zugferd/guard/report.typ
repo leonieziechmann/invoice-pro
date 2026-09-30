@@ -167,7 +167,12 @@
   } else if kind == "blank" {
     "The required element " + element + where + " has no text."
   } else if kind == "empty-value" {
-    "The element " + element + where + " has no text, but it states a code or a date."
+    (
+      "The element "
+        + element
+        + where
+        + " has no text, but it states a code or a date."
+    )
   } else if kind == "variant-min" {
     (
       "The element "
