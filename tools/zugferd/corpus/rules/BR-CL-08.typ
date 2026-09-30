@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID BR-CL-08
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // An invoice note (BT-22) with a subject code (BT-21) outside UNTDID 4451.
 

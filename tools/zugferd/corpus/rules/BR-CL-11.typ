@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID BR-CL-11
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // A seller legal registration identifier (BT-30) with a scheme that is no
 // ISO/IEC 6523 code.

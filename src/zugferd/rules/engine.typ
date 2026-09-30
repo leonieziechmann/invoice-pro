@@ -15,7 +15,7 @@
 // message: .., hint: .. | none)`, errors first, each level in the order of
 // the checks.
 
-#import "../code-lists.typ": lists
+#import "../code-lists.typ": fx-id, lists
 #import "../xml.typ": fmt-number, rate-digits
 #import "../model.typ": profile-terms, vat-id-country, vat-id-prefix
 #import "../../utils/iban.typ": iban-valid
@@ -770,7 +770,7 @@
     out += identifiers(buyer, "recipient", "buyer")
     out += global-id(seller, "BR-CL-10", "sender", profile)
     out += global-id(buyer, "BR-CL-10", "recipient", profile)
-    if profile.en16931 {
+    if profile.cen {
       out += single-identifier(
         buyer,
         "CII-SR-450",
@@ -782,7 +782,7 @@
   if profile.addresses and ship-to != none {
     out += identifiers(ship-to, "delivery-address", "delivery address")
     out += global-id(ship-to, "BR-CL-26", "delivery-address", profile)
-    if profile.en16931 {
+    if profile.cen {
       out += single-identifier(
         ship-to,
         "CII-SR-449",
@@ -869,7 +869,16 @@
     } else { false }
     let unit-issue = line.at("unit-issue", default: none)
     if not known {
-      out.push((key: "BR-CL-23", field: line-field(line), code: code))
+      out.push((
+        key: "BR-CL-23",
+        // BASIC: the rule of the Factur-X Schematron, which checks the list
+        // alone (see `cen` of profile.typ).
+        id: if model.profile.cen { "BR-CL-23" } else {
+          fx-id("unit", model.profile)
+        },
+        field: line-field(line),
+        code: code,
+      ))
     } else if unit-issue != none and unit-issue.kind == "unknown" {
       // IP-UNIT-02: a text invoice-pro does not know has no unit code, and
       // "one" (C62) would be a guess.

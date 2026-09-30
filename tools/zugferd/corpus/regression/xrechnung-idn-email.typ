@@ -1,10 +1,10 @@
 // expect: AGREE_VALID
-// warns: BR-DE-28
 // finding: fidelity-cat-xr-warning-rules
 //
-// XRechnung: the seller e-mail address must match the official pattern
-// (BR-DE-28), which has no internationalized domains (use punycode). It was
-// a warning, invisible in the default mode.
+// XRechnung: a seller e-mail address with an internationalized domain. The
+// pattern of the XRechnung Schematron 3.0.2 (BR-DE-28, a warning) accepts
+// it, and so does invoice-pro; the older pattern of Mustang 2.14.0 had ASCII
+// characters only.
 
 #import "_base.typ": *
 

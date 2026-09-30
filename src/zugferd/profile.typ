@@ -55,6 +55,11 @@
   item-origin: false,
   // The EN 16931 business rules (BR-*) apply to the whole document.
   en16931: false,
+  // The CEN Schematron of EN 16931 validates the document, with its code
+  // lists and the rules of the CII syntax (CII-*): KoSIT in EN 16931, both
+  // validators in XRechnung. The validation of MINIMUM to BASIC applies the
+  // Factur-X Schematron alone, which states the business rules itself.
+  cen: false,
   // The German CIUS XRechnung (BR-DE-*) applies on top of EN 16931.
   xrechnung: false,
   // The name of the embedded XML file: "factur-x.xml", and "xrechnung.xml"
@@ -126,6 +131,7 @@
       document-references: true,
       notes: true,
       en16931: true,
+      cen: true,
     ),
   xrechnung: _base
     + (
@@ -154,6 +160,7 @@
       document-references: true,
       notes: true,
       en16931: true,
+      cen: true,
       xrechnung: true,
       file-name: "xrechnung.xml",
     ),

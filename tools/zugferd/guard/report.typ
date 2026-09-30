@@ -18,6 +18,7 @@
   variant-min: "IP-GUARD-04",
   any-of: "IP-GUARD-04",
   empty: "IP-GUARD-04",
+  empty-value: "IP-GUARD-04",
   not-used: "IP-GUARD-05",
   attribute-not-used: "IP-GUARD-05",
   xref-other: "IP-GUARD-05",
@@ -165,6 +166,8 @@
     "The required element " + element + where + " is missing."
   } else if kind == "blank" {
     "The required element " + element + where + " has no text."
+  } else if kind == "empty-value" {
+    "The element " + element + where + " has no text, but it states a code or a date."
   } else if kind == "variant-min" {
     (
       "The element "

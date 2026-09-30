@@ -325,15 +325,18 @@ def parse_mustang_report(report):
 
     Every <error> counts, whatever its type. In particular the XRechnung
     Schematron (BR-DE-*, PEPPOL-*) reports its violations as type 27: as
-    <error> for an XRechnung invoice, and as <notice> (ignored) for the
-    other profiles, which the XRechnung rules do not apply to. Type 18 is
-    the XSD check. The rule id is the leading [BR-..] of the message or,
-    without one, its [ID ..].
+    <error> for an XRechnung invoice, and as <notice> for the other
+    profiles, which the XRechnung rules do not apply to. Mustang 2.26.0
+    reports an assertion flagged as a warning as a <warning>, one flagged as
+    information as a <notice> (`notices`, which the parity of a fixture
+    reads for a rule of that level only). Type 18 is the XSD check. The rule
+    id is the leading [BR-..] of the message or, without one, its [ID ..].
     """
     if "<crash>" in report:
-        return {"status": "crash", "errors": {"MUSTANG-CRASH": _unescape(report)[:500]}, "warnings": []}
+        return {"status": "crash", "errors": {"MUSTANG-CRASH": _unescape(report)[:500]}, "warnings": [],
+                "notices": []}
     status = _STATUS.findall(report)
-    errors, warnings = {}, []
+    errors, warnings, notices = {}, [], []
     for kind, attrs, body in _MESSAGE.findall(report):
         text = re.sub(r"\s+", " ", _unescape(body)).strip()
         type_ = re.search(r'type="(\d+)"', attrs)
@@ -347,7 +350,10 @@ def parse_mustang_report(report):
             errors.setdefault(rule, text[:400])
         elif kind == "warning":
             warnings.append(f"{rule}: {text[:200]}")
-    return {"status": status[-1] if status else "?", "errors": errors, "warnings": warnings}
+        elif kind == "notice":
+            notices.append(rule)
+    return {"status": status[-1] if status else "?", "errors": errors, "warnings": warnings,
+            "notices": sorted(set(notices))}
 
 
 _PDF_PART = re.compile(r"<pdf>(.*?)</pdf>", re.S)

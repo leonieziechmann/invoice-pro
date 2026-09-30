@@ -1,15 +1,12 @@
-// expect: AGREE_VALID
-// warns: IP-CODE-01
+// expect: AGREE_INVALID FX-SCH-A-000514
 // finding: core-wrong-rule-ids
 //
-// The Bulgarian lev (BGN), which the code list of the EN 16931 Schematron
-// 1.3.16 has withdrawn (Bulgaria pays in euro since 2026), in BASIC: Mustang
-// validates it with the Factur-X list and CEN 1.3.12, which both still have
-// it, and KoSIT does not validate BASIC. invoice-pro reported BR-CL-04, which
-// no validator reports for it; as the maintainer decided, it allows the
-// currency where the Factur-X validation accepts it, with a warning of its
-// own rule (currency-withdrawn-from-en16931-list.typ shows EN 16931,
-// currency-withdrawn-xrechnung.typ the error of XRechnung).
+// The Bulgarian lev (BGN), which the ISO 4217 lists have withdrawn (Bulgaria
+// pays in euro since 2026), in BASIC. Mustang 2.14.0 still accepted it (the
+// Factur-X list and CEN 1.3.12), so invoice-pro only warned (IP-CODE-01);
+// the Factur-X 1.09 list of Mustang 2.26.0 has withdrawn it as well, which
+// BASIC applies alone: an error under the rule of the Factur-X Schematron of
+// the position.
 
 #import "_base.typ": *
 

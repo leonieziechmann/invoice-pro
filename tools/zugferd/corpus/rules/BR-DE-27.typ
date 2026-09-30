@@ -3,7 +3,7 @@
 // profiles: xrechnung
 //
 // An XRechnung whose seller contact phone number (BT-42) has fewer than three
-// digits; KoSIT only warns (maintainer decision: an error).
+// digits: a warning of the validators, and of invoice-pro.
 
 #import "_base.typ": *
 

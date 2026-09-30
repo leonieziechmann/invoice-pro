@@ -3,7 +3,7 @@
   python3 -m unittest discover -s tools/zugferd -p 'test_*.py'
 
 The parts run on small synthetic artefacts, inventories and classification
-files and need only lxml. With the Mustang CLI jar 2.14.0 ($MUSTANG_JAR) and
+files and need only lxml. With the Mustang CLI jar 2.26.0 ($MUSTANG_JAR) and
 KoSIT's XRechnung configuration ($KOSIT_CONFIG), the inventory of the pinned
 artefacts is checked as well.
 """
@@ -682,7 +682,7 @@ KOSIT = os.environ.get("KOSIT_CONFIG")
 
 
 @unittest.skipUnless(JAR and Path(JAR).is_file() and KOSIT and Path(KOSIT).is_dir(),
-                     "needs the Mustang CLI jar 2.14.0 ($MUSTANG_JAR) and KoSIT's configuration ($KOSIT_CONFIG)")
+                     "needs the Mustang CLI jar 2.26.0 ($MUSTANG_JAR) and KoSIT's configuration ($KOSIT_CONFIG)")
 class PinnedArtefacts(unittest.TestCase):
     """The inventory of the pinned artefacts, as Mustang and KoSIT select them."""
 
@@ -717,9 +717,11 @@ class PinnedArtefacts(unittest.TestCase):
         self.assertEqual(levels["xrechnung"]["BR-DE-17"], {"mustang": "warning", "kosit": "warning"})
 
     def test_twins(self):
-        # KoSIT reports the assertion id, Mustang the id its message names.
-        self.assertEqual(self.levels["en16931"]["CII-SR-04"], {"kosit": "warning"})
-        self.assertEqual(self.levels["en16931"]["CII-SR-004"], {"mustang": "warning"})
+        # KoSIT reports the assertion id, Mustang the id its message names
+        # (in XRechnung: Mustang 2.26.0 applies no CEN Schematron to EN 16931).
+        self.assertEqual(self.levels["xrechnung"]["CII-SR-04"], {"kosit": "warning"})
+        self.assertEqual(self.levels["xrechnung"]["CII-SR-004"], {"mustang": "warning"})
+        self.assertNotIn("CII-SR-004", self.levels["en16931"])
 
 
 if __name__ == "__main__":

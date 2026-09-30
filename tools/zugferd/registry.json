@@ -22,12 +22,11 @@
       "legal": null
     },
     "BR-03": {
-      "covers": ["BR-03", "FX-SCH-A-000491", "FX-SCH-A-000554"],
+      "covers": ["BR-03", "FX-SCH-A-000554"],
       "source": "EN16931",
       "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
-        "FX-SCH-A-000491": ["basic"],
         "FX-SCH-A-000554": ["en16931"]
       },
       "scope": "document",
@@ -56,7 +55,7 @@
       "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
-        "BR-CL-04": ["basic", "en16931", "xrechnung"],
+        "BR-CL-04": ["en16931", "xrechnung"],
         "FX-SCH-A-000040": ["minimum"],
         "FX-SCH-A-000464": ["basic-wl"],
         "FX-SCH-A-000514": ["basic"],
@@ -185,7 +184,7 @@
       "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
-        "BR-CL-08": ["basic", "en16931", "xrechnung"],
+        "BR-CL-08": ["en16931", "xrechnung"],
         "FX-SCH-A-000162": ["basic-wl"],
         "FX-SCH-A-000490": ["basic"],
         "FX-SCH-A-000553": ["en16931"]
@@ -340,7 +339,7 @@
       "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
-        "BR-CL-14": ["basic", "en16931", "xrechnung"],
+        "BR-CL-14": ["en16931", "xrechnung"],
         "FX-SCH-A-000036": ["minimum"],
         "FX-SCH-A-000423": ["basic-wl"],
         "FX-SCH-A-000435": ["basic-wl"],
@@ -453,7 +452,7 @@
       "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
-        "BR-CL-11": ["basic", "en16931", "xrechnung"],
+        "BR-CL-11": ["en16931", "xrechnung"],
         "FX-SCH-A-000031": ["minimum"],
         "FX-SCH-A-000410": ["minimum"],
         "FX-SCH-A-000424": ["basic-wl"],
@@ -554,12 +553,12 @@
       "covers": [],
       "source": "IP",
       "versions": [],
-      "profiles": ["basic-wl"],
+      "profiles": ["basic-wl", "basic"],
       "scope": "party",
       "terms": ["BT-59", "BT-60", "BT-61"],
       "level": "error",
       "field": "payee",
-      "summary": "A `payee` that is the seller (its name, identifier or legal registration identifier) in `\"basic-wl\"`: the payee (BG-10) is someone other than the seller (`BR-17`), which the validation of the profile does not check.",
+      "summary": "A `payee` that is the seller (its name, identifier or legal registration identifier) in `\"basic-wl\"` or `\"basic\"`: the payee (BG-10) is someone other than the seller (`BR-17`), which the validation of these profiles does not check.",
       "legal": null
     },
     "IP-ID-02": {
@@ -581,7 +580,7 @@
       "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
-        "BR-CL-10": ["basic", "en16931", "xrechnung"],
+        "BR-CL-10": ["en16931", "xrechnung"],
         "FX-SCH-A-000421": ["basic-wl"],
         "FX-SCH-A-000441": ["basic-wl"],
         "FX-SCH-A-000471": ["basic-wl"],
@@ -606,7 +605,7 @@
       "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
-        "BR-CL-26": ["basic", "en16931", "xrechnung"],
+        "BR-CL-26": ["en16931", "xrechnung"],
         "FX-SCH-A-000454": ["basic-wl"],
         "FX-SCH-A-000506": ["basic"],
         "FX-SCH-A-000585": ["en16931"]
@@ -622,7 +621,7 @@
       "covers": ["CII-SR-450"],
       "source": "CII",
       "versions": ["1.3.16"],
-      "profiles": ["basic", "en16931", "xrechnung"],
+      "profiles": ["en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-46"],
       "level": "warning",
@@ -634,7 +633,7 @@
       "covers": ["CII-SR-449"],
       "source": "CII",
       "versions": ["1.3.16"],
-      "profiles": ["basic", "en16931", "xrechnung"],
+      "profiles": ["en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-71"],
       "level": "warning",
@@ -646,7 +645,7 @@
       "covers": ["CII-SR-451"],
       "source": "CII",
       "versions": ["1.3.16"],
-      "profiles": ["basic", "en16931", "xrechnung"],
+      "profiles": ["en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-60"],
       "level": "warning",
@@ -721,7 +720,7 @@
       "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
-        "BR-CL-25": ["basic", "en16931", "xrechnung"],
+        "BR-CL-25": ["en16931", "xrechnung"],
         "FX-SCH-A-000429": ["basic-wl"],
         "FX-SCH-A-000447": ["basic-wl"],
         "FX-SCH-A-000498": ["basic"],
@@ -959,17 +958,17 @@
       "legal": null
     },
     "BR-CL-23": {
-      "covers": ["BR-CL-23", "FX-SCH-A-000275", "FX-SCH-A-000533", "FX-SCH-A-000534", "FX-SCH-A-000611", "FX-SCH-A-000612", "FX-SCH-A-000613"],
+      "ids": ["BR-CL-23", "FX-SCH-A-000534"],
+      "covers": ["BR-CL-23", "FX-SCH-A-000534", "FX-SCH-A-000611", "FX-SCH-A-000612", "FX-SCH-A-000613"],
       "source": "EN16931",
       "versions": ["1.3.16"],
       "profiles": ["basic", "en16931", "xrechnung"],
       "id-profiles": {
-        "FX-SCH-A-000275": ["basic"],
-        "FX-SCH-A-000533": ["basic"],
         "FX-SCH-A-000534": ["basic"],
         "FX-SCH-A-000611": ["en16931"],
         "FX-SCH-A-000612": ["en16931"],
-        "FX-SCH-A-000613": ["en16931"]
+        "FX-SCH-A-000613": ["en16931"],
+        "BR-CL-23": ["en16931", "xrechnung"]
       },
       "scope": "line",
       "terms": ["BT-130"],
@@ -1118,15 +1117,14 @@
     },
     "BR-CL-18": {
       "ids": ["BR-CL-18", "FX-SCH-A-000179", "FX-SCH-A-000508", "FX-SCH-A-000587"],
-      "covers": ["BR-CL-18", "FX-SCH-A-000179", "FX-SCH-A-000508", "FX-SCH-A-000537", "FX-SCH-A-000587", "FX-SCH-A-000619"],
+      "covers": ["BR-CL-18", "FX-SCH-A-000179", "FX-SCH-A-000508", "FX-SCH-A-000587", "FX-SCH-A-000619"],
       "source": "EN16931",
       "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
-        "BR-CL-18": ["basic", "en16931", "xrechnung"],
+        "BR-CL-18": ["en16931", "xrechnung"],
         "FX-SCH-A-000179": ["basic-wl"],
         "FX-SCH-A-000508": ["basic"],
-        "FX-SCH-A-000537": ["basic"],
         "FX-SCH-A-000587": ["en16931"],
         "FX-SCH-A-000619": ["en16931"]
       },
@@ -1212,7 +1210,7 @@
       "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
-        "BR-CL-22": ["basic", "en16931", "xrechnung"],
+        "BR-CL-22": ["en16931", "xrechnung"],
         "FX-SCH-A-000181": ["basic-wl"],
         "FX-SCH-A-000510": ["basic"],
         "FX-SCH-A-000589": ["en16931"]
@@ -1524,7 +1522,7 @@
       "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
-        "BR-CL-16": ["basic", "en16931", "xrechnung"],
+        "BR-CL-16": ["en16931", "xrechnung"],
         "FX-SCH-A-000489": ["basic-wl"],
         "FX-SCH-A-000527": ["basic"],
         "FX-SCH-A-000609": ["en16931"]

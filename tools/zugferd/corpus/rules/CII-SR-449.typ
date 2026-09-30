@@ -1,6 +1,6 @@
 // expect: AGREE_VALID
 // warns: CII-SR-449
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // A deliver-to location with both a location identifier (BT-71) and a global
 // identifier.
@@ -19,7 +19,7 @@
     global-id: id.gln("4000001987658"),
   ),
   sender: seller-de,
-  recipient: buyer-fr,
+  recipient: buyer-de,
   invoice-nr: "CII-SR-449",
 )
 

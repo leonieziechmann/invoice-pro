@@ -32,107 +32,60 @@
 #                rejecting validator rejects; such a case is WARNED rather
 #                than a FALSE_NEGATIVE (tools/zugferd/run.py)
 
-# ---- Code lists: the lists of the validators differ, so either one may
-# ---- reject a code that the other one accepts without a message
-#
-# Mustang checks the codes with the lists of CEN Schematron 1.3.12 and of
-# Factur-X 1.0.07 (XRechnung: of CEN 1.3.12 alone), KoSIT with those of CEN
-# Schematron 1.3.16. The newer lists have codes the older ones lack, and have
-# withdrawn codes the older ones still have; the Factur-X lists lack a few
-# codes the CEN lists have (e.g. the scheme 0219). invoice-pro accepts only
-# the codes that every list the validation of a profile applies contains
-# (the code lists of the validator, which tools/zugferd/gen_guard.py
-# intersects: src/zugferd/code-lists.json, read by
-# src/zugferd/code-lists.typ), and reports an error for any other, under the
-# rule of a validator that rejects it (`code-finding` of
-# src/zugferd/rules/rare.typ).
+# ---- Only KoSIT rejects: the CEN Schematron, which Mustang 2.26.0 does not
+# ---- apply to EN 16931 (the Factur-X 1.09 Schematron states the business
+# ---- rules itself)
 
-["BR-CL-03"]
-rejected-by = ["mustang", "kosit"]
+["BR-17"]
+rejected-by = "kosit"
 other = "nothing"
-warned-as = "IP-CODE-01"
-reason = """The currency of an amount (currencyID) is in the ISO 4217 list of the EN 16931 \
-Schematron. CEN 1.3.12 in Mustang lacks newer codes such as the current bolivar (VES), which CEN \
-1.3.16 in KoSIT has; CEN 1.3.16 has withdrawn codes such as the Bulgarian lev (BGN, the euro since \
-2026) and the Croatian kuna (HRK), which CEN 1.3.12 still has. invoice-pro reports a newer code as \
-BR-CL-04. A withdrawn code that the Factur-X list has is allowed in EN 16931 (and BASIC, which \
-KoSIT does not validate), as the Factur-X validation accepts it: invoice-pro warns of it \
-(IP-CODE-01, a maintainer decision; the case is WARNED), and reports it in XRechnung as BR-CL-04."""
+reason = """A payee (BG-10) is someone other than the seller. The Factur-X Schematron, which Mustang \
+applies to EN 16931, compares the payee with a path of the seller that never matches; the CEN \
+Schematron of KoSIT checks it. invoice-pro reports BR-17 in EN 16931 and XRechnung, and its own \
+IP-PAY-05 in BASIC WL and BASIC, which KoSIT does not validate."""
 
-["BR-CL-04"]
-rejected-by = ["mustang", "kosit"]
+["BR-CL-14"]
+rejected-by = "kosit"
 other = "nothing"
-warned-as = "IP-CODE-01"
-reason = """The invoice currency (BT-5): the same difference of the code lists as BR-CL-03. \
-invoice-pro reports an error, but warns of a withdrawn currency in EN 16931 (IP-CODE-01)."""
+reason = """A country code in the ISO 3166-1 list of EN 16931. The Factur-X list, which Mustang \
+applies to EN 16931, also has South Sudan (SS); the CEN list of KoSIT does not. invoice-pro reports \
+BR-CL-14 in EN 16931 and accepts SS in MINIMUM, BASIC WL and BASIC, whose validation applies the \
+Factur-X list alone."""
 
-["BR-CL-10"]
+# ---- Only Mustang rejects: the code lists of Factur-X, which lack a few codes
+# ---- of the CEN lists. Since Factur-X 1.09, each position of each profile has
+# ---- a rule id of its own (`fx-rules` of src/zugferd/code-lists.json); KoSIT
+# ---- has no Factur-X rules. invoice-pro reports the rule of the Factur-X
+# ---- Schematron of the position (`code-finding` of src/zugferd/rules/rare.typ),
+# ---- and XRechnung, which Mustang validates with the CEN lists, accepts the
+# ---- codes.
+
+["FX-SCH-A-000568"]
 rejected-by = "mustang"
 other = "nothing"
-reason = """The scheme of a party identifier (BT-29, BT-46) is in the ISO/IEC 6523 ICD list. CEN \
-1.3.16 in KoSIT has newer codes (0231 to 0248) that the lists of CEN 1.3.12 and Factur-X 1.0.07 in \
-Mustang lack. invoice-pro follows Mustang and reports an error."""
+reason = """The buyer country code (BT-55) in EN 16931 is in the Factur-X list, which lacks the \
+Netherlands Antilles (AN), which the CEN list still has."""
 
-["BR-CL-11"]
+["FX-SCH-A-000571"]
 rejected-by = "mustang"
 other = "nothing"
-reason = """The scheme of a legal registration identifier (BT-30, BT-47): the same difference of \
-the ICD lists as BR-CL-10. invoice-pro reports an error."""
+reason = """The scheme of the buyer electronic address (BT-49) in EN 16931 is in the Factur-X EAS \
+list, which lacks the schemes 0219 and 0220 of the CEN list."""
 
-["BR-CL-25"]
-rejected-by = ["mustang", "kosit"]
-other = "nothing"
-reason = """The scheme of an electronic address (BT-34, BT-49) is in the EAS code list. CEN 1.3.16 \
-in KoSIT has newer schemes (e.g. 0240) that CEN 1.3.12 and Factur-X 1.0.07 in Mustang lack, and it \
-has withdrawn 9901, which they still have. invoice-pro reports both kinds as an error."""
-
-["FX-SCH-A-000031"]
+["FX-SCH-A-000595"]
 rejected-by = "mustang"
 other = "nothing"
-reason = """The Factur-X 1.0.07 Schematron in Mustang checks every scheme identifier (`@schemeID`) \
-with its own lists, which lack the newer ICD and EAS codes of CEN 1.3.16 (see BR-CL-10 and \
-BR-CL-25) and the EAS schemes 0219 and 0220, which both CEN lists have; KoSIT has no Factur-X \
-rules. invoice-pro reports the rule of the CEN list for a newer code (BR-CL-10, BR-CL-11 or \
-BR-CL-25), which CEN 1.3.12 in Mustang lacks as well, and FX-SCH-A-000031 for 0219 and 0220, \
-which XRechnung accepts."""
+reason = """The invoice currency (BT-5) in EN 16931 is in the Factur-X list, which lacks the São \
+Tomé dobra of before 2018 (STD), which the CEN list has."""
 
-["FX-SCH-A-000040"]
+["FX-SCH-A-000606"]
 rejected-by = "mustang"
 other = "nothing"
-reason = """The invoice currency (BT-5) is in the Factur-X 1.0.07 list, which lacks the newest ISO \
-4217 codes that CEN 1.3.16 in KoSIT has, e.g. the Caribbean guilder (XCG), Zimbabwe Gold (ZWG) \
-and the digital bolivar (VED), and the São Tomé dobra of before 2018 (STD), which both CEN lists \
-have; KoSIT has no Factur-X rules. invoice-pro reports BR-CL-04 for a newer code, which CEN 1.3.12 \
-in Mustang lacks as well, and FX-SCH-A-000040 for STD, which XRechnung accepts."""
+reason = """The currency of an amount (`@currencyID`) in EN 16931: the same Factur-X list as \
+FX-SCH-A-000595. invoice-pro reports the rule of the invoice currency."""
 
-["FX-SCH-A-000045"]
+["FX-SCH-A-000628"]
 rejected-by = "mustang"
 other = "nothing"
-reason = """The currency of an amount (`@currencyID`): the same Factur-X list as FX-SCH-A-000040. \
-invoice-pro reports the rule of the invoice currency (BR-CL-04 or FX-SCH-A-000040)."""
-
-["BR-CL-22"]
-rejected-by = "mustang"
-other = "nothing"
-reason = """The VAT exemption reason code (BT-121) is in the VATEX code list. CEN 1.3.16 in KoSIT \
-has newer codes (e.g. VATEX-EU-144) that the lists of CEN 1.3.12 and Factur-X 1.0.07 in Mustang \
-lack. invoice-pro follows Mustang and reports BR-CL-22."""
-
-["FX-SCH-A-000181"]
-rejected-by = "mustang"
-other = "nothing"
-reason = """The VAT exemption reason code (BT-121) in the Factur-X 1.0.07 list: the same difference \
-of the code lists as BR-CL-22; KoSIT has no Factur-X rules. invoice-pro reports BR-CL-22."""
-
-["FX-SCH-A-000036"]
-rejected-by = "mustang"
-other = "nothing"
-reason = """A country code of an address (BT-40, BT-55, BT-69, BT-80) in the Factur-X 1.0.07 list, \
-which lacks the Netherlands Antilles (AN), which both CEN lists still have; KoSIT has no Factur-X \
-rules. invoice-pro reports FX-SCH-A-000036 in the Factur-X profiles; XRechnung accepts the code."""
-
-["FX-SCH-A-000026"]
-rejected-by = "mustang"
-other = "nothing"
-reason = """The country of origin of an item (BT-159): the same Factur-X list as FX-SCH-A-000036, \
-which lacks AN. invoice-pro reports FX-SCH-A-000026 in EN 16931; XRechnung accepts the code."""
+reason = """The country of origin of an item (BT-159) in EN 16931 is in the Factur-X list, which \
+lacks the Netherlands Antilles (AN), which the CEN list still has."""

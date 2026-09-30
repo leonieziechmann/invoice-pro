@@ -372,7 +372,7 @@ nix develop .#test --command tt run
 
 ### 2. ZUGFeRD / Factur-X Validation (Mustang CLI)
 
-ZUGFeRD tests verify that generated invoices comply with the **EN 16931** European e-invoicing standard and the **Factur-X / ZUGFeRD 2.3** profile specifications.
+ZUGFeRD tests verify that generated invoices comply with the **EN 16931** European e-invoicing standard and the **Factur-X / ZUGFeRD 2.5** profile specifications.
 
 #### How It Works
 
@@ -492,7 +492,7 @@ The scripts take their tools from environment variables, and their generated fil
 | :--------------------------------------- | :------------------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
 | `TYPST_BIN`                              | all                        | `typst`                                                                                                                             |
 | `PYTHON`                                 | all                        | `python3`; Python 3.11 or newer, with the packages `lxml` and `pypdf` for the corpus and the golden XML                             |
-| `MUSTANG_JAR`                            | corpus                     | none: `Mustang-CLI-2.14.0.jar` from the [Mustang releases](https://github.com/ZUGFeRD/mustangproject/releases)                      |
+| `MUSTANG_JAR`                            | corpus                     | none: `Mustang-CLI-2.26.0.jar` from the [Mustang releases](https://github.com/ZUGFeRD/mustangproject/releases)                      |
 | `JAVA_BIN`, `JAVAC_BIN` (or `JAVA_HOME`) | corpus                     | `java`, `javac`: a JDK, because the batch validator `tools/zugferd/java/MustangBatch.java` is compiled against the jar on first use |
 | `ZUGFERD_BUILD_DIR`                      | corpus, golden             | `build/zugferd`; must be inside the repository (the cases import `/src/lib.typ`)                                                    |
 | `KOSIT_JAR`, `KOSIT_CONFIG`              | corpus, KoSIT, `mutate.py` | none: the KoSIT jar and its unpacked XRechnung configuration (see below); `gen_guard.py` and `mutate.py` need the configuration     |
@@ -500,7 +500,7 @@ The scripts take their tools from environment variables, and their generated fil
 KoSIT, in the corpus and in `validate-all-zugferd`, needs `KOSIT_JAR`, the standalone jar `validator-1.6.3-standalone.jar` of the [KoSIT validator releases](https://github.com/itplr-kosit/validator/releases), and `KOSIT_CONFIG`, the directory with `scenarios.xml` of the unpacked `xrechnung-3.0.2-validator-configuration-2026-08-31.zip` of the [XRechnung configuration releases](https://github.com/itplr-kosit/validator-configuration-xrechnung/releases). `flake.nix` pins both with their hashes; KoSIT runs with the `java` of `JAVA_BIN`. Without them, the corpus stops with a message that says where to get them. `--no-kosit` (like `--no-mustang`) skips a validator for a quick local run: the report then warns that its classes are not the official verdict, and CI (`CI=true`) refuses both flags. The Factur-X PDF check (`scripts/zugferd-xmp`) needs `MUSTANG_JAR` and a JDK as well, the package bundle check (`scripts/check-package-bundle`) only Typst.
 
 ```bash
-export MUSTANG_JAR=~/Downloads/Mustang-CLI-2.14.0.jar
+export MUSTANG_JAR=~/Downloads/Mustang-CLI-2.26.0.jar
 export KOSIT_JAR=~/Downloads/validator-1.6.3-standalone.jar
 export KOSIT_CONFIG=~/Downloads/xrechnung-configuration   # the unpacked zip
 ./scripts/zugferd-corpus                        # generate and check the PR population
@@ -518,7 +518,7 @@ export KOSIT_CONFIG=~/Downloads/xrechnung-configuration   # the unpacked zip
 `tools/zugferd/corpus/gen.py` writes the generated invoices and their `manifest.json` to `build/zugferd/corpus/`; `tools/zugferd/corpus/regression/` holds the committed regression cases and `tools/zugferd/corpus/rules/` the parity fixtures (see [Rule Coverage](#rule-coverage)). `tools/zugferd/run.py` then handles every case in six steps:
 
 1. **Typst, once per case.** The cases use `zugferd-errors: "report"` and the harness theme `tools/zugferd/harness.typ`, which attaches invoice-pro's diagnostics to the PDF as `invoice-pro-diagnostics.json`. One compilation yields the XML, invoice-pro's verdict and the printed text.
-2. **XSD** of the profile with lxml. The Factur-X 1.0.07 XSDs are read from the Mustang jar.
+2. **XSD** of the profile with lxml. The Factur-X 1.09.2 XSDs are read from the Mustang jar.
 3. **Mustang 2.14** (EN 16931, Factur-X and XRechnung Schematron) in a single JVM for the whole run, validating while Typst still compiles. The XRechnung Schematron reports its rules (BR-DE-\*, PEPPOL-\*) with message type 27: as errors for an XRechnung, as notices for the other profiles. The runner counts every error, whatever its type.
 4. **KoSIT 1.6.3** with the XRechnung configuration 2026-08-31 (CEN Schematron 1.3.16, XRechnung Schematron 2.6.0), the reference validator for XRechnung: one JVM validates the EN 16931 and XRechnung cases of the run as a batch after Typst is done (about 15 s for the some 500 files of a PR run). KoSIT has no scenario for MINIMUM, BASIC WL and BASIC.
 5. **Verdict:** the class (table below), the expectation of the case, the semantic oracles, the metamorphic relations between twin cases and the quality of invoice-pro's messages (`O-DIAG`).
@@ -591,7 +591,7 @@ When the corpus fails:
 
 #### Validator Differences
 
-Mustang and KoSIT do not always agree: they bundle different versions of the CEN Schematron (1.3.12 in Mustang, 1.3.16 in KoSIT) with different code lists, Mustang adds the Factur-X Schematron and its code lists, and some XRechnung rules are warnings in KoSIT but errors in Mustang. When only one of them rejects a document, every rule behind the disagreement must be listed in `tools/zugferd/validator-differences.toml` with the validator that rejects it (`rejected-by`), what the other one reports (`other`: `"warning"` or `"nothing"`) and why they differ and what invoice-pro does (`reason`):
+Mustang and KoSIT do not always agree: both bundle the CEN Schematron 1.3.16, but Mustang adds the Factur-X Schematron and its code lists, which lack a few codes of the CEN lists, and its copy of a rule may differ from KoSIT's. Both report the assertions flagged as warnings as warnings (Mustang since 2.26.0), and KoSIT's scenario for XRechnung sets the level of some rules. When only one of them rejects a document, every rule behind the disagreement must be listed in `tools/zugferd/validator-differences.toml` with the validator that rejects it (`rejected-by`), what the other one reports (`other`: `"warning"` or `"nothing"`) and why they differ and what invoice-pro does (`reason`):
 
 ```toml
 ["BR-DE-27"]
@@ -638,30 +638,31 @@ invoice-pro's own validation checks the invoice data against the business rules 
 
 A check that fails records a finding, `(key: .., field: .., ..values)`: the key of its entry, the input field the diagnostic names, the id where the entry reports several (e.g. `BR-S-05` of the entry `vat-rate-positive`), the level where the entry has two, and the values its message needs. `diagnostics` builds the message only then, loading `xrechnung-messages.typ` for a `BR-DE-*` rule and `messages.typ` for any other (an invoice whose XRechnung checks fail, e.g. with `zugferd: auto` for a buyer without buyer reference, parses only the messages of XRechnung). The diagnostic names the id of the finding, else its key, and has the level of the finding, else `"warning"` for a key of `_warnings` and `"error"` for any other; a finding without a message stops the compilation. That every diagnostic is a rule of the registry, with an id, a profile and a level of its entry, the tests check (see below), and `registry.py --check` that `_warnings` lists exactly the keys whose usual (first) level is `"warning"`.
 
-The code lists of the checks are `lists` of `src/zugferd/code-lists.typ`, which reads `src/zugferd/code-lists.json`; `tools/zugferd/gen_guard.py` generates it from the official validations of the profiles, together with the tables of the test oracle (see [The Test Oracle of the XML](#the-test-oracle-of-the-xml)). `every` holds the codes of every validation of BASIC and EN 16931 (Factur-X 1.0.07, the CEN Schematron 1.3.12 of Mustang and 1.3.16 of KoSIT), `xrechnung` those of the validation of XRechnung (both CEN lists, no Factur-X list) where they differ, `factur-x` those of the Factur-X validation of MINIMUM and BASIC WL (the JSON file holds both as the codes they have beyond `every`, which `code-lists.typ` adds), `withdrawn` the codes the newest CEN list has withdrawn, and `newer` the codes only the newest CEN list has, whose diagnostic says that the validation of the profile does not know them yet (e.g. the currency `XCG`). `code-finding` of `rare.typ` names the rule of the validator of the profile that rejects a code outside `every`: the CEN rule (e.g. `BR-CL-04`), the Factur-X rule where only its list lacks the code or where it applies alone (e.g. `FX-SCH-A-000040`), or `IP-CODE-01` for a withdrawn code that no validator of the profile rejects.
+The code lists of the checks are `lists` of `src/zugferd/code-lists.typ`, which reads `src/zugferd/code-lists.json`; `tools/zugferd/gen_guard.py` generates it from the official validations of the profiles, together with the tables of the test oracle (see [The Test Oracle of the XML](#the-test-oracle-of-the-xml)). `every` holds the codes of every validation of BASIC and EN 16931 (Factur-X 1.09.2 and the CEN Schematron 1.3.16 of Mustang and of KoSIT), `xrechnung` those of the validation of XRechnung (the CEN lists, no Factur-X list) where they differ, `factur-x` those of the Factur-X validation of MINIMUM and BASIC WL (the JSON file holds both as the codes they have beyond `every`, which `code-lists.typ` adds), `withdrawn` the codes the newest CEN list has withdrawn, and `newer` the codes only the newest CEN list has, whose diagnostic says that the validation of the profile does not know them yet (both are empty while Mustang and KoSIT bundle the same version). `fx-rules` holds the id of the Factur-X code list rule at each position the checks name, per profile: since Factur-X 1.09, the rule of a code list has another id at each position and in each profile (the currency is `FX-SCH-A-000040` in MINIMUM and `FX-SCH-A-000595` in EN 16931), and `fx-id` of `code-lists.typ` looks it up. `code-finding` of `rare.typ` names the rule of the validator of the profile that rejects a code outside `every`: the CEN rule (e.g. `BR-CL-04`), the Factur-X rule of the position where only its list lacks the code or where it applies alone (e.g. `FX-SCH-A-000040`), or `IP-CODE-01` for a withdrawn code that no validator of the profile rejects.
 
 An entry of `registry.json`, by its key (the rule id, or a name for an entry that reports several ids):
 
 ```json
-"BR-CO-25": {
-  "covers": ["BR-CO-25", "FX-SCH-A-000155"],
+"BR-03": {
+  "covers": ["BR-03", "FX-SCH-A-000491", "FX-SCH-A-000554"],
   "source": "EN16931",
-  "versions": ["1.3.12", "1.3.16"],
-  "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
-  "scope": "payment",
-  "terms": ["BT-9", "BT-20", "BT-115"],
+  "versions": ["1.3.16"],
+  "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+  "id-profiles": {"FX-SCH-A-000491": ["basic"], "FX-SCH-A-000554": ["en16931"]},
+  "scope": "document",
+  "terms": ["BT-2"],
   "level": "error",
-  "field": "payment-goal",
-  "summary": "An invoice with an amount due (BT-115) has a payment due date (BT-9) or payment terms (BT-20).",
+  "field": "date",
+  "summary": "An invoice has an invoice date (BT-2) that is a calendar date.",
   "legal": null
 }
 ```
 
 | Field                | Meaning                                                                                                                                                                                                                   |
 | :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ids`                | the rule ids the entry reports (optional, default: the key), e.g. `BR-S-05` to `BR-AG-07` of `vat-rate-positive`, or `FX-SCH-A-000040` of `BR-CL-04` (with its `id-profiles`)                                             |
-| `covers`             | the official rules the check implements, with their Factur-X aliases (e.g. `FX-SCH-A-000011` for `BR-02`); none for a rule of invoice-pro                                                                                 |
-| `source`, `versions` | where the rule comes from, and the versions of the artefacts it was compared with: `EN16931` and `CII` (CEN Schematron 1.3.12, 1.3.16), `FACTUR-X` (1.0.07), `XRECHNUNG` and `PEPPOL` (XRechnung 3.0), `IP` (invoice-pro) |
+| `ids`                | the rule ids the entry reports (optional, default: the key), e.g. `BR-S-05` to `BR-AG-07` of `vat-rate-positive`, or `FX-SCH-A-000040` (MINIMUM) to `FX-SCH-A-000595` (EN 16931) of `BR-CL-04` (with their `id-profiles`)                                             |
+| `covers`             | the official rules the check implements, with their Factur-X aliases (e.g. `FX-SCH-A-000554` for `BR-03` in EN 16931); none for a rule of invoice-pro                                                                                 |
+| `source`, `versions` | where the rule comes from, and the versions of the artefacts it was compared with: `EN16931` and `CII` (CEN Schematron 1.3.16), `FACTUR-X` (1.09.2), `XRECHNUNG` and `PEPPOL` (XRechnung 3.0.2), `IP` (invoice-pro) |
 | `profiles`           | the profiles in which the check can report the rule (the coverage of the official rules in `covers` counts in these profiles only)                                                                                        |
 | `id-profiles`        | the profiles of an id of `covers` that counts in fewer of them (optional), e.g. `BR-S-05` of `vat-rate-positive` in the profiles with lines; a Factur-X rule (`FX-SCH-*`) never counts in XRechnung                       |
 | `scope`              | `document`, `party`, `line`, `tax`, `allowance-charge`, `payment` or `printed`                                                                                                                                            |
@@ -729,7 +730,7 @@ A finding names the official rule the XML breaks where there is one (e.g. `BR-CL
 | `IP-GUARD-12` | The XML states a business term the data model does not have.                                                                                                                                                                 |
 | `IP-GUARD-13` | An element, or the entries of a repeated group (e.g. the lines), occur more or less often than the data model has.                                                                                                           |
 
-`tools/zugferd/gen_guard.py` compiles the tables of the write guard from the official artefacts inside the Mustang CLI jar 2.14.0 (pinned by their SHA-256): the Factur-X 1.0.07 XSDs and Schematron, the CEN Schematron of EN 16931 (1.3.12) and the XRechnung 3.0 Schematron. The code lists of a profile with the rules of EN 16931 are also narrowed to those of the current CEN Schematron 1.3.16 of the KoSIT XRechnung configuration 2026-08-31 (`$KOSIT_CONFIG` or `--kosit-config`, pinned as well; there is no fallback without it): a code must be in every list that applies. Only the currency lists of 1.3.16 apply to XRechnung alone (`NEWEST_XRECHNUNG_ONLY`): a currency it has withdrawn is allowed where the Factur-X validation accepts it (a maintainer decision), with a warning of the validator. It writes the code lists with the rules of the VAT categories (`tools/zugferd/guard/lists.json`, which `lists.typ` reads) and the nodes of each profile (`tools/zugferd/guard/<profile>.json`) as JSON, which Typst reads several times faster than Typst source, within a size budget (`SIZE_BUDGET`); from the same lists it writes the code lists of the validator (`src/zugferd/code-lists.json`, see [The Rule Registry](#the-rule-registry)), the one generated file the package ships (`PACKAGE_BUDGET`). The tables cover exactly the elements `src/zugferd/build.typ` can write. It fails on any XSD construct or Schematron shape outside the subset it understands, instead of guessing, and prints what it did with every rule:
+`tools/zugferd/gen_guard.py` compiles the tables of the write guard from the official artefacts inside the Mustang CLI jar 2.26.0 (pinned by their SHA-256): the Factur-X 1.09.2 XSDs and Schematron, the CEN Schematron of EN 16931 (1.3.16) and the XRechnung 3.0.2 Schematron. An assertion flagged as a warning or information is left to the validators, which accept the invoice (disposition `warning`). The code lists of a profile with the rules of EN 16931 are also narrowed to those of the CEN Schematron of the KoSIT XRechnung configuration 2026-08-31 (1.3.16 as well) (`$KOSIT_CONFIG` or `--kosit-config`, pinned as well; there is no fallback without it): a code must be in every list that applies. Only the currency lists of 1.3.16 apply to XRechnung alone (`NEWEST_XRECHNUNG_ONLY`): a currency it has withdrawn is allowed where the Factur-X validation accepts it (a maintainer decision), with a warning of the validator. It writes the code lists with the rules of the VAT categories (`tools/zugferd/guard/lists.json`, which `lists.typ` reads) and the nodes of each profile (`tools/zugferd/guard/<profile>.json`) as JSON, which Typst reads several times faster than Typst source, within a size budget (`SIZE_BUDGET`); from the same lists it writes the code lists of the validator (`src/zugferd/code-lists.json`, see [The Rule Registry](#the-rule-registry)), the one generated file the package ships (`PACKAGE_BUDGET`). The tables cover exactly the elements `src/zugferd/build.typ` can write. It fails on any XSD construct or Schematron shape outside the subset it understands, instead of guessing, and prints what it did with every rule:
 
 ```bash
 python3 tools/zugferd/gen_guard.py            # regenerate the tables and the code lists (after a change of build.typ)
@@ -766,7 +767,7 @@ The model is a projection of the computed invoice; the invariants of the test or
 
 The corpus shows that invoice-pro agrees with the official validators on the invoices it generates; the rule coverage shows that no rule is left out. Every rule the validators apply to a profile is accounted for, and invoice-pro reports each rule it checks under the id the validators report, so that a user can look it up and the diagnostics can be compared with the validators' reports.
 
-`tools/zugferd/rule_coverage.py` collects the rule ids of every profile from the pinned artefacts, the way the validators select them. Mustang applies the Factur-X 1.0.07 Schematron of the profile, from BASIC on also the CEN Schematron 1.3.12, and to XRechnung the CEN and the XRechnung 3.0 Schematron. KoSIT applies the CEN Schematron 1.3.16 to EN 16931 and, with the XRechnung 3.0.2 Schematron and the levels of its scenario, to XRechnung; it has no scenario for MINIMUM, BASIC WL and BASIC. A rule id is the id a validator reports: `BR-CO-26` for the Factur-X assertion whose message starts with `[BR-CO-26]`, otherwise its `FX-SCH-A-*` id; one assertion with two ids (`CII-SR-04` in KoSIT, `CII-SR-004` in Mustang) is recognized by its context and test. Every rule id of every profile is exactly one of:
+`tools/zugferd/rule_coverage.py` collects the rule ids of every profile from the pinned artefacts, the way the validators select them. Mustang applies the Factur-X 1.09.2 Schematron of the profile, from BASIC on also the CEN Schematron 1.3.16, and to XRechnung the CEN and the XRechnung 3.0.2 Schematron, each assertion at the level of its flag. KoSIT applies the CEN Schematron 1.3.16 to EN 16931 and, with the XRechnung 3.0.2 Schematron and the levels of its scenario, to XRechnung; it has no scenario for MINIMUM, BASIC WL and BASIC. A rule id is the id a validator reports: `BR-CO-26` for the Factur-X assertion whose message starts with `[BR-CO-26]`, otherwise its `FX-SCH-A-*` id; one assertion with two ids (`CII-SR-04` in KoSIT, `CII-SR-004` in Mustang) is recognized by its context and test. Every rule id of every profile is exactly one of:
 
 | Class          | Meaning                                                                                                                      | Shown by                                                                      |
 | :------------- | :--------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------- |
@@ -774,9 +775,10 @@ The corpus shows that invoice-pro agrees with the official validators on the inv
 | `compiled`     | the test oracle checks the rule on the XML of every test invoice, and the builder writes nothing else (no check at run time) | `gen_guard.py`, which compiles every assertion of it into the oracle's tables |
 | `construction` | the builder cannot produce the violation, e.g. it writes a negative price as a negative quantity (`BR-27`)                   | a reason and the evidence: the code path and its tests                        |
 | `unreachable`  | the rule cannot fire on an XML of invoice-pro: its test is always true, or it tests an element that is never written         | a reason, or the guard's compiler (a test that is always true, no position)   |
+| `warning`      | every validator reports the rule as a warning or information only and accepts the invoice                                    | the levels of the validators (the flags, and KoSIT's scenario)                |
 | `open`         | not handled yet, or reported under another id                                                                                | a reason; the target is none, and the documentation lists them                |
 
-`compiled` and `unreachable` are derived from the guard's compiler (`gen_guard.py`) where it settles a rule in a profile: every assertion of the rule is compiled or cannot fire, and the assertions of KoSIT test the same as those of Mustang. Every other rule id needs an entry in `tools/zugferd/rule-coverage.toml`:
+`compiled` and `unreachable` are derived from the guard's compiler (`gen_guard.py`) where it settles a rule in a profile: every assertion of the rule that a validator reports as an error is compiled or cannot fire, and the assertions of KoSIT test the same as those of Mustang; `warning` where no validator reports it as an error. Every other rule id needs an entry in `tools/zugferd/rule-coverage.toml`:
 
 ```toml
 [[rule]]

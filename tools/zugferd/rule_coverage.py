@@ -177,6 +177,7 @@ ARTEFACT_NAMES = {
     ("mustang", "FX"): "Factur-X 1.09.2 Schematron",
     ("mustang", "CEN"): "CEN EN 16931 Schematron 1.3.16",
     ("mustang", "XR"): "XRechnung 3.0.2 Schematron",
+    ("guard", "CEN"): "CEN EN 16931 Schematron 1.3.16 of the tables (KoSIT's)",
     ("kosit", "resources/cii/16b/xsl/EN16931-CII-validation.xsl"): "CEN EN 16931 Schematron 1.3.16",
     ("kosit", "resources/xrechnung/3.0.2/xsl/XRechnung-CII-validation.xsl"): "XRechnung 3.0.2 Schematron",
 }
@@ -257,7 +258,11 @@ def business_ref(rule_id, text):
 
 def mustang_assertions(jar, profile, schemas=None, guard=True):
     """The assertions Mustang applies to a profile. With `guard`, each one
-    carries the dispositions of gen_guard's compiler for the profile."""
+    carries the dispositions of gen_guard's compiler for the profile, and
+    the rules the tables compile beyond Mustang's (the CEN Schematron of
+    EN 16931, which KoSIT applies and Mustang 2.26.0 does not, see
+    MUSTANG_CEN of gen_guard.py) come as the guard's assertions (validator
+    "guard"): no rule id of their own, but the twins of KoSIT's."""
     directory, fx, cen, xr = gen_guard.PROFILES[profile]
     if guard:
         compiler = gen_guard.load_profile(jar, profile, schemas or gen_guard.load_schemas(jar))
@@ -269,7 +274,7 @@ def mustang_assertions(jar, profile, schemas=None, guard=True):
         rules = []
         if fx:
             rules += gen_guard.load_rules(jar, gen_guard.fx_xslt(fx), "FX", gen_guard.fx_codedb(fx))
-        if cen:
+        if cen and profile in gen_guard.MUSTANG_CEN:
             rules += gen_guard.load_rules(jar, gen_guard.CEN_XSLT, "CEN")
         if xr:
             rules += gen_guard.load_rules(jar, gen_guard.XR_XSLT, "XR")
@@ -278,7 +283,7 @@ def mustang_assertions(jar, profile, schemas=None, guard=True):
     for rule in rules:
         records = found.get(id(rule), [])
         out.append(Assertion(
-            validator="mustang",
+            validator="mustang" if rule.source != "CEN" or profile in gen_guard.MUSTANG_CEN else "guard",
             artefact=rule.source,
             id=rule.id,
             ref=rule.ref,
@@ -415,6 +420,14 @@ def load_inventory(jar_path, kosit_path=None, guard=True):
             assertions = mustang_assertions(jar, profile, schemas, guard)
             if config:
                 assertions += kosit_assertions(config, profile)
+            # The guard's assertions only pair up with KoSIT's (see
+            # mustang_assertions): a rule id of theirs alone is none of a
+            # validator.
+            validators = collections.defaultdict(set)
+            for a in assertions:
+                if a.ref is not None:
+                    validators[a.ref].add(a.validator)
+            assertions = [a for a in assertions if a.ref is None or validators[a.ref] != {"guard"}]
             for a in assertions:
                 if a.ref is None:
                     # A report of the Factur-X Schematron without id: an
@@ -681,7 +694,7 @@ def twins_of(assertions):
     twins = collections.defaultdict(list)
     for rule_assertions in assertions:
         for a in rule_assertions:
-            if a.validator == "mustang":
+            if a.validator in ("mustang", "guard"):
                 twins[a.signature()].append(a)
     return twins
 
@@ -693,7 +706,7 @@ def automatic(assertions, twins=None):
     of Mustang's in the profile (`twins`, see twins_of). Only the
     assertions a validator reports as errors count: a rule that every
     validator only warns about (or informs of) is `warning`."""
-    errors = [a for a in assertions if a.level == "error"]
+    errors = [a for a in assertions if a.level == "error" and a.validator != "guard"]
     if not errors:
         return "warning", "every validator reports it as a warning or information only and accepts the invoice"
     mustang = [a for a in errors if a.validator == "mustang"]
@@ -1036,6 +1049,8 @@ def rule_levels(jar_path, kosit_path=None):
         for rule, assertions in inventory.rules[profile].items():
             levels = {}
             for a in assertions:
+                if a.validator == "guard":
+                    continue
                 if _LEVEL_RANK[a.level] > _LEVEL_RANK.get(levels.get(a.validator), -1):
                     levels[a.validator] = a.level
             out[profile][rule] = levels

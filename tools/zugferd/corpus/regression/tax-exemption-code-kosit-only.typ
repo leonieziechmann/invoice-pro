@@ -1,9 +1,9 @@
-// expect: AGREE_INVALID BR-CL-22
+// expect: AGREE_VALID
 // finding: legal-bt121-vatex-missing
 //
-// A VATEX code only the newer code list of the KoSIT validator knows
-// (VATEX-EU-144): the Factur-X code list and the EN 16931 Schematron of
-// Mustang reject it, so invoice-pro reports it (BR-CL-22).
+// A VATEX code of 2025 (VATEX-EU-144), which only the newer list of KoSIT had
+// while Mustang 2.14.0 rejected it (BR-CL-22). Every list of Mustang 2.26.0
+// and KoSIT has it now: the invoice stays valid.
 
 #import "_base.typ": *
 

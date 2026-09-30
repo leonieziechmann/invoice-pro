@@ -480,8 +480,9 @@
     ("blank", "BR-24", path(..total)),
   ))
   let country = buyer("ram:PostalTradeAddress", "ram:CountryID")
+  // A code without text is no code (the Factur-X 1.09 lists let it pass).
   assert.eq(check(model, put(tree, country, (:))), (
-    ("code", "BR-CL-14", path(..country)),
+    ("empty-value", none, path(..country)),
     ("blank", "BR-11", path(..country)),
   ))
 })

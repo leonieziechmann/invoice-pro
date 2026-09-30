@@ -1,9 +1,9 @@
-// expect: AGREE_INVALID BR-CL-04
+// expect: AGREE_VALID
 // finding: core-codelists-cen
 //
-// The EN 16931 code list lacks the current bolívar (VES), which the Factur-X
-// list has. Mustang applies both lists, so an EN 16931 invoice in VES cannot
-// validate; invoice-pro accepted it without a report.
+// The current bolívar (VES), which the EN 16931 code list of Mustang 2.14.0
+// (CEN 1.3.12) lacked, so that invoice-pro reported BR-CL-04. Every list of
+// Mustang 2.26.0 and KoSIT has it now: the invoice stays valid.
 
 #import "_base.typ": *
 #import "/src/locale/lang/lang.typ" as lang

@@ -424,9 +424,9 @@
   let minimum = with-profile(m, "minimum")
   assert.eq(diagnostic(minimum, "IP-PROFILE-01").field, "payee")
   assert.eq(xml-elements(minimum, "ram:PayeeTradeParty"), ())
-  // Only a payee other than the seller, with a name (BR-17). BASIC WL
-  // checks the name only, so there a payee that is the seller is
-  // invoice-pro's own rule (IP-PAY-05)
+  // Only a payee other than the seller, with a name (BR-17). The Factur-X
+  // Schematron of BASIC WL and BASIC checks the name only, so there a payee
+  // that is the seller is invoice-pro's own rule (IP-PAY-05)
   m.payee = payee(id: "F-1")
   assert.eq(rules(m), ("BR-17",))
   assert.eq(diagnostic(m, "BR-17").field, "payee.name")
@@ -434,7 +434,7 @@
   m.payee = payee(name: base.seller.name)
   assert.eq(rules(m), ("BR-17",))
   assert.eq(diagnostic(m, "BR-17").field, "payee")
-  assert.eq(rules(with-profile(m, "basic")), ("BR-17",))
+  assert.eq(rules(with-profile(m, "basic")), ("IP-PAY-05",))
   let basic-wl = with-profile(m, "basic-wl")
   assert.eq(rules(basic-wl), ("IP-PAY-05",))
   assert.eq(diagnostic(basic-wl, "IP-PAY-05").field, "payee")

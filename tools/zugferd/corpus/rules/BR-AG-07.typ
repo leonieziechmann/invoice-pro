@@ -1,7 +1,7 @@
 // expect: AGREE_INVALID BR-AG-07
 // profiles: basic-wl
 //
-// IPSI items (M) at a rate of 0 %, which the category does not allow (BT-103),
+// IPSI items (M) at a negative rate, which the category does not allow (BT-103),
 // on a document level charge. BASIC WL has no lines, so the rule of the
 // allowance or charge applies.
 
@@ -16,7 +16,7 @@
 )
 
 #line-items[
-  #item-with(tax.special.ceuta-melilla(0%))
+  #item-with(tax.special.ceuta-melilla(-1%))
   #shipping
 ]
 #payment-goal(days: 14)

@@ -121,7 +121,7 @@
     for (id, rule) in (
       ("minimum", "FX-SCH-A-000040"),
       ("basic-wl", "FX-SCH-A-000464"),
-      ("basic", "BR-CL-04"),
+      ("basic", "FX-SCH-A-000514"),
       ("en16931", "BR-CL-04"),
     ) {
       m.profile = resolve-profile(id, "FR")
@@ -144,8 +144,9 @@
 ]
 
 // --- 6. The electronic address scheme 9901, which the EAS code lists have
-// withdrawn: the rule of the CEN Schematron from BASIC on, the one of the
-// Factur-X Schematron of the position in BASIC WL ---
+// withdrawn: the rule of the CEN Schematron in EN 16931, the one of the
+// Factur-X Schematron of the position in BASIC WL and BASIC, whose
+// validation applies the Factur-X list alone ---
 #model-test(model => {
   assert(not in-list(lists.eas.every, "9901"))
   assert(not in-list(lists.eas.xrechnung, "9901"))
@@ -153,7 +154,7 @@
   m.buyer.electronic-address = (scheme: "9901", id: "12345678")
   assert.eq(rules(m), ("BR-CL-25",))
   m.profile = resolve-profile("basic", "FR")
-  assert.eq(rules(m), ("BR-CL-25",))
+  assert.eq(rules(m), ("FX-SCH-A-000498",))
   m.profile = resolve-profile("basic-wl", "FR")
   assert.eq(rules(m), ("FX-SCH-A-000429",))
   m.buyer.electronic-address = (scheme: "0088", id: "4000001123452")
@@ -293,8 +294,9 @@
   #bank
 ]
 
-// --- 9. MINIMUM and BASIC WL apply the code lists of the Factur-X
-// Schematron alone: its rules name a code none of its lists has ---
+// --- 9. MINIMUM, BASIC WL and BASIC apply the code lists of the Factur-X
+// Schematron alone: its rules name a code none of its lists has, and
+// EN 16931 the ones of the CEN Schematron ---
 #model-test(model => {
   let m = model
   m.profile = resolve-profile("minimum", "FR")
@@ -305,6 +307,8 @@
     "The seller country code (BT-40) \"XX\" is not in the ISO 3166-1 code list of Factur-X.",
   )
   m.profile = resolve-profile("basic", "FR")
+  assert.eq(rules(m), ("FX-SCH-A-000502",))
+  m.profile = resolve-profile("en16931", "FR")
   assert.eq(rules(m), ("BR-CL-14",))
 
   let m = model

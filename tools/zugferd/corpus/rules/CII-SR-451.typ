@@ -1,6 +1,6 @@
 // expect: AGREE_VALID
 // warns: CII-SR-451
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // A payee with both an identifier and a global identifier (BT-60).
 
@@ -15,7 +15,7 @@
     global-id: id.gln("4000001543212"),
   ),
   sender: seller-de,
-  recipient: buyer-fr,
+  recipient: buyer-de,
   invoice-nr: "CII-SR-451",
 )
 

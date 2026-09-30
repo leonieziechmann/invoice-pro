@@ -3,7 +3,7 @@ its consistency with the rule modules and with the documentation.
 
   python3 -m unittest discover -s tools/zugferd -p 'test_*.py'
 
-With the Mustang CLI jar 2.14.0 ($MUSTANG_JAR), the Factur-X aliases that
+With the Mustang CLI jar 2.26.0 ($MUSTANG_JAR), the Factur-X aliases that
 `covers` names are also checked against the Schematrons of the jar.
 """
 
@@ -350,11 +350,9 @@ class Aliases(unittest.TestCase):
     def test_the_aliases_of_the_jar(self):
         # Factur-X 1.09 reports BR-02 by its own id: no alias.
         self.assertNotIn("BR-02", self.aliases)
-        # The code list rules at the position of a CEN rule, one per profile.
-        self.assertEqual(
-            self.aliases["BR-CL-04"],
-            {"FX-SCH-A-000514": frozenset({"basic"}), "FX-SCH-A-000595": frozenset({"en16931"})},
-        )
+        # The code list rule at the position of a CEN rule, in EN 16931, the
+        # one profile with both Schematrons (BASIC has no CEN rules).
+        self.assertEqual(self.aliases["BR-CL-04"], {"FX-SCH-A-000595": frozenset({"en16931"})})
         self.assertNotIn("BR-DE-1", self.aliases)
 
     def test_covers_names_every_alias(self):
@@ -362,14 +360,13 @@ class Aliases(unittest.TestCase):
 
     def test_a_missing_and_a_wrong_alias(self):
         loaded = registry(**{"BR-03": entry(
-            covers=["BR-03", "FX-SCH-A-000554", "FX-SCH-A-000040"],
+            covers=["BR-03", "FX-SCH-A-000040"],
             profiles=list(r.PROFILES),
-            **{"id-profiles": {"FX-SCH-A-000554": ["en16931"]}},
         )})
         self.assertEqual(
             r.alias_problems(loaded, self.aliases),
             [
-                "rules.BR-03.covers: lacks the Factur-X alias FX-SCH-A-000491",
+                "rules.BR-03.covers: lacks the Factur-X alias FX-SCH-A-000554",
                 "rules.BR-03.covers: FX-SCH-A-000040 is no Factur-X alias of a rule it covers",
             ],
         )
@@ -379,16 +376,15 @@ class Aliases(unittest.TestCase):
         # profile whose Schematron has it: FX-SCH-A-000554 (BR-03) in
         # EN 16931 only.
         wrong = entry(
-            covers=["BR-03", "FX-SCH-A-000491", "FX-SCH-A-000554"],
+            covers=["BR-03", "FX-SCH-A-000554"],
             profiles=list(r.PROFILES),
-            **{"id-profiles": {"FX-SCH-A-000491": ["basic"]}},
         )
         self.assertEqual(
             r.alias_problems(registry(**{"BR-03": wrong}), self.aliases),
             ["rules.BR-03.id-profiles: the alias FX-SCH-A-000554 counts in "
              "['minimum', 'basic-wl', 'basic', 'en16931'], the rules it implements in ['en16931']"],
         )
-        right = dict(wrong, **{"id-profiles": {"FX-SCH-A-000491": ["basic"], "FX-SCH-A-000554": ["en16931"]}})
+        right = dict(wrong, **{"id-profiles": {"FX-SCH-A-000554": ["en16931"]}})
         self.assertEqual(r.alias_problems(registry(**{"BR-03": right}), self.aliases), [])
         # A code list rule of the Factur-X Schematron the entry reports itself.
         reported = entry(

@@ -627,6 +627,7 @@ class Checker:
                 "valid": m["status"] == "valid" and not m["errors"],
                 "rules": sorted(m["errors"]),
                 "warned": sorted({w.split(":")[0] for w in m["warnings"]}),
+                "informed": sorted(m.get("notices", ())),
             }
         k = res.get("kosit")
         if k:

@@ -246,15 +246,11 @@ class OfficialVerdict(unittest.TestCase):
         differences = run.load_differences(HERE / "validator-differences.toml")
         for rule, entry in differences.items():
             self.assertTrue(entry["rejected-by"] and set(entry["rejected-by"]) <= set(run.VALIDATORS), rule)
-        # KoSIT reports nothing for a domain with umlauts and warns about an
-        # address without a domain name (BR-DE-28); Mustang rejects both.
-        self.assertTrue(run.documented("BR-DE-28", "mustang", "nothing", differences))
-        self.assertTrue(run.documented("BR-DE-28", "mustang", "warning", differences))
-        # The code lists differ both ways: a code only the newer lists of
-        # KoSIT have, and one they have withdrawn.
-        for rule in ("BR-CL-03", "BR-CL-04", "BR-CL-25"):
-            for validator in run.VALIDATORS:
-                self.assertTrue(run.documented(rule, validator, "nothing", differences), (rule, validator))
+        # Only KoSIT applies the CEN Schematron to EN 16931, only Mustang the
+        # Factur-X code lists.
+        self.assertTrue(run.documented("BR-17", "kosit", "nothing", differences))
+        self.assertFalse(run.documented("BR-17", "mustang", "nothing", differences))
+        self.assertTrue(run.documented("FX-SCH-A-000595", "mustang", "nothing", differences))
         with tempfile.TemporaryDirectory() as tmp:
             bad = Path(tmp) / "differences.toml"
             bad.write_text('[BR-DE-27]\nrejected-by = "kosit"\nother = "error"\nreason = "r"\n', encoding="utf-8")
@@ -285,8 +281,11 @@ class OfficialVerdict(unittest.TestCase):
         entries = {"BR-DE-27": {"rejected-by": ["mustang"], "other": ["warning"], "reason": "r"}}
         self.assertFalse(run.documented("BR-DE-27", "mustang", "nothing", entries))
         # A decided warning names a rule of invoice-pro.
-        self.assertEqual(differences["BR-CL-04"].get("warned-as"), "IP-CODE-01")
         with tempfile.TemporaryDirectory() as tmp:
+            warned = Path(tmp) / "warned.toml"
+            warned.write_text('[BR-CL-04]\nrejected-by = "kosit"\nother = "nothing"\nreason = "r"\n'
+                              'warned-as = "IP-CODE-01"\n', encoding="utf-8")
+            self.assertEqual(run.load_differences(warned)["BR-CL-04"].get("warned-as"), "IP-CODE-01")
             bad = Path(tmp) / "differences.toml"
             bad.write_text('[BR-CL-04]\nrejected-by = "kosit"\nother = "nothing"\nreason = "r"\nwarned-as = "BR-CL-04"\n',
                            encoding="utf-8")

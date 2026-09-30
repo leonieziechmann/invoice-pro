@@ -254,7 +254,7 @@ evidence = [
 [[rule]]
 ids = ["BR-CO-04", "BR-47"]
 class = "construction"
-profiles = ["basic", "en16931", "xrechnung"]
+profiles = ["en16931", "xrechnung"]
 reason = """Every item has a VAT category: `tax` requires one, and `tax: none` is written as zero \
 rated (Z) with IP-TAX-01. The VAT breakdown is built from the categories of the items."""
 evidence = [
@@ -264,9 +264,20 @@ evidence = [
 ]
 
 [[rule]]
+ids = ["BR-CO-04"]
+class = "construction"
+profiles = ["basic"]
+reason = """Every item has a VAT category: `tax` requires one, and `tax: none` is written as zero \
+rated (Z) with IP-TAX-01 (the test oracle checks BR-47 in BASIC)."""
+evidence = [
+  "src/data/tax.typ: new",
+  "tests/zugferd/vat-categories/test.typ: `tax: none` (IP-TAX-01)",
+]
+
+[[rule]]
 ids = ["BR-CO-18"]
 class = "construction"
-profiles = ["basic", "en16931", "xrechnung"]
+profiles = ["en16931", "xrechnung"]
 reason = """The VAT breakdown has a group for the VAT category of every line, and an invoice without \
 lines breaks BR-16, which invoice-pro reports."""
 evidence = [
@@ -422,7 +433,7 @@ the test holds."""
 [[rule]]
 ids = ["CII-SR-462"]
 class = "unreachable"
-profiles = ["basic", "en16931", "xrechnung"]
+profiles = ["en16931", "xrechnung"]
 reason = "The builder never writes the VAT point date code (BT-8, ram:DueDateTypeCode)."
 
 [[rule]]
@@ -511,10 +522,10 @@ ids = [
   "FX-SCH-A-000472", "FX-SCH-A-000490", "FX-SCH-A-000494", "FX-SCH-A-000496", "FX-SCH-A-000499",
   "FX-SCH-A-000501", "FX-SCH-A-000502", "FX-SCH-A-000503", "FX-SCH-A-000504", "FX-SCH-A-000506",
   "FX-SCH-A-000507", "FX-SCH-A-000508", "FX-SCH-A-000510", "FX-SCH-A-000516", "FX-SCH-A-000517",
-  "FX-SCH-A-000527", "FX-SCH-A-000553", "FX-SCH-A-000567", "FX-SCH-A-000569", "FX-SCH-A-000573",
-  "FX-SCH-A-000579", "FX-SCH-A-000580", "FX-SCH-A-000581", "FX-SCH-A-000582", "FX-SCH-A-000585",
-  "FX-SCH-A-000586", "FX-SCH-A-000587", "FX-SCH-A-000589", "FX-SCH-A-000597", "FX-SCH-A-000598",
-  "FX-SCH-A-000609",
+  "FX-SCH-A-000527", "FX-SCH-A-000534", "FX-SCH-A-000553", "FX-SCH-A-000567", "FX-SCH-A-000569",
+  "FX-SCH-A-000573", "FX-SCH-A-000579", "FX-SCH-A-000580", "FX-SCH-A-000581", "FX-SCH-A-000582",
+  "FX-SCH-A-000585", "FX-SCH-A-000586", "FX-SCH-A-000587", "FX-SCH-A-000589", "FX-SCH-A-000597",
+  "FX-SCH-A-000598", "FX-SCH-A-000609", "FX-SCH-A-000613",
 ]
 reason = """The code list rules of Factur-X 1.09 at the positions and in the profiles that no parity \
 fixture runs in: `code-finding` of src/zugferd/rules/rare.typ reports the same check at every \
@@ -782,10 +793,10 @@ tests = ["tests/zugferd/payment-means/test.typ"]
 
 [ip."IP-PAY-05"]
 level = "error"
-summary = "A payee that is the seller, in BASIC WL."
+summary = "A payee that is the seller, in BASIC WL and BASIC."
 basis = """EN 16931 BR-17: the payee (BG-10) is someone other than the seller; the Factur-X Schematron \
-of BASIC WL compares it with a path of the seller that never matches, so its validation does not \
-check it."""
+of BASIC WL and BASIC compares it with a path of the seller that never matches, so their validation \
+does not check it."""
 tests = ["tests/zugferd/party-details/test.typ", "tools/zugferd/corpus/regression/payee-is-seller-basic-wl.typ"]
 
 [ip."IP-PAY-06"]

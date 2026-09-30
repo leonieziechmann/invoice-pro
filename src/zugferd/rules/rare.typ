@@ -25,12 +25,13 @@
 /// validation lacks the code; `fx`, the one of the Factur-X Schematron,
 /// where only the Factur-X list lacks it (e.g. the scheme 0219, which
 /// XRechnung accepts); and IP-CODE-01 for a code the newest CEN list has
-/// withdrawn, which no validator of BASIC, MINIMUM and BASIC WL rejects,
-/// but a receiver that applies the current list does (e.g. the scheme
-/// 9901), and for a withdrawn currency of the Factur-X list in BASIC and
-/// EN 16931, which are allowed with a warning (maintainer decision; KoSIT
-/// rejects them in EN 16931). MINIMUM and BASIC WL accept the Factur-X list
-/// of a name with `factur-x` as it is, e.g. the currency BGN. Each list of
+/// withdrawn, which no validator of MINIMUM, BASIC WL and BASIC rejects
+/// (their validation applies the Factur-X list alone), but a receiver that
+/// applies the current list does, and for a withdrawn currency of the
+/// Factur-X list in EN 16931, which is allowed with a warning (maintainer
+/// decision; KoSIT rejects it). None is withdrawn while Mustang and KoSIT
+/// bundle the same CEN version. MINIMUM, BASIC WL and BASIC accept the
+/// Factur-X list of a name with `factur-x` as it is. Each list of
 /// a profile holds the codes of `every` (tools/zugferd/gen_guard.py checks
 /// it), which is the list of XRechnung, too, unless it has one
 /// (`xrechnung`).
@@ -45,19 +46,19 @@
   }
   let own = entry.at("factur-x", default: none)
   let withdrawn = entry.at("withdrawn", default: "")
-  if not profile.en16931 {
+  // MINIMUM, BASIC WL and BASIC: the Factur-X list alone (Mustang 2.26.0
+  // applies no CEN Schematron to them, KoSIT has no scenario).
+  if not profile.cen {
     if own != none { return if in-list(own, code) { none } else { fx } }
     // `every` is the Factur-X list without the withdrawn codes.
     return if in-list(withdrawn, code) { "IP-CODE-01" } else { fx }
   }
   // Both CEN lists have it: only the Factur-X list lacks it.
   if in-list(xrechnung, code) { return fx }
-  // Only CEN 1.3.16 lacks it, which KoSIT applies to EN 16931 but not to
-  // BASIC.
+  // Only the newest CEN list lacks it, which KoSIT applies to EN 16931.
   if in-list(withdrawn, code) {
     let factur-x = own == none or in-list(own, code)
     if factur-x and name == "currency" { return "IP-CODE-01" }
-    if profile.id == "basic" { return if factur-x { "IP-CODE-01" } else { fx } }
   }
   cen
 }
@@ -417,7 +418,10 @@
       )
   ) {
     out.push((
-      key: if profile.id == "basic-wl" { "IP-PAY-05" } else { "BR-17" },
+      // The Factur-X Schematron (BASIC WL, BASIC; Mustang 2.26.0 applies no
+      // CEN Schematron to BASIC) compares the payee with a seller path that
+      // never matches, so its validation does not check BR-17.
+      key: if profile.cen { "BR-17" } else { "IP-PAY-05" },
       field: field,
       kind: "seller",
     ))
@@ -425,7 +429,7 @@
   out += identifiers(payee, field, "payee")
   out += global-id(payee, "BR-CL-10", field, profile)
   out += legal-id(payee, field, "payee", "BT-61", profile)
-  if profile.en16931 {
+  if profile.cen {
     out += single-identifier(
       payee,
       "CII-SR-451",
@@ -704,7 +708,7 @@
   (
     (
       key: "BR-CL-08",
-      id: if profile.en16931 { "BR-CL-08" } else {
+      id: if profile.cen { "BR-CL-08" } else {
         fx-id("note-subject", profile)
       },
       field: "notes",

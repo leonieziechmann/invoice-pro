@@ -26,6 +26,7 @@
 "legal-id/payee":[null,"FX-SCH-A-000472","FX-SCH-A-000517","FX-SCH-A-000598"],
 "note-subject":[null,"FX-SCH-A-000162","FX-SCH-A-000490","FX-SCH-A-000553"],
 "payment-means":[null,"FX-SCH-A-000489","FX-SCH-A-000527","FX-SCH-A-000609"],
+"unit":[null,null,"FX-SCH-A-000534","FX-SCH-A-000613"],
 "vat-category":[null,"FX-SCH-A-000179","FX-SCH-A-000508","FX-SCH-A-000587"],
 "vatex":[null,"FX-SCH-A-000181","FX-SCH-A-000510","FX-SCH-A-000589"]}
 }

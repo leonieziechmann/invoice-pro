@@ -23,10 +23,13 @@ and from the unpacked XRechnung configuration of the KoSIT validator
 
   resources/cii/16b/xsl/EN16931-CII-validation.xsl       CEN EN 16931 (CII) 1.3.16
 
-Which artefacts apply to which profile mirrors Mustang's validator: the
+Which artefacts apply to which profile mirrors the official validators: the
 Factur-X Schematron of the profile for MINIMUM, BASIC WL, BASIC and
-EN 16931; the CEN Schematron for BASIC, EN 16931 and XRechnung; the
-XRechnung Schematron for XRechnung, which uses the EN 16931 XSD. An assertion
+EN 16931 (Mustang); the CEN Schematron for EN 16931 (KoSIT; Mustang 2.26.0
+applies it to XRechnung only, as the Factur-X 1.09 Schematron states the
+business rules itself) and XRechnung (both); the XRechnung Schematron for
+XRechnung, which uses the EN 16931 XSD. No validator applies the CEN
+Schematron to BASIC (KoSIT has no scenario for it). An assertion
 counts unless its flag is `warning` or `information`: Mustang 2.26.0 reports
 those as warnings and accepts the invoice (Mustang 2.14.0 reported them as
 errors), and so does KoSIT, so the tables leave them to the validators
@@ -132,13 +135,16 @@ PROFILES = {
     # profile: (XSD directory, Factur-X Schematron, CEN Schematron, XRechnung Schematron)
     "minimum": ("MINIMUM", "MINIMUM", False, False),
     "basic-wl": ("BASIC-WL", "BASIC-WL", False, False),
-    "basic": ("BASIC", "BASIC", True, False),
+    "basic": ("BASIC", "BASIC", False, False),
     "en16931": ("EN16931", "EN16931", True, False),
     "xrechnung": ("EN16931", None, True, True),
 }
 # The Factur-X directory of the XSDs and XSLTs inside the Mustang jar.
 FX_DIR = "ZF_250"
 CEN_XSLT = "xslt/en16931schematron/EN16931-CII-validation.xslt"
+# The profiles to which Mustang applies the CEN Schematron itself; the tables
+# apply it to EN 16931 as KoSIT does (see PROFILES).
+MUSTANG_CEN = frozenset({"xrechnung"})
 XR_XSLT = "xslt/XR_30/XRechnung-CII-validation.xslt"
 
 # SHA-256 of every artefact the tables are compiled from, as found in
@@ -2603,8 +2609,6 @@ def validator_lists(compilers, names):
                 raise GenError(f"VALIDATOR_LISTS {name}: no leaf {path} in the profile {profile}")
         own_lists, en16931 = at["en16931"]
         xr_lists, xrechnung = at["xrechnung"]
-        if at["basic"] is not None and at["basic"][1] != en16931:
-            raise GenError(f"VALIDATOR_LISTS {name}: the list of BASIC is not the one of EN 16931")
         # The lists of every validation of the profiles based on EN 16931:
         # XRechnung applies the newest CEN list to codes the others do not
         # (NEWEST_XRECHNUNG_ONLY), which `every` then lacks as well.
@@ -2617,25 +2621,26 @@ def validator_lists(compilers, names):
         cen = [c.codes for c in lists if c.source == "CEN" and not c.newest]
         withdrawn = (frozenset.intersection(*cen) - frozenset.intersection(*newest)) if cen and newest else frozenset()
         fx = [c.codes for c in lists if c.source == "FX"]
-        own = [at[p][1] for p in ("minimum", "basic-wl") if at[p] is not None]
+        # The profiles whose validation applies the Factur-X list alone.
+        own = [at[p][1] for p in FACTUR_X_ONLY if at[p] is not None]
         if factur_x:
             if not own or any(codes != own[-1] for codes in own):
-                raise GenError(f"VALIDATOR_LISTS {name}: MINIMUM and BASIC WL have no common list at {path}")
+                raise GenError(f"VALIDATOR_LISTS {name}: MINIMUM, BASIC WL and BASIC have no common list at {path}")
             entry["factur-x"] = names.name(own[-1])
         else:
-            # The engine accepts `every` in MINIMUM and BASIC WL and names a
-            # withdrawn code as IP-CODE-01 in them and in BASIC: each is in
-            # the Factur-X list.
+            # The engine accepts `every` in MINIMUM, BASIC WL and BASIC and
+            # names a withdrawn code as IP-CODE-01 in them: each is in the
+            # Factur-X list.
             if any(codes - withdrawn != every for codes in own):
-                raise GenError(f"VALIDATOR_LISTS {name}: the list of MINIMUM or BASIC WL is not `every` "
+                raise GenError(f"VALIDATOR_LISTS {name}: the list of MINIMUM, BASIC WL or BASIC is not `every` "
                                "and the withdrawn codes; give it `factur-x`")
             if fx and not withdrawn <= frozenset.intersection(*fx):
                 raise GenError(f"VALIDATOR_LISTS {name}: withdrawn codes that the Factur-X list lacks; "
                                "give it `factur-x`")
         if any(not every <= codes for codes in own):
             raise GenError(f"VALIDATOR_LISTS {name}: a list of a profile lacks codes of `every`")
-        # BASIC and EN 16931 accept beyond `every` only the withdrawn
-        # currencies, of which the validator warns (IP-CODE-01).
+        # EN 16931 accepts beyond `every` only the withdrawn currencies, of
+        # which the validator warns (IP-CODE-01).
         beyond = en16931 - every
         if beyond and (name != "currency" or not beyond <= withdrawn):
             raise GenError(f"VALIDATOR_LISTS {name}: the list of EN 16931 has codes beyond `every` that "
@@ -2680,11 +2685,15 @@ FX_RULES = {
     "legal-id/payee": (f"{_SETTLEMENT}/ram:PayeeTradeParty/ram:SpecifiedLegalOrganization/ram:ID", "schemeID"),
     "note-subject": ("rsm:CrossIndustryInvoice/rsm:ExchangedDocument/ram:IncludedNote/ram:SubjectCode", None),
     "payment-means": (f"{_SETTLEMENT}/ram:SpecifiedTradeSettlementPaymentMeans/ram:TypeCode", None),
+    "unit": (f"{_LINE}/ram:SpecifiedLineTradeDelivery/ram:BilledQuantity", "unitCode"),
     "vat-category": (f"{_SETTLEMENT}/ram:ApplicableTradeTax/ram:CategoryCode", None),
     "vatex": (f"{_SETTLEMENT}/ram:ApplicableTradeTax/ram:ExemptionReasonCode", None),
 }
 # The profiles with a Factur-X Schematron, in the order of `fx-rules`.
 FX_PROFILES = ("minimum", "basic-wl", "basic", "en16931")
+# The profiles whose validation applies the code lists of the Factur-X
+# Schematron alone (no validator applies the CEN Schematron to them).
+FACTUR_X_ONLY = tuple(p for p in FX_PROFILES if not PROFILES[p][2])
 
 
 def fx_rules(compilers):

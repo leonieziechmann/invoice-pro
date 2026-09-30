@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID BR-CL-10
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // A buyer identifier (BT-46) with a scheme that is no ISO/IEC 6523 code.
 
