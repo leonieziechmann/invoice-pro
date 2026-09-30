@@ -146,10 +146,12 @@ except ImportError:
         for event in events:
             if event["ph"] == "B":
                 args = event.get("args") or {}
+                # Typst 0.15 quotes the path of the file, Typst 0.14 did not.
+                file = (args.get("file") or "").replace('"', "")
                 key = event["name"]
                 if key in ("func call", "eval", "context", "for loop"):
-                    key = f'{key} {args.get("file")}:{args.get("line")}'
-                mine = (args.get("file") or "").startswith(prefix)
+                    key = f'{key} {file or None}:{args.get("line")}'
+                mine = file.startswith(prefix)
                 stack.append((key, event["ts"], mine, event["name"]))
                 open_keys[key] = open_keys.get(key, 0) + 1
                 depth += mine

@@ -1,4 +1,7 @@
 #import "/src/lib.typ": country
+#import "/tests/panic-message.typ": quoted-panic
+#let _catch = catch
+#let catch(f) = quoted-panic(_catch(f))
 
 // --- DE Country Tests ---
 #{

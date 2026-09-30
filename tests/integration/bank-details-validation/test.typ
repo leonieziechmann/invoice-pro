@@ -9,6 +9,9 @@
 #import "/src/utils/iban.typ": format-iban, iban-valid, normalize-iban
 #import "/src/utils/text.typ": plain-text
 #import "/tests/integration/payment-reference/harness.typ": find-all, plain
+#import "/tests/panic-message.typ": quoted-panic
+#let _catch = catch
+#let catch(f) = quoted-panic(_catch(f))
 
 // --- 1. IBAN helpers ---
 #{

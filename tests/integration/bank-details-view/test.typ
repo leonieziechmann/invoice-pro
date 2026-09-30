@@ -13,6 +13,9 @@
 #import "/src/utils/text.typ": plain-text
 #import "/src/themes/base-theme/bank-details.typ": render-bank-details
 #import "/tests/integration/payment-reference/harness.typ": find-all, plain
+#import "/tests/panic-message.typ": quoted-panic
+#let _catch = catch
+#let catch(f) = quoted-panic(_catch(f))
 
 #let valid = "DE75512108001245126199"
 #let long-name = "Muster Gesellschaft für Beratung, Entwicklung und Vertrieb mbH & Co. KG"

@@ -10,6 +10,9 @@
 #import "/src/themes/base-theme/payment-means.typ": render-payment-means
 #import "/src/themes/base-theme/bank-details.typ": render-bank-details
 #import "/tests/integration/payment-reference/harness.typ": find-all, plain
+#import "/tests/panic-message.typ": quoted-panic
+#let _catch = catch
+#let catch(f) = quoted-panic(_catch(f))
 
 // Records what the layouts print, per scenario.
 #let capturing-theme(scenario) = themes.blank.with(
