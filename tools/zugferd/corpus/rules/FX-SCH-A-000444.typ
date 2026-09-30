@@ -1,5 +1,5 @@
-// expect: AGREE_INVALID FX-SCH-A-000031
-// profiles: minimum basic-wl
+// expect: AGREE_INVALID FX-SCH-A-000444
+// profiles: basic-wl
 //
 // A seller legal registration identifier (BT-30) with a scheme that is no
 // ISO/IEC 6523 code, in the profiles whose validation applies the code lists
@@ -12,7 +12,7 @@
   zugferd: fixture-profile("basic-wl"),
   sender: seller-de + (legal-id: id.custom("9999", "4711")),
   recipient: buyer-fr,
-  invoice-nr: "FX-SCH-A-000031",
+  invoice-nr: "FX-SCH-A-000444",
 )
 
 #line-items[

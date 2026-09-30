@@ -756,7 +756,8 @@ class RuleChecks(unittest.TestCase):
         self.assertEqual(run.registry_rule_problems(res, reported), [missing])
         # The registry lists the ids of its entries per profile.
         listed = registry.reported_in(registry.load(), "basic-wl")
-        self.assertIn("FX-SCH-A-000040", listed)
+        self.assertIn("FX-SCH-A-000464", listed)
+        self.assertNotIn("FX-SCH-A-000040", listed)
         self.assertNotIn("BR-CL-04", listed)
 
     def test_foreign_rules(self):

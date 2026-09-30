@@ -232,8 +232,7 @@
 // A method whose details are missing: EN 16931 states the payment means code
 // alone, XRechnung requires the details (BR-DE-23-a, BR-DE-24-a,
 // BR-DE-25-a); a credit transfer needs the account in any profile: the CEN
-// Schematron 1.3.16 checks it as CII-SR-470, and in BASIC WL and BASIC,
-// whose BR-61 tests the debited account, invoice-pro as IP-PAY-04
+// Schematron 1.3.16 and Factur-X 1.09 check it as CII-SR-470
 #model-test(..xrechnung, model => {
   assert.eq(model.payment.means, (means("48", "card", "paid"),))
   assert.eq(rules(model), ("BR-DE-24-a",))
@@ -252,8 +251,8 @@
   assert.eq(rules(m), ("CII-SR-470",))
   for id in ("basic-wl", "basic") {
     m.profile = resolve-profile(id, "FR")
-    assert.eq(rules(m), ("IP-PAY-04",))
-    assert.eq(diagnostic(m, "IP-PAY-04").field, "paid.method")
+    assert.eq(rules(m), ("CII-SR-470",))
+    assert.eq(diagnostic(m, "CII-SR-470").field, "paid.method")
   }
 })[#items #paid(method: "transfer")]
 // Bank details without an IBAN (only with `zugferd-errors: "report"`, which
@@ -339,15 +338,14 @@
     message: d.message,
   )
   // The payment means codes differ: CII-SR-467 of the CEN Schematron 1.3.16
-  // in EN 16931; the validation of BASIC WL and BASIC accepts them
-  // (IP-PAY-03)
+  // and of Factur-X 1.09
   let m = model
   m.profile = en16931
   assert.eq(rules(m), ("CII-SR-467",))
   for id in ("basic-wl", "basic") {
     m.profile = resolve-profile(id, "FR")
-    assert.eq(rules(m), ("IP-PAY-03",))
-    assert.eq(diagnostic(m, "IP-PAY-03").field, "bank-details, direct-debit")
+    assert.eq(rules(m), ("CII-SR-467",))
+    assert.eq(diagnostic(m, "CII-SR-467").field, "bank-details, direct-debit")
   }
 })[#items #goal #debit #bank]
 #model-test(..xrechnung, model => {
@@ -365,7 +363,7 @@
   assert.eq(rules(model), ("CII-SR-467",))
   let m = model
   m.profile = resolve-profile("basic", "DE")
-  assert.eq(rules(m), ("IP-PAY-03",))
+  assert.eq(rules(m), ("CII-SR-467",))
 })[#items #goal #card #bank]
 #model-test(..xrechnung, model => {
   assert.eq(rules(model), ("CII-SR-467",))

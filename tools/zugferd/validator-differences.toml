@@ -99,41 +99,6 @@ other = "warning"
 reason = """The payee has one identifier (BT-60): `ram:ID` or `ram:GlobalID`. A warning in the CEN \
 Schematron and in KoSIT, an error in Mustang (see CII-SR-449). invoice-pro reports an error."""
 
-# ---- Mustang rejects, KoSIT reports nothing
-
-["BR-AG-05"]
-rejected-by = "mustang"
-other = "nothing"
-reason = """The rate of an IPSI line (category M): CEN Schematron 1.3.12 in Mustang requires a rate \
-above zero, CEN 1.3.16 in KoSIT accepts zero as well. invoice-pro reports an error, like Mustang."""
-
-["BR-CO-25"]
-rejected-by = "mustang"
-other = "nothing"
-reason = """An amount due needs a payment due date (BT-9) or payment terms (BT-20). The CII \
-Schematron of CEN 1.3.16 in KoSIT no longer checks BR-CO-25 \
-(https://github.com/ConnectingEurope/eInvoicing-EN16931/issues/477); CEN 1.3.12 and the Factur-X \
-1.0.07 Schematron in Mustang still do (the latter as FX-SCH-A-000155, whose message names \
-BR-CO-25). invoice-pro follows Factur-X and reports an error."""
-
-# ---- KoSIT rejects, Mustang reports nothing
-
-["CII-SR-467"]
-rejected-by = "kosit"
-other = "nothing"
-reason = """All payment means of an invoice have the same type code (BT-81). The rule is newer than \
-CEN Schematron 1.3.12 in Mustang; KoSIT (CEN 1.3.16) reports an error. invoice-pro reports \
-CII-SR-467 (in XRechnung BR-DE-23-b or BR-DE-24-b for the details of a direct debit next to \
-another payment means)."""
-
-["CII-SR-470"]
-rejected-by = "kosit"
-other = "nothing"
-reason = """A credit transfer names the account by its IBAN or a proprietary ID (BT-84). The rule is \
-newer than CEN Schematron 1.3.12 in Mustang, whose CII variant of BR-61 tests the debited account \
-instead; KoSIT (CEN 1.3.16) reports an error. invoice-pro reports CII-SR-470 (BR-DE-23-a in \
-XRechnung, which both validators report)."""
-
 # ---- Code lists: the lists of the validators differ, so either one may
 # ---- reject a code that the other one accepts without a message
 #

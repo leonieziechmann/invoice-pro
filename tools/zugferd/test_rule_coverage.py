@@ -322,7 +322,7 @@ class Classification(unittest.TestCase):
         # profiles, each once), and an id no artefact has.
         text = rc.explain(decisions, {"BR-27", "BR-99"}).splitlines()
         self.assertEqual(text[0], "BR-99: no artefact of any profile has this rule id")
-        self.assertEqual(text[4:], ["    mustang CEN EN 16931 Schematron 1.3.12 BR-27 (error) guard: business: [BR-27] text",
+        self.assertEqual(text[4:], ["    mustang CEN EN 16931 Schematron 1.3.16 BR-27 (error) guard: business: [BR-27] text",
                                     "      context: //BR-27", "      test: test(BR-27)"])
 
     def test_summary_and_open_rules(self):
@@ -608,12 +608,13 @@ class WithoutFixture(unittest.TestCase):
         self.assertIn(rc.REPO / "src" / "zugferd" / "rules" / "engine.typ", found["BR-02"])
         # The registry names the official ids its rules cover, but not their
         # Factur-X aliases, which the inventory counts under the rule itself
-        # (FX-SCH-A-000011 of BR-02). The rule modules name the Factur-X ids
-        # they report, e.g. the one of the currency code list in MINIMUM,
-        # which rare.typ builds for a code not every validation accepts.
+        # (FX-SCH-A-000011 of BR-02). The package names the Factur-X ids it
+        # reports in `fx-rules` of code-lists.json, e.g. the one of the
+        # currency code list in MINIMUM, which rare.typ reports for a code
+        # not every validation accepts.
         self.assertIn(rc.REPO / "tools" / "zugferd" / "registry.json", found["BR-02"])
         self.assertNotIn("FX-SCH-A-000011", found)
-        self.assertEqual(found["FX-SCH-A-000040"], [rc.REPO / "src" / "zugferd" / "rules" / "rare.typ"])
+        self.assertEqual(found["FX-SCH-A-000040"], [rc.REPO / "src" / "zugferd" / "code-lists.json"])
         # The tables of the test oracle name the rules they compile: they do
         # not count.
         self.assertNotIn("BR-01", found)
@@ -700,15 +701,18 @@ class PinnedArtefacts(unittest.TestCase):
         # KoSIT has scenarios for EN 16931 and XRechnung only.
         self.assertEqual(levels["basic"]["BR-S-02"], {"mustang": "error"})
         self.assertEqual(levels["en16931"]["BR-S-02"], {"mustang": "error", "kosit": "error"})
-        # Rules only the newer CEN Schematron of KoSIT has, or only the older one of Mustang.
-        self.assertEqual(levels["en16931"]["CII-SR-470"], {"kosit": "error"})
-        self.assertEqual(levels["en16931"]["BR-CO-25"], {"mustang": "error"})
+        # Mustang 2.26.0 and KoSIT apply the CEN Schematron 1.3.16: a rule of
+        # it in both, and in Mustang's Factur-X Schematron of BASIC as well.
+        # BR-CO-25, which 1.3.16 dropped, is in neither.
+        self.assertEqual(levels["en16931"]["CII-SR-470"], {"mustang": "error", "kosit": "error"})
+        self.assertEqual(levels["basic"]["CII-SR-470"], {"mustang": "error"})
+        self.assertNotIn("BR-CO-25", levels["en16931"])
         # Mustang applies the XRechnung Schematron to XRechnung only; KoSIT at
         # the levels of the scenario (customLevel) and of the flags.
         self.assertNotIn("BR-DE-15", levels["en16931"])
         self.assertEqual(levels["xrechnung"]["BR-DE-15"], {"mustang": "error", "kosit": "error"})
         self.assertEqual(levels["xrechnung"]["BR-CL-23"], {"mustang": "error", "kosit": "warning"})
-        self.assertEqual(levels["xrechnung"]["BR-DE-TMP-32"], {"kosit": "information"})
+        self.assertEqual(levels["xrechnung"]["BR-DE-TMP-32"], {"mustang": "error", "kosit": "information"})
         self.assertEqual(levels["xrechnung"]["BR-DE-17"], {"mustang": "error", "kosit": "warning"})
 
     def test_twins(self):

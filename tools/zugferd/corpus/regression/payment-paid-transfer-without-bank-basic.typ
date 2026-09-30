@@ -1,11 +1,10 @@
-// expect: STRICTER IP-PAY-04
+// expect: AGREE_INVALID CII-SR-470
 // finding: core-wrong-rule-ids
 //
-// Paid by credit transfer, without the bank details, in BASIC: the validation
-// of the profile accepts it (its BR-61 tests the debited account, and KoSIT
-// has no scenario for BASIC), but the buyer would not know where the amount
-// went. invoice-pro reports its own rule instead of BR-61, which no validator
-// reports for this XML.
+// Paid by credit transfer, without the bank details, in BASIC: CII-SR-470 of
+// the CEN Schematron 1.3.16 and of Factur-X 1.09 in Mustang rejects it (KoSIT
+// has no scenario for BASIC). Until Mustang 2.14.0, whose BR-61 tests the
+// debited account, invoice-pro reported its own IP-PAY-04.
 
 #import "_base.typ": *
 

@@ -1,7 +1,7 @@
-// expect: AGREE_INVALID FX-SCH-A-000023
+// expect: AGREE_INVALID FX-SCH-A-000464
 // profiles: basic-wl
 //
-// A payment means code (BT-81) outside UNTDID 4461, in BASIC WL, whose
+// An invoice currency (BT-5) that is no ISO 4217 code, in the profiles whose
 // validation applies the code list of Factur-X alone.
 
 #import "_base.typ": *
@@ -9,12 +9,14 @@
 #show: invoice.with(
   ..setup,
   zugferd: fixture-profile("basic-wl"),
+  currency: "ABC",
   sender: seller-de,
   recipient: buyer-fr,
-  invoice-nr: "FX-SCH-A-000023",
+  invoice-nr: "FX-SCH-A-000464",
 )
 
 #line-items[
   #item-s
 ]
-#paid(method: (code: "999", name: [Tausch]))
+#payment-goal(days: 14)
+#bank

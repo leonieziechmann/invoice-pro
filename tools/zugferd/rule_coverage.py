@@ -7,11 +7,11 @@ Inventory. The rule ids of every profile, collected from the pinned
 artefacts of the two official validators and applied to the profiles the
 way each validator selects them:
 
-  Mustang CLI 2.14.0 ($MUSTANG_JAR; the artefacts are pinned in gen_guard.py)
-    MINIMUM, BASIC WL   the Factur-X 1.0.07 Schematron of the profile
+  Mustang CLI 2.26.0 ($MUSTANG_JAR; the artefacts are pinned in gen_guard.py)
+    MINIMUM, BASIC WL   the Factur-X 1.09.2 Schematron of the profile
     BASIC, EN 16931     the Factur-X Schematron of the profile and the CEN
-                        Schematron of EN 16931 (CII, 1.3.12)
-    XRechnung           the CEN Schematron and the XRechnung 3.0 Schematron
+                        Schematron of EN 16931 (CII, 1.3.16)
+    XRechnung           the CEN Schematron and the XRechnung 3.0.2 Schematron
                         (CII); Mustang applies no Factur-X Schematron to it
   KoSIT 1.6.3 with its XRechnung configuration 2026-08-31 ($KOSIT_CONFIG;
   pinned below), by the scenarios of its scenarios.xml:
@@ -171,9 +171,9 @@ KOSIT_PINS = {
 }
 # Names of the artefacts in reports.
 ARTEFACT_NAMES = {
-    ("mustang", "FX"): "Factur-X 1.0.07 Schematron",
-    ("mustang", "CEN"): "CEN EN 16931 Schematron 1.3.12",
-    ("mustang", "XR"): "XRechnung 3.0 Schematron",
+    ("mustang", "FX"): "Factur-X 1.09.2 Schematron",
+    ("mustang", "CEN"): "CEN EN 16931 Schematron 1.3.16",
+    ("mustang", "XR"): "XRechnung 3.0.2 Schematron",
     ("kosit", "resources/cii/16b/xsl/EN16931-CII-validation.xsl"): "CEN EN 16931 Schematron 1.3.16",
     ("kosit", "resources/xrechnung/3.0.2/xsl/XRechnung-CII-validation.xsl"): "XRechnung 3.0.2 Schematron",
 }
@@ -900,10 +900,11 @@ def official_rules_in_source(root=REPO / "src", guard=GUARD_DIR, registry_path=r
     found = collections.defaultdict(list)
     for file in source_files(root, guard, registry_path):
         rules = set(_OFFICIAL_ID.findall(file.read_text(encoding="utf-8")))
-        if file.suffix == ".json":
+        if file == registry_path:
             # The registry names the Factur-X aliases of its rules as well
             # (`covers`), which the inventory counts under the rule they
-            # implement.
+            # implement. The Factur-X rules the package reports are named by
+            # `fx-rules` of src/zugferd/code-lists.json.
             rules = {rule for rule in rules if not rule.startswith("FX-SCH-")}
         for rule in sorted(rules):
             found[rule].append(file)
@@ -1134,7 +1135,7 @@ def update_docs(decisions, summary, path=DOCS):
 
 def report(inventory, decisions, summary, problems, ip, without=()):
     lines = ["Rule coverage of the official validators (tools/zugferd/rule-coverage.toml)"]
-    lines.append("  artefacts: Mustang CLI 2.14.0 (Factur-X 1.0.07, CEN 1.3.12, XRechnung 3.0)"
+    lines.append("  artefacts: Mustang CLI 2.26.0 (Factur-X 1.09.2, CEN 1.3.16, XRechnung 3.0.2)"
                  + (", KoSIT XRechnung configuration 2026-08-31 (CEN 1.3.16, XRechnung 3.0.2)" if inventory.kosit
                     else ", without KoSIT"))
     width = max(len(n) for n in PROFILE_NAMES.values())

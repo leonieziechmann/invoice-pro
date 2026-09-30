@@ -70,7 +70,7 @@ def jar(members):
 
 def schema(ram_body=DOCUMENT, root=ROOT, **kwargs):
     return g.Schema(
-        jar({"schema/ZF_230/T/rsm.xsd": root, "schema/ZF_230/T/ram.xsd": xsd(RAM, ram_body, **kwargs)}),
+        jar({"schema/ZF_250/T/rsm.xsd": root, "schema/ZF_250/T/ram.xsd": xsd(RAM, ram_body, **kwargs)}),
         "T",
     )
 
@@ -194,7 +194,7 @@ class SchemaSubset(unittest.TestCase):
             g.Jar(path).read(name)
         self.assertIn("is not the pinned artefact", str(caught.exception))
         with self.assertRaises(g.GenError):
-            g.Jar(path).read("schema/ZF_230/missing.xsd")
+            g.Jar(path).read("schema/ZF_250/missing.xsd")
 
 
 class RuleCompiler(unittest.TestCase):
@@ -903,38 +903,47 @@ class Tables(unittest.TestCase):
             self.assertIn("never writes", str(caught.exception))
 
     def test_codes_withdrawn_from_the_newest_lists(self):
-        # The code lists of the validator hold what every validation accepts:
-        # the currencies and the scheme the CEN Schematron 1.3.16 withdrew
-        # are missing from `every`, which the profiles based on EN 16931
-        # apply, and the codes only it has are `newer`. `every` is written in
-        # full, `factur-x` and `xrechnung` as the codes beyond it.
+        # The code lists of the validator hold what every validation accepts.
+        # Mustang 2.26.0 and KoSIT apply the same CEN Schematron (1.3.16), so
+        # no code is `newer` or `withdrawn`: the currencies the CEN list
+        # withdrew (e.g. BGN) are missing from `every` and from the Factur-X
+        # 1.09.2 list, and its new ones (e.g. XCG) are in `every`. `every` is
+        # written in full, `factur-x` and `xrechnung` as the codes beyond it.
         data = json.loads((self.fresh / "code-lists.json").read_text(encoding="utf-8"))
 
         def codes(lines):
             return set(" ".join(lines).split())
 
         currency = data["currency"]
-        self.assertEqual(currency["newer"], ["CNH VED XCG ZWG"])
         every = codes(currency["every"])
         factur_x = codes(currency["factur-x"])
-        for code in ("ANG", "BGN", "CUC", "HRK", "MRU", "STN", "UYW", "VES", "ZWL"):
-            self.assertNotIn(code, every)
-            self.assertIn(code, factur_x)
-        self.assertIn("EUR", every)
-        self.assertIn("0231 0232", " ".join(data["icd"]["newer"]))
-        # The withdrawn codes, which the validator names as such, and the
-        # lists of XRechnung, which lack no code of both CEN lists (e.g. the
+        for name, entry in data.items():
+            if isinstance(entry, dict) and name != "fx-rules":
+                self.assertNotIn("newer", entry, name)
+                self.assertNotIn("withdrawn", entry, name)
+        for code in ("ANG", "BGN", "CUC", "HRK", "ZWL"):
+            self.assertNotIn(code, every | factur_x)
+        for code in ("EUR", "XCG", "ZWG"):
+            self.assertIn(code, every)
+        # A currency only the Factur-X list has (MINIMUM, BASIC WL), and the
+        # lists of XRechnung, which lack no code of the CEN lists (e.g. the
         # scheme 0219, which the Factur-X list lacks).
-        self.assertEqual(currency["withdrawn"], ["ANG BGN CUC HRK MRO VEF ZWL"])
-        self.assertEqual(data["eas"]["withdrawn"], ["9901"])
+        self.assertEqual(factur_x, {"STN"})
         self.assertIn("0219", codes(data["eas"]["xrechnung"]))
+        self.assertIn("0241", codes(data["icd"]["xrechnung"]))
+        # The Factur-X rule of a code list position, one per profile.
+        self.assertEqual(
+            data["fx-rules"]["currency"],
+            ["FX-SCH-A-000040", "FX-SCH-A-000464", "FX-SCH-A-000514", "FX-SCH-A-000595"],
+        )
+        self.assertEqual(data["fx-rules"]["country/buyer"][0], None)
         self.assertNotIn("0219", codes(data["eas"]["every"]))
         # `every` with the codes beyond it is a list of the tables of the
         # guard (lists.json): the validator accepts the codes the guard does.
         lists = json.loads((self.fresh / "lists.json").read_text(encoding="utf-8"))["lists"]
         tables = {frozenset(codes(lines)) for lines in lists.values()}
         for name, kinds in data.items():
-            if name == "generated":
+            if name in ("generated", "fx-rules"):
                 continue
             every = codes(kinds["every"])
             for kind in ("factur-x", "xrechnung"):

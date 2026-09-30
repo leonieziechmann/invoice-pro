@@ -410,7 +410,7 @@
 
 // The rules of the VAT category of a tax element (`body`, the child `step`
 // of `tag`): the `checks` of its `category` (see lists.typ) on its rate
-// ("r": above 0, 0, none, or "any" rate), its VAT amount ("a") and its
+// ("r": above 0, 0, 0 or above, none, or "any" rate), its VAT amount ("a") and its
 // exemption reason ("e"); see `_category-ok` of write.typ.
 #let _category-checks(tag, step, body, category, checks) = {
   let found = ()

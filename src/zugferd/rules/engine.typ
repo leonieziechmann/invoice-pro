@@ -1059,7 +1059,11 @@
         category-rule(category, 5 + rate-rule)
       }
     }
-    if category in ("S", "L", "M") and tax.rate <= _zero and rate-rule != none {
+    // IPSI (M) may be 0 % (BR-AG-05 to -07 of CEN 1.3.16, Factur-X 1.09).
+    let below = if category == "M" { tax.rate < _zero } else {
+      tax.rate <= _zero
+    }
+    if category in ("S", "L", "M") and below and rate-rule != none {
       out.push((
         key: "vat-rate-positive",
         id: rate-rule,
@@ -1218,9 +1222,8 @@
   // details of a direct debit (BG-19: the mandate reference, the creditor
   // identifier or a debited account) next to a credit transfer (BR-DE-23-b)
   // or a payment card (BR-DE-24-b). Kinds of payment means have different
-  // codes (see `code-kind`), which break CII-SR-467 of CEN 1.3.16 in EN 16931
-  // and XRechnung; BASIC WL and BASIC accept them, but the buyer could pay
-  // twice (IP-PAY-03).
+  // codes (see `code-kind`), which break CII-SR-467 of CEN 1.3.16 and
+  // Factur-X 1.09.
   let kinds = ()
   let conflicting = ()
   let debit-details = (
@@ -1242,9 +1245,7 @@
         "BR-DE-23-b"
       } else if xrechnung and debit-details and "card" in kinds {
         "BR-DE-24-b"
-      } else if xrechnung or profile.id == "en16931" { "CII-SR-467" } else {
-        "IP-PAY-03"
-      },
+      } else { "CII-SR-467" },
       field: fields.join(", "),
       means: conflicting,
       paid: "paid" in fields,
@@ -1257,14 +1258,11 @@
         // `paid(method: "transfer")` without bank details, or bank details
         // without an IBAN (with `zugferd-errors: "report"`; otherwise
         // `bank-details` stops the compilation): no account (BG-17) is
-        // written. XRechnung: BR-DE-23-a; EN 16931: CII-SR-470 (CEN 1.3.16);
-        // BASIC WL and BASIC accept it, as their BR-61 tests the debited
-        // account: IP-PAY-04.
+        // written. XRechnung: BR-DE-23-a; the other profiles: CII-SR-470 (CEN
+        // 1.3.16, Factur-X 1.09).
         let paid = entry.field == "paid"
         out.push((
-          key: if xrechnung { "BR-DE-23-a" } else if profile.id == "en16931" {
-            "CII-SR-470"
-          } else { "IP-PAY-04" },
+          key: if xrechnung { "BR-DE-23-a" } else { "CII-SR-470" },
           field: if paid { "paid.method" } else { "bank-details.iban" },
           type-code: entry.type-code,
           paid: paid,
@@ -1326,8 +1324,12 @@
     out += payment-terms(payment, terms)
   }
 
+  // IP-PAY-06: an amount due needs a payment due date or payment terms.
+  // This was BR-CO-25 of EN 16931, which the CEN Schematron 1.3.16 and
+  // Factur-X 1.09 no longer check in CII
+  // (https://github.com/ConnectingEurope/eInvoicing-EN16931/issues/477).
   if model.totals.due > _zero and payment.due-date == none and terms == none {
-    out.push((key: "BR-CO-25", field: "payment-goal"))
+    out.push((key: "IP-PAY-06", field: "payment-goal"))
   }
 
   out += _payment-means(model)

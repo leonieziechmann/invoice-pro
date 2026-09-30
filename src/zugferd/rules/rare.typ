@@ -13,6 +13,7 @@
   line-field, lists, not-carried, post-code, single-identifier,
   vat-id-prefix-check,
 )
+#import "../code-lists.typ": fx-id
 #import "../model.typ": vat-id-country, vat-id-prefix
 #import "../../utils/iban.typ": iban-valid
 #import "../../utils/creditor-id.typ": creditor-id-valid
@@ -65,7 +66,8 @@
 /// the profile rejects (see `_code-rule`), as an array: none where it
 /// accepts the code. `finding` is the field and the values of the message
 /// of `cen`, the code list rule of the CEN Schematron, whose entry reports
-/// `fx`, the one of the Factur-X Schematron, as well (`id`, with `fx-only`
+/// the one of the Factur-X Schematron at the position `position` (a key of
+/// `fx-id`) as well (`id`, with `fx-only`
 /// where only the Factur-X list lacks the code, and `xrechnung` for the
 /// messages). A withdrawn code is IP-CODE-01, whose message names it by
 /// `term` (`scheme`: the code is the scheme of the term): a warning for a
@@ -77,11 +79,12 @@
   code,
   profile,
   cen,
-  fx,
+  position,
   finding,
   term,
   scheme: false,
 ) = {
+  let fx = fx-id(position, profile)
   let rule = _code-rule(name, code, profile, cen, fx)
   if rule == none { return () }
   if rule == "IP-CODE-01" {
@@ -110,6 +113,19 @@
 // The code list checks of engine.typ, for a code that not every validation
 // accepts (see `code-finding`).
 
+// The party of an input field (e.g. `sender.legal-id`), as in the keys of
+// `fx-id`.
+#let _party(field) = if field.starts-with("sender.tax-representative") {
+  "tax-representative"
+} else {
+  (
+    sender: "seller",
+    recipient: "buyer",
+    delivery-address: "ship-to",
+    payee: "payee",
+  ).at(field.split(".").first())
+}
+
 /// BR-CL-04: the invoice currency (BT-5). A currency of the Factur-X list
 /// that a CEN list lacks names the profile, whose validation cannot accept
 /// it.
@@ -120,7 +136,7 @@
   code,
   profile,
   "BR-CL-04",
-  "FX-SCH-A-000040",
+  "currency",
   (
     field: field,
     code: code,
@@ -137,7 +153,7 @@
   code,
   profile,
   "BR-CL-14",
-  "FX-SCH-A-000036",
+  "country/" + _party(field),
   (field: field, term: term, code: code),
   term,
 )
@@ -150,7 +166,7 @@
   scheme,
   profile,
   "BR-CL-25",
-  "FX-SCH-A-000031",
+  "eas/" + _party(field),
   (field: field + ".electronic-address", term: term, scheme: scheme),
   term,
   scheme: true,
@@ -164,7 +180,7 @@
   scheme,
   profile,
   rule,
-  "FX-SCH-A-000031",
+  "global-id/" + _party(field),
   (field: field, scheme: scheme),
   "global identifier",
   scheme: true,
@@ -178,14 +194,14 @@
   scheme,
   profile,
   "BR-CL-11",
-  "FX-SCH-A-000031",
+  "legal-id/" + _party(field),
   (field: field + ".legal-id", term: term, bt: bt, scheme: scheme),
   term + " legal registration identifier (" + bt + ")",
   scheme: true,
 )
 
 /// BR-CL-18: a VAT category code. The split payment of Italy (B) is no
-/// category of Factur-X (FX-SCH-A-000179); XRechnung accepts it (see
+/// category of Factur-X; XRechnung accepts it (see
 /// `split-payment`).
 ///
 /// -> array
@@ -194,7 +210,7 @@
   category,
   profile,
   "BR-CL-18",
-  "FX-SCH-A-000179",
+  "vat-category",
   (field: field, category: category),
   "VAT category code (BT-118)",
 )
@@ -207,7 +223,7 @@
   code,
   profile,
   "BR-CL-16",
-  "FX-SCH-A-000023",
+  "payment-means",
   (field: "paid.method", code: code),
   "payment means code (BT-81)",
 )
@@ -473,7 +489,7 @@
         origin,
         profile,
         "BR-CL-15",
-        "FX-SCH-A-000026",
+        "country/origin",
         (field: line-field(line), code: origin),
         "country of origin (BT-159)",
       )
@@ -516,7 +532,7 @@
       code,
       profile,
       "BR-CL-22",
-      "FX-SCH-A-000181",
+      "vatex",
       (field: field, code: code),
       "VAT exemption reason code (BT-121)",
     )
@@ -680,7 +696,7 @@
 
 /// BR-CL-08: the subject code of a note (BT-21) is a code of UNTDID 4451,
 /// whose list Factur-X checks with the same codes in BASIC WL
-/// (FX-SCH-A-000162), which has no CEN rules.
+/// (`note-subject` of `fx-id`), which has no CEN rules.
 ///
 /// -> array
 #let note-subject-code(code, profile) = {
@@ -689,7 +705,9 @@
   (
     (
       key: "BR-CL-08",
-      id: if profile.en16931 { "BR-CL-08" } else { "FX-SCH-A-000162" },
+      id: if profile.en16931 { "BR-CL-08" } else {
+        fx-id("note-subject", profile)
+      },
       field: "notes",
       code: code,
     ),

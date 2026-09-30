@@ -593,10 +593,10 @@ def _exemption_codes(f, mutation):
     }.get(f["tax"], {})
 
 
-def _due_date(f, mutation):
+def _due_date(f):
     """The payment due date (BT-9): 14 days after the invoice date, or the
     `due-date`; none when the amount is due at once or paid already."""
-    if mutation == "no-payment-terms" or f["payment"] in ("bank+immediate", "card", "paid"):
+    if f["payment"] in ("bank+immediate", "card", "paid"):
         return None
     return "20260930" if f["payment"] == "bank+due" else "20260915"
 
@@ -709,7 +709,7 @@ def render(cid, f, mutation=None, opts=None):
             f'  delivery-address: (name: "Lager {buyer["name"]}", address: "Lagerweg 9", '
             f'city: {buyer["city"]}, country: country.{buyer["country"]}),'
         )
-    if f["payment"] == "bank+due" and mutation != "no-payment-terms":
+    if f["payment"] == "bank+due":
         header.append("  due-date: datetime(year: 2026, month: 9, day: 30),")
     if f["tax"] == "smallbiz":
         header.append("  tax-exempt-small-biz: true,")
@@ -763,10 +763,10 @@ def render(cid, f, mutation=None, opts=None):
         *lines,
         "]",
     ]
-    pay, terms = f["payment"], mutation != "no-payment-terms"
-    if pay in ("bank+days", "nobank+days", "direct-debit") and terms:
+    pay = f["payment"]
+    if pay in ("bank+days", "nobank+days", "direct-debit"):
         src.append("#payment-goal(days: 14)")
-    if pay in ("bank+immediate", "card") and terms:
+    if pay in ("bank+immediate", "card"):
         src.append("#payment-goal()")
     if pay == "paid":
         src.append(f"#paid(method: {PAID[0]}, date: {PAID[1]})")
@@ -831,7 +831,7 @@ def render(cid, f, mutation=None, opts=None):
         "period": period,
         "breakdown": _breakdown(f, seller, mutation),
         "exemption_codes": _exemption_codes(f, mutation),
-        "due_date": _due_date(f, mutation),
+        "due_date": _due_date(f),
         "iban": account[1] if account and mutation != "no-bank" else None,
         **_payment_facts(f, currency, account, buyer, mutation),
         "number_format": NUMBER_FORMAT[locale],
@@ -862,7 +862,6 @@ MUTATIONS = [
     ("no-buyer-vat", ["basic", "en16931", "xrechnung"], {"tax": "ae", "route": "de-fr"}, ["BR-AE-02"]),
     ("no-buyer-vat", ["basic", "en16931"], {"tax": "k", "route": "de-at"}, ["BR-IC-02"]),
     ("no-lines", ["basic", "en16931", "xrechnung"], {}, ["BR-16"]),
-    ("no-payment-terms", ["en16931", "xrechnung"], {"payment": "bank+days"}, ["BR-CO-25"]),
     ("no-buyer-reference", ["xrechnung"], {}, ["BR-DE-15"]),
     ("no-seller-contact", ["xrechnung"], {}, ["BR-DE-2"]),
     ("no-bank", ["xrechnung"], {"payment": "bank+days"}, ["BR-DE-1"]),

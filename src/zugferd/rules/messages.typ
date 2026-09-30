@@ -280,7 +280,7 @@
   )
 }
 
-// Several payment means (BR-DE-23-b, BR-DE-24-b, CII-SR-467, IP-PAY-03).
+// Several payment means (BR-DE-23-b, BR-DE-24-b, CII-SR-467).
 #let _several-means(f) = {
   let names = f.means.map(_means-description)
   (
@@ -300,7 +300,7 @@
   )
 }
 
-// A credit transfer without an account (BR-DE-23-a, CII-SR-470, IP-PAY-04).
+// A credit transfer without an account (BR-DE-23-a, CII-SR-470).
 #let _transfer-account(f) = (
   "A credit transfer (BT-81 = "
     + f.type-code
@@ -1244,17 +1244,15 @@
   ),
 
   // Payment
-  "BR-CO-25": f => (
+  "IP-PAY-06": f => (
     "An amount is due, but neither the payment due date (BT-9) nor the payment terms (BT-20) are given.",
     "Add `#payment-goal(days: 14)` or set `due-date` on the invoice.",
   ),
   "BR-DE-23-b": _several-means,
   "BR-DE-24-b": _several-means,
   "CII-SR-467": _several-means,
-  "IP-PAY-03": _several-means,
   "BR-DE-23-a": _transfer-account,
   "CII-SR-470": _transfer-account,
-  "IP-PAY-04": _transfer-account,
   "BR-DE-19": _iban,
   "BR-DE-20": _iban,
   "IP-PAY-01": _iban,

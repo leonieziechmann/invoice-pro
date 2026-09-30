@@ -50,11 +50,11 @@
 
         mustang-cli = pkgs.stdenv.mkDerivation rec {
           pname = "mustang-cli";
-          version = "2.14.0";
+          version = "2.26.0";
 
           src = pkgs.fetchurl {
             url = "https://github.com/ZUGFeRD/mustangproject/releases/download/core-${version}/Mustang-CLI-${version}.jar";
-            sha256 = "0yj3knyjp7rnmcvb8snm3f8famg2rankxfcfaqsnymkn4zc1lnb5";
+            sha256 = "0dlppdc6gxhpm4ykfwndqz626fxhhwslrawcgd58fr42ns68dms2";
           };
 
           dontUnpack = true;

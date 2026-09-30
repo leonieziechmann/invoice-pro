@@ -285,6 +285,8 @@
             f.expected == "any"
           ) { " requires a " + what } else if f.expected == 0 {
             " requires the " + what + " 0"
+          } else if f.expected == "ge0" {
+            " requires a " + what + " of 0 or above"
           } else { " requires a " + what + " above 0" }
           + "; "
           + element

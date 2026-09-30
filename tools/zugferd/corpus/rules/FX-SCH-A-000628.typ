@@ -1,4 +1,4 @@
-// expect: AGREE_INVALID FX-SCH-A-000026
+// expect: AGREE_INVALID FX-SCH-A-000628
 // profiles: en16931
 //
 // An item from the Netherlands Antilles (AN), which the code lists of
@@ -13,7 +13,7 @@
   zugferd: fixture-profile("en16931"),
   sender: seller-de,
   recipient: buyer-fr,
-  invoice-nr: "FX-SCH-A-000026",
+  invoice-nr: "FX-SCH-A-000628",
 )
 
 #line-items[

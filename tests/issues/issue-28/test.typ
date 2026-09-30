@@ -91,7 +91,7 @@
 
 // --- 2. The reported invoice no longer crashes ---
 // Without the VAT ID, the seller of the reported invoice has no identifier
-// left (BR-CO-26), and it has no payment terms (BR-CO-25). Both are reported
+// left (BR-CO-26), and it has no payment terms (IP-PAY-06). Both are reported
 // as validation errors instead of a crash.
 #let reported-invoice = invoice.with(
   theme: themes.blank,
@@ -127,7 +127,7 @@
     message: "Expected a validation error, got " + repr(message),
   )
   assert(message.contains("[BR-CO-26] sender:"), message: message)
-  assert(message.contains("[BR-CO-25] payment-goal:"), message: message)
+  assert(message.contains("[IP-PAY-06] payment-goal:"), message: message)
 }
 
 // --- 3. Full invoice rendering with an identifiable seller ---

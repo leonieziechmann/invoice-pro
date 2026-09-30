@@ -256,7 +256,7 @@
   // --- Payment ---
   let m = base
   m.payment.due-date = none
-  assert.eq(rules(m), ("BR-CO-25",))
+  assert.eq(rules(m), ("IP-PAY-06",))
   m.payment.terms = "sofort"
   assert.eq(rules(m), ())
   let m = base

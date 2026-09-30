@@ -290,7 +290,7 @@
 // Whether a tax element (`body`) passes the check `check` of its VAT
 // category with the value `expected` (see lists.typ): its exemption reason
 // ("e": stated or not), its rate ("r") or its VAT amount ("a": none absent,
-// "any" there, 0 zero, 1 above 0).
+// "any" there, 0 zero, 1 above 0, "ge0" zero or above).
 #let _category-ok(body, check, expected) = {
   if check == "e" {
     let stated = (
@@ -307,6 +307,8 @@
   )
   if expected == none { not _present(value) } else if expected == "any" {
     _present(value)
+  } else if expected == "ge0" {
+    _compares(value, 0) or _compares(value, 1)
   } else { _compares(value, expected) }
 }
 

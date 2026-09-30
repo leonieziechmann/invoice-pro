@@ -1,18 +1,18 @@
 {
   "format": 1,
   "sources": {
-    "EN16931": "The CEN EN 16931 CII Schematron (EN16931-CII-validation): 1.3.12 in the Mustang CLI 2.14.0, 1.3.16 in the KoSIT XRechnung configuration 2026-08-31.",
+    "EN16931": "The CEN EN 16931 CII Schematron (EN16931-CII-validation) 1.3.16, in the Mustang CLI 2.26.0 and in the KoSIT XRechnung configuration 2026-08-31.",
     "CII": "The rules of the CII syntax binding (CII-SR-*, CII-DT-*) of the same Schematron.",
-    "FACTUR-X": "The Factur-X 1.0.07 (ZUGFeRD 2.3) Schematron of the profile, in the Mustang CLI 2.14.0.",
-    "XRECHNUNG": "The XRechnung 3.0 CII Schematron: in the Mustang CLI 2.14.0, and 3.0.2 in the KoSIT XRechnung configuration 2026-08-31.",
+    "FACTUR-X": "The Factur-X 1.09.2 (ZUGFeRD 2.5.2) Schematron of the profile, in the Mustang CLI 2.26.0.",
+    "XRECHNUNG": "The XRechnung 3.0.2 CII Schematron, in the Mustang CLI 2.26.0 and in the KoSIT XRechnung configuration 2026-08-31.",
     "PEPPOL": "The PEPPOL rules of the XRechnung CII Schematron.",
     "IP": "A rule of invoice-pro: the official rules accept the XML, but the invoice would be wrong, e.g. required by law or a value would be lost."
   },
   "rules": {
     "BR-02": {
-      "covers": ["BR-02", "FX-SCH-A-000011"],
+      "covers": ["BR-02"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "document",
       "terms": ["BT-1"],
@@ -22,10 +22,14 @@
       "legal": null
     },
     "BR-03": {
-      "covers": ["BR-03", "FX-SCH-A-000012", "FX-SCH-A-000022"],
+      "covers": ["BR-03", "FX-SCH-A-000491", "FX-SCH-A-000554"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
+      "id-profiles": {
+        "FX-SCH-A-000491": ["basic"],
+        "FX-SCH-A-000554": ["en16931"]
+      },
       "scope": "document",
       "terms": ["BT-2"],
       "level": "error",
@@ -34,9 +38,9 @@
       "legal": null
     },
     "BR-05": {
-      "covers": ["BR-05", "FX-SCH-A-000014"],
+      "covers": ["BR-05"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "document",
       "terms": ["BT-5"],
@@ -46,14 +50,17 @@
       "legal": null
     },
     "BR-CL-04": {
-      "ids": ["BR-CL-04", "FX-SCH-A-000040"],
-      "covers": ["BR-CL-04", "FX-SCH-A-000040"],
+      "ids": ["BR-CL-04", "FX-SCH-A-000040", "FX-SCH-A-000464", "FX-SCH-A-000514", "FX-SCH-A-000595"],
+      "covers": ["BR-CL-04", "FX-SCH-A-000040", "FX-SCH-A-000464", "FX-SCH-A-000514", "FX-SCH-A-000595"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-CL-04": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000040": ["minimum", "basic-wl", "basic", "en16931"]
+        "FX-SCH-A-000040": ["minimum"],
+        "FX-SCH-A-000464": ["basic-wl"],
+        "FX-SCH-A-000514": ["basic"],
+        "FX-SCH-A-000595": ["en16931"]
       },
       "scope": "document",
       "terms": ["BT-5"],
@@ -102,7 +109,7 @@
     "BR-DE-17": {
       "covers": ["BR-DE-17"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "document",
       "terms": ["BT-3"],
@@ -126,7 +133,7 @@
     "BR-DE-26": {
       "covers": ["BR-DE-26"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "document",
       "terms": ["BT-3", "BT-25"],
@@ -184,14 +191,16 @@
       "legal": null
     },
     "BR-CL-08": {
-      "ids": ["BR-CL-08", "FX-SCH-A-000162"],
-      "covers": ["BR-CL-08", "FX-SCH-A-000162"],
+      "ids": ["BR-CL-08", "FX-SCH-A-000162", "FX-SCH-A-000490", "FX-SCH-A-000553"],
+      "covers": ["BR-CL-08", "FX-SCH-A-000162", "FX-SCH-A-000490", "FX-SCH-A-000553"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-CL-08": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000162": ["basic-wl", "basic", "en16931"]
+        "FX-SCH-A-000162": ["basic-wl"],
+        "FX-SCH-A-000490": ["basic"],
+        "FX-SCH-A-000553": ["en16931"]
       },
       "scope": "document",
       "terms": ["BT-21"],
@@ -215,7 +224,7 @@
     "BR-DE-TMP-32": {
       "covers": ["BR-DE-TMP-32"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "document",
       "terms": ["BT-72", "BG-14"],
@@ -237,9 +246,9 @@
       "legal": "§ 14 Abs. 4 Satz 1 Nr. 6 UStG, UStAE 14.5 Abs. 16, § 33 UStDV; Art. 226 No. 7 of the VAT Directive 2006/112/EC"
     },
     "BR-06": {
-      "covers": ["BR-06", "FX-SCH-A-000015"],
+      "covers": ["BR-06"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-27"],
@@ -249,9 +258,9 @@
       "legal": null
     },
     "BR-07": {
-      "covers": ["BR-07", "FX-SCH-A-000016"],
+      "covers": ["BR-07"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-44"],
@@ -285,9 +294,9 @@
       "legal": null
     },
     "BR-09": {
-      "covers": ["BR-09", "FX-SCH-A-000018"],
+      "covers": ["BR-09"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-40"],
@@ -298,9 +307,9 @@
       "note": "A safety net: an address without `country` gets the country of the locale."
     },
     "BR-11": {
-      "covers": ["BR-11", "FX-SCH-A-000157"],
+      "covers": ["BR-11"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-55"],
@@ -311,9 +320,9 @@
       "note": "A safety net: an address without `country` gets the country of the locale."
     },
     "BR-57": {
-      "covers": ["BR-57", "FX-SCH-A-000170"],
+      "covers": ["BR-57"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-80"],
@@ -324,9 +333,9 @@
       "note": "A safety net: an address without `country` gets the country of the locale."
     },
     "BR-20": {
-      "covers": ["BR-20", "FX-SCH-A-000078"],
+      "covers": ["BR-20"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-69"],
@@ -337,14 +346,26 @@
       "note": "A safety net: an address without `country` gets the country of the locale."
     },
     "BR-CL-14": {
-      "ids": ["BR-CL-14", "FX-SCH-A-000036"],
-      "covers": ["BR-CL-14", "FX-SCH-A-000036"],
+      "ids": ["BR-CL-14", "FX-SCH-A-000036", "FX-SCH-A-000423", "FX-SCH-A-000435", "FX-SCH-A-000443", "FX-SCH-A-000457", "FX-SCH-A-000495", "FX-SCH-A-000499", "FX-SCH-A-000502", "FX-SCH-A-000507", "FX-SCH-A-000568", "FX-SCH-A-000573", "FX-SCH-A-000580", "FX-SCH-A-000586"],
+      "covers": ["BR-CL-14", "FX-SCH-A-000036", "FX-SCH-A-000423", "FX-SCH-A-000435", "FX-SCH-A-000443", "FX-SCH-A-000457", "FX-SCH-A-000495", "FX-SCH-A-000499", "FX-SCH-A-000502", "FX-SCH-A-000507", "FX-SCH-A-000568", "FX-SCH-A-000573", "FX-SCH-A-000580", "FX-SCH-A-000586"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-CL-14": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000036": ["minimum", "basic-wl", "basic", "en16931"]
+        "FX-SCH-A-000036": ["minimum"],
+        "FX-SCH-A-000423": ["basic-wl"],
+        "FX-SCH-A-000435": ["basic-wl"],
+        "FX-SCH-A-000443": ["basic-wl"],
+        "FX-SCH-A-000457": ["basic-wl"],
+        "FX-SCH-A-000495": ["basic"],
+        "FX-SCH-A-000499": ["basic"],
+        "FX-SCH-A-000502": ["basic"],
+        "FX-SCH-A-000507": ["basic"],
+        "FX-SCH-A-000568": ["en16931"],
+        "FX-SCH-A-000573": ["en16931"],
+        "FX-SCH-A-000580": ["en16931"],
+        "FX-SCH-A-000586": ["en16931"]
       },
       "scope": "party",
       "terms": ["BT-40", "BT-55", "BT-69", "BT-80"],
@@ -378,9 +399,9 @@
       "legal": null
     },
     "BR-CO-09": {
-      "covers": ["BR-CO-09", "FX-SCH-A-000002"],
+      "covers": ["BR-CO-09"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-31", "BT-48", "BT-63"],
@@ -390,9 +411,9 @@
       "legal": null
     },
     "BR-CO-26": {
-      "covers": ["BR-CO-26", "FX-SCH-A-000001"],
+      "covers": ["BR-CO-26"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-29", "BT-30", "BT-31"],
@@ -438,14 +459,24 @@
       "legal": null
     },
     "BR-CL-11": {
-      "ids": ["BR-CL-11", "FX-SCH-A-000031"],
-      "covers": ["BR-CL-11", "FX-SCH-A-000031"],
+      "ids": ["BR-CL-11", "FX-SCH-A-000031", "FX-SCH-A-000410", "FX-SCH-A-000424", "FX-SCH-A-000444", "FX-SCH-A-000472", "FX-SCH-A-000496", "FX-SCH-A-000503", "FX-SCH-A-000517", "FX-SCH-A-000569", "FX-SCH-A-000581", "FX-SCH-A-000598"],
+      "covers": ["BR-CL-11", "FX-SCH-A-000031", "FX-SCH-A-000410", "FX-SCH-A-000424", "FX-SCH-A-000444", "FX-SCH-A-000472", "FX-SCH-A-000496", "FX-SCH-A-000503", "FX-SCH-A-000517", "FX-SCH-A-000569", "FX-SCH-A-000581", "FX-SCH-A-000598"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-CL-11": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000031": ["minimum", "basic-wl", "basic", "en16931"]
+        "FX-SCH-A-000031": ["minimum"],
+        "FX-SCH-A-000410": ["minimum"],
+        "FX-SCH-A-000424": ["basic-wl"],
+        "FX-SCH-A-000444": ["basic-wl"],
+        "FX-SCH-A-000472": ["basic-wl"],
+        "FX-SCH-A-000496": ["basic"],
+        "FX-SCH-A-000503": ["basic"],
+        "FX-SCH-A-000517": ["basic"],
+        "FX-SCH-A-000569": ["en16931"],
+        "FX-SCH-A-000581": ["en16931"],
+        "FX-SCH-A-000598": ["en16931"]
       },
       "scope": "party",
       "terms": ["BT-30", "BT-47", "BT-61"],
@@ -456,13 +487,12 @@
     },
     "vat-outside-scope": {
       "ids": ["BR-O-02", "BR-O-03", "BR-O-04"],
-      "covers": ["BR-O-02", "BR-O-03", "BR-O-04", "FX-SCH-A-000093", "FX-SCH-A-000111", "FX-SCH-A-000247"],
+      "covers": ["BR-O-02", "BR-O-03", "BR-O-04"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
-        "BR-O-02": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000247": ["basic", "en16931"]
+        "BR-O-02": ["basic", "en16931", "xrechnung"]
       },
       "scope": "party",
       "terms": ["BT-63"],
@@ -484,9 +514,9 @@
       "legal": null
     },
     "BR-18": {
-      "covers": ["BR-18", "FX-SCH-A-000076"],
+      "covers": ["BR-18"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-62"],
@@ -496,9 +526,9 @@
       "legal": null
     },
     "BR-56": {
-      "covers": ["BR-56", "FX-SCH-A-000079"],
+      "covers": ["BR-56"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-63"],
@@ -520,9 +550,9 @@
       "legal": "Art. 226 No. 4 and No. 15 of the VAT Directive 2006/112/EC"
     },
     "BR-17": {
-      "covers": ["BR-17", "FX-SCH-A-000075"],
+      "covers": ["BR-17"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-59"],
@@ -557,14 +587,22 @@
       "legal": null
     },
     "BR-CL-10": {
-      "ids": ["BR-CL-10", "FX-SCH-A-000031"],
-      "covers": ["BR-CL-10", "FX-SCH-A-000031"],
+      "ids": ["BR-CL-10", "FX-SCH-A-000421", "FX-SCH-A-000441", "FX-SCH-A-000471", "FX-SCH-A-000494", "FX-SCH-A-000501", "FX-SCH-A-000516", "FX-SCH-A-000567", "FX-SCH-A-000579", "FX-SCH-A-000597"],
+      "covers": ["BR-CL-10", "FX-SCH-A-000421", "FX-SCH-A-000441", "FX-SCH-A-000471", "FX-SCH-A-000494", "FX-SCH-A-000501", "FX-SCH-A-000516", "FX-SCH-A-000567", "FX-SCH-A-000579", "FX-SCH-A-000597"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-CL-10": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000031": ["basic-wl", "basic", "en16931"]
+        "FX-SCH-A-000421": ["basic-wl"],
+        "FX-SCH-A-000441": ["basic-wl"],
+        "FX-SCH-A-000471": ["basic-wl"],
+        "FX-SCH-A-000494": ["basic"],
+        "FX-SCH-A-000501": ["basic"],
+        "FX-SCH-A-000516": ["basic"],
+        "FX-SCH-A-000567": ["en16931"],
+        "FX-SCH-A-000579": ["en16931"],
+        "FX-SCH-A-000597": ["en16931"]
       },
       "scope": "party",
       "terms": ["BT-29", "BT-46", "BT-60"],
@@ -574,14 +612,16 @@
       "legal": null
     },
     "BR-CL-26": {
-      "ids": ["BR-CL-26", "FX-SCH-A-000031"],
-      "covers": ["BR-CL-26", "FX-SCH-A-000031"],
+      "ids": ["BR-CL-26", "FX-SCH-A-000454", "FX-SCH-A-000506", "FX-SCH-A-000585"],
+      "covers": ["BR-CL-26", "FX-SCH-A-000454", "FX-SCH-A-000506", "FX-SCH-A-000585"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-CL-26": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000031": ["basic-wl", "basic", "en16931"]
+        "FX-SCH-A-000454": ["basic-wl"],
+        "FX-SCH-A-000506": ["basic"],
+        "FX-SCH-A-000585": ["en16931"]
       },
       "scope": "party",
       "terms": ["BT-71"],
@@ -593,7 +633,7 @@
     "CII-SR-450": {
       "covers": ["CII-SR-450"],
       "source": "CII",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-46"],
@@ -605,7 +645,7 @@
     "CII-SR-449": {
       "covers": ["CII-SR-449"],
       "source": "CII",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-71"],
@@ -617,7 +657,7 @@
     "CII-SR-451": {
       "covers": ["CII-SR-451"],
       "source": "CII",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-60"],
@@ -629,7 +669,7 @@
     "PEPPOL-EN16931-R020": {
       "covers": ["PEPPOL-EN16931-R020"],
       "source": "PEPPOL",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-34"],
@@ -641,7 +681,7 @@
     "PEPPOL-EN16931-R010": {
       "covers": ["PEPPOL-EN16931-R010"],
       "source": "PEPPOL",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-49"],
@@ -663,9 +703,9 @@
       "legal": null
     },
     "BR-62": {
-      "covers": ["BR-62", "FX-SCH-A-000158"],
+      "covers": ["BR-62"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-34"],
@@ -675,9 +715,9 @@
       "legal": null
     },
     "BR-63": {
-      "covers": ["BR-63", "FX-SCH-A-000159"],
+      "covers": ["BR-63"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "party",
       "terms": ["BT-49"],
@@ -687,14 +727,19 @@
       "legal": null
     },
     "BR-CL-25": {
-      "ids": ["BR-CL-25", "FX-SCH-A-000031"],
-      "covers": ["BR-CL-25", "FX-SCH-A-000031"],
+      "ids": ["BR-CL-25", "FX-SCH-A-000429", "FX-SCH-A-000447", "FX-SCH-A-000498", "FX-SCH-A-000504", "FX-SCH-A-000571", "FX-SCH-A-000582"],
+      "covers": ["BR-CL-25", "FX-SCH-A-000429", "FX-SCH-A-000447", "FX-SCH-A-000498", "FX-SCH-A-000504", "FX-SCH-A-000571", "FX-SCH-A-000582"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-CL-25": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000031": ["basic-wl", "basic", "en16931"]
+        "FX-SCH-A-000429": ["basic-wl"],
+        "FX-SCH-A-000447": ["basic-wl"],
+        "FX-SCH-A-000498": ["basic"],
+        "FX-SCH-A-000504": ["basic"],
+        "FX-SCH-A-000571": ["en16931"],
+        "FX-SCH-A-000582": ["en16931"]
       },
       "scope": "party",
       "terms": ["BT-34", "BT-49"],
@@ -706,7 +751,7 @@
     "BR-DE-2": {
       "covers": ["BR-DE-2"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BG-6"],
@@ -718,7 +763,7 @@
     "BR-DE-5": {
       "covers": ["BR-DE-5"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-41"],
@@ -730,7 +775,7 @@
     "BR-DE-6": {
       "covers": ["BR-DE-6"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-42"],
@@ -742,7 +787,7 @@
     "BR-DE-7": {
       "covers": ["BR-DE-7"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-43"],
@@ -754,7 +799,7 @@
     "BR-DE-27": {
       "covers": ["BR-DE-27"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-42"],
@@ -766,7 +811,7 @@
     "BR-DE-28": {
       "covers": ["BR-DE-28"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-43"],
@@ -778,7 +823,7 @@
     "BR-DE-3": {
       "covers": ["BR-DE-3"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-37"],
@@ -790,7 +835,7 @@
     "BR-DE-4": {
       "covers": ["BR-DE-4"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-38"],
@@ -802,7 +847,7 @@
     "BR-DE-8": {
       "covers": ["BR-DE-8"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-52"],
@@ -814,7 +859,7 @@
     "BR-DE-9": {
       "covers": ["BR-DE-9"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-53"],
@@ -826,7 +871,7 @@
     "BR-DE-10": {
       "covers": ["BR-DE-10"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-77"],
@@ -838,7 +883,7 @@
     "BR-DE-11": {
       "covers": ["BR-DE-11"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-78"],
@@ -850,7 +895,7 @@
     "BR-DE-15": {
       "covers": ["BR-DE-15"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "party",
       "terms": ["BT-10"],
@@ -861,15 +906,13 @@
     },
     "vat-buyer-id": {
       "ids": ["BR-IC-02", "BR-IC-03", "BR-IC-04", "BR-AE-02", "BR-AE-03", "BR-AE-04"],
-      "covers": ["BR-IC-02", "BR-IC-03", "BR-IC-04", "BR-AE-02", "BR-AE-03", "BR-AE-04", "FX-SCH-A-000081", "FX-SCH-A-000087", "FX-SCH-A-000099", "FX-SCH-A-000105", "FX-SCH-A-000235", "FX-SCH-A-000241"],
+      "covers": ["BR-IC-02", "BR-IC-03", "BR-IC-04", "BR-AE-02", "BR-AE-03", "BR-AE-04"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-IC-02": ["basic", "en16931", "xrechnung"],
-        "BR-AE-02": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000235": ["basic", "en16931"],
-        "FX-SCH-A-000241": ["basic", "en16931"]
+        "BR-AE-02": ["basic", "en16931", "xrechnung"]
       },
       "scope": "tax",
       "terms": ["BT-48", "BT-47"],
@@ -879,9 +922,9 @@
       "legal": null
     },
     "BR-IC-12": {
-      "covers": ["BR-IC-12", "FX-SCH-A-000145"],
+      "covers": ["BR-IC-12"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "tax",
       "terms": ["BT-80"],
@@ -904,9 +947,9 @@
       "legal": "Art. 138 of the VAT Directive 2006/112/EC"
     },
     "BR-16": {
-      "covers": ["BR-16", "FX-SCH-A-000253"],
+      "covers": ["BR-16"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic", "en16931", "xrechnung"],
       "scope": "line",
       "terms": ["BG-25"],
@@ -916,9 +959,9 @@
       "legal": null
     },
     "BR-25": {
-      "covers": ["BR-25", "FX-SCH-A-000204"],
+      "covers": ["BR-25"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic", "en16931", "xrechnung"],
       "scope": "line",
       "terms": ["BT-153"],
@@ -928,10 +971,18 @@
       "legal": null
     },
     "BR-CL-23": {
-      "covers": ["BR-CL-23", "FX-SCH-A-000275"],
+      "covers": ["BR-CL-23", "FX-SCH-A-000275", "FX-SCH-A-000533", "FX-SCH-A-000534", "FX-SCH-A-000611", "FX-SCH-A-000612", "FX-SCH-A-000613"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic", "en16931", "xrechnung"],
+      "id-profiles": {
+        "FX-SCH-A-000275": ["basic"],
+        "FX-SCH-A-000533": ["basic"],
+        "FX-SCH-A-000534": ["basic"],
+        "FX-SCH-A-000611": ["en16931"],
+        "FX-SCH-A-000612": ["en16931"],
+        "FX-SCH-A-000613": ["en16931"]
+      },
       "scope": "line",
       "terms": ["BT-130"],
       "level": "error",
@@ -964,9 +1015,9 @@
       "legal": null
     },
     "BR-CO-04": {
-      "covers": ["BR-CO-04", "FX-SCH-A-000210"],
+      "covers": ["BR-CO-04"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic", "en16931", "xrechnung"],
       "scope": "line",
       "terms": ["BT-151"],
@@ -977,9 +1028,9 @@
       "note": "A safety net: every item has a VAT category (`tax: none` is written as zero rated, IP-TAX-01)."
     },
     "BR-30": {
-      "covers": ["BR-30", "FX-SCH-A-000212"],
+      "covers": ["BR-30"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic", "en16931", "xrechnung"],
       "scope": "line",
       "terms": ["BT-134", "BT-135"],
@@ -991,7 +1042,7 @@
     "PEPPOL-EN16931-R110": {
       "covers": ["PEPPOL-EN16931-R110"],
       "source": "PEPPOL",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "line",
       "terms": ["BT-134", "BG-14"],
@@ -1003,7 +1054,7 @@
     "PEPPOL-EN16931-R111": {
       "covers": ["PEPPOL-EN16931-R111"],
       "source": "PEPPOL",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "line",
       "terms": ["BT-135", "BG-14"],
@@ -1025,13 +1076,13 @@
       "legal": null
     },
     "BR-CL-15": {
-      "ids": ["BR-CL-15", "FX-SCH-A-000026"],
-      "covers": ["BR-CL-15", "FX-SCH-A-000026"],
+      "ids": ["BR-CL-15", "FX-SCH-A-000628"],
+      "covers": ["BR-CL-15", "FX-SCH-A-000628"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["en16931", "xrechnung"],
       "id-profiles": {
-        "FX-SCH-A-000026": ["en16931"]
+        "FX-SCH-A-000628": ["en16931"]
       },
       "scope": "line",
       "terms": ["BT-159"],
@@ -1041,9 +1092,9 @@
       "legal": null
     },
     "BR-CO-18": {
-      "covers": ["BR-CO-18", "FX-SCH-A-000135"],
+      "covers": ["BR-CO-18"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl"],
       "scope": "tax",
       "terms": ["BG-23"],
@@ -1054,9 +1105,9 @@
       "note": "Only BASIC WL, which has no invoice lines: in the profiles with lines, an invoice without VAT breakdown has no lines, which BR-16 reports."
     },
     "BR-48": {
-      "covers": ["BR-48", "FX-SCH-A-000050"],
+      "covers": ["BR-48"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "tax",
       "terms": ["BT-119"],
@@ -1078,14 +1129,18 @@
       "legal": null
     },
     "BR-CL-18": {
-      "ids": ["BR-CL-18", "FX-SCH-A-000179"],
-      "covers": ["BR-CL-18", "FX-SCH-A-000179"],
+      "ids": ["BR-CL-18", "FX-SCH-A-000179", "FX-SCH-A-000508", "FX-SCH-A-000587"],
+      "covers": ["BR-CL-18", "FX-SCH-A-000179", "FX-SCH-A-000508", "FX-SCH-A-000537", "FX-SCH-A-000587", "FX-SCH-A-000619"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-CL-18": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000179": ["basic-wl", "basic", "en16931"]
+        "FX-SCH-A-000179": ["basic-wl"],
+        "FX-SCH-A-000508": ["basic"],
+        "FX-SCH-A-000537": ["basic"],
+        "FX-SCH-A-000587": ["en16931"],
+        "FX-SCH-A-000619": ["en16931"]
       },
       "scope": "tax",
       "terms": ["BT-118", "BT-151"],
@@ -1096,17 +1151,14 @@
     },
     "vat-rate-positive": {
       "ids": ["BR-S-05", "BR-S-06", "BR-S-07", "BR-AF-05", "BR-AF-06", "BR-AF-07", "BR-AG-05", "BR-AG-06", "BR-AG-07"],
-      "covers": ["BR-S-05", "BR-S-06", "BR-S-07", "BR-AF-05", "BR-AF-06", "BR-AF-07", "BR-AG-05", "BR-AG-06", "BR-AG-07", "FX-SCH-A-000090", "FX-SCH-A-000092", "FX-SCH-A-000096", "FX-SCH-A-000108", "FX-SCH-A-000110", "FX-SCH-A-000114", "FX-SCH-A-000244", "FX-SCH-A-000246", "FX-SCH-A-000250"],
+      "covers": ["BR-S-05", "BR-S-06", "BR-S-07", "BR-AF-05", "BR-AF-06", "BR-AF-07", "BR-AG-05", "BR-AG-06", "BR-AG-07"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-S-05": ["basic", "en16931", "xrechnung"],
         "BR-AF-05": ["basic", "en16931", "xrechnung"],
-        "BR-AG-05": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000244": ["basic", "en16931"],
-        "FX-SCH-A-000246": ["basic", "en16931"],
-        "FX-SCH-A-000250": ["basic", "en16931"]
+        "BR-AG-05": ["basic", "en16931", "xrechnung"]
       },
       "scope": "tax",
       "terms": ["BT-152", "BT-96", "BT-103"],
@@ -1118,9 +1170,9 @@
     },
     "vat-rate-zero": {
       "ids": ["BR-Z-05", "BR-Z-06", "BR-Z-07", "BR-Z-09", "BR-E-05", "BR-E-06", "BR-E-07", "BR-E-09", "BR-AE-05", "BR-AE-06", "BR-AE-07", "BR-AE-09", "BR-IC-05", "BR-IC-06", "BR-IC-07", "BR-IC-09", "BR-G-05", "BR-G-06", "BR-G-07", "BR-G-09"],
-      "covers": ["BR-Z-05", "BR-Z-06", "BR-Z-07", "BR-Z-09", "BR-E-05", "BR-E-06", "BR-E-07", "BR-E-09", "BR-AE-05", "BR-AE-06", "BR-AE-07", "BR-AE-09", "BR-IC-05", "BR-IC-06", "BR-IC-07", "BR-IC-09", "BR-G-05", "BR-G-06", "BR-G-07", "BR-G-09", "FX-SCH-A-000055", "FX-SCH-A-000082", "FX-SCH-A-000084", "FX-SCH-A-000086", "FX-SCH-A-000088", "FX-SCH-A-000098", "FX-SCH-A-000100", "FX-SCH-A-000102", "FX-SCH-A-000104", "FX-SCH-A-000106", "FX-SCH-A-000116", "FX-SCH-A-000136", "FX-SCH-A-000138", "FX-SCH-A-000140", "FX-SCH-A-000142", "FX-SCH-A-000236", "FX-SCH-A-000238", "FX-SCH-A-000240", "FX-SCH-A-000242", "FX-SCH-A-000252"],
+      "covers": ["BR-Z-05", "BR-Z-06", "BR-Z-07", "BR-Z-09", "BR-E-05", "BR-E-06", "BR-E-07", "BR-E-09", "BR-AE-05", "BR-AE-06", "BR-AE-07", "BR-AE-09", "BR-IC-05", "BR-IC-06", "BR-IC-07", "BR-IC-09", "BR-G-05", "BR-G-06", "BR-G-07", "BR-G-09"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-Z-05": ["basic", "en16931", "xrechnung"],
@@ -1132,17 +1184,7 @@
         "BR-IC-05": ["basic", "en16931", "xrechnung"],
         "BR-IC-09": ["basic-wl"],
         "BR-G-05": ["basic", "en16931", "xrechnung"],
-        "BR-G-09": ["basic-wl"],
-        "FX-SCH-A-000055": ["basic-wl"],
-        "FX-SCH-A-000136": ["basic-wl"],
-        "FX-SCH-A-000138": ["basic-wl"],
-        "FX-SCH-A-000140": ["basic-wl"],
-        "FX-SCH-A-000142": ["basic-wl"],
-        "FX-SCH-A-000236": ["basic", "en16931"],
-        "FX-SCH-A-000238": ["basic", "en16931"],
-        "FX-SCH-A-000240": ["basic", "en16931"],
-        "FX-SCH-A-000242": ["basic", "en16931"],
-        "FX-SCH-A-000252": ["basic", "en16931"]
+        "BR-G-09": ["basic-wl"]
       },
       "scope": "tax",
       "terms": ["BT-152", "BT-96", "BT-103", "BT-119"],
@@ -1152,9 +1194,9 @@
       "legal": null
     },
     "BR-O-09": {
-      "covers": ["BR-O-09", "FX-SCH-A-000150"],
+      "covers": ["BR-O-09"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "tax",
       "terms": ["BT-119", "BT-117"],
@@ -1164,9 +1206,9 @@
       "legal": null
     },
     "BR-E-10": {
-      "covers": ["BR-E-10", "FX-SCH-A-000139"],
+      "covers": ["BR-E-10"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "tax",
       "terms": ["BT-120", "BT-121"],
@@ -1176,14 +1218,16 @@
       "legal": null
     },
     "BR-CL-22": {
-      "ids": ["BR-CL-22", "FX-SCH-A-000181"],
-      "covers": ["BR-CL-22", "FX-SCH-A-000181"],
+      "ids": ["BR-CL-22", "FX-SCH-A-000181", "FX-SCH-A-000510", "FX-SCH-A-000589"],
+      "covers": ["BR-CL-22", "FX-SCH-A-000181", "FX-SCH-A-000510", "FX-SCH-A-000589"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-CL-22": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000181": ["basic-wl", "basic", "en16931"]
+        "FX-SCH-A-000181": ["basic-wl"],
+        "FX-SCH-A-000510": ["basic"],
+        "FX-SCH-A-000589": ["en16931"]
       },
       "scope": "tax",
       "terms": ["BT-121"],
@@ -1230,9 +1274,9 @@
     },
     "vat-seller-id": {
       "ids": ["BR-S-02", "BR-S-03", "BR-S-04", "BR-Z-02", "BR-Z-03", "BR-Z-04", "BR-E-02", "BR-E-03", "BR-E-04", "BR-AE-02", "BR-AE-03", "BR-AE-04", "BR-AF-02", "BR-AF-03", "BR-AF-04", "BR-AG-02", "BR-AG-03", "BR-AG-04"],
-      "covers": ["BR-S-02", "BR-S-03", "BR-S-04", "BR-Z-02", "BR-Z-03", "BR-Z-04", "BR-E-02", "BR-E-03", "BR-E-04", "BR-AE-02", "BR-AE-03", "BR-AE-04", "BR-AF-02", "BR-AF-03", "BR-AF-04", "BR-AG-02", "BR-AG-03", "BR-AG-04", "FX-SCH-A-000081", "FX-SCH-A-000083", "FX-SCH-A-000089", "FX-SCH-A-000091", "FX-SCH-A-000095", "FX-SCH-A-000097", "FX-SCH-A-000099", "FX-SCH-A-000101", "FX-SCH-A-000107", "FX-SCH-A-000109", "FX-SCH-A-000113", "FX-SCH-A-000115", "FX-SCH-A-000235", "FX-SCH-A-000237", "FX-SCH-A-000243", "FX-SCH-A-000245", "FX-SCH-A-000249", "FX-SCH-A-000251"],
+      "covers": ["BR-S-02", "BR-S-03", "BR-S-04", "BR-Z-02", "BR-Z-03", "BR-Z-04", "BR-E-02", "BR-E-03", "BR-E-04", "BR-AE-02", "BR-AE-03", "BR-AE-04", "BR-AF-02", "BR-AF-03", "BR-AF-04", "BR-AG-02", "BR-AG-03", "BR-AG-04"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-S-02": ["basic", "en16931", "xrechnung"],
@@ -1240,13 +1284,7 @@
         "BR-E-02": ["basic", "en16931", "xrechnung"],
         "BR-AE-02": ["basic", "en16931", "xrechnung"],
         "BR-AF-02": ["basic", "en16931", "xrechnung"],
-        "BR-AG-02": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000235": ["basic", "en16931"],
-        "FX-SCH-A-000237": ["basic", "en16931"],
-        "FX-SCH-A-000243": ["basic", "en16931"],
-        "FX-SCH-A-000245": ["basic", "en16931"],
-        "FX-SCH-A-000249": ["basic", "en16931"],
-        "FX-SCH-A-000251": ["basic", "en16931"]
+        "BR-AG-02": ["basic", "en16931", "xrechnung"]
       },
       "scope": "tax",
       "terms": ["BT-31", "BT-32", "BT-63"],
@@ -1257,15 +1295,13 @@
     },
     "vat-seller-vat-id": {
       "ids": ["BR-IC-02", "BR-IC-03", "BR-IC-04", "BR-G-02", "BR-G-03", "BR-G-04"],
-      "covers": ["BR-IC-02", "BR-IC-03", "BR-IC-04", "BR-G-02", "BR-G-03", "BR-G-04", "FX-SCH-A-000085", "FX-SCH-A-000087", "FX-SCH-A-000103", "FX-SCH-A-000105", "FX-SCH-A-000239", "FX-SCH-A-000241"],
+      "covers": ["BR-IC-02", "BR-IC-03", "BR-IC-04", "BR-G-02", "BR-G-03", "BR-G-04"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-IC-02": ["basic", "en16931", "xrechnung"],
-        "BR-G-02": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000239": ["basic", "en16931"],
-        "FX-SCH-A-000241": ["basic", "en16931"]
+        "BR-G-02": ["basic", "en16931", "xrechnung"]
       },
       "scope": "tax",
       "terms": ["BT-31", "BT-63"],
@@ -1275,9 +1311,9 @@
       "legal": null
     },
     "BR-IC-11": {
-      "covers": ["BR-IC-11", "FX-SCH-A-000144"],
+      "covers": ["BR-IC-11"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "tax",
       "terms": ["BT-72", "BG-14"],
@@ -1287,9 +1323,9 @@
       "legal": null
     },
     "BR-O-11": {
-      "covers": ["BR-O-11", "FX-SCH-A-000152"],
+      "covers": ["BR-O-11"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "tax",
       "terms": ["BT-118"],
@@ -1299,9 +1335,9 @@
       "legal": null
     },
     "BR-B-01": {
-      "covers": ["BR-B-01", "FX-SCH-A-000263"],
+      "covers": ["BR-B-01"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic", "en16931", "xrechnung"],
       "scope": "tax",
       "terms": ["BT-40", "BT-55", "BT-69", "BT-80", "BT-118"],
@@ -1311,9 +1347,9 @@
       "legal": null
     },
     "BR-B-02": {
-      "covers": ["BR-B-02", "FX-SCH-A-000264"],
+      "covers": ["BR-B-02"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic", "en16931", "xrechnung"],
       "scope": "tax",
       "terms": ["BT-118"],
@@ -1325,7 +1361,7 @@
     "BR-DE-18": {
       "covers": ["BR-DE-18"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "payment",
       "terms": ["BT-20"],
@@ -1334,22 +1370,22 @@
       "summary": "The payment terms (BT-20) write every cash discount in the Skonto syntax of XRechnung, on a line of its own that a line break follows, and its base amount with 2 decimals.",
       "legal": null
     },
-    "BR-CO-25": {
-      "covers": ["BR-CO-25", "FX-SCH-A-000155"],
-      "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+    "IP-PAY-06": {
+      "covers": [],
+      "source": "IP",
+      "versions": [],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "payment",
       "terms": ["BT-9", "BT-20", "BT-115"],
       "level": "error",
       "field": "payment-goal",
-      "summary": "An invoice with an amount due (BT-115) has a payment due date (BT-9) or payment terms (BT-20).",
+      "summary": "An invoice with an amount due (BT-115) has a payment due date (BT-9) or payment terms (BT-20): BR-CO-25 of EN 16931, which the CEN Schematron 1.3.16 and Factur-X 1.09 no longer check in CII.",
       "legal": null
     },
     "BR-DE-1": {
       "covers": ["BR-DE-1"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "payment",
       "terms": ["BG-16"],
@@ -1361,7 +1397,7 @@
     "BR-DE-23-b": {
       "covers": ["BR-DE-23-b"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "payment",
       "terms": ["BT-81", "BG-17", "BG-19"],
@@ -1373,7 +1409,7 @@
     "BR-DE-24-b": {
       "covers": ["BR-DE-24-b"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "payment",
       "terms": ["BT-81", "BG-18", "BG-19"],
@@ -1386,31 +1422,19 @@
       "covers": ["CII-SR-467"],
       "source": "CII",
       "versions": ["1.3.16"],
-      "profiles": ["en16931", "xrechnung"],
+      "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "scope": "payment",
       "terms": ["BT-81"],
       "level": "error",
       "field": "bank-details, card-payment",
       "summary": "All payment means of an invoice have the same payment means code (BT-81).",
       "legal": null,
-      "note": "A rule of CEN 1.3.16 (KoSIT) only; BASIC WL and BASIC report two kinds of payment means as IP-PAY-03."
-    },
-    "IP-PAY-03": {
-      "covers": [],
-      "source": "IP",
-      "versions": [],
-      "profiles": ["basic-wl", "basic"],
-      "scope": "payment",
-      "terms": ["BT-81"],
-      "level": "error",
-      "field": "bank-details, card-payment",
-      "summary": "Two kinds of payment means in `\"basic-wl\"` or `\"basic\"`, whose validation accepts them together, e.g. `bank-details` next to `card-payment`: an invoice states one payment means (BT-81), so that the buyer does not pay twice. The other profiles report them as `CII-SR-467` (or `BR-DE-23-b`, `BR-DE-24-b`).",
-      "legal": null
+      "note": "A rule of CEN 1.3.16 and of Factur-X 1.09; XRechnung reports several payment means next to the details of a direct debit as BR-DE-23-b or BR-DE-24-b."
     },
     "BR-DE-23-a": {
       "covers": ["BR-DE-23-a"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "payment",
       "terms": ["BT-84"],
@@ -1423,31 +1447,19 @@
       "covers": ["CII-SR-470"],
       "source": "CII",
       "versions": ["1.3.16"],
-      "profiles": ["en16931"],
+      "profiles": ["basic-wl", "basic", "en16931"],
       "scope": "payment",
       "terms": ["BT-81", "BT-84"],
       "level": "error",
       "field": "bank-details.iban",
       "summary": "A credit transfer (BT-81 = 30, 58) names the account it is paid to by its IBAN or a proprietary identifier (BT-84).",
       "legal": null,
-      "note": "A rule of CEN 1.3.16 (KoSIT) only. XRechnung reports the missing account as BR-DE-23-a, BASIC WL and BASIC as IP-PAY-04."
-    },
-    "IP-PAY-04": {
-      "covers": [],
-      "source": "IP",
-      "versions": [],
-      "profiles": ["basic-wl", "basic"],
-      "scope": "payment",
-      "terms": ["BT-81", "BT-84"],
-      "level": "error",
-      "field": "bank-details.iban",
-      "summary": "A credit transfer (`paid(method: \"transfer\")`, or `bank-details` without IBAN) without the account the buyer pays to (BT-84), which EN 16931 requires (`BR-61`); the Factur-X rules of `\"basic-wl\"` and `\"basic\"` test another account, so their validation accepts it.",
-      "legal": null
+      "note": "A rule of CEN 1.3.16 and of Factur-X 1.09. XRechnung reports the missing account as BR-DE-23-a."
     },
     "BR-DE-19": {
       "covers": ["BR-DE-19"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "payment",
       "terms": ["BT-84"],
@@ -1459,7 +1471,7 @@
     "BR-DE-20": {
       "covers": ["BR-DE-20"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "payment",
       "terms": ["BT-91"],
@@ -1483,7 +1495,7 @@
     "BR-DE-25-a": {
       "covers": ["BR-DE-25-a"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "payment",
       "terms": ["BG-19"],
@@ -1495,7 +1507,7 @@
     "PEPPOL-EN16931-R061": {
       "covers": ["PEPPOL-EN16931-R061"],
       "source": "PEPPOL",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "payment",
       "terms": ["BT-89"],
@@ -1507,7 +1519,7 @@
     "BR-DE-30": {
       "covers": ["BR-DE-30"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "payment",
       "terms": ["BT-90"],
@@ -1520,7 +1532,7 @@
     "BR-DE-31": {
       "covers": ["BR-DE-31"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "payment",
       "terms": ["BT-91"],
@@ -1532,7 +1544,7 @@
     "BR-DE-24-a": {
       "covers": ["BR-DE-24-a"],
       "source": "XRECHNUNG",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "payment",
       "terms": ["BG-18"],
@@ -1542,14 +1554,16 @@
       "legal": null
     },
     "BR-CL-16": {
-      "ids": ["BR-CL-16", "FX-SCH-A-000023"],
-      "covers": ["BR-CL-16", "FX-SCH-A-000023"],
+      "ids": ["BR-CL-16", "FX-SCH-A-000489", "FX-SCH-A-000527", "FX-SCH-A-000609"],
+      "covers": ["BR-CL-16", "FX-SCH-A-000489", "FX-SCH-A-000527", "FX-SCH-A-000609"],
       "source": "EN16931",
-      "versions": ["1.3.12", "1.3.16"],
+      "versions": ["1.3.16"],
       "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
       "id-profiles": {
         "BR-CL-16": ["basic", "en16931", "xrechnung"],
-        "FX-SCH-A-000023": ["basic-wl", "basic", "en16931"]
+        "FX-SCH-A-000489": ["basic-wl"],
+        "FX-SCH-A-000527": ["basic"],
+        "FX-SCH-A-000609": ["en16931"]
       },
       "scope": "payment",
       "terms": ["BT-81"],
@@ -1609,7 +1623,7 @@
     "PEPPOL-EN16931-R120": {
       "covers": ["PEPPOL-EN16931-R120"],
       "source": "PEPPOL",
-      "versions": ["3.0", "3.0.2"],
+      "versions": ["3.0.2"],
       "profiles": ["xrechnung"],
       "scope": "line",
       "terms": ["BT-129", "BT-131", "BT-136", "BT-141", "BT-146", "BT-149"],

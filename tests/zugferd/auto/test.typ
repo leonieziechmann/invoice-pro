@@ -111,7 +111,7 @@
   with-goal: false,
   result => {
     assert.eq(result.profile.id, "en16931")
-    assert.eq(rules(result, "error"), ("BR-CO-25",))
+    assert.eq(rules(result, "error"), ("IP-PAY-06",))
     assert.eq(rules(result, "warning"), ("BR-DE-15",))
   },
 )

@@ -76,11 +76,11 @@ The tests of `invoice-pro` account for every rule of the official validators, pr
 
 | Profile   | Rule ids | Reported by invoice-pro | Checked by the tests | Excluded by construction | Cannot occur | Open |
 | :-------- | -------: | ----------------------: | -------------------: | -----------------------: | -----------: | ---: |
-| MINIMUM   |       46 |                       9 |                   37 |                        0 |            0 |    0 |
-| BASIC WL  |      196 |                      65 |                  110 |                       14 |            7 |    0 |
-| BASIC     |      851 |                      77 |                  710 |                       41 |           23 |    0 |
-| EN 16931  |      905 |                      81 |                  730 |                       54 |           40 |    0 |
-| XRechnung |      885 |                     110 |                  646 |                       62 |           67 |    0 |
+| MINIMUM   |       55 |                       9 |                   46 |                        0 |            0 |    0 |
+| BASIC WL  |      278 |                      67 |                  185 |                       15 |           11 |    0 |
+| BASIC     |      982 |                      78 |                  834 |                       39 |           31 |    0 |
+| EN 16931  |     1027 |                      80 |                  883 |                       40 |           24 |    0 |
+| XRechnung |      882 |                     109 |                  677 |                       48 |           48 |    0 |
 
 Open: none.
 
