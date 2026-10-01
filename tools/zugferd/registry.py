@@ -38,17 +38,17 @@ read it here:
 
 An entry (see tests/TESTING.md, "The Rule Registry", for its meaning):
 
-  "BR-CO-25": {
-    "ids": ["BR-CO-25"],                  # optional, default: [key]
-    "covers": ["BR-CO-25", "FX-SCH-A-000155"],
+  "BR-CL-04": {
+    "ids": ["BR-CL-04", "FX-SCH-A-000040", ..],  # optional, default: [key]
+    "covers": ["BR-CL-04", "FX-SCH-A-000040", ..],
     "source": "EN16931",                  # EN16931 FACTUR-X XRECHNUNG PEPPOL CII IP
-    "versions": ["1.3.12", "1.3.16"],     # of the source's artefacts
-    "profiles": ["basic-wl", "basic", "en16931", "xrechnung"],
+    "versions": ["1.3.16"],               # of the source's artefacts
+    "profiles": ["minimum", "basic-wl", "basic", "en16931", "xrechnung"],
     "id-profiles": {..},                  # optional, see below
-    "scope": "payment",                   # document party line tax allowance-charge payment printed
-    "terms": ["BT-9", "BT-20"],
+    "scope": "document",                  # document party line tax allowance-charge payment printed
+    "terms": ["BT-5"],
     "level": "error",                     # or ["error", "warning"]: the first is the usual one
-    "field": "payment-goal",              # the input the diagnostic names
+    "field": "currency",                  # the input the diagnostic names
     "summary": "...",                     # what it checks (the documentation of IP rules)
     "legal": null                         # the legal basis of a rule of invoice-pro
   }
@@ -515,56 +515,63 @@ def write_docs(registry, path=DOCS):
 
 
 def fx_aliases(jar_path):
-    """{official id: {Factur-X id}}: the rules of the Factur-X Schematrons
-    whose message names an official rule (e.g. FX-SCH-A-000011, "[BR-02]"),
-    and the code list rules of the Factur-X Schematron at the positions of a
-    code list rule of the CEN Schematron (e.g. FX-SCH-A-000040 at the invoice
-    currency code of BR-CL-04), as the tables of the write guard compile
-    them."""
+    """{official id: {Factur-X id: {profile}}}: the rules of the Factur-X
+    Schematrons whose message names an official rule (e.g. FX-SCH-A-000045,
+    "[BR-CO-15]"), and the code list rules of the Factur-X Schematron at the
+    positions of a code list rule of the CEN Schematron (e.g. FX-SCH-A-000595
+    at the invoice currency code of BR-CL-04 in EN 16931), as the tables of
+    the write guard compile them; each with the Factur-X profiles whose
+    Schematron has it. Since Factur-X 1.09, most of the rules that name an
+    official rule have its id (BR-02), which is no alias, and a code list
+    rule has an id of its own in each profile."""
     sys.path.insert(0, str(HERE))
     import gen_guard
 
     jar = gen_guard.Jar(jar_path)
-    out = collections.defaultdict(set)
-    for fx in ("MINIMUM", "BASIC-WL", "BASIC", "EN16931"):
+    out = collections.defaultdict(lambda: collections.defaultdict(set))
+    for fx, profile in zip(("MINIMUM", "BASIC-WL", "BASIC", "EN16931"), FACTUR_X_PROFILES):
         for rule in gen_guard.load_rules(jar, gen_guard.fx_xslt(fx), "FX", gen_guard.fx_codedb(fx)):
-            if rule.kind == "assert" and rule.business_id:
-                out[rule.business_id].add(rule.id)
-    compiler = gen_guard.load_profile(jar, "en16931", gen_guard.load_schemas(jar))
-    for pos in compiler.positions:
-        for lists in [pos.lists, pos.prefix] + [attr.lists for attr in pos.attrs.values()]:
-            cen = {c.rule for c in lists if c.source == "CEN"}
-            fx = {c.rule for c in lists if c.source == "FX" and c.rule.startswith("FX-")}
-            for rule in cen:
-                out[rule] |= fx
-    return {rule: aliases for rule, aliases in out.items() if aliases}
+            if rule.kind == "assert" and rule.business_id and rule.id != rule.business_id:
+                out[rule.business_id][rule.id].add(profile)
+    schemas = gen_guard.load_schemas(jar)
+    # The profiles with both a Factur-X and a CEN Schematron.
+    for profile in ("basic", "en16931"):
+        compiler = gen_guard.load_profile(jar, profile, schemas)
+        for pos in compiler.positions:
+            for lists in [pos.lists, pos.prefix] + [attr.lists for attr in pos.attrs.values()]:
+                cen = {c.rule for c in lists if c.source == "CEN"}
+                fx = {c.rule for c in lists if c.source == "FX" and c.rule.startswith("FX-")}
+                for rule in cen:
+                    for alias in fx:
+                        out[rule][alias].add(profile)
+    return {rule: {a: frozenset(p) for a, p in aliases.items()} for rule, aliases in out.items() if aliases}
 
 
 def alias_problems(registry, aliases):
     """Entries whose `covers` lacks a Factur-X alias of an official rule it
-    covers in a Factur-X profile, or names one of no rule it covers; and
-    aliases that do not count in the Factur-X profiles of the rules they
-    implement (`id-profiles`). A rule of the Factur-X Schematron that the
-    entry reports itself (in `ids`, e.g. the code list rule FX-SCH-A-000040
-    of MINIMUM and BASIC WL) needs no rule it implements."""
+    covers in a Factur-X profile of the alias, or names one of no rule it
+    covers; and aliases that do not count in the profiles in which they
+    implement a rule the entry covers (`id-profiles`). A rule of the Factur-X
+    Schematron that the entry reports itself (in `ids`, e.g. the code list
+    rule FX-SCH-A-000040 of MINIMUM) needs no rule it implements."""
     out = []
-    fx_profiles = set(FACTUR_X_PROFILES)
     for key, entry in registry["rules"].items():
         covers = set(entry["covers"])
         official = {r for r in covers if not r.startswith("FX-")}
-        wanted = set()
+        wanted = {}
         for rule in official:
-            if fx_profiles & set(profiles_of(entry, rule)):
-                wanted |= aliases.get(rule, set())
+            for alias, where in aliases.get(rule, {}).items():
+                profiles = where & set(profiles_of(entry, rule))
+                if profiles:
+                    wanted.setdefault(alias, set()).update(profiles)
         named = {r for r in covers if r.startswith("FX-")}
         reported = set(ids(key, entry))
-        for rule in sorted(wanted - named):
+        for rule in sorted(set(wanted) - named):
             out.append(f"rules.{key}.covers: lacks the Factur-X alias {rule}")
-        for rule in sorted(named - wanted - reported):
+        for rule in sorted(named - set(wanted) - reported):
             out.append(f"rules.{key}.covers: {rule} is no Factur-X alias of a rule it covers")
-        for rule in sorted(named & wanted - reported):
-            owners = [o for o in official if rule in aliases.get(o, set())]
-            expected = [p for p in FACTUR_X_PROFILES if any(p in profiles_of(entry, o) for o in owners)]
+        for rule in sorted(named & set(wanted) - reported):
+            expected = [p for p in FACTUR_X_PROFILES if p in wanted[rule]]
             if profiles_of(entry, rule) != expected:
                 out.append(f"rules.{key}.id-profiles: the alias {rule} counts in {profiles_of(entry, rule)}, "
                            f"the rules it implements in {expected}")
@@ -576,7 +583,7 @@ def main(argv=None):
     ap.add_argument("--check", action="store_true", help="check the registry, the rule modules and the documentation")
     ap.add_argument("--format", action="store_true", help="rewrite registry.json in the layout of `dump`")
     ap.add_argument("--write-docs", action="store_true", help="rewrite the table of the rules in the documentation")
-    ap.add_argument("--jar", default=os.environ.get("MUSTANG_JAR"), help="Mustang-CLI-2.14.0.jar, for the aliases")
+    ap.add_argument("--jar", default=os.environ.get("MUSTANG_JAR"), help="Mustang-CLI-2.26.0.jar, for the aliases")
     args = ap.parse_args(argv)
     try:
         registry = load()

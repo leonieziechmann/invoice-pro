@@ -26,13 +26,28 @@
   country: country.ch,
 )
 
-// --- 1. IPSI (M) needs a rate above 0% (BR-AG-05), also on document level
-// allowances and charges (BR-AG-06, BR-AG-07) ---
+// --- 1. IPSI (M) needs a rate of 0% or above (BR-AG-05; above 0% until the
+// CEN Schematron 1.3.16), also on document level allowances and charges
+// (BR-AG-06, BR-AG-07) ---
 #model-test(tax: tax.special.ceuta-melilla(0%), model => {
+  assert.eq(rules(model), ())
+  let m = model
+  m.profile = resolve-profile("basic-wl", "FR")
+  assert.eq(rules(m), ())
+})[
+  #line-items[
+    #item([Leistung], price: 100)
+    #discount([Rabatt], amount: 5%)
+  ]
+  #payment-goal(days: 14)
+  #bank
+]
+
+#model-test(tax: tax.special.ceuta-melilla(-1%), model => {
   assert.eq(rules(model), ("BR-AG-05",))
   assert.eq(
     diagnostic(model, "BR-AG-05").message,
-    "The IPSI category (M) needs a rate above 0%.",
+    "The IPSI category (M) needs a rate of 0% or above.",
   )
   // BASIC WL has no lines, but the rule of allowances applies
   let m = model

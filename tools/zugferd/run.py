@@ -563,7 +563,7 @@ class Checker:
 
     def describe(self):
         """The official validators of this run, for the report."""
-        parts = ["XSD (Factur-X 1.0.07)" if self.schemas else "no XSD"]
+        parts = ["XSD (Factur-X 1.09.2)" if self.schemas else "no XSD"]
         if self.mustang:
             parts.append(f"Mustang {self.mustang_version or '(unknown version)'}")
         if self.kosit:
@@ -627,6 +627,7 @@ class Checker:
                 "valid": m["status"] == "valid" and not m["errors"],
                 "rules": sorted(m["errors"]),
                 "warned": sorted({w.split(":")[0] for w in m["warnings"]}),
+                "informed": sorted(m.get("notices", ())),
             }
         k = res.get("kosit")
         if k:

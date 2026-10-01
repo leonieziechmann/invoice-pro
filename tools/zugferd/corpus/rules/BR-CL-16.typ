@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID BR-CL-16
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // A payment means code (BT-81) outside UNTDID 4461.
 

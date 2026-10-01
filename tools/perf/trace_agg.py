@@ -57,12 +57,15 @@ def event_key(event):
     """`func call /src/x.typ:12` for code spans, the span name otherwise."""
     if event["name"] in CODE_SPANS:
         args = event.get("args") or {}
-        return f'{event["name"]} {args.get("file")}:{args.get("line")}'
+        file = _file(event) or None
+        return f'{event["name"]} {file}:{args.get("line")}'
     return event["name"]
 
 
 def _file(event):
-    return (event.get("args") or {}).get("file") or ""
+    """The file of a code span. Typst 0.15 quotes the path (`"/src/x.typ"`,
+    `@preview/loom:0.1.1"/src/lib.typ"`), Typst 0.14 did not."""
+    return ((event.get("args") or {}).get("file") or "").replace('"', "")
 
 
 def aggregate(events, prefix=EINVOICE_PREFIX):

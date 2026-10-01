@@ -5,7 +5,7 @@ test oracle (tools/zugferd/guard/), and of the code lists of the validator
   python3 -m unittest discover -s tools/zugferd -p 'test_*.py'
 
 The tests of the parts run on small synthetic schemas and rules and need
-only lxml. With the Mustang CLI jar 2.14.0 ($MUSTANG_JAR) and the KoSIT
+only lxml. With the Mustang CLI jar 2.26.0 ($MUSTANG_JAR) and the KoSIT
 XRechnung configuration ($KOSIT_CONFIG), the files are also regenerated:
 they must equal the committed ones (drift test), come out the same twice,
 and stay within their size budgets.
@@ -70,7 +70,7 @@ def jar(members):
 
 def schema(ram_body=DOCUMENT, root=ROOT, **kwargs):
     return g.Schema(
-        jar({"schema/ZF_230/T/rsm.xsd": root, "schema/ZF_230/T/ram.xsd": xsd(RAM, ram_body, **kwargs)}),
+        jar({"schema/ZF_250/T/rsm.xsd": root, "schema/ZF_250/T/ram.xsd": xsd(RAM, ram_body, **kwargs)}),
         "T",
     )
 
@@ -194,7 +194,7 @@ class SchemaSubset(unittest.TestCase):
             g.Jar(path).read(name)
         self.assertIn("is not the pinned artefact", str(caught.exception))
         with self.assertRaises(g.GenError):
-            g.Jar(path).read("schema/ZF_230/missing.xsd")
+            g.Jar(path).read("schema/ZF_250/missing.xsd")
 
 
 class RuleCompiler(unittest.TestCase):
@@ -695,16 +695,17 @@ class ListsOutput(unittest.TestCase):
 
 class ValidatorLists(unittest.TestCase):
     """The lists of the validator per profile (VALIDATOR_LISTS), from the
-    code lists at a position of each profile: Factur-X (FX), CEN 1.3.12 and
+    code lists at a position of each profile: Factur-X (FX), CEN 1.3.16 (Mustang) and
     CEN 1.3.16 (newest)."""
 
     PATH = "rsm:X/ram:Code"
 
     def lists(self, fx, cen, newest, factur_x=False, every_only=False, own=None, name="x",
               newest_xrechnung_only=False):
-        """`own`: the Factur-X list of MINIMUM and BASIC WL, if not `fx`;
-        `newest_xrechnung_only`: BASIC and EN 16931 do not apply the newest
-        CEN list (as for the currencies, NEWEST_XRECHNUNG_ONLY)."""
+        """`own`: the Factur-X list of MINIMUM, BASIC WL and BASIC (whose
+        validation applies it alone), if not `fx`; `newest_xrechnung_only`:
+        EN 16931 does not apply the newest CEN list (as for the currencies,
+        NEWEST_XRECHNUNG_ONLY)."""
         fx, cen, newest = frozenset(fx), frozenset(cen), frozenset(newest)
         lists = {
             "fx": g.CodeList(fx, "FX-1", "FX"),
@@ -715,7 +716,7 @@ class ValidatorLists(unittest.TestCase):
         applied = {
             "minimum": ["own"],
             "basic-wl": ["own"],
-            "basic": ["fx", "cen"] if newest_xrechnung_only else ["fx", "cen", "newest"],
+            "basic": ["own"],
             "en16931": ["fx", "cen"] if newest_xrechnung_only else ["fx", "cen", "newest"],
             "xrechnung": ["cen", "newest"],
         }
@@ -764,14 +765,14 @@ class ValidatorLists(unittest.TestCase):
             "newer": ["N"],
             "withdrawn": ["W"],
         })
-        # MINIMUM and BASIC WL may accept the Factur-X list as it is.
+        # MINIMUM, BASIC WL and BASIC may accept the Factur-X list as it is.
         entry = self.lists(fx="ABWX", cen="ABCW", newest="ABCN", factur_x=True)
         self.assertEqual(entry["factur-x"], "list-ABWX")
         # The list of XRechnung is stated only where it is not `every`.
         entry = self.lists(fx="ABW", cen="ABW", newest="AB")
         self.assertEqual(entry, {"every": "list-AB", "withdrawn": ["W"]})
         self.assertEqual(self.lists(fx="AB", cen="AB", newest="AB", every_only=True), {"every": "list-AB"})
-        # The currencies: BASIC and EN 16931 accept the withdrawn W, which
+        # The currencies: EN 16931 accepts the withdrawn W, which
         # only XRechnung checks with the newest list; `every` is of no
         # position then, but it names the codes every profile accepts.
         entry = self.lists(fx="ABW", cen="ABCW", newest="ABCN", factur_x=True, name="currency",
@@ -785,7 +786,7 @@ class ValidatorLists(unittest.TestCase):
         })
 
     def test_lists_the_validator_cannot_use(self):
-        # Without `factur-x`, MINIMUM and BASIC WL accept `every`: a code of
+        # Without `factur-x`, MINIMUM, BASIC WL and BASIC accept `every`: a code of
         # their list beyond it and the withdrawn codes fails, and so does a
         # withdrawn code their list lacks (it would not be IP-CODE-01).
         with self.assertRaises(g.GenError) as caught:
@@ -804,7 +805,7 @@ class ValidatorLists(unittest.TestCase):
         with self.assertRaises(g.GenError) as caught:
             self.lists(fx="ABX", cen="ABX", newest="ABX", factur_x=True, own="AB")
         self.assertIn("lacks codes of `every`", str(caught.exception))
-        # Only a withdrawn currency may be accepted in BASIC and EN 16931
+        # Only a withdrawn currency may be accepted in EN 16931
         # beyond `every`: the validator warns of it as IP-CODE-01.
         with self.assertRaises(g.GenError) as caught:
             self.lists(fx="ABW", cen="ABCW", newest="ABCN", factur_x=True, newest_xrechnung_only=True)
@@ -831,7 +832,7 @@ KOSIT = os.environ.get("KOSIT_CONFIG")
 
 @unittest.skipUnless(
     JAR and Path(JAR).is_file() and KOSIT and Path(KOSIT).is_dir(),
-    "needs the Mustang CLI jar 2.14.0 ($MUSTANG_JAR) and the KoSIT XRechnung configuration ($KOSIT_CONFIG)",
+    "needs the Mustang CLI jar 2.26.0 ($MUSTANG_JAR) and the KoSIT XRechnung configuration ($KOSIT_CONFIG)",
 )
 class Tables(unittest.TestCase):
     """The committed tables and code lists are the generator's (the drift
@@ -903,38 +904,47 @@ class Tables(unittest.TestCase):
             self.assertIn("never writes", str(caught.exception))
 
     def test_codes_withdrawn_from_the_newest_lists(self):
-        # The code lists of the validator hold what every validation accepts:
-        # the currencies and the scheme the CEN Schematron 1.3.16 withdrew
-        # are missing from `every`, which the profiles based on EN 16931
-        # apply, and the codes only it has are `newer`. `every` is written in
-        # full, `factur-x` and `xrechnung` as the codes beyond it.
+        # The code lists of the validator hold what every validation accepts.
+        # Mustang 2.26.0 and KoSIT apply the same CEN Schematron (1.3.16), so
+        # no code is `newer` or `withdrawn`: the currencies the CEN list
+        # withdrew (e.g. BGN) are missing from `every` and from the Factur-X
+        # 1.09.2 list, and its new ones (e.g. XCG) are in `every`. `every` is
+        # written in full, `factur-x` and `xrechnung` as the codes beyond it.
         data = json.loads((self.fresh / "code-lists.json").read_text(encoding="utf-8"))
 
         def codes(lines):
             return set(" ".join(lines).split())
 
         currency = data["currency"]
-        self.assertEqual(currency["newer"], ["CNH VED XCG ZWG"])
         every = codes(currency["every"])
         factur_x = codes(currency["factur-x"])
-        for code in ("ANG", "BGN", "CUC", "HRK", "MRU", "STN", "UYW", "VES", "ZWL"):
-            self.assertNotIn(code, every)
-            self.assertIn(code, factur_x)
-        self.assertIn("EUR", every)
-        self.assertIn("0231 0232", " ".join(data["icd"]["newer"]))
-        # The withdrawn codes, which the validator names as such, and the
-        # lists of XRechnung, which lack no code of both CEN lists (e.g. the
+        for name, entry in data.items():
+            if isinstance(entry, dict) and name != "fx-rules":
+                self.assertNotIn("newer", entry, name)
+                self.assertNotIn("withdrawn", entry, name)
+        for code in ("ANG", "BGN", "CUC", "HRK", "ZWL"):
+            self.assertNotIn(code, every | factur_x)
+        for code in ("EUR", "XCG", "ZWG"):
+            self.assertIn(code, every)
+        # A currency only the Factur-X list has (MINIMUM, BASIC WL), and the
+        # lists of XRechnung, which lack no code of the CEN lists (e.g. the
         # scheme 0219, which the Factur-X list lacks).
-        self.assertEqual(currency["withdrawn"], ["ANG BGN CUC HRK MRO VEF ZWL"])
-        self.assertEqual(data["eas"]["withdrawn"], ["9901"])
+        self.assertEqual(factur_x, {"STN"})
         self.assertIn("0219", codes(data["eas"]["xrechnung"]))
+        self.assertIn("0241", codes(data["icd"]["xrechnung"]))
+        # The Factur-X rule of a code list position, one per profile.
+        self.assertEqual(
+            data["fx-rules"]["currency"],
+            ["FX-SCH-A-000040", "FX-SCH-A-000464", "FX-SCH-A-000514", "FX-SCH-A-000595"],
+        )
+        self.assertEqual(data["fx-rules"]["country/buyer"][0], None)
         self.assertNotIn("0219", codes(data["eas"]["every"]))
         # `every` with the codes beyond it is a list of the tables of the
         # guard (lists.json): the validator accepts the codes the guard does.
         lists = json.loads((self.fresh / "lists.json").read_text(encoding="utf-8"))["lists"]
         tables = {frozenset(codes(lines)) for lines in lists.values()}
         for name, kinds in data.items():
-            if name == "generated":
+            if name in ("generated", "fx-rules"):
                 continue
             every = codes(kinds["every"])
             for kind in ("factur-x", "xrechnung"):
@@ -947,7 +957,9 @@ class Tables(unittest.TestCase):
             for d, rules in info["dispositions"].items()
             for r in rules
         }
-        self.assertEqual(disposition[("xrechnung", "BR-DE-21")], "compiled")
+        # BR-DE-21 is a warning of the XRechnung Schematron, which Mustang
+        # 2.26.0 reports as such: left to the validators.
+        self.assertEqual(disposition[("xrechnung", "BR-DE-21")], "warning")
         self.assertEqual(disposition[("xrechnung", "PEPPOL-EN16931-R053")], "compiled")
 
 

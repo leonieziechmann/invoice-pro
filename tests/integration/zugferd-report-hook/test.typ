@@ -7,7 +7,7 @@
 #import "/src/lib.typ": *
 
 // An e-invoice with errors: the invoice number (BR-02) and the payment terms
-// (BR-CO-25) are missing. With `warnings-only`, they are given and the only
+// (IP-PAY-06) are missing. With `warnings-only`, they are given and the only
 // problem is a warning: the sender has a key the e-invoice does not read
 // (IP-KEY-01).
 #let test-invoice(theme, warnings-only: false) = invoice(
@@ -71,7 +71,7 @@
       message: "Unexpected error: " + repr(message),
     )
     assert(message.contains("[BR-02]"), message: message)
-    assert(message.contains("[BR-CO-25]"), message: message)
+    assert(message.contains("[IP-PAY-06]"), message: message)
   }
 }
 
@@ -103,14 +103,14 @@
 
   // Other values are shown as they would be in markup
   assert(
-    dictionary.contains("(rules: (\\\"BR-02\\\", \\\"BR-CO-25\\\"))"),
+    dictionary.contains("(rules: (\\\"BR-02\\\", \\\"IP-PAY-06\\\"))"),
     message: dictionary,
   )
   assert(string.contains("2 problems"), message: string)
 
   // The default report
   assert(default.contains("[BR-02]"), message: default)
-  assert(default.contains("[BR-CO-25]"), message: default)
+  assert(default.contains("[IP-PAY-06]"), message: default)
   assert(warnings.contains("[IP-KEY-01]"), message: warnings)
   assert(not warnings.contains("[BR-02]"), message: warnings)
 }

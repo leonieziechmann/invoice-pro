@@ -9,7 +9,7 @@
 #
 # Needs Python 3.11+ with lxml and pypdf ($PYTHON, default python3), Typst
 # ($TYPST_BIN, default typst), a JDK ($JAVA_BIN/$JAVAC_BIN or $JAVA_HOME,
-# default java/javac) and the Mustang CLI jar 2.14.0 ($MUSTANG_JAR). The Nix
+# default java/javac) and the Mustang CLI jar 2.26.0 ($MUSTANG_JAR). The Nix
 # app `nix run .#zugferd-xmp` provides all of them.
 set -euo pipefail
 

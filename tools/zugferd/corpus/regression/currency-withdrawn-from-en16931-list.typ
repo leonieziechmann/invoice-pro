@@ -1,14 +1,10 @@
-// expect: WARNED
-// warns: IP-CODE-01
+// expect: AGREE_INVALID BR-CL-04
 // finding: core-codelists-cen
 //
-// The code list of the EN 16931 Schematron 1.3.16 (KoSIT) has withdrawn the
-// Bulgarian lev (BGN): Bulgaria pays in euro since 2026. KoSIT rejects an
-// EN 16931 invoice in BGN (BR-CL-03, BR-CL-04), while Mustang, with the
-// Factur-X list and the older EN 16931 list, accepts it
-// (tools/zugferd/validator-differences.toml). invoice-pro accepted it without
-// a report; as the maintainer decided, it allows the currency where the
-// Factur-X validation accepts it, with a warning (IP-CODE-01).
+// The Bulgarian lev (BGN), which the ISO 4217 lists have withdrawn (Bulgaria
+// pays in euro since 2026), in EN 16931: KoSIT rejects it (BR-CL-03,
+// BR-CL-04), and so does Mustang 2.26.0 with the Factur-X 1.09 list
+// (Mustang 2.14.0 accepted it, so invoice-pro only warned, IP-CODE-01).
 
 #import "_base.typ": *
 

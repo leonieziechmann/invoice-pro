@@ -1,5 +1,5 @@
-// expect: AGREE_INVALID FX-SCH-A-000031
-// profiles: basic-wl basic en16931
+// expect: AGREE_INVALID FX-SCH-A-000498
+// profiles: basic
 //
 // A buyer electronic address (BT-49) with the scheme 0219, which the EAS code
 // lists of EN 16931 have, but the one of Factur-X does not: only its
@@ -10,10 +10,10 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: fixture-profile("en16931"),
+  zugferd: fixture-profile("basic"),
   sender: seller-de,
   recipient: buyer-fr + (electronic-address: (scheme: "0219", id: "4711")),
-  invoice-nr: "FX-SCH-A-000031--0219",
+  invoice-nr: "FX-SCH-A-000498--0219",
 )
 
 #line-items[

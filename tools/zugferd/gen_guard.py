@@ -10,38 +10,44 @@ checks every element of an e-invoice: that the profile's XSD knows it at
 this position, in this order and number, that the profile does not mark it
 as not used, and that its codes and lexical values satisfy the official code
 lists and formats that apply at this position in this profile. This script compiles those constraints from
-the pinned official artefacts inside the Mustang CLI jar 2.14.0 ($MUSTANG_JAR
+the pinned official artefacts inside the Mustang CLI jar 2.26.0 ($MUSTANG_JAR
 or --jar; read with zipfile, nothing is vendored):
 
-  schema/ZF_230/<P>/*.xsd                                Factur-X 1.0.07 XSD
-  xslt/ZF_230/FACTUR-X_<P>.xslt, FACTUR-X_<P>_codedb.xml Factur-X Schematron
-  xslt/cii16931schematron/EN16931-CII-validation.xslt    CEN EN 16931 (CII) 1.3.12
-  xslt/XR_30/XRechnung-CII-validation.xslt               XRechnung 3.0 (CII)
+  schema/ZF_250/<P>/*.xsd                                Factur-X 1.09.2 XSD
+  xslt/ZF_250/FACTUR-X_<P>.xslt, FACTUR-X_<P>_codedb.xml Factur-X Schematron
+  xslt/en16931schematron/EN16931-CII-validation.xslt     CEN EN 16931 (CII) 1.3.16
+  xslt/XR_30/XRechnung-CII-validation.xslt               XRechnung 3.0.2 (CII)
 
 and from the unpacked XRechnung configuration of the KoSIT validator
 ($KOSIT_CONFIG or --kosit-config, configuration 2026-08-31, also pinned):
 
   resources/cii/16b/xsl/EN16931-CII-validation.xsl       CEN EN 16931 (CII) 1.3.16
 
-Which artefacts apply to which profile mirrors Mustang's validator: the
+Which artefacts apply to which profile mirrors the official validators: the
 Factur-X Schematron of the profile for MINIMUM, BASIC WL, BASIC and
-EN 16931; the CEN Schematron for BASIC, EN 16931 and XRechnung; the
-XRechnung Schematron for XRechnung, which uses the EN 16931 XSD. Every failed
-assertion counts, whatever its flag: Mustang reports the warnings of these
-Schematrons as errors too. The reports of the Factur-X Schematron mark
+EN 16931 (Mustang); the CEN Schematron for EN 16931 (KoSIT; Mustang 2.26.0
+applies it to XRechnung only, as the Factur-X 1.09 Schematron states the
+business rules itself) and XRechnung (both); the XRechnung Schematron for
+XRechnung, which uses the EN 16931 XSD. No validator applies the CEN
+Schematron to BASIC (KoSIT has no scenario for it). An assertion
+counts unless its flag is `warning` or `information`: Mustang 2.26.0 reports
+those as warnings and accepts the invoice (Mustang 2.14.0 still reported them as
+errors), and so does KoSIT, so the tables leave them to the validators
+(disposition `warning`). The reports of the Factur-X Schematron mark
 elements and attributes as not used in a profile; Mustang ignores them, the
 guard does not, since they define the profile.
 
-The KoSIT validator applies a newer CEN Schematron (1.3.16) to EN 16931 and
-XRechnung documents, whose code lists have withdrawn codes that the older
-lists still have (e.g. the currencies BGN and HRK, the scheme 9901) and added
-new ones. Its code list rules join the CEN rules of the profiles with the
-CEN Schematron (see `load_cen_code_lists`): a code at such a position must be
-in the lists of both versions, but for a currency outside XRechnung, which
-is allowed where the Factur-X validation accepts it (NEWEST_XRECHNUNG_ONLY).
-Everything else of CEN 1.3.16 is left to the corpus, which runs KoSIT. There
-is no fallback without the configuration: the tables would silently accept
-the withdrawn codes.
+The KoSIT validator applies its own copy of the CEN Schematron to EN 16931
+and XRechnung documents. With Mustang 2.26.0 both are version 1.3.16, but
+KoSIT's may again be newer than Mustang's, with codes withdrawn from the
+older lists (as the currencies BGN and HRK and the scheme 9901 were from
+1.3.12) and new ones added. Its code list rules join the CEN rules of the
+profiles with the CEN Schematron (see `load_cen_code_lists`): a code at such
+a position must be in the lists of both copies, but for a currency outside
+XRechnung, which is allowed where the Factur-X validation accepts it
+(NEWEST_XRECHNUNG_ONLY). Everything else of KoSIT's CEN Schematron is left to
+the corpus, which runs KoSIT. There is no fallback without the
+configuration: the tables would silently accept withdrawn codes.
 
 Global variables and parameters of the XRechnung Schematron that stand for
 a literal (e.g. $XR-CIUS-ID) or a path (e.g. $documentCurrencyCode) are
@@ -129,56 +135,61 @@ PROFILES = {
     # profile: (XSD directory, Factur-X Schematron, CEN Schematron, XRechnung Schematron)
     "minimum": ("MINIMUM", "MINIMUM", False, False),
     "basic-wl": ("BASIC-WL", "BASIC-WL", False, False),
-    "basic": ("BASIC", "BASIC", True, False),
+    "basic": ("BASIC", "BASIC", False, False),
     "en16931": ("EN16931", "EN16931", True, False),
     "xrechnung": ("EN16931", None, True, True),
 }
-CEN_XSLT = "xslt/cii16931schematron/EN16931-CII-validation.xslt"
+# The Factur-X directory of the XSDs and XSLTs inside the Mustang jar.
+FX_DIR = "ZF_250"
+CEN_XSLT = "xslt/en16931schematron/EN16931-CII-validation.xslt"
+# The profiles to which Mustang applies the CEN Schematron itself; the tables
+# apply it to EN 16931 as KoSIT does (see PROFILES).
+MUSTANG_CEN = frozenset({"xrechnung"})
 XR_XSLT = "xslt/XR_30/XRechnung-CII-validation.xslt"
 
 # SHA-256 of every artefact the tables are compiled from, as found in
-# Mustang-CLI-2.14.0.jar. Another jar fails instead of silently changing the
+# Mustang-CLI-2.26.0.jar. Another jar fails instead of silently changing the
 # tables; updating a pin is a deliberate change that regenerates them.
-_Z = "schema/ZF_230/"
+_Z = f"schema/{FX_DIR}/"
 _Q = "urn_un_unece_uncefact_data_standard_QualifiedDataType_100.xsd"
 _R = "urn_un_unece_uncefact_data_standard_ReusableAggregateBusinessInformationEntity_100.xsd"
 _U = "urn_un_unece_uncefact_data_standard_UnqualifiedDataType_100.xsd"
 PINS = {
-    f"{_Z}BASIC-WL/FACTUR-X_BASIC-WL.xsd": "3e32e564c4a7ccbe0e0949f2bb442fd1aa94e74adfa31b52c2d48bab7782ca0f",
-    f"{_Z}BASIC-WL/FACTUR-X_BASIC-WL_{_Q}": "fd6958ad55567fbffb127b62b80d9cc76039a6f90315b81cba890646b824743f",
-    f"{_Z}BASIC-WL/FACTUR-X_BASIC-WL_{_R}": "aacc882f2b85899befcc3fb8a102237b5db01ce17fe7cf4f8dab6660f3f8062f",
-    f"{_Z}BASIC-WL/FACTUR-X_BASIC-WL_{_U}": "39d6b276050cf832b7584c60364ff83b75b834c4026481569633f7a536846f92",
+    f"{_Z}BASIC-WL/FACTUR-X_BASICWL.xsd": "251fd17722266ea6aead1ef5c5881f97ca87cc6182abcb72fdf6acb2246725e0",
+    f"{_Z}BASIC-WL/FACTUR-X_BASICWL_{_Q}": "fd6958ad55567fbffb127b62b80d9cc76039a6f90315b81cba890646b824743f",
+    f"{_Z}BASIC-WL/FACTUR-X_BASICWL_{_R}": "91e3a2e8d7931f0c3f790df01bc4a1760dd3b1b630184cb0db128ae9bec4d2d7",
+    f"{_Z}BASIC-WL/FACTUR-X_BASICWL_{_U}": "412f67846ce8d9af2c83e55b83a9aed8d56a0939135a38a61fbe641b3dd99814",
     f"{_Z}BASIC/FACTUR-X_BASIC.xsd": "1335ce8d9311fd88d68c713c3bd441cd0fb036fe7d94c9d3267b9fb4c16733f3",
     f"{_Z}BASIC/FACTUR-X_BASIC_{_Q}": "fd6958ad55567fbffb127b62b80d9cc76039a6f90315b81cba890646b824743f",
-    f"{_Z}BASIC/FACTUR-X_BASIC_{_R}": "95d0ca2935ed945b38375dde74423ce5a8cbc5e665fa4b58f40124dbbe9a39e0",
-    f"{_Z}BASIC/FACTUR-X_BASIC_{_U}": "1f3b93a872982282fce05893e15f7eb1ed2501fe73fc520c7623bfe98d53056a",
+    f"{_Z}BASIC/FACTUR-X_BASIC_{_R}": "b1695d72a47f21b73cb6b9b65f1d77cae8d311a18f20288608b5a92ffd381a32",
+    f"{_Z}BASIC/FACTUR-X_BASIC_{_U}": "0386218417686704266ee06991ab0312d46317757a87378246593c328bc64fd6",
     f"{_Z}EN16931/FACTUR-X_EN16931.xsd": "34e51a9b26c95ef6e09297051b9921a05279a4024e659f236ba5d5e0f5a23bec",
     f"{_Z}EN16931/FACTUR-X_EN16931_{_Q}": "5a3ce756cfa8d4f2ff3165d68123cfb7fbf3c7b64664edb0de38cca64d5c413b",
-    f"{_Z}EN16931/FACTUR-X_EN16931_{_R}": "d39f7671991005a14d1422ca870663857350d586d95479504d1ba53ef7e95ee0",
-    f"{_Z}EN16931/FACTUR-X_EN16931_{_U}": "9590182879865144dfc6ae069ef7499defaa7d31cb62e30ccacf9146ace5306d",
+    f"{_Z}EN16931/FACTUR-X_EN16931_{_R}": "4a091d4339eddab30f6f5d29364ca2297607d72f03af7da2786637f08bdb3cf7",
+    f"{_Z}EN16931/FACTUR-X_EN16931_{_U}": "f87a1b78d2b7177955957002f8c2a7917e326038d38803f875266cc7579ea857",
     f"{_Z}MINIMUM/FACTUR-X_MINIMUM.xsd": "f757df8498471c5813ea44e73cfa394a6229aba7e2961d0f26c380aab4e6b81d",
     f"{_Z}MINIMUM/FACTUR-X_MINIMUM_{_Q}": "7830de0041e47dd035fb482d369414422768ff215a3cf668f9fa83f720cec2cc",
-    f"{_Z}MINIMUM/FACTUR-X_MINIMUM_{_R}": "7afe6bac0e2a2b52bc36ef650b1ae1d8600b8d430e0a1258830f4b64d90c90c9",
-    f"{_Z}MINIMUM/FACTUR-X_MINIMUM_{_U}": "ea823ec1acb7cbe28690b2176d3f9ca8cc2d7d795303879252100a82758b01a0",
-    "xslt/XR_30/XRechnung-CII-validation.xslt": "9fa88a9f8f8a80489987aa0facc7047658bb3b2b882214e32241ecfc837d0e96",
-    "xslt/ZF_230/FACTUR-X_BASIC-WL.xslt": "dc36319c73cfde6ec135acbc8f49165d74f4deeff6d11c116597ec655468e82e",
-    "xslt/ZF_230/FACTUR-X_BASIC-WL_codedb.xml": "9dda0b5e9bf9016b7e684ddc023ac440184bf469767a7a22032c7362ebc33935",
-    "xslt/ZF_230/FACTUR-X_BASIC.xslt": "05ab01cd050b338dfafba3a7beeaa9d10594a44df826457556ac8c8c91a5c2eb",
-    "xslt/ZF_230/FACTUR-X_BASIC_codedb.xml": "8cf66b158e05344206bf99431c055fa02280ce5ec83bfb8883e15eb3f112534b",
-    "xslt/ZF_230/FACTUR-X_EN16931.xslt": "9f97895482aa1744361129d1a91861de20850ec51f1ae1e4ab424db0d61d830f",
-    "xslt/ZF_230/FACTUR-X_EN16931_codedb.xml": "5f2dde09df57bb0c0179168b5c374ade056921b47f582ecc54e516a7cb8914cb",
-    "xslt/ZF_230/FACTUR-X_MINIMUM.xslt": "a9fe19121ff10eb1e15ec8b7de513b6ea8fa9afc8071707b6876fb60a48816dd",
-    "xslt/ZF_230/FACTUR-X_MINIMUM_codedb.xml": "8b9afcb6fe8b69b4086963b341274fe4f581f8d7c8358d5bf7944a5cd3209d9a",
-    "xslt/cii16931schematron/EN16931-CII-validation.xslt": "02136fe6138737cd3be63a7ec7f7604c1b716df1899301e575f7018972444be8",
+    f"{_Z}MINIMUM/FACTUR-X_MINIMUM_{_R}": "a038d5fb57df4fa4e6461e96aa7710c89d9baef8a44f91cac3ea4c55c018572a",
+    f"{_Z}MINIMUM/FACTUR-X_MINIMUM_{_U}": "06d4245cc75927b3cf016fae8162249c95167158ed2e512dc63d6e7e5c89fed3",
+    "xslt/XR_30/XRechnung-CII-validation.xslt": "282c7e02a1a0332d17f0ab38a3778c9788012fb57cd379dfe96bb45047bce603",
+    f"xslt/{FX_DIR}/FACTUR-X_BASIC-WL.xslt": "5f6f8961a9125595075a6652ca34839afaf1f8895715df99638a162efd97971e",
+    f"xslt/{FX_DIR}/FACTUR-X_BASIC-WL_codedb.xml": "cdcec2f2449d2272bc2af8dbea97de9dff0da340b1ae4d2586ce2e5b040881d8",
+    f"xslt/{FX_DIR}/FACTUR-X_BASIC.xslt": "372cfdef6e429332dd0f43cccfc119af276dd657359e18489b08222c514ce3aa",
+    f"xslt/{FX_DIR}/FACTUR-X_BASIC_codedb.xml": "eb7478effd5f709aa45b4fee97a678c115dd521432ef832c6960180c727da436",
+    f"xslt/{FX_DIR}/FACTUR-X_EN16931.xslt": "d412c035cd790e0ea0de36b59f58a868f4d1a28bc2072fc2204f23dbeb2850d7",
+    f"xslt/{FX_DIR}/FACTUR-X_EN16931_codedb.xml": "dd3856984b69e25d5ba6312ec7c8f68e4458064a5998bebcfe8ae66de1a21cad",
+    f"xslt/{FX_DIR}/FACTUR-X_MINIMUM.xslt": "0308b9ec2e0c1b69e149b678d86d178a4c15c102085157439704d23d2d30f5e3",
+    f"xslt/{FX_DIR}/FACTUR-X_MINIMUM_codedb.xml": "703e435735f92c6517bbbe0422f95b72587741e0a6756f980b055bbde18aec94",
+    CEN_XSLT: "b98ac4b99611b4fa332820e130f551805201a602d4f33173016f975ea904f192",
 }
 
 
 def fx_xslt(name):
-    return f"xslt/ZF_230/FACTUR-X_{name}.xslt"
+    return f"xslt/{FX_DIR}/FACTUR-X_{name}.xslt"
 
 
 def fx_codedb(name):
-    return f"xslt/ZF_230/FACTUR-X_{name}_codedb.xml"
+    return f"xslt/{FX_DIR}/FACTUR-X_{name}_codedb.xml"
 
 
 class Jar:
@@ -197,12 +208,12 @@ class Jar:
         try:
             data = self.zip.read(name)
         except KeyError:
-            raise GenError(f"{self.path} has no member {name}; is it Mustang-CLI-2.14.0.jar?")
+            raise GenError(f"{self.path} has no member {name}; is it Mustang-CLI-2.26.0.jar?")
         digest = hashlib.sha256(data).hexdigest()
         if self.pinned and PINS.get(name) != digest:
             raise GenError(
                 f"{name} in {self.path} is not the pinned artefact (sha256 {digest}, pinned "
-                f"{PINS.get(name)}); the guard tables are compiled from Mustang-CLI-2.14.0.jar"
+                f"{PINS.get(name)}); the guard tables are compiled from Mustang-CLI-2.26.0.jar"
             )
         self.digests[name] = digest
         return data
@@ -287,7 +298,7 @@ class Schema:
         self.simple = {}  # simpleType key -> base type key
         self.root = None
         docs = []
-        for name in jar.names(f"schema/ZF_230/{directory}/"):
+        for name in jar.names(f"schema/{FX_DIR}/{directory}/"):
             if name.endswith(".xsd"):
                 root = etree.fromstring(jar.read(name))
                 ns = root.get("targetNamespace")
@@ -297,7 +308,7 @@ class Schema:
                     raise GenError(f"{name}: elements are not qualified")
                 docs.append((name, PREFIXES[ns], root))
         if not docs:
-            raise GenError(f"no XSD in schema/ZF_230/{directory}/")
+            raise GenError(f"no XSD in schema/{FX_DIR}/{directory}/")
         for name, prefix, root in docs:
             for node in self._children(root):
                 if node.tag == XS + "simpleType":
@@ -317,7 +328,7 @@ class Schema:
                 else:
                     raise GenError(f"{name}: unsupported top-level construct {etree.QName(node).localname}")
         if self.root is None:
-            raise GenError(f"schema/ZF_230/{directory}: no global element")
+            raise GenError(f"schema/{FX_DIR}/{directory}: no global element")
 
     @staticmethod
     def _children(node):
@@ -687,9 +698,9 @@ def is_code_list_test(test):
 def load_cen_code_lists(kosit, cen_rules):
     """The code list rules of the newest CEN Schematron (KOSIT_CEN, compiled
     with SchXslt), as rules of the CEN Schematron the compiler knows: each is
-    the twin of the rule of CEN 1.3.12 with the same id and context, whose
-    mode and priority it takes, so that it applies at the same positions, and
-    adds its list there (`newest`). A code list rule without such a twin
+    the twin of the rule of Mustang's CEN Schematron with the same id and
+    context, whose mode and priority it takes, so that it applies at the same
+    positions, and adds its list there (`newest`). A code list rule without such a twin
     fails: the newest version then checks a code the tables do not know."""
     root = etree.fromstring(kosit.read(KOSIT_CEN))
     twins = {(r.id, r.context): r for r in cen_rules if r.kind == "assert"}
@@ -828,6 +839,7 @@ _ANCESTOR_NOT = re.compile(r"^not ?\(ancestor::([\w:]+)\)$")
 _NAME_ENDS = re.compile(r"^ends-with\(name\(\), ?'(\w+)'\)$")
 _NOT_SELF = re.compile(r"^not ?\(self::([\w:]+)\)$")
 _VALUE_EQ = re.compile(r"^([\w:@/]+) ?= ?(?:(['\"])([^'\"]*)\2|(false|true)\(\))$")
+_NORMALIZED_EQ = re.compile(r"^normalize-space\(([\w:@/]+)\) ?(= ?['\"])")
 _XREF = re.compile(
     r"^@currencyID ?= ?(?:\.\./\.\./|/rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/"
     r"ram:ApplicableHeaderTradeSettlement/)ram:(InvoiceCurrencyCode|TaxCurrencyCode)$"
@@ -861,6 +873,10 @@ def value_condition(expr):
     disj = [strip_parens(d) for d in split_top(expr, " or ")]
     paths, values = set(), set()
     for d in disj:
+        # `normalize-space(p) = 'v'` (Factur-X 1.09, XRechnung 3.0.2) is
+        # `p = 'v'` here: the guard accepts a code only exactly as listed,
+        # without surrounding whitespace.
+        d = _NORMALIZED_EQ.sub(r"\1 \2", d)
         m = _VALUE_EQ.match(d)
         if not m:
             return None
@@ -1103,11 +1119,15 @@ _T_LIST = re.compile(
     r"contains\('((?: [A-Za-z0-9-]+)+) ', concat\(' ', (normalize-space\((?:upper-case\()?(\.|@\w+)\)?\)"
     r"|substring\(\., ?1, ?2\)), ' '\)\)\)?\)?$"
 )
+# Factur-X 1.09 lets an empty value pass: `string-length($v)=0 or document(..)`.
 _T_CODEDB = re.compile(
-    r"^document\('FACTUR-X_[\w-]+_codedb\.xml'\)//cl\[@id=(\d+)\]/enumeration\[@value=\$(codeValue\d+)\]$"
+    r"^(?:string-length\(\$(codeValue\d+)\)=0 or )?"
+    r"document\('FACTUR-X_[\w-]+_codedb\.xml'\)/(?:/|codedb/)cl\[@id=(\d+)\]/enumeration\[@value=\$(codeValue\d+)\]$"
 )
 _T_ATTR_VALUES = re.compile(r"^\(?(@\w+ = '[^']+'(?: or @\w+ = '[^']+')*)\)?$")
-_T_FRACTION = re.compile(rf"^string-length\(substring-after\((\.|{RELPATH}), ?'\.'\)\) ?<= ?2$")
+# `../ram:ActualAmount[1]` (CEN 1.3.16, Factur-X 1.09): the guard checks the
+# decimals of every one, and the schema allows one.
+_T_FRACTION = re.compile(rf"^string-length\(substring-after\((\.|{RELPATH})(?:\[1\])?, ?'\.'\)\) ?<= ?2$")
 _T_FRACTION_XREF = re.compile(
     r"^not\(ram:TaxTotalAmount\) or ram:TaxTotalAmount\[\(@currencyID ?=/rsm:CrossIndustryInvoice/"
     r"rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement/ram:(InvoiceCurrencyCode|TaxCurrencyCode) "
@@ -1124,10 +1144,15 @@ _T_INDICATOR = re.compile(
     r"^normalize-space\(ram:ChargeIndicator/udt:Indicator/text\(\)\) = 'true' or "
     r"normalize-space\(ram:ChargeIndicator/udt:Indicator/text\(\)\) = 'false'$"
 )
-_EMPTY_CONTEXT = re.compile(r"^//\*\[not\(name\(\) = '([\w:]+)'\) and not\(\*\) and not\(normalize-space\(\)\)\]$")
+# The empty-element rule (PEPPOL-EN16931-R008): the CEN Schematron excepts
+# one element, Factur-X 1.09 none (and tests `false`, a child that never
+# exists, i.e. false()).
+_EMPTY_CONTEXT = re.compile(
+    r"^//\*\[(?:not\(name\(\) = '([\w:]+)'\) and )?not\(\*\) and not\(normalize-space\(\)\)\]$"
+)
 # Tests of the rules of a VAT category, on the tax element or, with `../`,
 # from its category code (see `category_check`).
-_T_RATE = re.compile(r"^(\.\./)?ram:RateApplicablePercent ?(>|=) ?0$")
+_T_RATE = re.compile(r"^(\.\./)?ram:RateApplicablePercent ?(>=|>|=) ?0$")
 _T_NO_RATE = re.compile(r"^not ?\((\.\./)?ram:RateApplicablePercent\)$")
 _T_ZERO_AMOUNT = re.compile(r"^(\.\./)?ram:CalculatedAmount ?= ?0$")
 _T_PRESENT = re.compile(r"^(\.\./)?(ram:\w+)$")
@@ -1144,8 +1169,8 @@ _T_RATE_UNLESS = re.compile(
 def category_check(test):
     """The check of a test of a VAT category rule, as (check, value,
     children of the tax element, from its category code): the rate ("r",
-    value 1: above 0, 0: zero, None: absent; "any", a rate of any value, comes
-    from `resolve_rate_unless`), the VAT amount ("a", 0: zero)
+    value 1: above 0, 0: zero, "ge0": 0 or above, None: absent; "any", a rate
+    of any value, comes from `resolve_rate_unless`), the VAT amount ("a", 0: zero)
     or the exemption reason ("e", True: `ram:ExemptionReason` or
     `ram:ExemptionReasonCode` is required, False: both are forbidden). None
     for any other test.
@@ -1155,7 +1180,7 @@ def category_check(test):
     test = strip_parens(test)
     m = _T_RATE.match(test)
     if m:
-        return "r", 1 if m.group(2) == ">" else 0, m.group(1) is not None
+        return "r", {">": 1, "=": 0, ">=": "ge0"}[m.group(2)], m.group(1) is not None
     m = _T_NO_RATE.match(test)
     if m:
         return "r", None, m.group(1) is not None
@@ -1335,12 +1360,19 @@ class Compiler:
     def check_xref_lists(self):
         """The list of the VAT total's currency where it equals a currency
         element of the settlement is left to that element's list: they
-        must be the same codes of the same validator."""
+        must be the same codes of the same validator. Where the profile has
+        no such element (MINIMUM has no ram:TaxCurrencyCode), the rule never
+        applies."""
         for r, ref, code_list in self.xref_lists:
             targets = [
                 c for p in self.positions if p.tag == "ram:ApplicableHeaderTradeSettlement"
                 for c in p.child_positions("ram:" + ref)
             ]
+            if not targets and not any(
+                t.tag == "ram:" + ref for p in self.positions if p.tag == "ram:ApplicableHeaderTradeSettlement"
+                for t in p.type.children
+            ):
+                continue
             same = [
                 t for t in targets
                 if any(cl.codes == code_list.codes and cl.source == code_list.source for cl in t.lists)
@@ -1349,12 +1381,14 @@ class Compiler:
                 raise GenError(f"the currency list of the VAT total differs from the list of ram:{ref}: {r.label()}")
 
     def compile_rule(self, r):
+        if r.flag in ("warning", "information"):
+            return self.record(r, "warning", "the validators report it as a warning")
         test = strip_parens(r.test)
         if r.kind == "assert" and test == "true()":
             return self.record(r, "tautology")
         empty = _EMPTY_CONTEXT.match(r.context)
         if empty:
-            if test != "false()":
+            if test not in ("false()", "false"):
                 raise GenError(f"unsupported test of an empty-element rule: {r.label()}")
             for pos in self.positions:
                 if pos.tag != empty.group(1):
@@ -1446,7 +1480,8 @@ class Compiler:
                 if entry not in tax.categories.setdefault(code, []):
                     tax.categories[code].append(entry)
         what = {
-            ("r", 1): "a rate above 0", ("r", 0): "the rate 0", ("r", None): "no rate",
+            ("r", 1): "a rate above 0", ("r", 0): "the rate 0", ("r", "ge0"): "a rate of 0 or above",
+            ("r", None): "no rate",
             ("a", 0): "the VAT amount 0", ("e", True): "an exemption reason", ("e", False): "no exemption reason",
         }[(kind, value)]
         return f"VAT category {', '.join(sorted(set().union(*(c for _, c in plans))))}: {what}"
@@ -1455,11 +1490,19 @@ class Compiler:
         """Compiles the test at every matched position; None for a test that
         is no structural, code list or lexical constraint."""
         if r.kind == "report":
-            if test != "true()" or r.source != "FX":
+            # An attribute not used is reported with the attribute in the
+            # context (Factur-X 1.0.07: `X[@a]`, test `true()`) or in the
+            # test (1.09: `X`, test `@a`).
+            tested = _ATTR_EXISTS.match(test)
+            if (test != "true()" and not tested) or r.source != "FX":
                 raise GenError(f"unsupported report: {r.label()}")
             for pos, conds in matched:
                 attr = [d.data[0] for i, p, d in conds if d.kind == "attr" and p is pos]
                 others = [d for i, p, d in conds if not (d.kind == "attr" and p is pos)]
+                if tested:
+                    if pos.leaf and tested.group(1) not in pos.attrs:
+                        continue  # the XSD does not allow the attribute here
+                    attr.append(tested.group(1))
                 if attr:
                     if others or len(attr) != 1 or not r.text.startswith(f"Attribute @{attr[0]}"):
                         raise GenError(f"unsupported report of an attribute: {r.label()}")
@@ -1505,13 +1548,15 @@ class Compiler:
                 self.add_list(r, pos, conds, target, CodeList(codes, rule, r.source, casefold, r.newest), prefix)
             return "prefix list" if prefix else f"code list of {target}"
         m = _T_CODEDB.match(test)
+        if m and m.group(1) not in (None, m.group(3)):
+            raise GenError(f"unsupported code database test: {r.label()}")
         if m:
-            target = r.variables.get(m.group(2))
+            target = r.variables.get(m.group(3))
             if target not in (".",) and not re.fullmatch(r"@\w+", target or ""):
                 raise GenError(f"unsupported code database target {target}: {r.label()}")
-            codes = r.codedb.get(m.group(1))
+            codes = r.codedb.get(m.group(2))
             if not codes:
-                raise GenError(f"unknown code list {m.group(1)}: {r.label()}")
+                raise GenError(f"unknown code list {m.group(2)}: {r.label()}")
             for pos, conds in matched:
                 self.add_list(r, pos, conds, target, CodeList(codes, rule, r.source), False)
             return f"code list of {target}"
@@ -2219,7 +2264,7 @@ def combine_lists(code_lists):
     codes = frozenset.intersection(*(c.codes for c in code_lists))
     exceptions = {}
     for c in ordered[1:]:
-        # Two versions of a list of one rule (CEN 1.3.12 and 1.3.16) name the
+        # Two copies of a list of one rule (Mustang's and KoSIT's CEN) name the
         # primary's rule, which a code outside of `codes` gets anyway.
         if c.rule == primary.rule:
             continue
@@ -2427,7 +2472,7 @@ class Nodes:
 # The header of the tables as Typst source, which the generator wrote before
 # the JSON: `is_generated` tells such files apart, so that the drift test
 # reports one that comes back.
-HEADER = """// Generated by tools/zugferd/gen_guard.py from the Mustang CLI jar 2.14.0;
+HEADER = """// Generated by tools/zugferd/gen_guard.py from the Mustang CLI jar 2.26.0;
 // do not edit, rerun it (scripts/zugferd-corpus checks for drift).
 """
 
@@ -2492,9 +2537,9 @@ def count_text(n, noun):
 # each profile accepts (see `code-finding` of src/zugferd/rules/rare.typ):
 #
 #   every      the codes of every validation of BASIC, EN 16931 and
-#              XRechnung: the Factur-X list and both CEN lists (1.3.12 in
-#              Mustang, 1.3.16 in KoSIT, which BASIC applies as well, see
-#              `withdrawn`). Every list of a profile holds them, so the
+#              XRechnung: the Factur-X list and both CEN lists (Mustang's
+#              and KoSIT's, both 1.3.16 at present, which BASIC applies as
+#              well, see `withdrawn`). Every list of a profile holds them, so the
 #              validator accepts a code of `every` in every profile without
 #              a look at the others
 #   xrechnung  the codes of the validation of XRechnung, which applies both
@@ -2564,8 +2609,6 @@ def validator_lists(compilers, names):
                 raise GenError(f"VALIDATOR_LISTS {name}: no leaf {path} in the profile {profile}")
         own_lists, en16931 = at["en16931"]
         xr_lists, xrechnung = at["xrechnung"]
-        if at["basic"] is not None and at["basic"][1] != en16931:
-            raise GenError(f"VALIDATOR_LISTS {name}: the list of BASIC is not the one of EN 16931")
         # The lists of every validation of the profiles based on EN 16931:
         # XRechnung applies the newest CEN list to codes the others do not
         # (NEWEST_XRECHNUNG_ONLY), which `every` then lacks as well.
@@ -2578,25 +2621,26 @@ def validator_lists(compilers, names):
         cen = [c.codes for c in lists if c.source == "CEN" and not c.newest]
         withdrawn = (frozenset.intersection(*cen) - frozenset.intersection(*newest)) if cen and newest else frozenset()
         fx = [c.codes for c in lists if c.source == "FX"]
-        own = [at[p][1] for p in ("minimum", "basic-wl") if at[p] is not None]
+        # The profiles whose validation applies the Factur-X list alone.
+        own = [at[p][1] for p in FACTUR_X_ONLY if at[p] is not None]
         if factur_x:
             if not own or any(codes != own[-1] for codes in own):
-                raise GenError(f"VALIDATOR_LISTS {name}: MINIMUM and BASIC WL have no common list at {path}")
+                raise GenError(f"VALIDATOR_LISTS {name}: MINIMUM, BASIC WL and BASIC have no common list at {path}")
             entry["factur-x"] = names.name(own[-1])
         else:
-            # The engine accepts `every` in MINIMUM and BASIC WL and names a
-            # withdrawn code as IP-CODE-01 in them and in BASIC: each is in
-            # the Factur-X list.
+            # The engine accepts `every` in MINIMUM, BASIC WL and BASIC and
+            # names a withdrawn code as IP-CODE-01 in them: each is in the
+            # Factur-X list.
             if any(codes - withdrawn != every for codes in own):
-                raise GenError(f"VALIDATOR_LISTS {name}: the list of MINIMUM or BASIC WL is not `every` "
+                raise GenError(f"VALIDATOR_LISTS {name}: the list of MINIMUM, BASIC WL or BASIC is not `every` "
                                "and the withdrawn codes; give it `factur-x`")
             if fx and not withdrawn <= frozenset.intersection(*fx):
                 raise GenError(f"VALIDATOR_LISTS {name}: withdrawn codes that the Factur-X list lacks; "
                                "give it `factur-x`")
         if any(not every <= codes for codes in own):
             raise GenError(f"VALIDATOR_LISTS {name}: a list of a profile lacks codes of `every`")
-        # BASIC and EN 16931 accept beyond `every` only the withdrawn
-        # currencies, of which the validator warns (IP-CODE-01).
+        # EN 16931 accepts beyond `every` only the withdrawn currencies, of
+        # which the validator warns (IP-CODE-01).
         beyond = en16931 - every
         if beyond and (name != "currency" or not beyond <= withdrawn):
             raise GenError(f"VALIDATOR_LISTS {name}: the list of EN 16931 has codes beyond `every` that "
@@ -2611,6 +2655,73 @@ def validator_lists(compilers, names):
         if withdrawn:
             entry["withdrawn"] = sorted(withdrawn)
         out[name] = entry
+    return out
+
+
+# The positions whose Factur-X code list rule the validator names (`fx-id`
+# of src/zugferd/rules/rare.typ), by key: (path, attribute or None). Since
+# Factur-X 1.09, each position of each profile has a rule id of its own
+# (the currency list is FX-SCH-A-000040 in MINIMUM, FX-SCH-A-000595 in
+# EN 16931); `fx_rules` reads them from the tables.
+_AGREEMENT = "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement"
+_BUYER = f"{_AGREEMENT}/ram:BuyerTradeParty"
+_SHIP_TO = "rsm:CrossIndustryInvoice/rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeDelivery/ram:ShipToTradeParty"
+FX_RULES = {
+    "currency": (f"{_SETTLEMENT}/ram:InvoiceCurrencyCode", None),
+    "country/seller": (f"{_SELLER}/ram:PostalTradeAddress/ram:CountryID", None),
+    "country/buyer": (f"{_BUYER}/ram:PostalTradeAddress/ram:CountryID", None),
+    "country/ship-to": (f"{_SHIP_TO}/ram:PostalTradeAddress/ram:CountryID", None),
+    "country/tax-representative": (
+        f"{_AGREEMENT}/ram:SellerTaxRepresentativeTradeParty/ram:PostalTradeAddress/ram:CountryID", None),
+    "country/origin": (f"{_LINE}/ram:SpecifiedTradeProduct/ram:OriginTradeCountry/ram:ID", None),
+    "eas/seller": (f"{_SELLER}/ram:URIUniversalCommunication/ram:URIID", "schemeID"),
+    "eas/buyer": (f"{_BUYER}/ram:URIUniversalCommunication/ram:URIID", "schemeID"),
+    "global-id/seller": (f"{_SELLER}/ram:GlobalID", "schemeID"),
+    "global-id/buyer": (f"{_BUYER}/ram:GlobalID", "schemeID"),
+    "global-id/ship-to": (f"{_SHIP_TO}/ram:GlobalID", "schemeID"),
+    "global-id/payee": (f"{_SETTLEMENT}/ram:PayeeTradeParty/ram:GlobalID", "schemeID"),
+    "legal-id/seller": (f"{_SELLER}/ram:SpecifiedLegalOrganization/ram:ID", "schemeID"),
+    "legal-id/buyer": (f"{_BUYER}/ram:SpecifiedLegalOrganization/ram:ID", "schemeID"),
+    "legal-id/payee": (f"{_SETTLEMENT}/ram:PayeeTradeParty/ram:SpecifiedLegalOrganization/ram:ID", "schemeID"),
+    "note-subject": ("rsm:CrossIndustryInvoice/rsm:ExchangedDocument/ram:IncludedNote/ram:SubjectCode", None),
+    "payment-means": (f"{_SETTLEMENT}/ram:SpecifiedTradeSettlementPaymentMeans/ram:TypeCode", None),
+    "unit": (f"{_LINE}/ram:SpecifiedLineTradeDelivery/ram:BilledQuantity", "unitCode"),
+    "vat-category": (f"{_SETTLEMENT}/ram:ApplicableTradeTax/ram:CategoryCode", None),
+    "vatex": (f"{_SETTLEMENT}/ram:ApplicableTradeTax/ram:ExemptionReasonCode", None),
+}
+# The profiles with a Factur-X Schematron, in the order of `fx-rules`.
+FX_PROFILES = ("minimum", "basic-wl", "basic", "en16931")
+# The profiles whose validation applies the code lists of the Factur-X
+# Schematron alone (no validator applies the CEN Schematron to them).
+FACTUR_X_ONLY = tuple(p for p in FX_PROFILES if not PROFILES[p][2])
+
+
+def fx_rules(compilers):
+    """Per key of FX_RULES, the id of the Factur-X code list rule at its
+    position in each of FX_PROFILES, or None where the profile has no such
+    position or no Factur-X code list there. Fails where a position has
+    several Factur-X rules."""
+    out = {}
+    for key, (path, attr) in FX_RULES.items():
+        ids = []
+        for profile in FX_PROFILES:
+            found = [p for p in compilers[profile].positions if p.path() == path and p.leaf]
+            if len(found) > 1:
+                raise GenError(f"FX_RULES {key}: {len(found)} leaves {path} in the profile {profile}")
+            if not found or (attr and attr not in found[0].attrs):
+                ids.append(None)
+                continue
+            lists = found[0].attrs[attr].lists if attr else found[0].lists
+            rules = sorted({c.rule for c in lists if c.source == "FX"})
+            if not rules:
+                ids.append(None)  # e.g. the buyer's country in MINIMUM
+                continue
+            if len(rules) != 1 or not rules[0].startswith("FX-"):
+                raise GenError(f"FX_RULES {key}: the Factur-X code list rules at {path} ({profile}) are {rules}")
+            ids.append(rules[0])
+        if not any(ids):
+            raise GenError(f"FX_RULES {key}: no profile has {path}")
+        out[key] = ids
     return out
 
 
@@ -2745,12 +2856,12 @@ def emit_lists(names):
     return "\n".join(lines) + "\n"
 
 
-def emit_code_lists(names, validator):
+def emit_code_lists(names, validator, fx=None):
     """src/zugferd/code-lists.json, the code lists of the validator (see
     `validator_lists`), which src/zugferd/code-lists.typ reads: per name,
     `every` as the lines of its codes; `factur-x` and `xrechnung` as the
     codes they have beyond `every` (each list has all of `every`); `newer`
-    and `withdrawn` as their codes."""
+    and `withdrawn` as their codes; and `fx-rules`, the ids of `fx_rules`."""
     codes_of = {name: codes for codes, name in names.names.items()}
     out = {}
     for name, entry in validator.items():
@@ -2769,7 +2880,10 @@ def emit_code_lists(names, validator):
             kinds[kind] = chunks(sorted(codes), 75)
         out[name] = kinds
     lines = ["{", f'"generated":{json_value(CODE_LISTS_NOTICE)},']
-    lines += json_members((name, json_value(kinds)) for name, kinds in out.items())
+    members = [(name, json_value(kinds)) for name, kinds in out.items()]
+    if fx:
+        members.append(("fx-rules", "{\n" + "\n".join(json_members((k, json_value(v)) for k, v in fx.items())) + "}"))
+    lines += json_members(members)
     lines += ["}"]
     return "\n".join(lines) + "\n"
 
@@ -2789,15 +2903,15 @@ FAST_CLASSES = ("s", "d", "d2", "b")
 
 # The notice at the top of every generated JSON file (JSON has no comments).
 JSON_NOTICE = (
-    "Generated by tools/zugferd/gen_guard.py from the Mustang CLI jar 2.14.0; do not edit, "
+    "Generated by tools/zugferd/gen_guard.py from the Mustang CLI jar 2.26.0; do not edit, "
     "rerun it (scripts/zugferd-corpus checks for drift). tools/zugferd/guard/write.typ describes the nodes."
 )
 LISTS_NOTICE = (
-    "Generated by tools/zugferd/gen_guard.py from the Mustang CLI jar 2.14.0; do not edit, "
+    "Generated by tools/zugferd/gen_guard.py from the Mustang CLI jar 2.26.0; do not edit, "
     "rerun it (scripts/zugferd-corpus checks for drift). tools/zugferd/guard/lists.typ reads it."
 )
 CODE_LISTS_NOTICE = (
-    "Generated by tools/zugferd/gen_guard.py from the Mustang CLI jar 2.14.0; do not edit, "
+    "Generated by tools/zugferd/gen_guard.py from the Mustang CLI jar 2.26.0; do not edit, "
     "rerun it (scripts/zugferd-corpus checks for drift). src/zugferd/code-lists.typ reads it."
 )
 
@@ -2816,13 +2930,13 @@ def emit_profile(profile, nodes, names, digests):
     file stays reviewable line by line: one node per line, the children of a
     complex node on lines of their own (see `emit_node`)."""
     directory, fx, cen, xr = PROFILES[profile]
-    sources = [f"Factur-X 1.0.07 XSD {directory}"]
+    sources = [f"Factur-X 1.09.2 XSD {directory}"]
     if fx:
         sources.append(f"Factur-X Schematron {fx}")
     if cen:
         sources.append("CEN EN 16931 CII Schematron")
     if xr:
-        sources.append("XRechnung 3.0 CII Schematron")
+        sources.append("XRechnung 3.0.2 CII Schematron")
     body = [emit_node(key, nodes, names) for key in nodes.order]
     out = [
         "{",
@@ -3023,7 +3137,9 @@ def known_tags(schemas):
 # withdrawn (e.g. BGN and HRK, replaced by the euro) is allowed wherever the
 # Factur-X validation of the profile accepts it (maintainer decision of
 # 2026-09-24): the tables of BASIC and EN 16931 take the Factur-X list and
-# CEN 1.3.12 at these positions, and the validator warns (IP-CODE-01).
+# Mustang's CEN list at these positions, and the validator warns
+# (IP-CODE-01). Since Mustang 2.26.0 (Factur-X 1.09.2, CEN 1.3.16) these
+# lists have withdrawn BGN and HRK as well.
 NEWEST_XRECHNUNG_ONLY = frozenset({"BR-CL-03", "BR-CL-04", "BR-CL-05"})
 
 
@@ -3076,7 +3192,7 @@ OUTPUTS.update({f"{p}.json": OUT / f"{p}.json" for p in PROFILES})
 OUTPUT_FILES = list(OUTPUTS)
 # The tables of the guard may not grow beyond this (maintainer decision 13),
 # the code lists the package ships not beyond PACKAGE_BUDGET.
-SIZE_BUDGET = 100 * 1024
+SIZE_BUDGET = 120 * 1024
 PACKAGE_BUDGET = 16 * 1024
 
 
@@ -3092,7 +3208,7 @@ def generate(jar_path, out_dir=None, pinned=True, builder=BUILDER, kosit_config=
     emitted = builder_tags(builder)
     nodes = {p: Nodes(c, emitted) for p, c in compilers.items()}
     names = ListNames(nodes[p] for p in PROFILES)
-    files = {"code-lists.json": emit_code_lists(names, validator_lists(compilers, names))}
+    files = {"code-lists.json": emit_code_lists(names, validator_lists(compilers, names), fx_rules(compilers))}
     files["lists.json"] = emit_lists(names)
     for p in PROFILES:
         files[f"{p}.json"] = emit_profile(p, nodes[p], names, jar.digests)
@@ -3144,6 +3260,7 @@ DISPOSITIONS = {
     "conservative": "compiled, although a rule of higher priority may take the position (stricter)",
     "defect": "compiled as corrected (see DEFECTS)",
     "business": "a condition on values, sums or other elements: left to the validator",
+    "warning": "a warning of the validators, which accept the invoice: left to them",
     "tautology": "always true",
     "shadowed": "a rule of higher priority takes every position",
     "unmatched": "no position of the profile",
@@ -3211,7 +3328,7 @@ def check(jar_path, kosit_config=None):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--jar", default=os.environ.get("MUSTANG_JAR"), help="Mustang-CLI-2.14.0.jar ($MUSTANG_JAR)")
+    ap.add_argument("--jar", default=os.environ.get("MUSTANG_JAR"), help="Mustang-CLI-2.26.0.jar ($MUSTANG_JAR)")
     ap.add_argument(
         "--kosit-config",
         default=os.environ.get("KOSIT_CONFIG"),
@@ -3223,7 +3340,7 @@ def main(argv=None):
     ap.add_argument("--explain", action="store_true", help="list every rule with its disposition")
     args = ap.parse_args(argv)
     if not args.jar:
-        print("error: set MUSTANG_JAR or --jar to Mustang-CLI-2.14.0.jar", file=sys.stderr)
+        print("error: set MUSTANG_JAR or --jar to Mustang-CLI-2.26.0.jar", file=sys.stderr)
         return 2
     try:
         if args.check:

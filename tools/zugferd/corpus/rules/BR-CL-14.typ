@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID BR-CL-14
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // A buyer country code (BT-55) outside ISO 3166-1.
 

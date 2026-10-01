@@ -106,7 +106,7 @@
   }
   // The file name is the name of the attached XML: `file-name` of the
   // profile, else factur-x.xml. It equals Mustang's, which names the XML of
-  // the XRECHNUNG profile xrechnung.xml, as ZUGFeRD 2.3 does.
+  // the XRECHNUNG profile xrechnung.xml, as ZUGFeRD does since 2.3.
   let file-name = profiles.at(id).at("file-name", default: default-file-name)
   assert.eq(ours.values.DocumentFileName, (file-name,))
   assert.eq(ours.values.DocumentFileName, mustang.values.DocumentFileName)

@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID BR-CL-26
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // A deliver-to location identifier (BT-71) with a scheme that is no ISO/IEC
 // 6523 code.

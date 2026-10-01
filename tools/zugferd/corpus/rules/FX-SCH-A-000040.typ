@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID FX-SCH-A-000040
-// profiles: minimum basic-wl
+// profiles: minimum
 //
 // An invoice currency (BT-5) that is no ISO 4217 code, in the profiles whose
 // validation applies the code list of Factur-X alone.
@@ -8,7 +8,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: fixture-profile("basic-wl"),
+  zugferd: fixture-profile("minimum"),
   currency: "ABC",
   sender: seller-de,
   recipient: buyer-fr,

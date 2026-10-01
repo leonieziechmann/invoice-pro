@@ -9,6 +9,9 @@
 #import "/src/utils/iban.typ": format-iban, iban-valid, normalize-iban
 #import "/src/utils/text.typ": plain-text
 #import "/tests/integration/payment-reference/harness.typ": find-all, plain
+#import "/tests/panic-message.typ": quoted-panic
+#let _catch = catch
+#let catch(f) = quoted-panic(_catch(f))
 
 // --- 1. IBAN helpers ---
 #{
@@ -113,8 +116,8 @@
   // Outside the euro area there is no EPC-QR code; the IBAN is checked anyway.
   assert.eq(error(iban: invalid, region-locale: locale.de-ch), expected)
   // The printed invoice would be wrong as well, so the bank details stop the
-  // compilation before the e-invoice reports it (IP-PAY-01, in XRechnung
-  // BR-DE-19), also when its problems are ignored.
+  // compilation before the e-invoice reports it (IP-PAY-01), also when its
+  // problems are ignored.
   assert.eq(error(iban: invalid, zugferd: "en16931"), expected)
   assert.eq(
     error(iban: invalid, zugferd: "en16931", zugferd-errors: "ignore"),

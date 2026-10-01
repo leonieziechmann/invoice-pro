@@ -280,7 +280,7 @@
   )
 }
 
-// Several payment means (BR-DE-23-b, BR-DE-24-b, CII-SR-467, IP-PAY-03).
+// Several payment means (BR-DE-23-b, BR-DE-24-b, CII-SR-467).
 #let _several-means(f) = {
   let names = f.means.map(_means-description)
   (
@@ -300,7 +300,7 @@
   )
 }
 
-// A credit transfer without an account (BR-DE-23-a, CII-SR-470, IP-PAY-04).
+// A credit transfer without an account (BR-DE-23-a, CII-SR-470).
 #let _transfer-account(f) = (
   "A credit transfer (BT-81 = "
     + f.type-code
@@ -310,7 +310,7 @@
   } else { "Set `iban` on `bank-details`." },
 )
 
-// An IBAN with wrong check digits (BR-DE-19, BR-DE-20, IP-PAY-01).
+// An IBAN with wrong check digits (IP-PAY-01).
 #let _iban(f) = (
   if f.debtor { "The IBAN of the debited account (BT-91) " } else {
     "The IBAN (BT-84) "
@@ -371,8 +371,7 @@
   "Leave out `tax-representative` on invoices of items not subject to VAT.",
 )
 
-// A corrected invoice without the invoice it corrects (BR-DE-26 in
-// XRechnung, IP-DOC-02 in the other profiles).
+// A corrected invoice without the invoice it corrects (IP-DOC-02).
 #let _uncorrected(f) = (
   "A corrected invoice (BT-3 = "
     + f.code
@@ -509,7 +508,6 @@
     "The date of the preceding invoice (BT-26) is given, but not its number (BT-25): the e-invoice states a preceding invoice by its number, so the date would be lost.",
     "Set `preceding-invoice-nr` on the invoice.",
   ),
-  "BR-DE-26": _uncorrected,
   "IP-DOC-02": _uncorrected,
   "IP-DOC-03": f => (
     "A credit note (BT-3 = "
@@ -1139,7 +1137,9 @@
       L: "The IGIC category (L)",
       M: "The IPSI category (M)",
     ).at(f.category)
-      + " needs a rate above 0%.",
+      + if f.category == "M" { " needs a rate of 0% or above." } else {
+        " needs a rate above 0%."
+      },
     "Use `tax.zero()` for zero rated or `tax.exempt(grounds: ..)` for exempt items.",
   ),
   "vat-rate-zero": f => (
@@ -1244,19 +1244,15 @@
   ),
 
   // Payment
-  "BR-CO-25": f => (
+  "IP-PAY-06": f => (
     "An amount is due, but neither the payment due date (BT-9) nor the payment terms (BT-20) are given.",
     "Add `#payment-goal(days: 14)` or set `due-date` on the invoice.",
   ),
   "BR-DE-23-b": _several-means,
   "BR-DE-24-b": _several-means,
   "CII-SR-467": _several-means,
-  "IP-PAY-03": _several-means,
   "BR-DE-23-a": _transfer-account,
   "CII-SR-470": _transfer-account,
-  "IP-PAY-04": _transfer-account,
-  "BR-DE-19": _iban,
-  "BR-DE-20": _iban,
   "IP-PAY-01": _iban,
   "BR-DE-25-a": _paid-direct-debit,
   "PEPPOL-EN16931-R061": f => if f.paid { _paid-direct-debit(f) } else {

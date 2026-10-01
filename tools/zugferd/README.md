@@ -36,4 +36,4 @@ How to run them, how to read their results and how to update golden files and kn
 
 `validator-differences.toml` lists the rules on which the two official validators, Mustang and KoSIT, disagree, with the validator that rejects the document and why; `run.py` fails on a disagreement it does not list.
 
-Requirements: Python 3.11 or newer with `lxml` and `pypdf`, Typst, a JDK, the Mustang CLI jar 2.14.0 and the KoSIT validator 1.6.3 with its XRechnung configuration 2026-08-31 (`KOSIT_JAR`, `KOSIT_CONFIG`). `nix run .#zugferd-corpus`, `nix run .#zugferd-golden`, `nix run .#zugferd-xmp` and `nix run .#validate-all-zugferd` provide everything.
+Requirements: Python 3.11 or newer with `lxml` and `pypdf`, Typst, a JDK, the Mustang CLI jar 2.26.0 and the KoSIT validator 1.6.3 with its XRechnung configuration 2026-08-31 (`KOSIT_JAR`, `KOSIT_CONFIG`). `nix run .#zugferd-corpus`, `nix run .#zugferd-golden`, `nix run .#zugferd-xmp` and `nix run .#validate-all-zugferd` provide everything.

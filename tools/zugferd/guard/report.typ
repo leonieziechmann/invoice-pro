@@ -18,6 +18,7 @@
   variant-min: "IP-GUARD-04",
   any-of: "IP-GUARD-04",
   empty: "IP-GUARD-04",
+  empty-value: "IP-GUARD-04",
   not-used: "IP-GUARD-05",
   attribute-not-used: "IP-GUARD-05",
   xref-other: "IP-GUARD-05",
@@ -165,6 +166,13 @@
     "The required element " + element + where + " is missing."
   } else if kind == "blank" {
     "The required element " + element + where + " has no text."
+  } else if kind == "empty-value" {
+    (
+      "The element "
+        + element
+        + where
+        + " has no text, but it states a code or a date."
+    )
   } else if kind == "variant-min" {
     (
       "The element "
@@ -285,6 +293,8 @@
             f.expected == "any"
           ) { " requires a " + what } else if f.expected == 0 {
             " requires the " + what + " 0"
+          } else if f.expected == "ge0" {
+            " requires a " + what + " of 0 or above"
           } else { " requires a " + what + " above 0" }
           + "; "
           + element

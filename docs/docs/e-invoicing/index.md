@@ -5,7 +5,7 @@ sidebar_label: E-Invoicing
 
 # E-Invoicing (ZUGFeRD / Factur-X)
 
-`invoice-pro` can make every invoice a hybrid e-invoice: a PDF that people read, carrying the same invoice as XML that accounting software and tax authorities process without reading the page. The XML follows the European standard **EN 16931** in the syntax of the UN/CEFACT Cross Industry Invoice (CII), in the profiles of **ZUGFeRD 2.3 / Factur-X 1.0.07** and the German **XRechnung 3.0**.
+`invoice-pro` can make every invoice a hybrid e-invoice: a PDF that people read, carrying the same invoice as XML that accounting software and tax authorities process without reading the page. The XML follows the European standard **EN 16931** in the syntax of the UN/CEFACT Cross Industry Invoice (CII), in the profiles of **ZUGFeRD 2.5 / Factur-X 1.09** and the German **XRechnung 3.0**.
 
 You write the invoice as usual and choose a profile. `invoice-pro` then checks the invoice data against the rules of the profile, writes the XML from the amounts the invoice prints and attaches it to the PDF.
 

@@ -25,7 +25,7 @@ PDF_REPORT = f"""<?xml version="1.0" encoding="UTF-8"?>
     <summary status="invalid"/>
   </pdf>
   <xml>
-    <info><version>2</version><profile>urn:cen.eu:en16931:2017</profile><validator version="2.14.0"/></info>
+    <info><version>2</version><profile>urn:cen.eu:en16931:2017</profile><validator version="2.26.0"/></info>
     <messages>
       <notice type="27" location="/x">[BR-DE-21] Das Element "Specification identifier" (BT-24) soll ... [ID BR-DE-21]</notice>
     </messages>

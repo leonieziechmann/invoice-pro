@@ -35,13 +35,16 @@ The proof criteria, each must hold for every mutant:
   C2  the guard blocks no structural mutant the official validators accept,
       except by its documented stricter checks: an element the builder never
       writes, one the Factur-X Schematron marks as not used (Mustang ignores
-      those reports), a required element without text, a date that names no
-      day;
+      those reports), a required element without text, a code or a date
+      without text, a date that names no day; and in EN 16931 the rules of
+      the CEN Schematron, which KoSIT applies and Mustang 2.26.0 does not
+      (verified with --kosit);
   C3  the guard rejects a mutated code exactly when Mustang reports a code
       list rule of that position or the code is missing from the list of the
       newest CEN Schematron there (KoSIT's CEN 1.3.16, which the tables apply
-      as well), and KoSIT reports one of EN 16931 or XRechnung (with
-      --kosit); except a currency that CEN 1.3.16 has withdrawn and the
+      as well) or, in EN 16931, from a list of the CEN Schematron, which
+      KoSIT applies and Mustang 2.26.0 does not, and KoSIT reports one of
+      EN 16931 or XRechnung (with --kosit); except a currency that CEN 1.3.16 has withdrawn and the
       Factur-X validation accepts, which the tables allow outside XRechnung
       (NEWEST_XRECHNUNG_ONLY of gen_guard.py, a maintainer decision);
   C4  for a tax mutant or a mutated category code, the guard reports
@@ -110,8 +113,10 @@ LEXICAL = [
 
 # Finding kinds of the guard's documented checks beyond the official
 # validators (criterion C2): a required element without text ("blank") is
-# missing for the guard, also where a rule only asks for the element.
-STRICTER = {"unknown", "not-used", "attribute-not-used", "xref-other", "blank"}
+# missing for the guard, also where a rule only asks for the element; a code
+# or a date without text ("empty-value") is no code or date, although the Factur-X
+# 1.09 code lists let it pass and the validators only warn (R008).
+STRICTER = {"unknown", "not-used", "attribute-not-used", "xref-other", "blank", "empty-value"}
 
 
 def local(el):
@@ -365,14 +370,19 @@ def compiled_rules(jar, profiles, kosit):
     there ({(path, what): CodeList}), the rules of the VAT categories (a set of
     the ids Mustang reports), and the rules that require an element ({path:
     set of rules}: its minimum, the minimum of a variant, one of several
-    alternatives, a count over a path). `kosit` is the KoSIT configuration
+    alternatives, a count over a path), and the rules of the CEN Schematron
+    that the tables apply as KoSIT does, where Mustang does not (EN 16931,
+    see MUSTANG_CEN of gen_guard.py). `kosit` is the KoSIT configuration
     (gen_guard.KositConfig) whose CEN code lists the tables apply."""
     j = gen_guard.Jar(jar)
     schemas = gen_guard.load_schemas(j)
     newest = gen_guard.load_cen_code_lists(kosit, gen_guard.load_rules(j, gen_guard.CEN_XSLT, "CEN"))
-    lists, newest_codes, categories, presence = {}, {}, {}, {}
+    lists, newest_codes, categories, presence, kosit_cen = {}, {}, {}, {}, {}
     for profile in profiles:
         compiler = gen_guard.load_profile(j, profile, schemas, newest)
+        kosit_cen[profile] = set() if profile in gen_guard.MUSTANG_CEN else {
+            r.ref for r in compiler.rules if r.source == "CEN"
+        }
         rules = collections.defaultdict(dict)
         # The list of the newest CEN Schematron at each position (one each).
         codes = {}
@@ -411,7 +421,7 @@ def compiled_rules(jar, profiles, kosit):
             rule for pos in compiler.positions for checks in pos.categories.values() for _, _, rule in checks
         }
         presence[profile] = required
-    return lists, newest_codes, categories, presence
+    return lists, newest_codes, categories, presence, kosit_cen
 
 
 def all_codes(jar):
@@ -551,7 +561,7 @@ def main(argv=None):
         finally:
             mustang.close()
         kosit = run_kosit([m["file"] for m in mutants if m["class"] == "code"], out) if args.kosit else {}
-        rules, newest_codes, category_rules, presence_rules = compiled_rules(
+        rules, newest_codes, category_rules, presence_rules, kosit_cen = compiled_rules(
             jar, sorted({m["profile"] for m in mutants}), kosit_config
         )
 
@@ -582,8 +592,13 @@ def main(argv=None):
             if m["class"] == "structural" and official_valid and not accepted:
                 kinds = {f[0] for f in findings}
                 stricter = kinds <= STRICTER or all(f[0] == "date" and f[1] == "IP-GUARD-08" for f in findings)
+                # The rules of the CEN Schematron that KoSIT applies and
+                # Mustang does not (EN 16931), with the stricter checks.
+                cen = all(f[0] in STRICTER or f[1] in kosit_cen[m["profile"]] for f in findings)
                 if stricter:
                     stats[("structural", "blocked by stricter checks")] += 1
+                elif cen:
+                    stats[("structural", "blocked by the CEN rules of KoSIT")] += 1
                 else:
                     failures["C2"].append(entry)
             # C5: a deleted or emptied element that Mustang reports missing
@@ -622,7 +637,12 @@ def main(argv=None):
                 newest_rejects = newest is not None and (value.upper() if newest.casefold else value) not in newest.codes
                 stats[("code", "compared with Mustang")] += 1
                 stats[("code", "rejected by the newest CEN list only")] += newest_rejects and not mustang_rejects
-                if guard_rejects != (mustang_rejects or newest_rejects):
+                # A code only a list of the CEN Schematron rejects, which KoSIT
+                # applies and Mustang does not (EN 16931).
+                cen_only = bool(at) and all(f[1] in kosit_cen[m["profile"]] for f in at)
+                if cen_only and not (mustang_rejects or newest_rejects):
+                    stats[("code", "rejected by the CEN rules of KoSIT")] += 1
+                elif guard_rejects != (mustang_rejects or newest_rejects):
                     failures["C3"].append(entry | {"rules": sorted(known_rules)})
                 if args.kosit and kosit.get(m["file"]) is not None:
                     official_rules = {r for r, source in known_rules.items() if source in ("CEN", "XR")}

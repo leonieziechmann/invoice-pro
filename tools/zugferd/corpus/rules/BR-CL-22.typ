@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID BR-CL-22
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // A VAT exemption reason code (BT-121) outside the VATEX list.
 

@@ -7,11 +7,11 @@ Inventory. The rule ids of every profile, collected from the pinned
 artefacts of the two official validators and applied to the profiles the
 way each validator selects them:
 
-  Mustang CLI 2.14.0 ($MUSTANG_JAR; the artefacts are pinned in gen_guard.py)
-    MINIMUM, BASIC WL   the Factur-X 1.0.07 Schematron of the profile
+  Mustang CLI 2.26.0 ($MUSTANG_JAR; the artefacts are pinned in gen_guard.py)
+    MINIMUM, BASIC WL   the Factur-X 1.09.2 Schematron of the profile
     BASIC, EN 16931     the Factur-X Schematron of the profile and the CEN
-                        Schematron of EN 16931 (CII, 1.3.12)
-    XRechnung           the CEN Schematron and the XRechnung 3.0 Schematron
+                        Schematron of EN 16931 (CII, 1.3.16)
+    XRechnung           the CEN Schematron and the XRechnung 3.0.2 Schematron
                         (CII); Mustang applies no Factur-X Schematron to it
   KoSIT 1.6.3 with its XRechnung configuration 2026-08-31 ($KOSIT_CONFIG;
   pinned below), by the scenarios of its scenarios.xml:
@@ -23,10 +23,11 @@ way each validator selects them:
 
 A rule id is the id a validator reports: the id of the assertion, or for
 the Factur-X Schematron the business rule its message names (Mustang reports
-"[BR-CO-26]..." as BR-CO-26), else its FX-SCH-A-* id. Mustang reports every
-failed assertion as an error, whatever its flag; the XRechnung Schematron
-only for XRechnung documents (a notice elsewhere). KoSIT reports a rule at
-the level of its flag or of the scenario's customLevel. The reports of the
+"[BR-CO-26]..." as BR-CO-26), else its FX-SCH-A-* id. Mustang reports a
+failed assertion at the level of its flag (an assertion without one as an
+error; Mustang 2.14.0 reported every one as an error); the XRechnung
+Schematron only for XRechnung documents (a notice elsewhere). KoSIT reports
+a rule at the level of its flag or of the scenario's customLevel. The reports of the
 Factur-X Schematron that mark an element as not used have no id; they are
 counted apart (gen_guard.py compiles them, and the test oracle reports such
 an element as IP-GUARD-05).
@@ -137,6 +138,7 @@ CLASSES = {
     "compiled": "checked by the test oracle on the XML of every test invoice (compiled from the artefact)",
     "construction": "the builder cannot produce the violation",
     "unreachable": "cannot fire on an XML invoice-pro writes",
+    "warning": "the validators only warn about it and accept the invoice",
     "open": "not handled yet",
 }
 # Dispositions of gen_guard.py that settle a rule without an entry.
@@ -152,6 +154,7 @@ NEEDS = {
     "compiled": ("reason",),
     "construction": ("reason", "evidence"),
     "unreachable": ("reason",),
+    "warning": ("reason",),
     "open": ("reason",),
 }
 # The rules classified as open, by profile: the work list, which can only
@@ -171,9 +174,10 @@ KOSIT_PINS = {
 }
 # Names of the artefacts in reports.
 ARTEFACT_NAMES = {
-    ("mustang", "FX"): "Factur-X 1.0.07 Schematron",
-    ("mustang", "CEN"): "CEN EN 16931 Schematron 1.3.12",
-    ("mustang", "XR"): "XRechnung 3.0 Schematron",
+    ("mustang", "FX"): "Factur-X 1.09.2 Schematron",
+    ("mustang", "CEN"): "CEN EN 16931 Schematron 1.3.16",
+    ("mustang", "XR"): "XRechnung 3.0.2 Schematron",
+    ("guard", "CEN"): "CEN EN 16931 Schematron 1.3.16 of the tables (KoSIT's)",
     ("kosit", "resources/cii/16b/xsl/EN16931-CII-validation.xsl"): "CEN EN 16931 Schematron 1.3.16",
     ("kosit", "resources/xrechnung/3.0.2/xsl/XRechnung-CII-validation.xsl"): "XRechnung 3.0.2 Schematron",
 }
@@ -254,7 +258,11 @@ def business_ref(rule_id, text):
 
 def mustang_assertions(jar, profile, schemas=None, guard=True):
     """The assertions Mustang applies to a profile. With `guard`, each one
-    carries the dispositions of gen_guard's compiler for the profile."""
+    carries the dispositions of gen_guard's compiler for the profile, and
+    the rules the tables compile beyond Mustang's (the CEN Schematron of
+    EN 16931, which KoSIT applies and Mustang 2.26.0 does not, see
+    MUSTANG_CEN of gen_guard.py) come as the guard's assertions (validator
+    "guard"): no rule id of their own, but the twins of KoSIT's."""
     directory, fx, cen, xr = gen_guard.PROFILES[profile]
     if guard:
         compiler = gen_guard.load_profile(jar, profile, schemas or gen_guard.load_schemas(jar))
@@ -266,7 +274,7 @@ def mustang_assertions(jar, profile, schemas=None, guard=True):
         rules = []
         if fx:
             rules += gen_guard.load_rules(jar, gen_guard.fx_xslt(fx), "FX", gen_guard.fx_codedb(fx))
-        if cen:
+        if cen and profile in gen_guard.MUSTANG_CEN:
             rules += gen_guard.load_rules(jar, gen_guard.CEN_XSLT, "CEN")
         if xr:
             rules += gen_guard.load_rules(jar, gen_guard.XR_XSLT, "XR")
@@ -275,14 +283,14 @@ def mustang_assertions(jar, profile, schemas=None, guard=True):
     for rule in rules:
         records = found.get(id(rule), [])
         out.append(Assertion(
-            validator="mustang",
+            validator="mustang" if rule.source != "CEN" or profile in gen_guard.MUSTANG_CEN else "guard",
             artefact=rule.source,
             id=rule.id,
             ref=rule.ref,
             context=rule.context,
             test=normalize(rule.test),
             flag=rule.flag,
-            level="error",
+            level=KOSIT_LEVELS.get(rule.flag or "error"),
             text=rule.text,
             dispositions=tuple(sorted({d for d, _ in records})),
             details=tuple(detail for _, detail in records),
@@ -412,6 +420,14 @@ def load_inventory(jar_path, kosit_path=None, guard=True):
             assertions = mustang_assertions(jar, profile, schemas, guard)
             if config:
                 assertions += kosit_assertions(config, profile)
+            # The guard's assertions only pair up with KoSIT's (see
+            # mustang_assertions): a rule id of theirs alone is none of a
+            # validator.
+            validators = collections.defaultdict(set)
+            for a in assertions:
+                if a.ref is not None:
+                    validators[a.ref].add(a.validator)
+            assertions = [a for a in assertions if a.ref is None or validators[a.ref] != {"guard"}]
             for a in assertions:
                 if a.ref is None:
                     # A report of the Factur-X Schematron without id: an
@@ -678,7 +694,7 @@ def twins_of(assertions):
     twins = collections.defaultdict(list)
     for rule_assertions in assertions:
         for a in rule_assertions:
-            if a.validator == "mustang":
+            if a.validator in ("mustang", "guard"):
                 twins[a.signature()].append(a)
     return twins
 
@@ -687,9 +703,14 @@ def automatic(assertions, twins=None):
     """(class, reason) of a rule in a profile that the guard's dispositions
     settle, or None. Every assertion of Mustang must be compiled or unable
     to fire, and every assertion of KoSIT the same (context and test) as one
-    of Mustang's in the profile (`twins`, see twins_of)."""
-    mustang = [a for a in assertions if a.validator == "mustang"]
-    kosit = [a for a in assertions if a.validator == "kosit"]
+    of Mustang's in the profile (`twins`, see twins_of). Only the
+    assertions a validator reports as errors count: a rule that every
+    validator only warns about (or informs of) is `warning`."""
+    errors = [a for a in assertions if a.level == "error" and a.validator != "guard"]
+    if not errors:
+        return "warning", "every validator reports it as a warning or information only and accepts the invoice"
+    mustang = [a for a in errors if a.validator == "mustang"]
+    kosit = [a for a in errors if a.validator == "kosit"]
     twins = twins if twins is not None else twins_of([assertions])
     for a in kosit:
         same = twins.get(a.signature())
@@ -900,10 +921,11 @@ def official_rules_in_source(root=REPO / "src", guard=GUARD_DIR, registry_path=r
     found = collections.defaultdict(list)
     for file in source_files(root, guard, registry_path):
         rules = set(_OFFICIAL_ID.findall(file.read_text(encoding="utf-8")))
-        if file.suffix == ".json":
+        if file == registry_path:
             # The registry names the Factur-X aliases of its rules as well
             # (`covers`), which the inventory counts under the rule they
-            # implement.
+            # implement. The Factur-X rules the package reports are named by
+            # `fx-rules` of src/zugferd/code-lists.json.
             rules = {rule for rule in rules if not rule.startswith("FX-SCH-")}
         for rule in sorted(rules):
             found[rule].append(file)
@@ -1027,6 +1049,8 @@ def rule_levels(jar_path, kosit_path=None):
         for rule, assertions in inventory.rules[profile].items():
             levels = {}
             for a in assertions:
+                if a.validator == "guard":
+                    continue
                 if _LEVEL_RANK[a.level] > _LEVEL_RANK.get(levels.get(a.validator), -1):
                     levels[a.validator] = a.level
             out[profile][rule] = levels
@@ -1048,12 +1072,12 @@ def summarize(decisions):
 
 def markdown_table(summary):
     header = ["Profile", "Rule ids", "Reported by invoice-pro", "Checked by the tests", "Excluded by construction",
-              "Cannot occur", "Open"]
+              "Cannot occur", "Only warnings", "Open"]
     rows = [header, [":--"] + ["--:"] * (len(header) - 1)]
     for profile in PROFILES:
         c = summary[profile]
         rows.append([PROFILE_NAMES[profile], str(c["total"]), str(c["fixture"]), str(c["compiled"]),
-                     str(c["construction"]), str(c["unreachable"]), str(c["open"])])
+                     str(c["construction"]), str(c["unreachable"]), str(c["warning"]), str(c["open"])])
     widths = [max(len(r[i]) for r in rows) for i in range(len(header))]
     lines = []
     for k, r in enumerate(rows):
@@ -1134,7 +1158,7 @@ def update_docs(decisions, summary, path=DOCS):
 
 def report(inventory, decisions, summary, problems, ip, without=()):
     lines = ["Rule coverage of the official validators (tools/zugferd/rule-coverage.toml)"]
-    lines.append("  artefacts: Mustang CLI 2.14.0 (Factur-X 1.0.07, CEN 1.3.12, XRechnung 3.0)"
+    lines.append("  artefacts: Mustang CLI 2.26.0 (Factur-X 1.09.2, CEN 1.3.16, XRechnung 3.0.2)"
                  + (", KoSIT XRechnung configuration 2026-08-31 (CEN 1.3.16, XRechnung 3.0.2)" if inventory.kosit
                     else ", without KoSIT"))
     width = max(len(n) for n in PROFILE_NAMES.values())

@@ -1,7 +1,7 @@
 // The name of the embedded e-invoice: "factur-x.xml", and "xrechnung.xml"
-// in the XRECHNUNG profile (ZUGFeRD 2.3; Mustang embeds an XRechnung under
-// that name as well). A draft with errors is "invoice-draft.xml" in any
-// profile.
+// in the XRECHNUNG profile (ZUGFeRD 2.3 and later; Mustang embeds an
+// XRechnung under that name as well). A draft with errors is
+// "invoice-draft.xml" in any profile.
 
 #import "/src/lib.typ": *
 #import "/tests/zugferd/harness.typ": bank, buyer-de, buyer-fr, seller

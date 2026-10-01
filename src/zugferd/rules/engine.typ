@@ -15,7 +15,7 @@
 // message: .., hint: .. | none)`, errors first, each level in the order of
 // the checks.
 
-#import "../code-lists.typ": lists
+#import "../code-lists.typ": fx-id, lists
 #import "../xml.typ": fmt-number, rate-digits
 #import "../model.typ": profile-terms, vat-id-country, vat-id-prefix
 #import "../../utils/iban.typ": iban-valid
@@ -210,8 +210,8 @@
   // The preceding invoice reference (BG-3), from BASIC WL on, is written
   // with its number (BT-25) only: a date (BT-26) without it would be lost
   // (IP-DOC-05). A document that amends an invoice must refer to it (Art.
-  // 219 of the VAT Directive): XRechnung checks it as BR-DE-26, which it
-  // only warns about, but validators such as Mustang reject the invoice.
+  // 219 of the VAT Directive): IP-DOC-02 in every profile, as XRechnung's
+  // BR-DE-26 is a warning of the validators.
   if model.profile.document-references {
     let number = invoice.at("preceding-invoice-nr", default: none)
     if (
@@ -221,7 +221,7 @@
       out.push((key: "IP-DOC-05", field: "preceding-invoice-nr"))
     } else if number == none and code == "384" {
       out.push((
-        key: if model.profile.xrechnung { "BR-DE-26" } else { "IP-DOC-02" },
+        key: "IP-DOC-02",
         field: "preceding-invoice-nr",
         code: code,
       ))
@@ -770,7 +770,7 @@
     out += identifiers(buyer, "recipient", "buyer")
     out += global-id(seller, "BR-CL-10", "sender", profile)
     out += global-id(buyer, "BR-CL-10", "recipient", profile)
-    if profile.en16931 {
+    if profile.cen {
       out += single-identifier(
         buyer,
         "CII-SR-450",
@@ -782,7 +782,7 @@
   if profile.addresses and ship-to != none {
     out += identifiers(ship-to, "delivery-address", "delivery address")
     out += global-id(ship-to, "BR-CL-26", "delivery-address", profile)
-    if profile.en16931 {
+    if profile.cen {
       out += single-identifier(
         ship-to,
         "CII-SR-449",
@@ -869,7 +869,16 @@
     } else { false }
     let unit-issue = line.at("unit-issue", default: none)
     if not known {
-      out.push((key: "BR-CL-23", field: line-field(line), code: code))
+      out.push((
+        key: "BR-CL-23",
+        // BASIC: the rule of the Factur-X Schematron, which checks the list
+        // alone (see `cen` of profile.typ).
+        id: if model.profile.cen { "BR-CL-23" } else {
+          fx-id("unit", model.profile)
+        },
+        field: line-field(line),
+        code: code,
+      ))
     } else if unit-issue != none and unit-issue.kind == "unknown" {
       // IP-UNIT-02: a text invoice-pro does not know has no unit code, and
       // "one" (C62) would be a guess.
@@ -1059,7 +1068,11 @@
         category-rule(category, 5 + rate-rule)
       }
     }
-    if category in ("S", "L", "M") and tax.rate <= _zero and rate-rule != none {
+    // IPSI (M) may be 0 % (BR-AG-05 to -07 of CEN 1.3.16, Factur-X 1.09).
+    let below = if category == "M" { tax.rate < _zero } else {
+      tax.rate <= _zero
+    }
+    if category in ("S", "L", "M") and below and rate-rule != none {
       out.push((
         key: "vat-rate-positive",
         id: rate-rule,
@@ -1186,8 +1199,9 @@
 // --- Payment --------------------------------------------------------------
 
 // The payment means (BG-16): one kind of payment means, each with the
-// details of its kind (XRechnung: BR-DE-1, BR-DE-19, BR-DE-20, BR-DE-23,
-// BR-DE-24, BR-DE-25, BR-DE-30, BR-DE-31, PEPPOL-EN16931-R061).
+// details of its kind (XRechnung: BR-DE-1, BR-DE-23, BR-DE-24, BR-DE-25,
+// BR-DE-30, BR-DE-31, PEPPOL-EN16931-R061); an IBAN with wrong check digits
+// is IP-PAY-01 in every profile.
 #let _payment-means(model) = {
   let out = ()
   let profile = model.profile
@@ -1218,9 +1232,8 @@
   // details of a direct debit (BG-19: the mandate reference, the creditor
   // identifier or a debited account) next to a credit transfer (BR-DE-23-b)
   // or a payment card (BR-DE-24-b). Kinds of payment means have different
-  // codes (see `code-kind`), which break CII-SR-467 of CEN 1.3.16 in EN 16931
-  // and XRechnung; BASIC WL and BASIC accept them, but the buyer could pay
-  // twice (IP-PAY-03).
+  // codes (see `code-kind`), which break CII-SR-467 of CEN 1.3.16 and
+  // Factur-X 1.09.
   let kinds = ()
   let conflicting = ()
   let debit-details = (
@@ -1242,9 +1255,7 @@
         "BR-DE-23-b"
       } else if xrechnung and debit-details and "card" in kinds {
         "BR-DE-24-b"
-      } else if xrechnung or profile.id == "en16931" { "CII-SR-467" } else {
-        "IP-PAY-03"
-      },
+      } else { "CII-SR-467" },
       field: fields.join(", "),
       means: conflicting,
       paid: "paid" in fields,
@@ -1257,23 +1268,20 @@
         // `paid(method: "transfer")` without bank details, or bank details
         // without an IBAN (with `zugferd-errors: "report"`; otherwise
         // `bank-details` stops the compilation): no account (BG-17) is
-        // written. XRechnung: BR-DE-23-a; EN 16931: CII-SR-470 (CEN 1.3.16);
-        // BASIC WL and BASIC accept it, as their BR-61 tests the debited
-        // account: IP-PAY-04.
+        // written. XRechnung: BR-DE-23-a; the other profiles: CII-SR-470 (CEN
+        // 1.3.16, Factur-X 1.09).
         let paid = entry.field == "paid"
         out.push((
-          key: if xrechnung { "BR-DE-23-a" } else if profile.id == "en16931" {
-            "CII-SR-470"
-          } else { "IP-PAY-04" },
+          key: if xrechnung { "BR-DE-23-a" } else { "CII-SR-470" },
           field: if paid { "paid.method" } else { "bank-details.iban" },
           type-code: entry.type-code,
           paid: paid,
         ))
       } else if not iban-valid(entry.iban) {
+        // An error in every profile: XRechnung's BR-DE-19 is a warning of
+        // the validators, but the amount could not be paid.
         out.push((
-          key: if xrechnung and entry.type-code == "58" { "BR-DE-19" } else {
-            "IP-PAY-01"
-          },
+          key: "IP-PAY-01",
           field: "bank-details.iban",
           iban: entry.iban,
           debtor: false,
@@ -1326,8 +1334,12 @@
     out += payment-terms(payment, terms)
   }
 
+  // IP-PAY-06: an amount due needs a payment due date or payment terms.
+  // This was BR-CO-25 of EN 16931, which the CEN Schematron 1.3.16 and
+  // Factur-X 1.09 no longer check in CII
+  // (https://github.com/ConnectingEurope/eInvoicing-EN16931/issues/477).
   if model.totals.due > _zero and payment.due-date == none and terms == none {
-    out.push((key: "BR-CO-25", field: "payment-goal"))
+    out.push((key: "IP-PAY-06", field: "payment-goal"))
   }
 
   out += _payment-means(model)
@@ -1472,8 +1484,17 @@
 // The rules whose usual level is "warning" (the first `level` of their entry
 // in tools/zugferd/registry.json, which tools/zugferd/registry.py checks
 // against this list); a finding gives the level of a rule with two.
+// The rules the validators report as warnings only (their flag `warning`;
+// Mustang 2.26.0 accepts the invoice, as KoSIT does), besides invoice-pro's
+// own warnings.
 #let _warnings = (
+  "BR-DE-17",
+  "BR-DE-27",
+  "BR-DE-28",
   "BR-DE-TMP-32",
+  "CII-SR-449",
+  "CII-SR-450",
+  "CII-SR-451",
   "IP-DOC-04",
   "IP-EADDR-01",
   "IP-KEY-01",

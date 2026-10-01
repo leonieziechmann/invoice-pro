@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID BR-CL-23
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // A unit code (BT-130) outside UN/ECE Recommendation 20.
 

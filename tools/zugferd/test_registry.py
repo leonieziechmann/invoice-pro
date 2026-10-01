@@ -3,7 +3,7 @@ its consistency with the rule modules and with the documentation.
 
   python3 -m unittest discover -s tools/zugferd -p 'test_*.py'
 
-With the Mustang CLI jar 2.14.0 ($MUSTANG_JAR), the Factur-X aliases that
+With the Mustang CLI jar 2.26.0 ($MUSTANG_JAR), the Factur-X aliases that
 `covers` names are also checked against the Schematrons of the jar.
 """
 
@@ -27,7 +27,7 @@ def entry(**changes):
     out = {
         "covers": ["BR-02", "FX-SCH-A-000011"],
         "source": "EN16931",
-        "versions": ["1.3.12", "1.3.16"],
+        "versions": ["1.3.16"],
         "profiles": ["minimum", "basic-wl"],
         "scope": "document",
         "terms": ["BT-1"],
@@ -50,7 +50,7 @@ class Entries(unittest.TestCase):
         self.assertEqual(r.problems(loaded), [])
         # Every rule of the validator has an entry. The findings of the test
         # oracle (IP-GUARD-*) have none: the package never reports them.
-        self.assertGreaterEqual(len(loaded["rules"]), 120)
+        self.assertGreaterEqual(len(loaded["rules"]), 110)
         for key in ("BR-02", "BR-48", "BR-DE-18", "IP-TAX-01", "vat-rate-zero"):
             self.assertIn(key, loaded["rules"])
         self.assertEqual([key for key in r.reported(loaded) if key.startswith("IP-GUARD-")], [])
@@ -118,7 +118,7 @@ class Entries(unittest.TestCase):
                 '    "BR-02": {',
                 '      "covers": ["BR-02"],',
                 '      "source": "EN16931",',
-                '      "versions": ["1.3.12", "1.3.16"],',
+                '      "versions": ["1.3.16"],',
             ],
         )
         with tempfile.TemporaryDirectory() as tmp:
@@ -234,7 +234,7 @@ class Sources(unittest.TestCase):
 
     def test_the_rule_ids_of_the_modules(self):
         literals = r.module_literals()
-        self.assertIn("BR-CO-25", literals)
+        self.assertIn("IP-PAY-06", literals)
         # The prefixes of the rule families are no rule ids.
         self.assertIn("BR-IC", literals)
         self.assertIsNone(r.RULE_ID.match("BR-IC"))
@@ -339,7 +339,7 @@ class Docs(unittest.TestCase):
                 r.docs_problems(r.load(), path)
 
 
-@unittest.skipUnless(JAR and Path(JAR).is_file(), "needs the Mustang CLI jar 2.14.0 ($MUSTANG_JAR)")
+@unittest.skipUnless(JAR and Path(JAR).is_file(), "needs the Mustang CLI jar 2.26.0 ($MUSTANG_JAR)")
 class Aliases(unittest.TestCase):
     """`covers` names the Factur-X rules of the official rules it covers."""
 
@@ -348,41 +348,52 @@ class Aliases(unittest.TestCase):
         cls.aliases = r.fx_aliases(JAR)
 
     def test_the_aliases_of_the_jar(self):
-        self.assertEqual(self.aliases["BR-02"], {"FX-SCH-A-000011"})
-        # A code list rule at the position of the CEN rule.
-        self.assertIn("FX-SCH-A-000040", self.aliases["BR-CL-04"])
+        # Factur-X 1.09 reports BR-02 by its own id: no alias.
+        self.assertNotIn("BR-02", self.aliases)
+        # The code list rule at the position of a CEN rule, in EN 16931, the
+        # one profile with both Schematrons (BASIC has no CEN rules).
+        self.assertEqual(self.aliases["BR-CL-04"], {"FX-SCH-A-000595": frozenset({"en16931"})})
         self.assertNotIn("BR-DE-1", self.aliases)
 
     def test_covers_names_every_alias(self):
         self.assertEqual(r.alias_problems(r.load(), self.aliases), [])
 
     def test_a_missing_and_a_wrong_alias(self):
-        loaded = registry(**{"BR-02": entry(covers=["BR-02", "FX-SCH-A-000040"])})
+        loaded = registry(**{"BR-03": entry(
+            covers=["BR-03", "FX-SCH-A-000040"],
+            profiles=list(r.PROFILES),
+        )})
         self.assertEqual(
             r.alias_problems(loaded, self.aliases),
             [
-                "rules.BR-02.covers: lacks the Factur-X alias FX-SCH-A-000011",
-                "rules.BR-02.covers: FX-SCH-A-000040 is no Factur-X alias of a rule it covers",
+                "rules.BR-03.covers: lacks the Factur-X alias FX-SCH-A-000554",
+                "rules.BR-03.covers: FX-SCH-A-000040 is no Factur-X alias of a rule it covers",
             ],
         )
 
     def test_the_profiles_of_an_alias(self):
-        # An alias counts where the rule it implements does: FX-SCH-A-000011
-        # (BR-02) not in BASIC WL once BR-02 counts in MINIMUM only.
-        wrong = entry(profiles=["minimum", "basic-wl"], **{"id-profiles": {"BR-02": ["minimum"]}})
-        self.assertEqual(
-            r.alias_problems(registry(**{"BR-02": wrong}), self.aliases),
-            ["rules.BR-02.id-profiles: the alias FX-SCH-A-000011 counts in ['minimum', 'basic-wl'], "
-             "the rules it implements in ['minimum']"],
+        # An alias counts where the rule it implements does, and only in the
+        # profile whose Schematron has it: FX-SCH-A-000554 (BR-03) in
+        # EN 16931 only.
+        wrong = entry(
+            covers=["BR-03", "FX-SCH-A-000554"],
+            profiles=list(r.PROFILES),
         )
-        right = dict(wrong, **{"id-profiles": {"BR-02": ["minimum"], "FX-SCH-A-000011": ["minimum"]}})
-        self.assertEqual(r.alias_problems(registry(**{"BR-02": right}), self.aliases), [])
+        self.assertEqual(
+            r.alias_problems(registry(**{"BR-03": wrong}), self.aliases),
+            ["rules.BR-03.id-profiles: the alias FX-SCH-A-000554 counts in "
+             "['minimum', 'basic-wl', 'basic', 'en16931'], the rules it implements in ['en16931']"],
+        )
+        right = dict(wrong, **{"id-profiles": {"FX-SCH-A-000554": ["en16931"]}})
+        self.assertEqual(r.alias_problems(registry(**{"BR-03": right}), self.aliases), [])
         # A code list rule of the Factur-X Schematron the entry reports itself.
         reported = entry(
-            ids=["BR-CL-04", "FX-SCH-A-000040"],
-            covers=["BR-CL-04", "FX-SCH-A-000040"],
+            ids=["BR-CL-04", "FX-SCH-A-000040", "FX-SCH-A-000514"],
+            covers=["BR-CL-04", "FX-SCH-A-000040", "FX-SCH-A-000514"],
             profiles=["minimum", "basic"],
-            **{"id-profiles": {"BR-CL-04": ["basic"], "FX-SCH-A-000040": ["minimum", "basic"]}},
+            **{"id-profiles": {
+                "BR-CL-04": ["basic"], "FX-SCH-A-000040": ["minimum"], "FX-SCH-A-000514": ["basic"],
+            }},
         )
         self.assertEqual(r.alias_problems(registry(**{"BR-CL-04": reported}), self.aliases), [])
 

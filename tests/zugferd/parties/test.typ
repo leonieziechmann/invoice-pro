@@ -345,7 +345,8 @@
   assert(find(m, "PEPPOL-EN16931-R010").hint.contains("`vat-id`"))
 
   // Identifiers: two values for one slot, the buyer and the ship-to party
-  // with one identifier only (CII-SR-450, CII-SR-449), scheme lists
+  // with one identifier only (CII-SR-450, CII-SR-449, warnings of the
+  // validators), scheme lists
   let m = base
   let ids = party-model((id: "C-1", global-id: "4000001123452"))
   for key in ("id", "global-id", "id-keys", "global-id-keys") {
@@ -356,9 +357,10 @@
   let m = base
   m.buyer.id = "C-1"
   m.buyer.global-id = (scheme: "0088", id: "4000001123452")
-  assert.eq(rules(m), ("CII-SR-450",))
-  m.profile = resolve-profile("basic-wl", "DE")
   assert.eq(rules(m), ())
+  assert.eq(rules(m, level: "warning"), ("CII-SR-450",))
+  m.profile = resolve-profile("basic-wl", "DE")
+  assert.eq(rules(m) + rules(m, level: "warning"), ())
   let m = base
   m.ship-to = normalized(
     "ship-to",
@@ -367,7 +369,8 @@
     location-id: "LAGER-7",
     global-id: (scheme: "0088", id: "4000001123452"),
   )
-  assert.eq(rules(m), ("CII-SR-449",))
+  assert.eq(rules(m), ())
+  assert.eq(rules(m, level: "warning"), ("CII-SR-449",))
   m.ship-to.id = none
   m.ship-to.global-id = (scheme: "9999", id: "1")
   assert.eq(rules(m), ("BR-CL-26",))
@@ -449,13 +452,15 @@
   // XRechnung: the phone number and the email address of the seller contact
   // with the patterns of the XRechnung Schematron (BR-DE-27, BR-DE-28)
   let m = base
+  // (warnings of the validators)
   m.seller.contact.email = "max@müller.de"
-  assert.eq(rules(m), ("BR-DE-28",))
+  assert.eq(rules(m) + rules(m, level: "warning"), ())
   m.seller.contact.email = "max.muster+rechnung@xn--mller-kva.de"
-  assert.eq(rules(m), ())
+  assert.eq(rules(m) + rules(m, level: "warning"), ())
   m.seller.contact.email = "max@seller"
   m.seller.contact.phone = "Tel. 12"
-  assert.eq(rules(m), ("BR-DE-27", "BR-DE-28"))
+  assert.eq(rules(m), ())
+  assert.eq(rules(m, level: "warning"), ("BR-DE-27", "BR-DE-28"))
 
   // BR-CO-26 for an invoice not subject to VAT: the VAT ID is no way out
   let m = base
