@@ -216,7 +216,7 @@
   ),
 
   signature: (
-    closing: "Mit freundlichen Grüßen,",
+    closing: "Mit freundlichen Grüßen",
   ),
 
   legal: (
