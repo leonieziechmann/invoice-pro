@@ -1,6 +1,5 @@
 # Languages: one invoice in the five languages, and a text of your own
-# (api-reference/locale/index.md). The quantities are 1: the units of French,
-# Italian and Spanish have no plural forms yet.
+# (api-reference/locale/index.md).
 title = "Languages"
 subtitle = "Five languages, one word to switch, every text adjustable"
 outro = "Write to your customers in their language"
@@ -28,8 +27,8 @@ start = '''
 
 #line-items[
   #item([Branding], price: 2400)
-  #item([Website], price: 2700)
-  #item([Photography], price: 1300)
+  #item([Web design], quantity: 3, unit: unit.day, price: 900)
+  #item([Support], quantity: 12, unit: unit.hour, price: 95)
 ]
 
 #payment-terms(days: 14)
@@ -51,21 +50,21 @@ focus = [1, 0.27, 0.05, 0.97, 0.41]
 
 [[step]]
 caption = "French"
-sub = "Titles, labels and sentences follow"
+sub = "Titles, labels, units and sentences follow"
 edit = [{ find = "locale.en-de", with = "locale.fr-de" }]
 keep = true
 focus = [1, 0.27, 0.05, 0.97, 0.41]
 
 [[step]]
 caption = "Italian"
-sub = "Titles, labels and sentences follow"
+sub = "Titles, labels, units and sentences follow"
 edit = [{ find = "locale.fr-de", with = "locale.it-de" }]
 keep = true
 focus = [1, 0.27, 0.05, 0.97, 0.41]
 
 [[step]]
 caption = "Spanish"
-sub = "Titles, labels and sentences follow"
+sub = "Titles, labels, units and sentences follow"
 edit = [{ find = "locale.it-de", with = "locale.es-de" }]
 keep = true
 focus = [1, 0.27, 0.05, 0.97, 0.41]
