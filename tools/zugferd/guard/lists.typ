@@ -25,8 +25,8 @@
 
 /// The rules of the VAT categories on the tax of a line (BG-30), a VAT
 /// breakdown (BG-23), an allowance and a charge, by name: per category code,
-/// the checks (check, value, rule) of the rate ("r": 1 above 0, 0 zero, none
-/// absent, "any" there), the VAT amount ("a": 0) and the exemption reason
+/// the checks (check, value, rule) of the rate ("r": 1 above 0, 0 zero,
+/// "ge0" 0 or above, none absent, "any" there), the VAT amount ("a": 0) and the exemption reason
 /// ("e": true required, false forbidden); see write.typ.
 ///
 /// -> dictionary

@@ -1,10 +1,10 @@
-// expect: STRICTER IP-PAY-03
+// expect: AGREE_INVALID CII-SR-467
 // finding: core-wrong-rule-ids
 //
-// Bank details next to a payment card in BASIC: the validation of the
-// profile accepts two payment means (CII-SR-467 is a rule of the CEN
-// Schematron 1.3.16 only, and KoSIT has no scenario for BASIC), but the
-// buyer would not know how to pay. invoice-pro reports its own rule.
+// Bank details next to a payment card in BASIC: two payment means, which
+// CII-SR-467 of the CEN Schematron 1.3.16 and of Factur-X 1.09 in Mustang
+// rejects (KoSIT has no scenario for BASIC). Until Mustang 2.14.0, whose CEN
+// Schematron 1.3.12 lacked the rule, invoice-pro reported its own IP-PAY-03.
 
 #import "_base.typ": *
 

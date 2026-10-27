@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID FX-SCH-A-000036
-// profiles: minimum basic-wl
+// profiles: minimum
 //
 // A seller country code (BT-40) outside ISO 3166-1, in the profiles whose
 // validation applies the code list of Factur-X alone.
@@ -8,7 +8,7 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: fixture-profile("basic-wl"),
+  zugferd: fixture-profile("minimum"),
   sender: seller-de + (country: "XX"),
   recipient: buyer-fr,
   invoice-nr: "FX-SCH-A-000036",

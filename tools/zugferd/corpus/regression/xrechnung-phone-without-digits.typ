@@ -1,9 +1,10 @@
-// expect: AGREE_INVALID BR-DE-27
+// expect: AGREE_VALID
+// warns: BR-DE-27
 // finding: fidelity-cat-xr-warning-rules
 //
 // XRechnung: a seller phone number needs at least three digits (BR-DE-27).
-// invoice-pro treats it as an error, like Mustang (KoSIT only warns). It was
-// a warning, invisible in the default mode.
+// Both validators only warn (Mustang 2.14.0 reported an error), and so does
+// invoice-pro.
 
 #import "_base.typ": *
 

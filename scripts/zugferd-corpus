@@ -13,7 +13,7 @@
 #
 # Needs Python 3.11+ with lxml and pypdf ($PYTHON, default python3), Typst
 # ($TYPST_BIN, default typst), a JDK ($JAVA_BIN/$JAVAC_BIN or $JAVA_HOME,
-# default java/javac), the Mustang CLI jar 2.14.0 ($MUSTANG_JAR), the KoSIT
+# default java/javac), the Mustang CLI jar 2.26.0 ($MUSTANG_JAR), the KoSIT
 # validator jar 1.6.3 ($KOSIT_JAR) and its unpacked XRechnung configuration
 # ($KOSIT_CONFIG). The Nix app `nix run .#zugferd-corpus` provides all of them.
 set -euo pipefail

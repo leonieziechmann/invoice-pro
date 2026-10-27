@@ -1,6 +1,6 @@
 // Factur-X / ZUGFeRD profiles and the parts of the invoice each one carries.
 //
-// The flags mirror the Factur-X 1.0.07 (ZUGFeRD 2.3) schemas: the builder
+// The flags mirror the Factur-X 1.09 (ZUGFeRD 2.5) schemas: the builder
 // leaves out whatever a profile's schema does not allow, and the validator
 // only checks what ends up in the XML.
 
@@ -55,10 +55,16 @@
   item-origin: false,
   // The EN 16931 business rules (BR-*) apply to the whole document.
   en16931: false,
+  // The CEN Schematron of EN 16931 validates the document, with its code
+  // lists and the rules of the CII syntax (CII-*): KoSIT in EN 16931, both
+  // validators in XRechnung. The validation of MINIMUM to BASIC applies the
+  // Factur-X Schematron alone, which states the business rules itself.
+  cen: false,
   // The German CIUS XRechnung (BR-DE-*) applies on top of EN 16931.
   xrechnung: false,
   // The name of the embedded XML file: "factur-x.xml", and "xrechnung.xml"
-  // for the XRECHNUNG profile (ZUGFeRD 2.3, as Mustang embeds it as well).
+  // for the XRECHNUNG profile (ZUGFeRD 2.3 and later, as Mustang embeds it
+  // as well).
   file-name: "factur-x.xml",
 )
 
@@ -126,6 +132,7 @@
       document-references: true,
       notes: true,
       en16931: true,
+      cen: true,
     ),
   xrechnung: _base
     + (
@@ -154,6 +161,7 @@
       document-references: true,
       notes: true,
       en16931: true,
+      cen: true,
       xrechnung: true,
       file-name: "xrechnung.xml",
     ),

@@ -10,15 +10,15 @@ The details of the document as a whole: what kind of document it is, the documen
 
 `document-type` states what kind of document the invoice is. It is written as the document type code (BT-3, UNTDID 1001), and unless you set `subject`, it is the printed title:
 
-| `document-type`       | BT-3  | Title (German / English)                 | Meaning                                                                                                 |
-| :-------------------- | :---- | :--------------------------------------- | :------------------------------------------------------------------------------------------------------ |
-| `auto` or `"invoice"` | `380` | Rechnung / Invoice                       | A commercial invoice: the buyer pays the seller.                                                        |
-| `"credit-note"`       | `381` | Rechnungskorrektur / Credit Note         | Credits amounts to the buyer, e.g. for returned goods or a discount granted later.                      |
-| `"corrected"`         | `384` | Korrigierte Rechnung / Corrected Invoice | Replaces the invoice `preceding-invoice-nr`.                                                            |
-| `"prepayment"`        | `386` | Anzahlungsrechnung / Prepayment Invoice  | Asks for an advance payment, which the final invoice deducts. XRechnung does not allow it (`BR-DE-17`). |
-| `"self-billed"`       | `389` | Gutschrift / Self-Billing Invoice        | Issued by the buyer for the seller, e.g. a commission statement (see below).                            |
+| `document-type`       | BT-3  | Title (German / English)                 | Meaning                                                                                                  |
+| :-------------------- | :---- | :--------------------------------------- | :------------------------------------------------------------------------------------------------------- |
+| `auto` or `"invoice"` | `380` | Rechnung / Invoice                       | A commercial invoice: the buyer pays the seller.                                                         |
+| `"credit-note"`       | `381` | Rechnungskorrektur / Credit Note         | Credits amounts to the buyer, e.g. for returned goods or a discount granted later.                       |
+| `"corrected"`         | `384` | Korrigierte Rechnung / Corrected Invoice | Replaces the invoice `preceding-invoice-nr`.                                                             |
+| `"prepayment"`        | `386` | Anzahlungsrechnung / Prepayment Invoice  | Asks for an advance payment, which the final invoice deducts. XRechnung advises against it (`BR-DE-17`). |
+| `"self-billed"`       | `389` | Gutschrift / Self-Billing Invoice        | Issued by the buyer for the seller, e.g. a commission statement (see below).                             |
 
-Any other code of UNTDID 1001 for invoices and credit notes can be given as text, e.g. `"326"` for a partial invoice or `"875"` to `"877"` for construction invoices. It is printed with the title of its kind (an invoice or a credit note), so give it a `subject` of its own. XRechnung allows only `326`, `380`, `381`, `384`, `389`, `875`, `876` and `877` (`BR-DE-17`): the KoSIT validator only warns about other codes, but Mustang rejects them, so `invoice-pro` reports an error; with `zugferd: auto`, such an invoice is written as EN 16931.
+Any other code of UNTDID 1001 for invoices and credit notes can be given as text, e.g. `"326"` for a partial invoice or `"875"` to `"877"` for construction invoices. It is printed with the title of its kind (an invoice or a credit note), so give it a `subject` of its own. XRechnung should use only `326`, `380`, `381`, `384`, `389`, `875`, `876` and `877` (`BR-DE-17`): the validators warn about other codes, and so does `invoice-pro`.
 
 ### Credit Notes
 

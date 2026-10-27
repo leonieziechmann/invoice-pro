@@ -171,22 +171,15 @@
     assert.eq(diagnostic(m, "FX-SCH-A-000181").message, d.message)
   },
 )[#items()]
-// A code only the newer list of the KoSIT validator knows: Mustang and the
-// Factur-X code list reject it, so the message says that it is not known
-// there yet
+// A code of 2025, which the lists of Mustang 2.14.0 lacked: every validation
+// knows it now
 #model-test(
   tax: tax.exempt(grounds: "Steuerfrei", code: "VATEX-EU-144"),
   model => {
-    assert.eq(rules(model), ("BR-CL-22",))
-    let d = diagnostic(model, "BR-CL-22")
-    assert.eq(
-      d.message,
-      "The VAT exemption reason code (BT-121) \"VATEX-EU-144\" is not in the code list of the Factur-X validation yet: only the newest version of the EN 16931 code list has it.",
-    )
-    assert.eq(
-      d.hint,
-      "Use another code while the validators of the Factur-X profiles do not know it yet.",
-    )
+    assert.eq(rules(model), ())
+    let m = model
+    m.profile = resolve-profile("basic-wl", "DE")
+    assert.eq(rules(m), ())
   },
 )[#items()]
 

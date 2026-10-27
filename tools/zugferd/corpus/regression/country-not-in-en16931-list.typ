@@ -1,9 +1,10 @@
 // expect: AGREE_INVALID BR-CL-14
 // finding: core-codelists-cen, parties-country-ss-false-negative
 //
-// South Sudan (SS) is missing from the country code list of the EN 16931
-// validators, so an invoice stating it cannot validate. invoice-pro accepted
-// it without a report.
+// South Sudan (SS) is missing from the country code list of EN 16931, so
+// KoSIT rejects an EN 16931 invoice stating it (BR-CL-14); Mustang 2.26.0,
+// which validates EN 16931 with the Factur-X list, accepts it
+// (tools/zugferd/validator-differences.toml). invoice-pro reports an error.
 
 #import "_base.typ": *
 

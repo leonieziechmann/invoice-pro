@@ -1,10 +1,11 @@
 // expect: AGREE_INVALID BR-17
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // A payee (BG-10) with the seller's name: a payee is named only when someone
-// other than the seller receives the payment. Not in BASIC WL: the Factur-X
-// Schematron compares the payee with a seller path that never matches, so it
-// only requires the payee's name there (BR-17--no-name.typ).
+// other than the seller receives the payment. Not in BASIC WL and BASIC: the
+// Factur-X Schematron compares the payee with a seller path that never
+// matches, so it only requires the payee's name there (BR-17--no-name.typ);
+// in EN 16931, only KoSIT reports BR-17 (validator-differences.toml).
 
 #import "_base.typ": *
 

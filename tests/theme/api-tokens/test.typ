@@ -270,7 +270,7 @@
 )
 #assert(
   o.strings.signature.thanks == "Danke!"
-    and o.strings.signature.closing == "Mit freundlichen Grüßen,",
+    and o.strings.signature.closing == "Mit freundlichen Grüßen",
 )
 
 // --- 4. options honoured by built-in renderers ----------------------------------------

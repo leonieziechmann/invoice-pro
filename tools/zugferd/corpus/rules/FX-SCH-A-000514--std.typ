@@ -1,5 +1,5 @@
-// expect: AGREE_INVALID FX-SCH-A-000040
-// profiles: basic en16931
+// expect: AGREE_INVALID FX-SCH-A-000514
+// profiles: basic
 //
 // The São Tomé dobra of before 2018 (STD), which the code lists of EN 16931
 // still have, but the one of Factur-X does not: only its Schematron rejects
@@ -9,11 +9,11 @@
 
 #show: invoice.with(
   ..setup,
-  zugferd: fixture-profile("en16931"),
+  zugferd: fixture-profile("basic"),
   currency: "STD",
   sender: seller-de,
   recipient: buyer-fr,
-  invoice-nr: "FX-SCH-A-000040--std",
+  invoice-nr: "FX-SCH-A-000514--std",
 )
 
 #line-items[

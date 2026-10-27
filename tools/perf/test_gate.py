@@ -109,6 +109,28 @@ class Trace(unittest.TestCase):
         self.assertEqual(result["einvoice_import"], 10)
         self.assertEqual(gate.lazy_loads(result["inclusive"]), [])
 
+    def test_quoted_files_of_typst_0_15(self):
+        # Typst 0.15 writes the file of a span quoted: `"/src/x.typ"`, and
+        # `@preview/loom:0.1.1"/src/lib.typ"` for a package.
+        def span(name, file, start, end):
+            args = {"file": file, "line": 1}
+            return [
+                {"name": name, "ph": "B", "ts": start, "args": args},
+                {"name": name, "ph": "E", "ts": end, "args": args},
+            ]
+
+        events = (
+            [{"name": "compile once", "ph": "B", "ts": 0, "args": None}]
+            + span("eval", '"/src/zugferd/zugferd.typ"', 10, 20)
+            + span("func call", '@preview/loom:0.1.1"/src/lib.typ"', 30, 40)
+            + [{"name": "compile once", "ph": "E", "ts": 100, "args": None}]
+        )
+        result = gate.aggregate(events)
+        self.assertEqual(result["einvoice"], 10)
+        self.assertEqual(result["einvoice_import"], 10)
+        self.assertIn("eval /src/zugferd/zugferd.typ:1", result["inclusive"])
+        self.assertIn("func call @preview/loom:0.1.1/src/lib.typ:1", result["inclusive"])
+
     def test_lazy_loads_are_found_by_module_and_by_call(self):
         # A call is found by the line of the function's definition; the
         # example is `unit-aliases` of units.typ, whose first call builds a

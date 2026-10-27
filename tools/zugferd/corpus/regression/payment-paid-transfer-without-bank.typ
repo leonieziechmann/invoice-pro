@@ -2,10 +2,10 @@
 // finding: amounts-payment-means-api-gap
 //
 // Paid by credit transfer, without the bank details: EN 16931 requires the
-// account of a credit transfer (BT-84). The CII Schematron of CEN 1.3.12 in
-// Mustang tests its BR-61 on the debited account
-// (PayerPartyDebtorFinancialAccount) instead, so Mustang accepts the XML;
-// KoSIT rejects it with CII-SR-470 of CEN 1.3.16, which invoice-pro reports.
+// account of a credit transfer (BT-84). Both validators reject it with
+// CII-SR-470 (CEN 1.3.16 in KoSIT, Factur-X 1.09 in Mustang 2.26.0), which
+// invoice-pro reports. Mustang 2.14.0, whose CEN 1.3.12 tested BR-61 on the
+// debited account (PayerPartyDebtorFinancialAccount), accepted the XML.
 
 #import "_base.typ": *
 

@@ -228,6 +228,12 @@
 #let _check-text(tag, text, node, attrs) = {
   let found = ()
   let (kind, _, list, prefix, fraction, date) = node
+  // A code or a date without text: the Factur-X 1.09 code lists let an empty
+  // value pass, and the validators only warn about an empty element
+  // (PEPPOL-EN16931-R008); the guard rejects it (a documented stricter check).
+  if text.trim() == "" and (list != none or date != none) {
+    return (_finding("empty-value", none, (tag,)),)
+  }
   if kind == "d" {
     if _decimal not in text {
       found.push(_finding(
@@ -410,7 +416,7 @@
 
 // The rules of the VAT category of a tax element (`body`, the child `step`
 // of `tag`): the `checks` of its `category` (see lists.typ) on its rate
-// ("r": above 0, 0, none, or "any" rate), its VAT amount ("a") and its
+// ("r": above 0, 0, 0 or above, none, or "any" rate), its VAT amount ("a") and its
 // exemption reason ("e"); see `_category-ok` of write.typ.
 #let _category-checks(tag, step, body, category, checks) = {
   let found = ()

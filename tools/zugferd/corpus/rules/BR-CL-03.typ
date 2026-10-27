@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID BR-CL-04
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // A currency that is no ISO 4217 code: the validators report it for the
 // invoice currency (BR-CL-04) and for the currency of the VAT total (BR-

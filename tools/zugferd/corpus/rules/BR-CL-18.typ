@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID BR-CL-18
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // A VAT category (BT-151) EN 16931 does not know (AA).
 

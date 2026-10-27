@@ -81,11 +81,10 @@
     diagnostic(model, "IP-DOC-02").message,
     "A corrected invoice (BT-3 = 384) replaces a preceding invoice, but it names none (BG-3).",
   )
-  // XRechnung checks it as BR-DE-26
+  // In XRechnung as well, whose BR-DE-26 is a warning of the validators
   let m = model
   m.profile = resolve-profile("xrechnung", "DE")
-  assert("BR-DE-26" in rules(m))
-  assert("IP-DOC-02" not in rules(m))
+  assert("IP-DOC-02" in rules(m))
   // MINIMUM has no preceding invoice reference
   m.profile = resolve-profile("minimum", "FR")
   assert.eq(rules(m), ())

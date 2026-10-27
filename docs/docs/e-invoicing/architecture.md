@@ -47,7 +47,7 @@ pdf.attach(
 )
 ```
 
-The recipient's software detects this embedded `/factur-x.xml` file and extracts all data without needing optical character recognition (OCR) on the visual layout. In the `"xrechnung"` profile, the file is named `/xrechnung.xml`, as ZUGFeRD 2.3 names the XML of its XRECHNUNG profile (and as Mustang embeds it). Earlier versions named it `factur-x.xml` in every profile.
+The recipient's software detects this embedded `/factur-x.xml` file and extracts all data without needing optical character recognition (OCR) on the visual layout. In the `"xrechnung"` profile, the file is named `/xrechnung.xml`, as ZUGFeRD (since 2.3) names the XML of its XRECHNUNG profile (and as Mustang embeds it). Earlier versions named it `factur-x.xml` in every profile.
 
 The relationship `"alternative"` says that the XML is an equivalent form of the invoice. The XML of MINIMUM and BASIC WL, which state no invoice lines, only supplements the PDF, so it is attached with the relationship `"data"`.
 

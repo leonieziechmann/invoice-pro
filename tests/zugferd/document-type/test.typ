@@ -409,13 +409,15 @@
   #bank
 ]
 
-// --- 7. XRechnung allows eight document types (BR-DE-17) ---
+// --- 7. XRechnung allows eight document types (BR-DE-17), a warning of the
+// validators ---
 #model-test(
   zugferd: "xrechnung",
   recipient: buyer-de,
   document-type: "prepayment",
   model => {
-    assert.eq(rules(model), ("BR-DE-17",))
+    assert.eq(rules(model), ())
+    assert.eq(rules(model, level: "warning"), ("BR-DE-17", "BR-DE-TMP-32"))
     let d = diagnostic(model, "BR-DE-17")
     assert.eq(d.field, "document-type")
     assert(d.hint.contains("no prepayment invoice"))
@@ -426,15 +428,16 @@
   #bank
 ]
 
-// With `zugferd: auto`, the prepayment invoice is written as EN 16931
+// With `zugferd: auto`, the prepayment invoice is written as XRechnung, with
+// the warning
 #{
   let report-theme = theme.plain.with(theme.custom.part(
     "zugferd-report",
     (ctx, result) => {
-      assert.eq(result.profile.id, "en16931")
+      assert.eq(result.profile.id, "xrechnung")
       assert.eq(
         result.diagnostics.map(d => (d.level, d.rule)),
-        (("warning", "BR-DE-17"),),
+        (("warning", "BR-DE-17"), ("warning", "BR-DE-TMP-32")),
       )
       []
     },

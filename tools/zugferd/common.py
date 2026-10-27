@@ -10,7 +10,7 @@ and outside of Nix:
 
   TYPST_BIN    Typst executable (default: `typst`)
   MUSTANG_JAR  Mustang-CLI jar, needed for the official validation
-               (https://github.com/ZUGFeRD/mustangproject, version 2.14.0)
+               (https://github.com/ZUGFeRD/mustangproject, version 2.26.0)
   KOSIT_JAR    KoSIT validator, standalone jar
                (https://github.com/itplr-kosit/validator, version 1.6.3)
   KOSIT_CONFIG the unpacked XRechnung configuration of the KoSIT validator,
@@ -57,7 +57,7 @@ NS = {
 # Guideline (BT-24) -> (profile id, XSD inside the Mustang jar).
 GUIDELINES = {
     "urn:factur-x.eu:1p0:minimum": ("minimum", "MINIMUM/FACTUR-X_MINIMUM.xsd"),
-    "urn:factur-x.eu:1p0:basicwl": ("basic-wl", "BASIC-WL/FACTUR-X_BASIC-WL.xsd"),
+    "urn:factur-x.eu:1p0:basicwl": ("basic-wl", "BASIC-WL/FACTUR-X_BASICWL.xsd"),
     "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic": ("basic", "BASIC/FACTUR-X_BASIC.xsd"),
     "urn:cen.eu:en16931:2017": ("en16931", "EN16931/FACTUR-X_EN16931.xsd"),
     "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0": (
@@ -126,7 +126,7 @@ def mustang_jar():
     jar = os.environ.get("MUSTANG_JAR")
     if not jar:
         raise ToolError(
-            "MUSTANG_JAR is not set. Point it to Mustang-CLI-2.14.0.jar "
+            "MUSTANG_JAR is not set. Point it to Mustang-CLI-2.26.0.jar "
             "(https://github.com/ZUGFeRD/mustangproject/releases), or use the Nix "
             "apps, which set it (see tests/TESTING.md)."
         )
@@ -238,7 +238,7 @@ def invoice_xml(attachments):
 
 
 class Schemas:
-    """The Factur-X 1.0.07 (ZUGFeRD 2.3) XSDs, read from the Mustang jar."""
+    """The Factur-X 1.09.2 (ZUGFeRD 2.5.2) XSDs, read from the Mustang jar."""
 
     def __init__(self, jar, cache_dir):
         self.jar = Path(jar)
@@ -253,11 +253,11 @@ class Schemas:
         tmp = self.dir.with_name(self.dir.name + ".tmp")
         shutil.rmtree(tmp, ignore_errors=True)
         with zipfile.ZipFile(self.jar) as jar:
-            members = [m for m in jar.namelist() if m.startswith("schema/ZF_230/") and m.endswith(".xsd")]
+            members = [m for m in jar.namelist() if m.startswith("schema/ZF_250/") and m.endswith(".xsd")]
             if not members:
-                raise ToolError(f"{self.jar} contains no schema/ZF_230 XSDs; is it the Mustang-CLI jar?")
+                raise ToolError(f"{self.jar} contains no schema/ZF_250 XSDs; is it the Mustang-CLI jar?")
             for member in members:
-                target = tmp / member[len("schema/ZF_230/"):]
+                target = tmp / member[len("schema/ZF_250/"):]
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(jar.read(member))
         (tmp / ".complete").write_text("ok\n")
@@ -325,15 +325,18 @@ def parse_mustang_report(report):
 
     Every <error> counts, whatever its type. In particular the XRechnung
     Schematron (BR-DE-*, PEPPOL-*) reports its violations as type 27: as
-    <error> for an XRechnung invoice, and as <notice> (ignored) for the
-    other profiles, which the XRechnung rules do not apply to. Type 18 is
-    the XSD check. The rule id is the leading [BR-..] of the message or,
-    without one, its [ID ..].
+    <error> for an XRechnung invoice, and as <notice> for the other
+    profiles, which the XRechnung rules do not apply to. Mustang 2.26.0
+    reports an assertion flagged as a warning as a <warning>, one flagged as
+    information as a <notice> (`notices`, which the parity of a fixture
+    reads for a rule of that level only). Type 18 is the XSD check. The rule
+    id is the leading [BR-..] of the message or, without one, its [ID ..].
     """
     if "<crash>" in report:
-        return {"status": "crash", "errors": {"MUSTANG-CRASH": _unescape(report)[:500]}, "warnings": []}
+        return {"status": "crash", "errors": {"MUSTANG-CRASH": _unescape(report)[:500]}, "warnings": [],
+                "notices": []}
     status = _STATUS.findall(report)
-    errors, warnings = {}, []
+    errors, warnings, notices = {}, [], []
     for kind, attrs, body in _MESSAGE.findall(report):
         text = re.sub(r"\s+", " ", _unescape(body)).strip()
         type_ = re.search(r'type="(\d+)"', attrs)
@@ -347,7 +350,10 @@ def parse_mustang_report(report):
             errors.setdefault(rule, text[:400])
         elif kind == "warning":
             warnings.append(f"{rule}: {text[:200]}")
-    return {"status": status[-1] if status else "?", "errors": errors, "warnings": warnings}
+        elif kind == "notice":
+            notices.append(rule)
+    return {"status": status[-1] if status else "?", "errors": errors, "warnings": warnings,
+            "notices": sorted(set(notices))}
 
 
 _PDF_PART = re.compile(r"<pdf>(.*?)</pdf>", re.S)

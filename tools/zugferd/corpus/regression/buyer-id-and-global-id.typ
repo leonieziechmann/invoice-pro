@@ -1,8 +1,10 @@
-// expect: AGREE_INVALID CII-SR-450
+// expect: AGREE_VALID
+// warns: CII-SR-450
 // finding: robustness-buyer-id-and-globalid-cii-sr-450
 //
 // The buyer identifier (BT-46) can be given once: either `id` or
-// `global-id`. Both were written (ram:ID and ram:GlobalID) without a report.
+// `global-id`. Both were written (ram:ID and ram:GlobalID) without a report;
+// the validators only warn about it, and so does invoice-pro.
 
 #import "_base.typ": *
 

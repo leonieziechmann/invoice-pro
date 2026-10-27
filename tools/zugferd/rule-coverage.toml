@@ -40,7 +40,7 @@
 
 # The document and its references.
 [[rule]]
-ids = ["BR-02", "BR-05", "BR-CL-04", "BR-CL-08", "BR-DE-17", "BR-DE-26", "BR-DE-TMP-32"]
+ids = ["BR-02", "BR-05", "BR-CL-04", "BR-CL-08", "BR-DE-17", "BR-DE-TMP-32"]
 class = "fixture"
 
 # The parties: names, addresses, identifiers, electronic addresses and the
@@ -74,18 +74,18 @@ profiles = ["en16931", "xrechnung"]
 # Payment terms and payment means.
 [[rule]]
 ids = [
-  "BR-CO-25", "BR-CL-16", "CII-SR-467",
-  "BR-DE-1", "BR-DE-18", "BR-DE-19", "BR-DE-20", "BR-DE-23-a", "BR-DE-23-b", "BR-DE-24-a",
+  "BR-CL-16", "CII-SR-467",
+  "BR-DE-1", "BR-DE-18", "BR-DE-23-a", "BR-DE-23-b", "BR-DE-24-a",
   "BR-DE-24-b", "BR-DE-25-a", "BR-DE-31", "PEPPOL-EN16931-R061",
 ]
 class = "fixture"
 
-# A credit transfer without account, a rule of the CEN Schematron 1.3.16
-# (KoSIT) only; XRechnung see below.
+# A credit transfer without account, a rule of the CEN Schematron 1.3.16 and
+# of Factur-X 1.09; XRechnung see below.
 [[rule]]
 ids = ["CII-SR-470"]
 class = "fixture"
-profiles = ["en16931"]
+profiles = ["basic-wl", "basic", "en16931"]
 
 # VAT: categories, exemption reasons and the VAT breakdown.
 [[rule]]
@@ -146,22 +146,23 @@ profiles = ["basic-wl"]
 # The code lists of the Factur-X Schematron, which MINIMUM and BASIC WL apply
 # alone (a code none of its lists has); in BASIC and EN 16931, a code that the
 # lists of EN 16931 have, but the Factur-X list lacks (e.g. the scheme 0219,
-# which XRechnung accepts, BR-CL-25--pass.typ). Elsewhere the test oracle
-# checks these rules (derived as `compiled`).
+# which XRechnung accepts, BR-CL-25--pass.typ). Since Factur-X 1.09, each
+# position of each profile has a rule id of its own (see `fx-rules` of
+# src/zugferd/code-lists.json): the currency (MINIMUM 040, BASIC WL 464, BASIC
+# 514, EN 16931 595), the seller's country (036, 443) and legal registration
+# scheme (410, 444), the buyer's country (BASIC 495, EN 16931 568) and
+# electronic address scheme (429, 498, 571), and in BASIC WL the payment
+# means (489), the note subject (162), the VAT category (179) and the
+# exemption reason code (181); in EN 16931 the country of origin (628).
+# Elsewhere the test oracle checks these rules (derived as `compiled`).
 [[rule]]
-ids = ["FX-SCH-A-000031", "FX-SCH-A-000036", "FX-SCH-A-000040"]
+ids = [
+  "FX-SCH-A-000036", "FX-SCH-A-000040", "FX-SCH-A-000162", "FX-SCH-A-000179", "FX-SCH-A-000181",
+  "FX-SCH-A-000410", "FX-SCH-A-000429", "FX-SCH-A-000443", "FX-SCH-A-000444", "FX-SCH-A-000464",
+  "FX-SCH-A-000489", "FX-SCH-A-000495", "FX-SCH-A-000498", "FX-SCH-A-000514", "FX-SCH-A-000568",
+  "FX-SCH-A-000571", "FX-SCH-A-000595", "FX-SCH-A-000628",
+]
 class = "fixture"
-profiles = ["minimum", "basic-wl", "basic", "en16931"]
-
-[[rule]]
-ids = ["FX-SCH-A-000023", "FX-SCH-A-000162", "FX-SCH-A-000179", "FX-SCH-A-000181"]
-class = "fixture"
-profiles = ["basic-wl"]
-
-[[rule]]
-ids = ["FX-SCH-A-000026"]
-class = "fixture"
-profiles = ["en16931"]
 
 # ======================================================================
 # fixture: reported under a related rule the validators report as well
@@ -220,44 +221,6 @@ profiles = ["basic-wl"]
 # compiled: the test oracle checks Mustang's version, KoSIT's differs
 # ======================================================================
 
-[[rule]]
-ids = ["BR-20"]
-class = "compiled"
-profiles = ["en16931", "xrechnung"]
-reason = """CEN 1.3.16 in KoSIT tests the country code for text (normalize-space); the test oracle \
-checks the element and the country code list (BR-CL-14), which an empty code fails as well. A tax \
-representative without `country` gets the country of the locale."""
-
-[[rule]]
-ids = ["BR-AG-06", "BR-AG-07"]
-class = "compiled"
-profiles = ["en16931", "xrechnung"]
-reason = """CEN 1.3.16 in KoSIT allows IPSI (M) at 0 % on an allowance or charge; the test oracle \
-checks the rate above 0 of CEN 1.3.12 in Mustang, which is stricter (as for BR-AG-05, see \
-validator-differences.toml)."""
-
-[[rule]]
-ids = ["BR-DEC-01", "BR-DEC-05", "BR-DEC-24", "BR-DEC-27"]
-class = "compiled"
-profiles = ["en16931", "xrechnung"]
-reason = """CEN 1.3.16 in KoSIT tests the first `ram:ActualAmount` of an allowance or charge only; \
-the test oracle checks the decimals of every one (and the schema allows one)."""
-
-[[rule]]
-ids = ["BR-DEC-23"]
-class = "compiled"
-profiles = ["en16931", "xrechnung"]
-reason = """CEN 1.3.12 in Mustang names the path `ram:SpecifiedTradeSettlement`, which never \
-matches; the tables of the test oracle compile the corrected path, which CEN 1.3.16 in KoSIT has."""
-
-[[rule]]
-ids = ["CII-DT-001", "CII-DT-002", "CII-DT-003", "CII-DT-004"]
-class = "compiled"
-profiles = ["en16931", "xrechnung"]
-reason = """CEN 1.3.16 in KoSIT tests the attribute on four identifiers (BT-24, BT-1, BT-126, \
-BT-155); the test oracle checks Mustang's test on every element whose name ends in ID, which \
-includes them."""
-
 # ======================================================================
 # construction: the builder cannot produce the violation
 # ======================================================================
@@ -291,7 +254,7 @@ evidence = [
 [[rule]]
 ids = ["BR-CO-04", "BR-47"]
 class = "construction"
-profiles = ["basic", "en16931", "xrechnung"]
+profiles = ["en16931", "xrechnung"]
 reason = """Every item has a VAT category: `tax` requires one, and `tax: none` is written as zero \
 rated (Z) with IP-TAX-01. The VAT breakdown is built from the categories of the items."""
 evidence = [
@@ -301,9 +264,20 @@ evidence = [
 ]
 
 [[rule]]
+ids = ["BR-CO-04"]
+class = "construction"
+profiles = ["basic"]
+reason = """Every item has a VAT category: `tax` requires one, and `tax: none` is written as zero \
+rated (Z) with IP-TAX-01 (the test oracle checks BR-47 in BASIC)."""
+evidence = [
+  "src/data/tax.typ: new",
+  "tests/zugferd/vat-categories/test.typ: `tax: none` (IP-TAX-01)",
+]
+
+[[rule]]
 ids = ["BR-CO-18"]
 class = "construction"
-profiles = ["basic", "en16931", "xrechnung"]
+profiles = ["en16931", "xrechnung"]
 reason = """The VAT breakdown has a group for the VAT category of every line, and an invoice without \
 lines breaks BR-16, which invoice-pro reports."""
 evidence = [
@@ -317,8 +291,7 @@ class = "construction"
 reason = """The builder writes the account of a credit transfer (BG-17) only with its IBAN, and the \
 debited account (BT-91) only in the payment means of a direct debit (59): Mustang's version \
 (debited account of a credit transfer) and KoSIT's (credited account) cannot fail. invoice-pro \
-reports a credit transfer without account as CII-SR-470 in EN 16931, BR-DE-23-a in XRechnung and \
-IP-PAY-04 in BASIC WL and BASIC."""
+reports a credit transfer without account as CII-SR-470, and as BR-DE-23-a in XRechnung."""
 evidence = [
   "src/zugferd/build.typ: build-payment-means",
   "tools/zugferd/corpus/regression/payment-paid-transfer-without-bank.typ",
@@ -364,30 +337,6 @@ evidence = [
 ]
 
 [[rule]]
-ids = ["BR-CL-01"]
-class = "construction"
-profiles = ["en16931", "xrechnung"]
-reason = """`document-type` takes the UNTDID 1001 codes of invoices and credit notes only, which the \
-lists of both CEN Schematron versions contain."""
-evidence = ["src/logic/document-type.typ: resolve-document-type", "tests/zugferd/document-type/test.typ"]
-
-[[rule]]
-ids = ["BR-CL-21"]
-class = "construction"
-profiles = ["en16931", "xrechnung"]
-reason = "The builder writes the item standard identifier (BT-157) with the scheme 0160 (GTIN), which both ICD lists contain."
-evidence = ["src/zugferd/build.typ: build-line-item"]
-
-[[rule]]
-ids = ["BR-DE-21"]
-class = "construction"
-reason = "The builder writes the specification identifier (BT-24) of XRechnung 3.0 for `zugferd: \"xrechnung\"`."
-evidence = [
-  "src/zugferd/profile.typ: the guideline of the profile",
-  "tests/zugferd/golden/integration/zugferd-credit-note.xml",
-]
-
-[[rule]]
 ids = ["BR-DE-25-b"]
 class = "construction"
 reason = """A direct debit (59) is written as a payment means of its own, with the debited account \
@@ -415,21 +364,6 @@ evidence = [
 ]
 
 [[rule]]
-ids = ["BR-TMP-7"]
-class = "construction"
-reason = """The builder writes every date with the format 102 as YYYYMMDD, and the test oracle \
-checks each one on the XML of every test invoice (its finding IP-GUARD-08)."""
-evidence = ["src/zugferd/build.typ: _date", "tools/zugferd/guard/write.typ"]
-
-[[rule]]
-ids = ["CII-DT-005", "CII-DT-006", "CII-DT-007"]
-class = "construction"
-reason = """The builder writes no scheme attributes on the specification identifier (BT-24), the \
-invoice number (BT-1), the line identifier (BT-126) or the seller's item identifier (BT-155); \
-Mustang's version of the rule tests the parent elements instead."""
-evidence = ["src/zugferd/build.typ"]
-
-[[rule]]
 ids = ["CII-DT-033"]
 class = "construction"
 reason = """The test holds once the invoiced quantity (BT-129) has its unit code, which the builder \
@@ -437,10 +371,17 @@ always writes."""
 evidence = ["src/zugferd/build.typ: build-line-item"]
 
 [[rule]]
-ids = [
-  "CII-SR-469", "CII-SR-472", "CII-SR-473", "CII-SR-477", "CII-SR-478", "CII-SR-479", "CII-SR-480",
-  "CII-SR-482", "CII-SR-484", "CII-SR-487", "PEPPOL-EN16931-R053",
-]
+ids = ["CII-SR-452", "CII-SR-453", "CII-SR-454"]
+class = "construction"
+profiles = ["xrechnung"]
+reason = """The builder writes one payment terms (ram:SpecifiedTradePaymentTerms) with one \
+description, and one ram:ApplicableTradeTax per line (one entry of a dictionary each). A warning \
+of the CEN Schematron, which Mustang reports as such; the scenario of KoSIT for XRechnung raises \
+them to errors."""
+evidence = ["src/zugferd/build.typ: build-payment-terms, build-line-item"]
+
+[[rule]]
+ids = ["CII-SR-469", "PEPPOL-EN16931-R053"]
 class = "construction"
 reason = """The builder writes these elements at most once (one entry of a dictionary each), and the \
 test oracle rejects an element more often than the schema allows on the XML of every test invoice \
@@ -474,25 +415,13 @@ evidence = ["src/zugferd/build.typ: build-line-item"]
 # ======================================================================
 
 [[rule]]
-ids = ["BR-28", "BR-TMP-3", "CII-SR-119", "PEPPOL-EN16931-R044", "PEPPOL-EN16931-R046"]
+ids = ["BR-28", "BR-TMP-3", "PEPPOL-EN16931-R044", "PEPPOL-EN16931-R046"]
 class = "unreachable"
-reason = "The builder never writes the gross price (BT-148, ram:GrossPriceProductTradePrice)."
-
-[[rule]]
-ids = ["CII-SR-440"]
-class = "unreachable"
-profiles = ["en16931", "xrechnung"]
 reason = "The builder never writes the gross price (BT-148, ram:GrossPriceProductTradePrice)."
 
 [[rule]]
 ids = ["BR-53", "PEPPOL-EN16931-R005", "PEPPOL-EN16931-R055"]
 class = "unreachable"
-reason = "The builder never writes the VAT accounting currency (BT-6, ram:TaxCurrencyCode)."
-
-[[rule]]
-ids = ["BR-CL-05"]
-class = "unreachable"
-profiles = ["en16931", "xrechnung"]
 reason = "The builder never writes the VAT accounting currency (BT-6, ram:TaxCurrencyCode)."
 
 [[rule]]
@@ -520,27 +449,7 @@ profiles = ["en16931"]
 reason = "The builder never writes the item classification (BT-158, ram:DesignatedProductClassification)."
 
 [[rule]]
-ids = ["BR-CL-07"]
-class = "unreachable"
-profiles = ["en16931", "xrechnung"]
-reason = "The builder never writes the scheme of the invoiced object identifier (BT-18, ram:ReferenceTypeCode)."
-
-[[rule]]
-ids = ["BR-CL-13"]
-class = "unreachable"
-profiles = ["en16931", "xrechnung"]
-reason = "The builder never writes the item classification (BT-158, ram:ClassCode)."
-
-[[rule]]
-ids = ["BR-CO-27"]
-class = "unreachable"
-reason = "The test of CEN 1.3.12 is always true: it holds with an IBAN, a proprietary ID or neither."
-
-[[rule]]
-ids = [
-  "BR-DE-22", "BR-TMP-2", "BR-TMP-4", "BR-TMP-5",
-  "CII-SR-474", "CII-SR-475", "CII-SR-476", "PEPPOL-EN16931-R101",
-]
+ids = ["BR-DE-22", "BR-TMP-2", "PEPPOL-EN16931-R101"]
 class = "unreachable"
 reason = """The builder never writes additional supporting documents (BG-24) or the invoiced object \
 identifier of a line (BT-128, ram:AdditionalReferencedDocument)."""
@@ -555,13 +464,14 @@ reason = """The rules of an XRechnung of the Clean Vehicles Directive (its own s
 identifier, BT-24), which invoice-pro does not write."""
 
 [[rule]]
-ids = ["BR-DEX-01", "BR-DEX-04", "BR-DEX-05", "BR-DEX-06", "BR-DEX-07", "BR-DEX-08"]
+ids = ["BR-DEX-04", "BR-DEX-05", "BR-DEX-06", "BR-DEX-07", "BR-DEX-08"]
 class = "unreachable"
 reason = "Rules of the XRechnung extension (their context requires its own specification identifier, BT-24, `$isExtension`), which invoice-pro does not write."
 
 [[rule]]
 ids = ["CII-SR-464"]
 class = "unreachable"
+profiles = ["basic-wl", "basic", "en16931"]
 reason = "The builder never writes the debtor's financial institution (ram:PayerSpecifiedDebtorFinancialInstitution)."
 
 [[rule]]
@@ -570,23 +480,16 @@ class = "unreachable"
 reason = "The builder writes the contact point (BT-41, BT-56) as ram:PersonName only, never as ram:DepartmentName."
 
 [[rule]]
+ids = ["FX-SCH-A-000391", "FX-SCH-A-000523", "FX-SCH-A-000548", "FX-SCH-A-000604", "FX-SCH-A-000624"]
+class = "unreachable"
+reason = """The code lists of Factur-X 1.09 of the reason code of an allowance or charge without a list \
+identifier (ram:ReasonCode[not (@listID)]); the builder never writes a reason code (BT-98, BT-105, \
+BT-140, BT-145)."""
+
+[[rule]]
 ids = ["CII-SR-468"]
 class = "unreachable"
 reason = "The builder never writes the payment means text (BT-82, ram:Information)."
-
-[[rule]]
-ids = ["CII-SR-471"]
-class = "unreachable"
-reason = """The builder writes the rate of an allowance or charge in its ram:CategoryTradeTax, never \
-as a ram:RateApplicablePercent of the allowance or charge itself, so the count is always 0."""
-
-[[rule]]
-ids = [
-  "CII-SR-481", "CII-SR-483", "CII-SR-485", "CII-SR-486", "CII-SR-488", "CII-SR-489", "CII-SR-490",
-  "CII-SR-491", "CII-SR-492", "CII-SR-493", "CII-SR-494",
-]
-class = "unreachable"
-reason = "The builder never writes these amounts of the document totals (e.g. the rounding amount, BT-114)."
 
 [[rule]]
 ids = ["PEPPOL-EN16931-R040", "PEPPOL-EN16931-R041", "PEPPOL-EN16931-R042"]
@@ -611,6 +514,25 @@ with a base amount (BT-93) or percentage (BT-94)."""
 # do not report it for such an invoice, so no fixture can show it. Fix the
 # id, then remove it here (the gate names every entry that neither src/ nor
 # the rule registry names any more).
+
+[[without-fixture]]
+ids = [
+  "FX-SCH-A-000031", "FX-SCH-A-000421", "FX-SCH-A-000423", "FX-SCH-A-000424", "FX-SCH-A-000435",
+  "FX-SCH-A-000441", "FX-SCH-A-000447", "FX-SCH-A-000454", "FX-SCH-A-000457", "FX-SCH-A-000471",
+  "FX-SCH-A-000472", "FX-SCH-A-000490", "FX-SCH-A-000494", "FX-SCH-A-000496", "FX-SCH-A-000499",
+  "FX-SCH-A-000501", "FX-SCH-A-000502", "FX-SCH-A-000503", "FX-SCH-A-000504", "FX-SCH-A-000506",
+  "FX-SCH-A-000507", "FX-SCH-A-000508", "FX-SCH-A-000510", "FX-SCH-A-000516", "FX-SCH-A-000517",
+  "FX-SCH-A-000527", "FX-SCH-A-000534", "FX-SCH-A-000553", "FX-SCH-A-000567", "FX-SCH-A-000569",
+  "FX-SCH-A-000573", "FX-SCH-A-000579", "FX-SCH-A-000580", "FX-SCH-A-000581", "FX-SCH-A-000582",
+  "FX-SCH-A-000585", "FX-SCH-A-000586", "FX-SCH-A-000587", "FX-SCH-A-000589", "FX-SCH-A-000597",
+  "FX-SCH-A-000598", "FX-SCH-A-000609", "FX-SCH-A-000613",
+]
+reason = """The code list rules of Factur-X 1.09 at the positions and in the profiles that no parity \
+fixture runs in: `code-finding` of src/zugferd/rules/rare.typ reports the same check at every \
+position under the id of the position and the profile (`fx-rules` of src/zugferd/code-lists.json, \
+which gen_guard.py compiles from the Schematron of each profile), and the fixtures of \
+tools/zugferd/corpus/rules/FX-SCH-A-*.typ show it at one position of each list. Until Factur-X \
+1.0.07 these positions shared one id with the fixtures (e.g. FX-SCH-A-000031 for the schemes)."""
 
 [[without-fixture]]
 ids = ["BR-48"]
@@ -859,7 +781,7 @@ tests = [
 
 [ip."IP-PAY-01"]
 level = "error"
-summary = "An IBAN with wrong check digits or format, where BR-DE-19 and BR-DE-20 do not check it."
+summary = "An IBAN with wrong check digits or format (in XRechnung, BR-DE-19 and BR-DE-20 are warnings only)."
 basis = "ISO 13616 (IBAN): the amount could not be paid or collected."
 tests = ["tests/zugferd/payment-means/test.typ"]
 
@@ -869,32 +791,21 @@ summary = "A SEPA creditor identifier (BT-90) with wrong check digits or format.
 basis = "The EPC's SEPA creditor identifier (ISO 7064 check digits)."
 tests = ["tests/zugferd/payment-means/test.typ"]
 
-[ip."IP-PAY-03"]
-level = "error"
-summary = "Two kinds of payment means in BASIC WL and BASIC, whose validation accepts them together."
-basis = """EN 16931 BG-16: an invoice states one payment means type (BT-81), so that the buyer does not \
-pay twice; the CEN Schematron 1.3.16 checks it as CII-SR-467, which the validation of these profiles \
-does not apply."""
-tests = ["tests/zugferd/payment-means/test.typ", "tools/zugferd/corpus/regression/payment-card-and-bank-basic.typ"]
-
-[ip."IP-PAY-04"]
-level = "error"
-summary = "A credit transfer without the account it is paid to, in BASIC WL and BASIC."
-basis = """EN 16931 BR-61: a credit transfer states the payment account identifier (BT-84); the Factur-X \
-and CEN 1.3.12 versions of the rule test the debited account, so the validation of these profiles \
-does not check it."""
-tests = [
-  "tests/zugferd/payment-means/test.typ",
-  "tools/zugferd/corpus/regression/payment-paid-transfer-without-bank-basic.typ",
-]
-
 [ip."IP-PAY-05"]
 level = "error"
-summary = "A payee that is the seller, in BASIC WL."
+summary = "A payee that is the seller, in BASIC WL and BASIC."
 basis = """EN 16931 BR-17: the payee (BG-10) is someone other than the seller; the Factur-X Schematron \
-of BASIC WL compares it with a path of the seller that never matches, so its validation does not \
-check it."""
+of BASIC WL and BASIC compares it with a path of the seller that never matches, so their validation \
+does not check it."""
 tests = ["tests/zugferd/party-details/test.typ", "tools/zugferd/corpus/regression/payee-is-seller-basic-wl.typ"]
+
+[ip."IP-PAY-06"]
+level = "error"
+summary = "An amount due (BT-115) without a payment due date (BT-9) or payment terms (BT-20)."
+basis = """BR-CO-25 of EN 16931, which the CII Schematron of CEN 1.3.16 and Factur-X 1.09 no longer \
+check (https://github.com/ConnectingEurope/eInvoicing-EN16931/issues/477): without either, the \
+buyer does not know when to pay (maintainer decision of 2026-09-30)."""
+tests = ["tests/zugferd/validate/test.typ", "tools/zugferd/corpus/regression/payment-terms-missing.typ"]
 
 [ip."IP-PREPAID-01"]
 level = "warning"

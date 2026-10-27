@@ -151,14 +151,13 @@
   #bank
 ]
 
-// --- 5. Currencies the EN 16931 validation does not know yet ---
+// --- 5. The current bolivar (VES), which the EN 16931 validation of
+// Mustang 2.14.0 did not know yet: every validation accepts it now ---
 #model-test(model => {
   let m = model
   m.currency = "VES"
   m.printed-currency = (symbol: none, amount: none, price: none)
-  assert.eq(rules(m), ("BR-CL-04",))
-  assert(diagnostic(m, "BR-CL-04").message.contains("EN 16931 (COMFORT)"))
-  // The Factur-X code list of BASIC WL and MINIMUM has them
+  assert.eq(rules(m), ())
   m.profile = resolve-profile("basic-wl", "FR")
   assert.eq(rules(m), ())
 })[

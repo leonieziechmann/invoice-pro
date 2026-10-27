@@ -7,7 +7,7 @@
 #import "/src/lib.typ": *
 
 // An e-invoice with errors: the invoice number (BR-02) and the payment terms
-// (BR-CO-25) are missing. With `warnings-only`, they are given and the only
+// (IP-PAY-06) are missing. With `warnings-only`, they are given and the only
 // problem is a warning: the sender has a key the e-invoice does not read
 // (IP-KEY-01). The checks of the invoice data are off: they would withhold
 // the XML of the invoice without its number instead of validating it.
@@ -84,7 +84,7 @@
       message: "Unexpected error: " + repr(message),
     )
     assert(message.contains("[BR-02]"), message: message)
-    assert(message.contains("[BR-CO-25]"), message: message)
+    assert(message.contains("[IP-PAY-06]"), message: message)
   }
 }
 
@@ -117,14 +117,14 @@
 
   // Other values are shown as they would be in markup
   assert(
-    shown.dictionary.contains("(rules: (\"BR-02\", \"BR-CO-25\"))"),
+    shown.dictionary.contains("(rules: (\"BR-02\", \"IP-PAY-06\"))"),
     message: shown.dictionary,
   )
   assert(shown.string.contains("2 problems"), message: shown.string)
 
   // The default report
   assert(shown.default.contains("[BR-02]"), message: shown.default)
-  assert(shown.default.contains("[BR-CO-25]"), message: shown.default)
+  assert(shown.default.contains("[IP-PAY-06]"), message: shown.default)
   assert(shown.warnings.contains("[IP-KEY-01]"), message: shown.warnings)
   assert(not shown.warnings.contains("[BR-02]"), message: shown.warnings)
 }

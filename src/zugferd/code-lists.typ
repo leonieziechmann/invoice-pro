@@ -14,7 +14,7 @@
 #let lists = {
   let out = (:)
   for (name, kinds) in json("code-lists.json") {
-    if name == "generated" { continue }
+    if name in ("generated", "fx-rules") { continue }
     let every = " " + kinds.every.join(" ") + " "
     let entry = (:)
     for (kind, lines) in kinds {
@@ -26,4 +26,20 @@
     out.insert(name, entry)
   }
   out
+}
+
+// The profiles with a Factur-X Schematron, in the order of `fx-rules`.
+#let _fx-profiles = ("minimum", "basic-wl", "basic", "en16931")
+#let _fx-rules = json("code-lists.json").at("fx-rules")
+
+/// The rule of the Factur-X Schematron that checks the code list at a
+/// position (e.g. `country/buyer`) in a profile, or `none` where the profile
+/// has no Factur-X list there. Since Factur-X 1.09, each position of each
+/// profile has a rule id of its own.
+///
+/// -> none | str
+#let fx-id(key, profile) = {
+  let index = _fx-profiles.position(p => p == profile.id)
+  if index == none { return none }
+  _fx-rules.at(key).at(index)
 }

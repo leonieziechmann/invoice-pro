@@ -87,7 +87,7 @@
     "zugferd-report",
     (ctx, result) => {
       let rules = result.diagnostics.map(d => d.rule)
-      assert.eq(rules, ("BR-02", "BR-CO-25"))
+      assert.eq(rules, ("BR-02", "IP-PAY-06"))
       assert.eq(result.profile.id, "en16931")
       [#metadata(rules)<reported-rules>]
     },
@@ -142,7 +142,7 @@
 #context {
   assert.eq(
     query(<reported-rules>).map(it => it.value),
-    (("BR-02", "BR-CO-25"),),
+    (("BR-02", "IP-PAY-06"),),
   )
   assert.eq(
     query(<warned-rules>).map(it => it.value),

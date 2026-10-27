@@ -136,9 +136,9 @@
     ("code", "BR-CL-14", path(..country)),
   ))
   // The Netherlands Antilles only in the one of EN 16931: the Factur-X
-  // Schematron's rule rejects them.
+  // Schematron's rule of the position rejects them.
   assert.eq(check(model, put(tree, country, "AN")), (
-    ("code", "FX-SCH-A-000036", path(..country)),
+    ("code", "FX-SCH-A-000568", path(..country)),
   ))
   let quantity = line(0, "ram:SpecifiedLineTradeDelivery", "ram:BilledQuantity")
   assert.eq(check(model, put(tree, quantity + ("@unitCode",), "HOURS")), (
@@ -152,7 +152,7 @@
   )
   let category = tax + ("ram:CategoryCode",)
   assert.eq(check(model, put(tree, category, "B")), (
-    ("code", "FX-SCH-A-000179", path(..category)),
+    ("code", "FX-SCH-A-000619", path(..category)),
   ))
   // The currency of the invoice; the VAT total is then stated in another
   // currency (Factur-X marks it as not used).
@@ -196,11 +196,12 @@
   )
   let category = tax + ("ram:CategoryCode",)
   let rate = tax + ("ram:RateApplicablePercent",)
-  // IPSI (M) needs a rate above 0: `ram:RateApplicablePercent > 0` in the
-  // Schematrons of Factur-X (FX-SCH-A-000246) and EN 16931 (BR-AG-05) that
-  // the guard is compiled from, although the text of the rule reads "0
-  // (zero) or greater than zero".
+  // IPSI (M) needs a rate of 0 or above: `ram:RateApplicablePercent >= 0`
+  // in the Schematrons of Factur-X 1.09 and EN 16931 1.3.16 (BR-AG-05), as
+  // the text of the rule reads ("0 (zero) or greater than zero").
   let ipsi = put(put(tree, category, "M"), rate, "0.00")
+  assert.eq(check(model, ipsi), ())
+  let ipsi = put(put(tree, category, "M"), rate, "-1.00")
   assert.eq(check(model, ipsi), (("category", "BR-AG-05", path(..rate)),))
   assert.eq(check(model, put(tree, category, "M")), ())
   // Standard rated at 0 % or without a rate, zero rated at 19 %, and a line
@@ -479,8 +480,9 @@
     ("blank", "BR-24", path(..total)),
   ))
   let country = buyer("ram:PostalTradeAddress", "ram:CountryID")
+  // A code without text is no code (the Factur-X 1.09 lists let it pass).
   assert.eq(check(model, put(tree, country, (:))), (
-    ("code", "BR-CL-14", path(..country)),
+    ("empty-value", none, path(..country)),
     ("blank", "BR-11", path(..country)),
   ))
 })

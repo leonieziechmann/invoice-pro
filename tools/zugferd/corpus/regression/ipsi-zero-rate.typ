@@ -1,8 +1,10 @@
-// expect: AGREE_INVALID BR-AG-05
+// expect: AGREE_VALID
 // finding: tax-ipsi-zero-rate-false-negative
 //
-// IPSI (category M, Ceuta and Melilla) needs a rate above 0 % (BR-AG-05),
-// like IGIC (L, BR-AF-05). invoice-pro wrote the 0 % line without a report.
+// IPSI (category M, Ceuta and Melilla) at 0 %: the CEN Schematron 1.3.16 and
+// Factur-X 1.09 accept it (BR-AG-05, "0 (zero) or greater than zero"); CEN
+// 1.3.12 of Mustang 2.14.0 required a rate above 0, and invoice-pro reported
+// BR-AG-05. A negative rate is an error (corpus/rules/BR-AG-05.typ).
 
 #import "_base.typ": *
 

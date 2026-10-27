@@ -1,13 +1,10 @@
-// expect: AGREE_INVALID BR-CL-10 BR-CL-11 BR-CL-25
+// expect: AGREE_VALID
 // finding: core-codelists-cen
 //
-// The scheme 0240 is in the ISO/IEC 6523 ICD and EAS lists of the EN 16931
-// Schematron 1.3.16 (KoSIT), but not in the lists of Factur-X 1.0.07 and of
-// the older EN 16931 Schematron in Mustang, which rejects it as the scheme of
-// a party identifier (BR-CL-10), a legal registration identifier (BR-CL-11)
-// and an electronic address (BR-CL-25)
-// (tools/zugferd/validator-differences.toml). invoice-pro follows Mustang
-// and reports an error for each.
+// The scheme 0240 of the ISO/IEC 6523 ICD and EAS lists, which the lists of
+// Factur-X 1.0.07 and CEN 1.3.12 in Mustang 2.14.0 lacked, so that
+// invoice-pro reported BR-CL-10, BR-CL-11 and BR-CL-25. Every list of Mustang
+// 2.26.0 and KoSIT has it now: the invoice stays valid.
 
 #import "_base.typ": *
 

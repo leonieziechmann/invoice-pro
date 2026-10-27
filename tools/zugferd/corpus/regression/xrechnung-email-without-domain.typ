@@ -1,12 +1,12 @@
-// expect: AGREE_INVALID BR-DE-28
+// expect: AGREE_VALID
+// warns: BR-DE-28
 // finding: fidelity-cat-xr-warning-rules
 //
 // XRechnung: the seller e-mail address must match the official pattern
 // (BR-DE-28). An address without a domain name fails the patterns of both
-// XRechnung Schematron versions: Mustang reports an error, KoSIT only a
-// warning (unlike the domain with umlauts of xrechnung-idn-email, which
-// KoSIT accepts; see tools/zugferd/validator-differences.toml).
-// invoice-pro reports an error.
+// XRechnung Schematron versions (unlike the domain with umlauts of
+// xrechnung-idn-email, which both accept). Both validators only warn, and
+// so does invoice-pro (Mustang 2.14.0 reported an error).
 
 #import "_base.typ": *
 

@@ -1,5 +1,8 @@
 #import "/src/loom-wrapper.typ": loom
 #import "/src/lib.typ": locale, unit
+#import "/tests/panic-message.typ": quoted-panic
+#let _catch = catch
+#let catch(f) = quoted-panic(_catch(f))
 
 // --- Test standard builder functions ---
 #{

@@ -8,6 +8,9 @@
 
 #import "/src/lib.typ": *
 #import "/tests/integration/payment-reference/harness.typ": find-all, plain
+#import "/tests/panic-message.typ": quoted-panic
+#let _catch = catch
+#let catch(f) = quoted-panic(_catch(f))
 
 // Records what the default parts print, per scenario.
 #let capturing-theme(scenario) = theme.plain.with(

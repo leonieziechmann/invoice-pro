@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID BR-CL-04
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // An invoice currency (BT-5) that is no ISO 4217 code.
 

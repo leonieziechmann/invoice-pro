@@ -1,5 +1,5 @@
 // expect: AGREE_INVALID BR-CL-25
-// profiles: basic en16931 xrechnung
+// profiles: en16931 xrechnung
 //
 // A buyer electronic address (BT-49) with a scheme outside the EAS code list.
 

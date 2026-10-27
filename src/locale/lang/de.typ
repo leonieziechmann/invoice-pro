@@ -227,7 +227,7 @@
   ),
 
   signature: (
-    closing: "Mit freundlichen Grüßen,",
+    closing: "Mit freundlichen Grüßen",
     thanks: "Vielen Dank für Ihren Auftrag.",
   ),
 

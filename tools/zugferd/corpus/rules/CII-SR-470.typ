@@ -1,10 +1,9 @@
 // expect: AGREE_INVALID CII-SR-470
-// profiles: en16931
+// profiles: basic-wl basic en16931
 //
 // An invoice paid by credit transfer without the account (BT-84): the CEN
-// Schematron 1.3.16 of KoSIT requires its IBAN or proprietary ID. Mustang
-// (CEN 1.3.12, whose BR-61 tests the debited account) accepts it, see
-// validator-differences.toml.
+// Schematron 1.3.16 (Mustang and KoSIT) and Factur-X 1.09 (Mustang) require
+// its IBAN or proprietary ID.
 
 #import "_base.typ": *
 
