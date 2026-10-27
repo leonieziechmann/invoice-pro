@@ -405,6 +405,21 @@ The package template `template/invoice.typ` is compiled by the tytanic template 
 
 ---
 
+## Showcase Videos
+
+Six pages embed a video that types an invoice step by step next to the invoice it compiles to (`<Video name=".." />`). Its code is not a code block of the page: it lives in the scenes of `tools/videos/scenes/`, and `scripts/showcase-videos` compiles every step with the package of the checkout, so a step that no longer compiles stops the build. The editor and the end card show the import with the version (`0.5.0`), so the videos are rebuilt at every version bump. See [MAINTENANCE.md](/MAINTENANCE.md#showcase-videos).
+
+| Page                                | Video         | Scene                                  |
+| :---------------------------------- | :------------ | :------------------------------------- |
+| `intro.md`                          | `tour`        | `tools/videos/scenes/tour.toml`        |
+| `themes/index.md`                   | `theming`     | `tools/videos/scenes/theming.toml`     |
+| `api-reference/locale/index.md`     | `languages`   | `tools/videos/scenes/languages.toml`   |
+| `api-reference/line-items/index.md` | `line-items`  | `tools/videos/scenes/line-items.toml`  |
+| `api-reference/components.md`       | `payments`    | `tools/videos/scenes/payments.toml`    |
+| `e-invoicing/index.md`              | `e-invoicing` | `tools/videos/scenes/e-invoicing.toml` |
+
+---
+
 ## Version Bump Checklist
 
 When releasing a new version, all code blocks flagged with a version number must be updated. Use this list to find them quickly:

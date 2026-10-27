@@ -2,6 +2,8 @@
 sidebar_position: 3
 ---
 
+import Video from '@site/src/components/Video';
+
 # Components API
 
 This section details the standalone components you can use in your invoice, such as payment instructions, bank details, and signature blocks. Each component computes its data and hands it to a [part](./theme/parts.md) of the theme, which renders it; to restyle a component, wrap or replace its part.
@@ -10,6 +12,8 @@ This section details the standalone components you can use in your invoice, such
 **Looking for items and modifiers?**
 If you are looking for the core invoicing functions like `item`, `bundle`, `modifier`, `discount`, or `prepayment`, please check the [Line Items API Reference](./line-items).
 :::
+
+<Video name="payments" title="Payment terms, the EPC QR code, a cash discount, a direct debit and a card payment" />
 
 ---
 

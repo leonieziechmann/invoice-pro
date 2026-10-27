@@ -1,0 +1,90 @@
+# Themes: the presets, a brand on any of them, and one detail (themes/index.md).
+title = "Themes"
+subtitle = "Ten looks, your brand on any of them, every detail adjustable"
+outro = "Find the look that fits you"
+assets = ["logo.svg"]
+poster = 5
+
+start = '''
+#import "@preview/invoice-pro:{version}": *
+
+#show: invoice.with(
+  locale: locale.en-de,
+  sender: (
+    name: "Atelier Nord GmbH",
+    address: "Hafenstraße 12",
+    city: "20457 Hamburg",
+    vat-id: "DE123456789",
+  ),
+  recipient: (
+    name: "Acme Corporation",
+    address: "Market Street 5",
+    city: "80331 Munich",
+  ),
+  invoice-nr: "2026-0142",
+)
+
+#line-items[
+  #item([Brand strategy], price: 2400)
+  #item([Web design], quantity: 3, unit: unit.day, price: 900)
+  #item([Photo shoot], quantity: 2, unit: unit.day, price: 650)
+]
+
+#payment-terms(days: 14)
+#bank-details(
+  bank: "Hamburger Sparkasse",
+  iban: "DE75512108001245126199",
+)
+'''
+
+[intro]
+caption = "Without a theme: the classic look"
+sub = "A business letter that fits a window envelope"
+
+[[step]]
+caption = "Pick a look"
+sub = "Ten presets: one word changes the whole design"
+edit = [{ find = "#show: invoice.with(\n", with = "#show: invoice.with(\n  theme: theme.corporate,\n" }]
+
+[[step]]
+caption = "Pick a look"
+sub = "Prestige: a dark band and serif type"
+edit = [{ find = "theme.corporate", with = "theme.prestige" }]
+
+[[step]]
+caption = "Pick a look"
+sub = "Soft: rounded cards for cafés, practices and shops"
+edit = [{ find = "theme.prestige", with = "theme.soft" }]
+
+[[step]]
+caption = "Add your brand"
+sub = "A color and a logo: fills, rules and titles follow"
+edit = [
+  { find = "#show: invoice.with(\n", with = '''#let brand = theme.custom.brand(
+  color: rgb("#0f766e"),
+  logo: image("logo.svg", alt: "Atelier Nord"),
+)
+
+#show: invoice.with(
+''' },
+  { find = "theme: theme.soft,", with = "theme: theme.soft.with(brand)," },
+]
+
+[[step]]
+caption = "Your brand fits every look"
+sub = "Change the preset, keep the brand"
+edit = [{ find = "theme.soft.with", with = "theme.bold.with" }]
+
+[[step]]
+caption = "Your brand fits every look"
+sub = "Change the preset, keep the brand"
+edit = [{ find = "theme.bold.with", with = "theme.classic.with" }]
+
+[[step]]
+caption = "Adjust any detail"
+sub = "Every block has options: here the table header"
+edit = [{ find = "theme: theme.classic.with(brand),", with = '''theme: theme.classic.with(
+    brand,
+    theme.custom.items-table(header-fill: rgb("#0f766e")),
+  ),''' }]
+focus = [1, 0.06, 0.28, 0.96, 0.52]

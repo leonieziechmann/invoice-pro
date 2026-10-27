@@ -1,0 +1,20 @@
+.figure {
+  margin: 1.5rem 0 2rem;
+}
+
+.video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-global-radius);
+  background: #0f172a;
+}
+
+.caption {
+  margin-top: 0.5rem;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.875rem;
+  text-align: center;
+}

@@ -1,0 +1,93 @@
+# Payments: terms, bank details with the EPC QR code, a cash discount, a
+# direct debit and a card payment (api-reference/components.md).
+title = "Payments"
+subtitle = "Terms, QR code, cash discount, direct debit or card: one call each"
+outro = "Get paid faster"
+poster = 2
+
+start = '''
+#import "@preview/invoice-pro:{version}": *
+
+#show: invoice.with(
+  theme: theme.soft,
+  locale: locale.en-de,
+  sender: (
+    name: "Atelier Nord GmbH",
+    address: "Hafenstraße 12",
+    city: "20457 Hamburg",
+    vat-id: "DE123456789",
+  ),
+  recipient: (
+    name: "Acme Corporation",
+    address: "Market Street 5",
+    city: "80331 Munich",
+  ),
+  invoice-nr: "2026-0142",
+)
+
+#line-items[
+  #item([Brand strategy], price: 2400)
+  #item([Web design], quantity: 3, unit: unit.day, price: 900)
+]
+'''
+
+[intro]
+caption = "An invoice without payment details"
+sub = "How should the customer pay?"
+
+[[step]]
+caption = "Payment terms"
+sub = "The sentence states the amount and the deadline"
+edit = [{ find = "price: 900)\n]\n", with = "price: 900)\n]\n\n#payment-terms(days: 14)\n" }]
+focus = [1, 0.06, 0.36, 0.96, 0.50]
+
+[[step]]
+caption = "Bank details and a QR code"
+sub = "Banking apps scan the EPC QR code (GiroCode)"
+edit = [{ find = "#payment-terms(days: 14)\n", with = '''#payment-terms(days: 14)
+#bank-details(
+  bank: "Hamburger Sparkasse",
+  iban: "DE75512108001245126199",
+  bic: "SOLADEST600",
+)
+''' }]
+focus = [1, 0.06, 0.43, 0.96, 0.60]
+
+[[step]]
+caption = "A cash discount for early payment"
+sub = "Skonto: printed, and stated in the e-invoice"
+edit = [{ find = "#payment-terms(days: 14)", with = "#payment-terms(days: 30, discount: (days: 10, percent: 2%))" }]
+focus = [1, 0.06, 0.43, 0.96, 0.61]
+
+[[step]]
+caption = "Or collect it by direct debit"
+sub = "Creditor ID and IBAN are checked; the QR code goes"
+edit = [
+  { find = "#payment-terms(days: 30, discount: (days: 10, percent: 2%))", with = "#payment-terms(days: 14)" },
+  { find = '''#bank-details(
+  bank: "Hamburger Sparkasse",
+  iban: "DE75512108001245126199",
+  bic: "SOLADEST600",
+)
+''', with = '''#direct-debit(
+  mandate: "M-2026-017",
+  creditor-id: "DE98ZZZ09999999999",
+  debtor-iban: "DE02 1203 0000 0000 2020 51",
+)
+''' },
+]
+focus = [1, 0.06, 0.43, 0.96, 0.56]
+
+[[step]]
+caption = "Already paid by card?"
+sub = "The invoice says so, and nothing is due"
+edit = [{ find = '''#payment-terms(days: 14)
+#direct-debit(
+  mandate: "M-2026-017",
+  creditor-id: "DE98ZZZ09999999999",
+  debtor-iban: "DE02 1203 0000 0000 2020 51",
+)
+''', with = '''#paid(method: "card")
+#card-payment(last4: "4242", kind: "credit")
+''' }]
+focus = [1, 0.06, 0.36, 0.96, 0.54]

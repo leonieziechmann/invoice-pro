@@ -3,11 +3,15 @@ slug: /
 sidebar_position: 1
 ---
 
+import Video from '@site/src/components/Video';
+
 # Introduction
 
 Welcome to the official documentation for `invoice-pro`, an open-source, automated invoicing template designed for Typst. Our goal is to provide a DRY (Don't Repeat Yourself) and declarative API that makes generating compliant invoices straightforward and reliable. Meaning we work hard on making the template derive as much data as possible from your inputs and focus strong on sane defaults and ease of use.
 
 The target group for this template are small businesses in the EU/Schengen Area that want to create high quality B2B and B2C invoices.
+
+<Video name="tour" title="invoice-pro in one minute: from a first invoice to an e-invoice" />
 
 ## The Engine and Paradigm
 

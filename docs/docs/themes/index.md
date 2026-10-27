@@ -2,6 +2,8 @@
 sidebar_position: 7
 ---
 
+import Video from '@site/src/components/Video';
+
 # Themes
 
 A theme decides how your invoice looks: the page layout, the colors, the fonts and the style of every block. It never decides what the invoice says. Switching the theme is one line, and your data, the totals, the legal notes, the ZUGFeRD XML and the EPC-QR code stay exactly the same.
@@ -14,6 +16,8 @@ A theme decides how your invoice looks: the page layout, the colors, the fonts a
 ```
 
 Without a `theme` argument, `invoice` uses [`theme.classic`](./classic.md).
+
+<Video name="theming" title="Pick a preset, add your brand, adjust a detail" />
 
 ## At a Glance
 

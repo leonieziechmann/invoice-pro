@@ -42,6 +42,7 @@ When releasing a new version, the version string must be updated in multiple loc
   - `api-reference/locale/custom.md`
   - `api-reference/locale/base.md`
 - [ ] **`docs/DOCUMENTATION.md`** — Update all version numbers in the Code Block Registry tables
+- [ ] **Showcase videos** — Rebuild them after the version change (`./scripts/showcase-videos`, see [Showcase Videos](#showcase-videos)): the editor and the end card of every video show the import with the version
 - [ ] **Docusaurus versioned docs** — Create a new versioned snapshot if needed (`docs/versioned_docs/version-X.Y.Z/`). Do **not** manually edit old versioned docs — they are frozen snapshots.
 
 ### Verification
@@ -98,3 +99,58 @@ The script needs Typst (`$TYPST_BIN`, default `typst`) with Liberation Sans inst
 | `tests/theme/body.typ`                                      | the identical data of the preset, layout, proof and matrix figures (with the brand of `tests/theme/matrix.typ`) |
 | `tests/theme/gallery/`                                      | the industry invoices of the ten presets (the preset pages and `fig-presets-industry`)                          |
 | `tests/theme/draft.typ`, `stationery.typ`, `acme-theme.typ` | the draft, the stationery modes and the third-party layout                                                      |
+
+---
+
+## Showcase Videos
+
+The videos of the documentation (`docs/static/video/`) show how an invoice is written: the code is typed step by step next to the invoice it compiles to. They are rendered from the scenes in `tools/videos/scenes/` with the package of the checkout, so they show what the current code draws. Rebuild them when a change alters what a scene shows (a preset, the texts of a language, the totals, the draft feedback), and at every version bump.
+
+| Video         | Page                                          | Shows                                                                 |
+| :------------ | :-------------------------------------------- | :-------------------------------------------------------------------- |
+| `tour`        | `docs/docs/intro.md`                          | items, a discount, payment, two presets, a brand, a language, ZUGFeRD |
+| `theming`     | `docs/docs/themes/index.md`                   | three presets, a brand on three presets, an option                    |
+| `languages`   | `docs/docs/api-reference/locale/index.md`     | the five languages and `locale.custom`                                |
+| `line-items`  | `docs/docs/api-reference/line-items/index.md` | units, a group, a bundle, two VAT rates, a discount, a prepayment     |
+| `payments`    | `docs/docs/api-reference/components.md`       | payment terms, bank details, a cash discount, direct debit, card      |
+| `e-invoicing` | `docs/docs/e-invoicing/index.md`              | `zugferd`, the report of `zugferd-errors`, a draft and its report     |
+
+### Checklist
+
+- [ ] Run `./scripts/showcase-videos` from the repository root (all videos, about ten minutes), or name the ones to rebuild: `./scripts/showcase-videos theming languages`. Every step of a scene is compiled; a step that does not compile stops the build with the error of Typst.
+- [ ] Watch every changed video before committing it. `build/videos/<scene>/frames/` holds its frames as PNG files, `build/videos/<scene>/timeline.json` what each frame shows.
+- [ ] Keep the captions true: the caption and the subtitle of a step state what the step shows, so check them when a feature behaves differently.
+
+The script needs Typst (`$TYPST_BIN`, default `typst`) with Inter and Liberation Sans installed, which the presets and the frames use, ffmpeg with libx264 (`$FFMPEG_BIN`, default `ffmpeg`) and Python 3.11 or later (`$PYTHON`, default `python3`). The invoices are dated 22 September 2026 unless `VIDEOS_DATE_EPOCH` sets another date, so a rebuild without changes gives the same frames.
+
+### Writing a Scene
+
+A scene is a TOML file: the document at the start and the steps that change it. Each edit of a step is typed as a user would type it; when the edits of a step are typed, the preview shows the compiled result.
+
+| Key                          | In    | Effect                                                                                                                      |
+| :--------------------------- | :---- | :-------------------------------------------------------------------------------------------------------------------------- |
+| `title`, `subtitle`, `outro` | scene | The title card and the end card.                                                                                            |
+| `start`                      | scene | The document; `{version}` is replaced by the version of `typst.toml`.                                                       |
+| `assets`                     | scene | Files of `tools/videos/assets/` the document uses, such as `logo.svg` (a made-up logo).                                     |
+| `poster`                     | scene | The step whose last frame is the poster image (default: the last step).                                                     |
+| `intro`                      | scene | A caption over the start document: `caption`, `sub`, `hold`.                                                                |
+| `caption`, `sub`             | step  | The caption and the subtitle of the step.                                                                                   |
+| `edit`                       | step  | The edits, `{ find = .., with = .. }`, typed one after the other; each `find` must occur exactly once.                      |
+| `focus`                      | step  | `[page, x0, y0, x1, y1]`: a region of the page, in fractions of its width and height, that the preview then shows up close. |
+| `keep`                       | step  | Stays up close and shows the typed line in a chip; for short edits after a step with `focus`.                               |
+| `badge`                      | step  | A note over the preview, such as "✓ factur-x.xml attached to the PDF".                                                      |
+| `look`, `hold`               | step  | Seconds before the preview zooms in (default 0.2) and before the next step (default 1.9).                                   |
+| `type`                       | step  | `"chars"` or `"lines"`; by default, edits up to 160 characters are typed character by character, longer ones line by line.  |
+
+A line may have at most 64 characters, the width of the editor; a longer line stops the build.
+
+### Files Reference
+
+| File                         | Contains                                                                                    |
+| :--------------------------- | :------------------------------------------------------------------------------------------ |
+| `scripts/showcase-videos`    | the entry point                                                                             |
+| `tools/videos/build.py`      | the steps, the typing, the camera and the timing; compiles the steps and encodes the videos |
+| `tools/videos/frames.typ`    | draws every frame (the editor, the preview, the captions and the cards) from the timeline   |
+| `tools/videos/scenes/*.toml` | one scene per video                                                                         |
+| `tools/videos/assets/`       | files the scenes use                                                                        |
+| `docs/src/components/Video/` | the `<Video name=".." title=".." />` component that embeds a video and its poster in a page |

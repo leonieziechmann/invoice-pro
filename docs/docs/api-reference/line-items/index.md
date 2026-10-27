@@ -2,6 +2,8 @@
 sidebar_position: 2
 ---
 
+import Video from '@site/src/components/Video';
+
 # Line Items API
 
 This section details the functions used to build the core of your invoice: the line items. You can use these components to list services, group them into bundles, organize them into hierarchical groups, apply modifiers like discounts or surcharges, and record advance prepayments.
@@ -11,6 +13,8 @@ Many parameters (like `input-gross` and `tax`) are **cascading**. This means if 
 
 **Resolution Order:** Item Level → Bundle / Group Level → Line-Items Level → Document/Locale Default.
 :::
+
+<Video name="line-items" title="Units, a group, a bundle, two VAT rates, a discount and a deposit" />
 
 ---
 
