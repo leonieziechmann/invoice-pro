@@ -1112,8 +1112,8 @@ Every non-trivial code block in `docs/docs/` must be registered here. When addin
 | `api-reference/locale/index.md`          | `validation-texts`                                               | Custom validation marker                                                         | `docs/api-invoice-validation-locale/`   | ✅                 |
 | `api-reference/locale/custom.md`         | `pl-language`, `pl-region`, `pl-factory`, `pl-usage`             | Polish locale package in four files                                              | `docs/api-locale-custom-pl/`            | ✅                 |
 | `api-reference/locale/base.md`           | `schema-override`                                                | Schema inspection and partial override example                                   | `docs/api-locale-base-override/`        | ✅                 |
-| `README.md`                              | `basic-usage`                                                    | Full invoice                                                                     | `docs/readme-getting-started/`          | ✅                 |
-| `README.md`                              | `theming`                                                        | A preset with a brand and a logo                                                 | `docs/readme-theming/`                  | ✅                 |
+| `README.md`, `.github/README.md`         | `quick-start`                                                    | Full invoice                                                                     | `docs/readme-getting-started/`          | ✅                 |
+| `README.md`, `.github/README.md`         | `theme`                                                          | A preset with a brand and a logo                                                 | `docs/readme-theming/`                  | ✅                 |
 
 ---
 

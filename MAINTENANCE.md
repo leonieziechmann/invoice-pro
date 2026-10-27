@@ -12,7 +12,7 @@ When releasing a new version, the version string must be updated in multiple loc
 
 - [ ] **`typst.toml`** — Update the `version` field
 - [ ] **`src/loom-wrapper.typ`** — Update the `loom-key` label (e.g., `<invoice-pro:X.Y.Z>`)
-- [ ] **`README.md`** — Update all `@preview/invoice-pro:X.Y.Z` import strings (3 occurrences)
+- [ ] **`README.md`** and **`.github/README.md`** — Update the `@preview/invoice-pro:X.Y.Z` import of the quick start (one in each)
 - [ ] **`template/invoice.typ`** — Update the import version
 - [ ] **`docs/docs/` (current docs)** — Update all `@preview/invoice-pro:X.Y.Z` imports across:
   - `intro.md`
@@ -70,7 +70,8 @@ nix run .#check-version -- 0.3.0
 | :---------------------- | :------------------------------------- | :-------------------- |
 | `typst.toml`            | `version = "X.Y.Z"`                    | `version = "0.5.0"`   |
 | `src/loom-wrapper.typ`  | `#let loom-key = <invoice-pro:X.Y.Z>`  | `<invoice-pro:0.5.0>` |
-| `README.md`             | `#import "@preview/invoice-pro:X.Y.Z"` | 3 import statements   |
+| `README.md`             | `#import "@preview/invoice-pro:X.Y.Z"` | 1 import statement    |
+| `.github/README.md`     | `#import "@preview/invoice-pro:X.Y.Z"` | 1 import statement    |
 | `template/invoice.typ`  | `#import "@preview/invoice-pro:X.Y.Z"` | 1 import statement    |
 | `docs/docs/**/*.md`     | `#import "@preview/invoice-pro:X.Y.Z"` | ~36 import statements |
 | `docs/DOCUMENTATION.md` | Version column in registry tables      | All `0.X.Y` entries   |
@@ -85,7 +86,7 @@ The figures of the theme documentation (`docs/static/img/themes/`) and of the th
 
 - [ ] Run `./scripts/theme-figures` from the repository root. It renders the pages with `tools/figures/pages.typ` into `build/figures/pages/`, composes the labelled sheets with `tools/figures/sheets.typ`, and writes both figure directories (about 40 seconds).
 - [ ] Look at every changed figure before committing it, as with a tytanic reference image. A figure that changed without a visual change in the code points to a changed fixture or font.
-- [ ] Update a caption when the figure says something different now: the captions of the sheets are in `tools/figures/sheets.typ`, the alt texts in the pages that show them (`docs/docs/api-reference/theme/`, `docs/docs/api-reference/invoice/validation.md`, `docs/concepts/theming-api/README.md` and the `README.md` of the repository, which links the published `fig-presets.png`).
+- [ ] Update a caption when the figure says something different now: the captions of the sheets are in `tools/figures/sheets.typ`, the alt texts in the pages that show them (`docs/docs/api-reference/theme/`, `docs/docs/api-reference/invoice/validation.md`, and `docs/concepts/theming-api/README.md`). The README has images of its own; see [README](#readme).
 
 The script needs Typst (`$TYPST_BIN`, default `typst`) with Liberation Sans installed, which the presets use for body text (without it, they fall back to an embedded font and the figures differ), and Python 3 with Pillow (`$PYTHON`, default `python3`), which reduces each sheet to 256 colours. The invoices are dated 22 September 2026 unless `FIGURES_DATE_EPOCH` sets another date, so a rebuild without changes gives the same figures.
 
@@ -154,3 +155,19 @@ A line may have at most 64 characters, the width of the editor; a longer line st
 | `tools/videos/scenes/*.toml` | one scene per video                                                                         |
 | `tools/videos/assets/`       | files the scenes use                                                                        |
 | `docs/src/components/Video/` | the `<Video name=".." title=".." />` component that embeds a video and its poster in a page |
+
+---
+
+## README
+
+The repository has two READMEs with the same content. GitHub shows `.github/README.md`, which it prefers to the one at the root. The package uses `README.md`, and Typst Universe renders it with fewer means than GitHub: it removes top-level headings (an HTML `<h1>` with everything in it), and it resolves relative paths in the published package, which holds no images. So `README.md` links its images by the absolute URL of the documentation site, has its title as a Markdown heading (which Typst Universe drops, while the package archive keeps it) instead of an HTML `<h1>`, and leaves out the development section. Change both files together; the tests `docs/readme-*` take their Typst code verbatim (see `docs/DOCUMENTATION.md`).
+
+The title image and the ten looks (`docs/static/img/readme/`) are rendered from `tools/readme/invoice.typ`, the example invoice of the showcase videos with its made-up logo. The video posters come from `docs/static/video/` (see [Showcase Videos](#showcase-videos)).
+
+### Checklist
+
+- [ ] Rebuild the images with `./scripts/readme-images` when a preset's look changes, together with the [theme figures](#theme-figures). It renders the invoice in the ten presets into `build/readme/pages/`, composes the title image (`tools/readme/hero.py`) and the ten looks (`tools/readme/looks.typ`) and writes them as WebP (quality 92: no visible loss, a quarter of the size of a PNG).
+- [ ] Look at both images before committing them.
+- [ ] After a change to `README.md`, look at a Typst Universe page of the release, and at the Markdown preview of GitHub for `.github/README.md`.
+
+The script needs Typst (`$TYPST_BIN`) with Inter and Liberation Sans installed and Python with Pillow (`$PYTHON`). The invoice is dated 22 September 2026 unless `README_DATE_EPOCH` sets another date, so a rebuild without changes gives the same images.
