@@ -254,7 +254,7 @@ The preset looks replace many of these renderers. `theme.parts` always holds the
 | :------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------- |
 | tokens, options, checks, body parts, `row(fill:)` | layout patches, frame parts, and the frame options `logo`, `title`, `page-number`, `continuation`: the page frame is drawn once per document |
 
-`theme.custom.row(fill:)` is read by the `group` and `item` components inside the scope. Issues found in a scope, such as a contrast problem, follow the validation level; in a draft their ids start with `themed/`.
+`theme.custom.row(fill:)` is read by the `group`, `item` and `bundle` components inside the scope; in nested scopes, the innermost wins. Issues found in a scope, such as a contrast problem, follow the validation level; in a draft their ids start with `themed/`.
 
 ## Theme Packages
 

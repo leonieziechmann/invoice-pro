@@ -9,6 +9,14 @@
   let t = ctx.at("theme", default: none)
   if type(t) == content { t.value } else { t }
 }
+/// The row style (`options.row`) of the theme in effect at `ctx`, as
+/// `themed(theme.custom.row(..))` sets it for a part of the body. The rows of
+/// the items table record it: groups, items and the lines of bundles, so a
+/// scope colours every row inside it. `none` without a theme.
+#let row-style-of(ctx) = {
+  let t = theme-of(ctx)
+  if t == none { none } else { t.options.at("row", default: none) }
+}
 #let unsealed(ctx) = {
   let t = ctx.at("theme", default: none)
   if type(t) == content { ctx + (theme: t.value) } else { ctx }
