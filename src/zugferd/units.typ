@@ -66,28 +66,8 @@
   ).pairs() {
     for text in texts { table.insert(text, code) }
   }
-  // Plurals that the languages list no own form for and that are no singular
-  // with "s" (French, Italian and Spanish).
-  for (code, texts) in (
-    H87: ("pezzi", "unidades"),
-    PR: ("paia", "pares"),
-    HUR: ("ore",),
-    DAY: ("giorni",),
-    MON: ("mesi",),
-    ANN: ("anni", "année", "années"),
-    KGM: ("chilogrammi",),
-    GRM: ("grammi",),
-    TNE: ("tonnellate",),
-    MTR: ("metri",),
-    MTK: ("mètres carrés", "metri quadrati", "metros cuadrados"),
-    MMT: ("millimetri",),
-    CMT: ("centimetri",),
-    KMT: ("chilometri",),
-    LTR: ("litri",),
-    MTQ: ("mètres cubes", "metri cubi", "metros cúbicos"),
-  ).pairs() {
-    for text in texts { table.insert(text, code) }
-  }
+  // The French "année" (year) besides "an", which the language lists.
+  for text in ("année", "années") { table.insert(text, "ANN") }
   for unit in unit-db {
     if unit.symbol != none { table.insert(lower(unit.symbol), unit.code) }
     table.insert(lower(unit.name), unit.code)

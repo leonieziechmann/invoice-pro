@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Rebuilds the images of the README (docs/static/img/readme, WebP): the example
+# invoice of tools/readme/invoice.typ in every preset, fanned out in the title
+# image (tools/readme/hero.py) and named in the ten looks
+# (tools/readme/looks.typ). Look at both images before committing them (see
+# MAINTENANCE.md).
+#
+# Usage: readme-images
+#
+# Needs Typst ($TYPST_BIN, default typst) with the fonts the presets use
+# (Inter and Liberation Sans) and Python with Pillow ($PYTHON, default
+# python3). The invoice is dated by $README_DATE_EPOCH, 22 September 2026 by
+# default, so that a rebuild without changes gives the same images.
+set -euo pipefail
+
+if [ ! -f "typst.toml" ]; then
+  echo "Error: readme-images must be run from the root of the invoice-pro repository." >&2
+  exit 1
+fi
+
+TYPST="${TYPST_BIN:-typst}"
+PYTHON="${PYTHON:-python3}"
+export SOURCE_DATE_EPOCH="${README_DATE_EPOCH:-1790078400}"
+
+PAGES=build/readme/pages
+OUT=docs/static/img/readme
+rm -rf "$PAGES"
+mkdir -p "$PAGES" "$OUT"
+
+echo "Rendering the example invoice in every preset..."
+for p in classic plain corporate elegant prestige bold technical soft compact boxed; do
+  "$TYPST" compile --root . --ppi 150 --input "preset=$p" tools/readme/invoice.typ "$PAGES/$p-{0p}.png"
+done
+
+echo "Composing the images..."
+"$PYTHON" tools/readme/hero.py "$PAGES" "$OUT/hero.webp"
+"$TYPST" compile --root . --ppi 144 tools/readme/looks.typ "$PAGES/looks.png"
+"$PYTHON" -c 'import sys; from PIL import Image; Image.open(sys.argv[1]).save(sys.argv[2], quality=92, method=6)' \
+  "$PAGES/looks.png" "$OUT/looks.webp"
+
+ls -l "$OUT"

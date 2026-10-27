@@ -66,6 +66,7 @@
     ("giorni", "DAY"),
     ("pezzi", "H87"),
     ("unidades", "H87"),
+    ("sumas globales", "LS"),
     ("années", "ANN"),
     ("mètres carrés", "MTK"),
     ("metri cubi", "MTQ"),

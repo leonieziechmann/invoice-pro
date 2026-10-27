@@ -2,11 +2,15 @@
 sidebar_position: 5
 ---
 
+import Video from '@site/src/components/Video';
+
 # Locale API
 
 The locale system in `invoice-pro` is a powerful engine that dictates the language of your document, the formatting of dates and currencies, and the default tax rates and legal behaviors of your region.
 
 By default, standard text (like "Invoice", "Subtotal", or "Tax") is automatically translated, and prices are formatted according to the regional standards.
+
+<Video name="languages" title="One invoice in five languages, and a text of your own" />
 
 ---
 

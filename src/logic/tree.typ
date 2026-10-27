@@ -100,6 +100,7 @@
         bundle-contents,
         prefix: prefix,
         start-counter: counter,
+        style: style,
       )
       entries += bundle-result.entries
       counter = bundle-result.next-counter
@@ -112,7 +113,9 @@
           pos: current-pos,
           level: prefix.len(),
           raw: item-signal,
-          style: style,
+          // the row style the line recorded in its own `themed` scope (the
+          // innermost wins), else the one of its group
+          style: item-signal.at("style", default: style),
         ))
         counter += 1
       }

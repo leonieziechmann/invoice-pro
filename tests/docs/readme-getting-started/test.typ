@@ -1,53 +1,31 @@
-// Source: README.md — "Basic Usage"
+// Source: README.md and .github/README.md — "Quick Start"
 #import "/src/lib.typ": *
 
 #show: invoice.with(
   locale: locale.en-de,
   sender: (
-    name: "Your Company / Name",
-    address: "1 Example Street",
-    city: "12345 Example City",
-    tax-nr: "123/456/789",
+    name: "Atelier Nord GmbH",
+    address: "Hafenstraße 12",
+    city: "20457 Hamburg",
+    vat-id: "DE123456789",
   ),
   recipient: (
-    name: "Customer Name",
-    address: "5 Customer Street",
-    city: "98765 Customer City",
+    name: "Acme Corporation",
+    address: "Market Street 5",
+    city: "80331 Munich",
   ),
-  invoice-nr: "2026-01",
+  invoice-nr: "2026-0142",
 )
 
-// Add Invoice Items inside a scoped block
 #line-items[
-  #item(
-    [Consulting & Concept],
-    price: 85.00,
-    quantity: 5,
-    unit: "hrs",
-  )
-
-  #item(
-    [Web Design Layout (Flat Rate)],
-    price: 1200.00,
-  )
-
-  #item(
-    [Stock Licenses (Images)],
-    price: 25.00,
-    quantity: 4,
-  )
-
-  #discount([Project Discount (Regular Customer)], amount: 10%)
+  #item([Brand strategy], price: 2400)
+  #item([Web design], quantity: 3, unit: unit.day, price: 900)
+  #discount([Loyal customer], amount: 5%)
 ]
 
-// Payment Terms
 #payment-terms(days: 14)
-
-// Bank Details with QR Code
 #bank-details(
-  bank: "Example Bank",
+  bank: "Hamburger Sparkasse",
   iban: "DE75512108001245126199",
   bic: "SOLADEST600",
 )
-
-#signature()

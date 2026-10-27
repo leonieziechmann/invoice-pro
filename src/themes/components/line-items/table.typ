@@ -202,7 +202,8 @@
     } else if type(spec) == dictionary {
       spec.at(key, default: default)
     } else if type(spec) == array {
-      if idx < spec.len() {
+      // idx is none for a column the table does not show (e.g. no total column)
+      if idx != none and idx < spec.len() {
         spec.at(idx)
       } else {
         default
@@ -637,7 +638,22 @@
         default-total-align,
       )
 
-      if indices.percent != none {
+      if indices.total == none {
+        // No total column (left out of column-order or hidden): the label and
+        // the percentage span the value columns, the amount shows in the
+        // totals, as in the table of `compact`.
+        let span1 = indices.total-count - indices.desc
+        m-row.push(line-cell(
+          [#mod-content.label #text(
+              size: styles.size-small,
+              mod-content.percent,
+            )],
+          inset: cell-inset + (top: 0pt),
+          colspan: span1,
+          align: desc-cell-align,
+        ))
+        m-col-tracker += span1
+      } else if indices.percent != none {
         let span1 = indices.percent - indices.desc
         m-row.push(line-cell(
           mod-content.label,
@@ -677,9 +693,10 @@
         ))
         m-col-tracker += 1
       }
+      // the columns after the total, where column-order puts any
       let remaining = indices.total-count - m-col-tracker
       if remaining > 0 {
-        m-row.push(line-cell(colspan: remaining, inset: 0pt))
+        m-row.push(line-cell(none, colspan: remaining, inset: 0pt))
       }
 
       m-row.push(right-spacer)
@@ -699,8 +716,12 @@
           rows += build-modifier-row(surcharge, false)
         }
       }
+    }
 
-      // --- SECTION: SUBTOTAL ROW ---
+    // --- SECTION: SUBTOTAL ROW ---
+    // Only with a total column: without one, the amounts show in the totals,
+    // as in the table of `compact`.
+    if has-mods and indices.total != none {
       rows.push(left-spacer)
       let sub-col-tracker = 0
 
@@ -1012,7 +1033,11 @@
       default-total-align,
     )
 
-    let span1 = indices.total - indices.desc
+    // Without a total column, the label spans the value columns and the
+    // amount shows in the totals, as in the table of `compact`.
+    let span1 = if indices.total == none { total-cols - sub-col-tracker } else {
+      indices.total - indices.desc
+    }
     rows.push(line-cell(
       text(
         weight: styles.weight-bold,
@@ -1024,12 +1049,14 @@
     ))
     sub-col-tracker += span1
 
-    rows.push(line-cell(
-      num(text(weight: styles.weight-bold)[#group.subtotal]),
-      align: total-cell-align,
-      inset: cell-inset,
-    ))
-    sub-col-tracker += 1
+    if indices.total != none {
+      rows.push(line-cell(
+        num(text(weight: styles.weight-bold)[#group.subtotal]),
+        align: total-cell-align,
+        inset: cell-inset,
+      ))
+      sub-col-tracker += 1
+    }
 
     let remaining = total-cols - sub-col-tracker
     if remaining > 0 {

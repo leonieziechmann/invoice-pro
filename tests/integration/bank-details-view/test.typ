@@ -295,6 +295,21 @@
   assert(plain(draw()).contains("IBAN: DE75 5121 0800 1245 1261 99"))
   assert(plain(draw()).contains("Verwendungszweck: RE-2026-001"))
 
+  // A line without a value is left out, not printed as a bare label: no
+  // `bank` given, `name: none` (both "" in the view).
+  let s = ctx.locale.strings.bank-details
+  let holder = s.account-holder + ": Muster GmbH"
+  let bank = s.bank + ": Musterbank"
+  let without(field) = plain(draw(sender: view.sender + ((field): "")))
+  assert(plain(draw()).contains(holder) and plain(draw()).contains(bank))
+  assert(not without("bank").contains(s.bank), message: without("bank"))
+  assert(without("bank").contains(holder))
+  assert(
+    not without("name").contains(s.account-holder),
+    message: without("name"),
+  )
+  assert(without("name").contains(bank))
+
   // The code of the view is drawn at the size of the theme (25 mm); the
   // component builds it from the payload, or the placeholder naming the
   // problems.

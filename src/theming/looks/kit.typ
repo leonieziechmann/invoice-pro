@@ -252,7 +252,8 @@
   let snd = view.sender
   let number = if number == auto { x => figures(ctx, x) } else { number }
   let iban = if iban == auto { number } else { iban }
-  let rows = ((s.account-holder, snd.name),)
+  let rows = ()
+  if not blank(snd.name) { rows.push((s.account-holder, snd.name)) }
   if not blank(snd.bank) { rows.push((s.bank, snd.bank)) }
   if not blank(view.iban.text) { rows.push((s.iban, iban(view.iban.text))) }
   if not blank(snd.bic) { rows.push((s.bic, number(snd.bic))) }

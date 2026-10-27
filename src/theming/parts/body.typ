@@ -336,11 +336,13 @@
       fill: rgb("#b91c1c"),
     )[ (#if view.iban.value == "" [missing] else [invalid])]
   }
+  // a line without a value (no bank given, `name: none`) is left out
+  let given(value) = value not in (none, "", [])
   let lines = (
-    [#label(s.account-holder): #view.sender.name],
-    [#label(s.bank): #view.sender.bank],
+    if given(view.sender.name) [#label(s.account-holder): #view.sender.name],
+    if given(view.sender.bank) [#label(s.bank): #view.sender.bank],
     [#label(s.iban): #num(text(weight: t.weights.strong, view.iban.text))#iban-note],
-    if view.sender.bic not in (none, "") [#label(s.bic): #view.sender.bic],
+    if given(view.sender.bic) [#label(s.bic): #view.sender.bic],
     if view.show-reference
       and view.payment-reference
         != none [#label(s.reference): #num(view.payment-reference)],

@@ -1,0 +1,78 @@
+# Languages: one invoice in the five languages, and a text of your own
+# (api-reference/locale/index.md).
+title = "Languages"
+subtitle = "Five languages, one word to switch, every text adjustable"
+outro = "Write to your customers in their language"
+poster = 3
+
+start = '''
+#import "@preview/invoice-pro:{version}": *
+
+#show: invoice.with(
+  theme: theme.corporate,
+  locale: locale.de-de,
+  sender: (
+    name: "Atelier Nord GmbH",
+    address: "Hafenstraße 12",
+    city: "20457 Hamburg",
+    vat-id: "DE123456789",
+  ),
+  recipient: (
+    name: "Acme Corporation",
+    address: "Market Street 5",
+    city: "80331 Munich",
+  ),
+  invoice-nr: "2026-0142",
+)
+
+#line-items[
+  #item([Branding], price: 2400)
+  #item([Web design], quantity: 3, unit: unit.day, price: 900)
+  #item([Support], quantity: 12, unit: unit.hour, price: 95)
+]
+
+#payment-terms(days: 14)
+#bank-details(
+  bank: "Hamburger Sparkasse",
+  iban: "DE75512108001245126199",
+)
+'''
+
+[intro]
+caption = "An invoice in German"
+sub = "locale.de-de: German texts, German VAT and formats"
+
+[[step]]
+caption = "English for international customers"
+sub = "en-de: English texts, German VAT and formats"
+edit = [{ find = "locale.de-de", with = "locale.en-de" }]
+focus = [1, 0.27, 0.05, 0.97, 0.41]
+
+[[step]]
+caption = "French"
+sub = "Titles, labels, units and sentences follow"
+edit = [{ find = "locale.en-de", with = "locale.fr-de" }]
+keep = true
+focus = [1, 0.27, 0.05, 0.97, 0.41]
+
+[[step]]
+caption = "Italian"
+sub = "Titles, labels, units and sentences follow"
+edit = [{ find = "locale.fr-de", with = "locale.it-de" }]
+keep = true
+focus = [1, 0.27, 0.05, 0.97, 0.41]
+
+[[step]]
+caption = "Spanish"
+sub = "Titles, labels, units and sentences follow"
+edit = [{ find = "locale.it-de", with = "locale.es-de" }]
+keep = true
+focus = [1, 0.27, 0.05, 0.97, 0.41]
+
+[[step]]
+caption = "Your own words"
+sub = "Change any text of a language with locale.custom"
+edit = [{ find = "  locale: locale.es-de,", with = '''  locale: locale.en-de.with(
+    locale.custom.document(invoice: "Proforma Invoice"),
+  ),''' }]
+focus = [1, 0.27, 0.05, 0.97, 0.41]

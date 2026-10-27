@@ -7,6 +7,7 @@
 #import "../data/tax.typ" as m-tax
 #import "../public/unit.typ" as m-unit
 #import "../logic/unit.typ" as unit-logic
+#import "../theming/access.typ": row-style-of
 
 /// Normalizes a modifier input (content, dictionary, or signal) into a structured modifier object.
 ///
@@ -292,7 +293,8 @@
     }),
     measure: ctx => {
       loom.guards.assert-direct-parent(ctx, "line-items", "bundle", "group")
-      return calculate-item-data(ctx, name)
+      // the row style of a `themed` scope around the item, as a group records it
+      return calculate-item-data(ctx, name) + (style: row-style-of(ctx))
     },
   )
 }

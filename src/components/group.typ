@@ -1,5 +1,5 @@
 #import "../loom-wrapper.typ": compute-motif, loom
-#import "../theming/access.typ": theme-of
+#import "../theming/access.typ": row-style-of
 #import "../utils/types.typ"
 #import "../utils/coercion.typ"
 #import "../data/tax.typ" as m-tax
@@ -121,7 +121,7 @@
         description: if description == auto { none } else { description },
         show-subtotal: if show-subtotal == auto { true } else { show-subtotal },
         // structure-first: data motifs record the scoped row style so parts can honour it
-        style: theme-of(ctx).options.row,
+        style: row-style-of(ctx),
         children: children,
       )
     },
