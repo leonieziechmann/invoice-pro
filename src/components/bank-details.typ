@@ -54,11 +54,13 @@
   /// sender's name on one line, as in the e-invoice (BT-59, BT-27), or the
   /// recipient's on a credit note or a self-billed invoice, which the sender
   /// pays. A name given here is also the account name of the e-invoice
-  /// (BT-85).
+  /// (BT-85). `none` prints no account holder; the EPC-QR code needs one, so
+  /// hide it with `qr-code: (display: false)`.
   /// -> auto | none | string
   name: auto,
 
-  /// The name of the banking institution.
+  /// The name of the banking institution. If omitted or `none`, the bank is
+  /// not displayed in the bank details block.
   /// -> none | string
   bank: none,
 

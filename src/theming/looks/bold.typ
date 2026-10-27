@@ -9,7 +9,8 @@
 #import "../custom.typ" as c
 #import "../color.typ": luminance, on-color
 #import "kit.typ": (
-  bank-qr, caps, figures, fit-size, label-grid, payable-label, tight-signature,
+  bank-qr, blank, caps, figures, fit-size, label-grid, payable-label,
+  tight-signature,
 )
 
 #let _t(ctx) = ctx.theme.tokens
@@ -331,9 +332,11 @@
   let s = ctx.locale.strings.bank-details
   let b = view.sender
   let cell(k, v) = [#caps(ctx, k, fill: t.colors.text-muted) \ #v]
-  let who = (cell(s.account-holder, b.name), cell(s.bank, b.bank))
+  let who = ((s.account-holder, b.name), (s.bank, b.bank))
+    .filter(((_, v)) => not blank(v))
+    .map(((k, v)) => cell(k, v))
   let where = (cell(s.iban, figures(ctx, view.iban.text)),)
-  if b.bic not in ("", none) { where.push(cell(s.bic, figures(ctx, b.bic))) }
+  if not blank(b.bic) { where.push(cell(s.bic, figures(ctx, b.bic))) }
   let what = if view.show-reference and view.payment-reference != none {
     (cell(s.reference, figures(ctx, view.payment-reference)),)
   } else { () }
