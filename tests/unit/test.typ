@@ -17,15 +17,15 @@
 
   let u-piece-es = unit.piece(locale.es-es)
   assert.eq(u-piece-es.code, "H87")
-  assert.eq(u-piece-es.name, "unidad")
+  assert.eq(u-piece-es.name, (singular: "unidad", plural: "unidades"))
 
   let u-piece-fr = unit.piece(locale.fr-fr)
   assert.eq(u-piece-fr.code, "H87")
-  assert.eq(u-piece-fr.name, "pièce")
+  assert.eq(u-piece-fr.name, (singular: "pièce", plural: "pièces"))
 
   let u-piece-it = unit.piece(locale.it-it)
   assert.eq(u-piece-it.code, "H87")
-  assert.eq(u-piece-it.name, "pezzo")
+  assert.eq(u-piece-it.name, (singular: "pezzo", plural: "pezzi"))
 
   let u-set-de = unit.unit-set(locale.de-de)
   assert.eq(u-set-de.code, "SET")
@@ -1359,6 +1359,33 @@
   assert.eq(en-res(u-en, 1), "hour")
   assert.eq(en-res(u-en, 8), "hours")
   assert.eq(en-res(u-en, 0), "hours")
+
+  // French takes the singular below 2 (1,5 heure), Italian and Spanish for 1
+  // only (1,5 ore, 1,5 horas)
+  let fr-res = locale.fr-fr(base-language, base-region).resolve-plural
+  let it-res = locale.it-it(base-language, base-region).resolve-plural
+  let es-res = locale.es-es(base-language, base-region).resolve-plural
+  let u-fr = unit.hour(locale.fr-fr).name
+  assert.eq(u-fr, (singular: "heure", plural: "heures"))
+  assert.eq(fr-res(u-fr, 1), "heure")
+  assert.eq(fr-res(u-fr, decimal("1.5")), "heure")
+  assert.eq(fr-res(u-fr, 0), "heure")
+  assert.eq(fr-res(u-fr, 2), "heures")
+  let u-it = unit.hour(locale.it-it).name
+  assert.eq(u-it, (singular: "ora", plural: "ore"))
+  assert.eq(it-res(u-it, 1), "ora")
+  assert.eq(it-res(u-it, decimal("1.5")), "ore")
+  assert.eq(it-res(u-it, 2), "ore")
+  let u-es = unit.hour(locale.es-es).name
+  assert.eq(u-es, (singular: "hora", plural: "horas"))
+  assert.eq(es-res(u-es, 1), "hora")
+  assert.eq(es-res(u-es, decimal("1.5")), "horas")
+  assert.eq(es-res(u-es, 2), "horas")
+  // Invariable names stay strings: "mois", "set", "a forfait"
+  assert.eq(unit.month(locale.fr-fr).name, "mois")
+  assert.eq(unit.unit-set(locale.it-it).name, "set")
+  assert.eq(unit.lump-sum(locale.it-it).name, "a forfait")
+  assert.eq(unit.pair(locale.it-it).name, (singular: "paio", plural: "paia"))
 
   // 3. Custom keys fallback to first pair
   let u-one-other = (one: "piece", other: "pieces")

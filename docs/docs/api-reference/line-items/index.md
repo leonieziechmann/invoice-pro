@@ -90,7 +90,7 @@ The package provides three ways to pass the `unit` parameter:
    :::tip
    The names returned by functions in the `unit` module are **automatically translated** based on the active document locale. For instance, `unit.hour` resolves to `"hour"` in English, `"Stunde"` in German, `"hora"` in Spanish, `"heure"` in French, and `"ora"` in Italian.
 
-   Where the language has a plural form, the name follows the item's `quantity`: `1 Stunde`, `2 Stunden`, `2,5 Stunden`. The "unit for all items" note below the table always uses the singular.
+   Where the language has a plural form, the name follows the item's `quantity`: `1 Stunde`, `2 Stunden`, `2,5 Stunden`; in French, the singular holds below 2: `1,5 heure`, `2 heures`. The "unit for all items" note below the table always uses the singular.
    :::
 
 2. **Custom Dictionary:**

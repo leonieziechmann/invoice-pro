@@ -1,7 +1,8 @@
 // The unit column pluralises with each row's quantity, while the "unit for all
 // items" note always names the unit in singular.
 //
-// Pages 1-3 are English, pages 4-6 German. Each page is one invoice:
+// Pages 1-3 are English, 4-6 German, 7-9 French, 10-12 Italian and 13-15
+// Spanish. Each page is one invoice:
 //   1. Mixed quantities: unit column with 1, 2 and 2.5 per unit kind
 //      (preset, (singular:, plural:) dictionary, plain string, bundle).
 //   2. All items share quantity 2: the unit moves into the note, in singular.
@@ -62,3 +63,9 @@
 #page-for(locale.en-de, (singular: "licence", plural: "licences"), "hrs")
 
 #page-for(locale.de-de, (singular: "Lizenz", plural: "Lizenzen"), "Std.")
+
+#page-for(locale.fr-de, (singular: "licence", plural: "licences"), "h")
+
+#page-for(locale.it-de, (singular: "licenza", plural: "licenze"), "h")
+
+#page-for(locale.es-de, (singular: "licencia", plural: "licencias"), "h")

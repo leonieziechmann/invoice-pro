@@ -154,28 +154,28 @@ Notes on why no VAT is charged, for the tax categories that need one. When no it
 
 ### `units`
 
-Designations for common units of measure.
+Designations for common units of measure. A name that changes with the quantity is a dictionary `(singular: "hour", plural: "hours")`, and `meta.resolve-plural` picks the form for the quantity of each item: French uses the singular below 2 (`1,5 heure`), the other languages for exactly 1. A name that never changes, such as the German `"Stück"` or the French `"mois"`, is a string.
 
-| Key            | Type  | Description                                               |
-| :------------- | :---- | :-------------------------------------------------------- |
-| `piece`        | `str` | Label for a singular item (e.g., `"piece"`).              |
-| `set`          | `str` | Label for a set of items (e.g., `"set"`).                 |
-| `pair`         | `str` | Label for a pair of items (e.g., `"pair"`).               |
-| `lump-sum`     | `str` | Label for a lump-sum amount (e.g., `"lump sum"`).         |
-| `hour`         | `str` | Label for hours of service (e.g., `"hour"`).              |
-| `day`          | `str` | Label for days of service (e.g., `"day"`).                |
-| `month`        | `str` | Label for monthly billing (e.g., `"month"`).              |
-| `year`         | `str` | Label for yearly billing (e.g., `"year"`).                |
-| `kilogram`     | `str` | Label for weight in kilograms (e.g., `"kilogram"`).       |
-| `gram`         | `str` | Label for weight in grams (e.g., `"gram"`).               |
-| `tonne`        | `str` | Label for weight in tonnes (e.g., `"tonne"`).             |
-| `metre`        | `str` | Label for length in metres (e.g., `"metre"`).             |
-| `square-metre` | `str` | Label for area in square metres (e.g., `"square metre"`). |
-| `millimetre`   | `str` | Label for length in millimetres (e.g., `"millimetre"`).   |
-| `centimetre`   | `str` | Label for length in centimetres (e.g., `"centimetre"`).   |
-| `kilometre`    | `str` | Label for distance in kilometres (e.g., `"kilometre"`).   |
-| `litre`        | `str` | Label for volume in litres (e.g., `"litre"`).             |
-| `cubic-metre`  | `str` | Label for volume in cubic metres (e.g., `"cubic metre"`). |
+| Key            | Type                  | Description                                               |
+| :------------- | :-------------------- | :-------------------------------------------------------- |
+| `piece`        | `str` \| `dictionary` | Label for a singular item (e.g., `"piece"`).              |
+| `set`          | `str` \| `dictionary` | Label for a set of items (e.g., `"set"`).                 |
+| `pair`         | `str` \| `dictionary` | Label for a pair of items (e.g., `"pair"`).               |
+| `lump-sum`     | `str` \| `dictionary` | Label for a lump-sum amount (e.g., `"lump sum"`).         |
+| `hour`         | `str` \| `dictionary` | Label for hours of service (e.g., `"hour"`).              |
+| `day`          | `str` \| `dictionary` | Label for days of service (e.g., `"day"`).                |
+| `month`        | `str` \| `dictionary` | Label for monthly billing (e.g., `"month"`).              |
+| `year`         | `str` \| `dictionary` | Label for yearly billing (e.g., `"year"`).                |
+| `kilogram`     | `str` \| `dictionary` | Label for weight in kilograms (e.g., `"kilogram"`).       |
+| `gram`         | `str` \| `dictionary` | Label for weight in grams (e.g., `"gram"`).               |
+| `tonne`        | `str` \| `dictionary` | Label for weight in tonnes (e.g., `"tonne"`).             |
+| `metre`        | `str` \| `dictionary` | Label for length in metres (e.g., `"metre"`).             |
+| `square-metre` | `str` \| `dictionary` | Label for area in square metres (e.g., `"square metre"`). |
+| `millimetre`   | `str` \| `dictionary` | Label for length in millimetres (e.g., `"millimetre"`).   |
+| `centimetre`   | `str` \| `dictionary` | Label for length in centimetres (e.g., `"centimetre"`).   |
+| `kilometre`    | `str` \| `dictionary` | Label for distance in kilometres (e.g., `"kilometre"`).   |
+| `litre`        | `str` \| `dictionary` | Label for volume in litres (e.g., `"litre"`).             |
+| `cubic-metre`  | `str` \| `dictionary` | Label for volume in cubic metres (e.g., `"cubic metre"`). |
 
 ### `bank-details`
 
