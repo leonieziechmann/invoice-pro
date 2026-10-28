@@ -176,13 +176,14 @@ Every layout has the **standard areas** `marks`, `letterhead`, `address`, `info`
 
 `arrange` takes these forms:
 
-| Value                           | Arrangement                                                                                         |
-| :------------------------------ | :-------------------------------------------------------------------------------------------------- |
-| `"stack"`                       | The cells one below the other, separated by `gap`.                                                  |
-| `"row"`                         | The cells side by side.                                                                             |
-| `(columns: .., align: ..)`      | A grid with these columns; `gap` is the gutter.                                                     |
-| `(rows: .., align: ..)`         | A grid with these rows; `gap` is the gutter.                                                        |
-| `(ctx, cells, area) => content` | Experimental. `cells` is an array of `(name, body)`, `area` the `(width, height)` inside the inset. |
+| Value                           | Arrangement                                                                                                                                                                                                                                                                |
+| :------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"stack"`                       | The cells one below the other, separated by `gap`.                                                                                                                                                                                                                         |
+| `"row"`                         | The cells side by side.                                                                                                                                                                                                                                                    |
+| `(columns: .., align: ..)`      | A grid with these columns; `gap` is the gutter.                                                                                                                                                                                                                            |
+| `(rows: .., align: ..)`         | A grid with these rows; `gap` is the gutter.                                                                                                                                                                                                                               |
+| `(.., skip-empty: true)`        | With `columns` or `rows`: an empty cell is left out with its track and its `align` entry where these list one per cell, so the other cells share the space. The legal footer of `a4-digital` uses it: without `extra`, the `contact` column gives its width to the others. |
+| `(ctx, cells, area) => content` | Experimental. `cells` is an array of `(name, body)`, `area` the `(width, height)` inside the inset.                                                                                                                                                                        |
 
 An area whose cells are all empty draws nothing, unless it has an explicit `height`.
 

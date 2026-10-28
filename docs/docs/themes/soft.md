@@ -78,7 +78,7 @@ Copy this into a `.typ` file and compile it:
 - The items in a rounded card with a tinted serif header and dotted rules between the rows.
 - The totals in a tinted card, the amount to pay in the brand color.
 - The bank details and the EPC-QR code in a "How to pay" card.
-- The signature in the brand color, and a centered footer under a dotted rule.
+- The signature in the brand color, and a centered legal footer under a dotted rule with the company, its contact details (`extra`), the register and tax numbers and the bank account.
 
 ## Make It Yours
 

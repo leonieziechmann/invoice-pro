@@ -442,10 +442,16 @@
     ),
     continuation: _running.continuation,
     page-number: _running.page-number,
+    // the legal footer with `contact`, the only place a digital invoice prints
+    // the sender's `extra` (phone, email): columns weighted by what they hold
+    // (the register column carries the longest lines, as in `bold`); an empty
+    // part, e.g. without `extra`, gives up its column
     footer: _footer
       + (
-        parts: ("company", "registration", "bank-account"),
-        arrange: (columns: (1fr, 1fr, 1fr)),
+        arrange: (
+          columns: (0.75fr, 1.05fr, 1.4fr, 1.25fr),
+          skip-empty: true,
+        ),
       ),
   ),
 )

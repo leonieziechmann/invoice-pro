@@ -81,6 +81,7 @@ Copy this into a `.typ` file and compile it:
 - Fine rules between the rows instead of stripes, and square corners throughout.
 - The amount to pay inverted on the brand color.
 - The payment sentence behind a bar in the brand color, and the bank details under a `// Payment` section marker.
+- A legal footer under a fine rule with the company, its contact details (`extra`), the register and tax numbers and the bank account.
 
 ## Make It Yours
 

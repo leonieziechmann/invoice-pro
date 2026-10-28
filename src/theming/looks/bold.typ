@@ -366,21 +366,26 @@
 ))
 
 /// Legal footer columns weighted by what they hold (the register column carries
-/// the longest lines), for any number of footer parts on any layout.
+/// the longest lines), for any number of footer parts on any layout: on A4, an
+/// e-mail line such as "E-Mail: jane.doe@example.com" and a German IBAN fit on
+/// one line each. An empty part (no `extra`, no bank account) gives up its column.
 #let footer-weights = (
-  company: 0.85fr,
-  contact: 1fr,
-  registration: 1.45fr,
-  bank-account: 1.15fr,
+  company: 0.75fr,
+  contact: 1.05fr,
+  registration: 1.4fr,
+  bank-account: 1.25fr,
 )
-#let arrange-footer(ctx, cells, area) = grid(
-  columns: cells.map(((name, _)) => footer-weights.at(
-    if name == none { "" } else { name },
-    default: 1fr,
-  )),
-  column-gutter: 1.1em,
-  ..cells.map(((_, body)) => if body == none { [] } else { body }),
-)
+#let arrange-footer(ctx, cells, area) = {
+  let cells = cells.filter(((_, body)) => not blank(body))
+  grid(
+    columns: cells.map(((name, _)) => footer-weights.at(
+      if name == none { "" } else { name },
+      default: 1fr,
+    )),
+    column-gutter: 1.1em,
+    ..cells.map(((_, body)) => body),
+  )
+}
 
 #let look = {
   c.colors(

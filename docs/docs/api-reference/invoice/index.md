@@ -61,7 +61,7 @@ While the table above lists all available options, a few parameters dictate the 
 
 These parameters define the contact details for the invoicing party (sender) and the customer (recipient). Both parameters accept a standard dictionary.
 
-Standard keys are `name`, `address`, and `city`, plus `country`, `vat-id`, and `tax-nr`. Two optional sender keys feed the legal footer (the `registration` part of the theme): `register` for the commercial register entry and `management` for the managing directors. The `extra` key provides supplementary information such as phone numbers and email addresses; the themes print it next to the address and in the footer.
+Standard keys are `name`, `address`, and `city`, plus `country`, `vat-id`, and `tax-nr`. Two optional sender keys feed the legal footer (the `registration` part of the theme): `register` for the commercial register entry and `management` for the managing directors. The `extra` key provides supplementary information such as phone numbers and email addresses; the themes print it next to the address, in the legal footer or both. `theme.plain`, made for letterhead paper that already shows it, leaves it out.
 
 Just like the header `references`, the `extra` field accepts either a dictionary of key-value pairs or an array of `(label, value)` tuples.
 
