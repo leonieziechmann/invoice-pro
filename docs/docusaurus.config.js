@@ -11,7 +11,7 @@ import {themes as prismThemes} from 'prism-react-renderer';
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Invoice Pro - Documentation',
-  tagline: 'Automatic and Compliant European Invoiceing',
+  tagline: 'Automatic and Compliant European Invoicing',
   favicon: 'img/favicon.ico',
 
   future: {
