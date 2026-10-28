@@ -1,7 +1,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
+  theme: theme.classic.with(theme.custom.fonts(body: "libertinus serif")),
   locale: locale.de-de,
   zugferd: "en16931",
   sender: (
@@ -49,7 +49,7 @@
   #surcharge([Express-Zuschlag], amount: 25.00)
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
   bank: "Musterbank",

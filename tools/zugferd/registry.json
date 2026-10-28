@@ -1352,7 +1352,7 @@
       "scope": "payment",
       "terms": ["BT-20"],
       "level": "error",
-      "field": "payment-goal",
+      "field": "payment-terms",
       "summary": "The payment terms (BT-20) write every cash discount in the Skonto syntax of XRechnung, on a line of its own that a line break follows, and its base amount with 2 decimals.",
       "legal": null
     },
@@ -1364,7 +1364,7 @@
       "scope": "payment",
       "terms": ["BT-9", "BT-20", "BT-115"],
       "level": "error",
-      "field": "payment-goal",
+      "field": "payment-terms",
       "summary": "An invoice with an amount due (BT-115) has a payment due date (BT-9) or payment terms (BT-20): BR-CO-25 of EN 16931, which the CEN Schematron 1.3.16 and Factur-X 1.09 no longer check in CII.",
       "legal": null
     },

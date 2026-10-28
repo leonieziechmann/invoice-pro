@@ -24,5 +24,5 @@
 #line-items[
   #item([Projektberatung Juni], quantity: 15, unit: unit.hour, price: 120)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

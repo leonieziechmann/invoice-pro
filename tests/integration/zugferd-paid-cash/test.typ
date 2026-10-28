@@ -5,7 +5,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "xrechnung",
   sender: (

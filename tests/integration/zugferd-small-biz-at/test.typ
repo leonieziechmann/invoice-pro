@@ -5,7 +5,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-at,
   zugferd: "en16931",
   tax-exempt-small-biz: true,
@@ -37,7 +37,7 @@
   #item([Visitenkarten], price: 0.35, quantity: 500, unit: unit.piece)
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
   bank: "Musterbank",

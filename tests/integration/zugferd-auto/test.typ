@@ -4,7 +4,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: auto,
   sender: (
@@ -34,7 +34,7 @@
 #line-items[
   #item([Consulting], price: 100, quantity: 8, unit: unit.hour)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(
   bank: "Musterbank",
   iban: "DE89370400440532013000",

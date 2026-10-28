@@ -94,7 +94,7 @@
 // Antillean guilder (ANG), the Cuban convertible peso (CUC), the Zimbabwe
 // dollar (ZWL) and the Mauritanian ouguiya of before 2018 (MRO) are in no
 // list of the validators any more, neither of EN 16931 nor of Factur-X ---
-#import "/src/lib.typ": item, line-items, payment-goal
+#import "/src/lib.typ": item, line-items, payment-terms
 #import "/src/zugferd/profile.typ": resolve-profile
 #import "/src/zugferd/build.typ": build-tree
 #import "/tools/zugferd/guard/write.typ": write
@@ -139,7 +139,7 @@
   }
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -161,7 +161,7 @@
   assert.eq(rules(m), ())
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -193,7 +193,7 @@
   assert.eq(rules(m), ())
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -290,7 +290,7 @@
   )
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -337,6 +337,6 @@
   )
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]

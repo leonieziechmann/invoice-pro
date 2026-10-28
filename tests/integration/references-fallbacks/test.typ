@@ -6,22 +6,43 @@
 // `id`, never as the dictionary of the typed identifier.
 
 #import "/src/lib.typ": *
+#import "/src/loom-wrapper.typ": motif
 #import "/src/utils/text.typ": plain-text
 
-// A blank theme that hands the printed references and the text of the drawn
-// body to `check`.
-#let check-invoice(check, ..args, body) = invoice(
-  theme: themes.blank.with(document: (ctx, body) => {
-    check(ctx.references, plain-text(body))
-    body
-  }),
-  locale: locale.en-de,
-  sender: (name: "Seller GmbH", address: "Street 1", city: "10115 Berlin"),
-  invoice-nr: "RE-1",
-  date: datetime(year: 2026, month: 9, day: 1),
-  ..args,
+// Records the text of its body as drawn (the `info` values are text by then).
+#let drawn-text(body) = motif(
+  scope: ctx => ctx,
+  measure: (_, children) => (children, none),
+  draw: (ctx, _, _, body) => [#metadata(plain-text(body))<fallback-text>#body],
   body,
 )
+
+// An invoice whose printed references (the context of its `title` part) and
+// the text of its drawn body are handed to `check` after it. The invoices are
+// bare fixtures, so validation is off.
+#let check-invoice(check, ..args, body) = {
+  invoice(
+    theme: theme.plain.with(theme.custom.wrap("title", (ctx, view, inner) => {
+      [#metadata(ctx.references)<fallback-references>]
+      inner(ctx, view)
+    })),
+    locale: locale.en-de,
+    validation: none,
+    sender: (name: "Seller GmbH", address: "Street 1", city: "10115 Berlin"),
+    invoice-nr: "RE-1",
+    date: datetime(year: 2026, month: 9, day: 1),
+    ..args,
+  )[#drawn-text(body)]
+  context {
+    let refs = query(selector(<fallback-references>).before(here()))
+    let text = query(selector(<fallback-text>).before(here()))
+    // Introspection is empty in the first layout iteration.
+    if refs.len() > 0 and text.len() > 0 {
+      check(refs.last().value, text.last().value)
+      [#metadata(none)<fallback-checked>]
+    }
+  }
+}
 
 #let recipient = (
   name: "Buyer AG",
@@ -97,3 +118,6 @@
     },
   )[#info.customer-nr]
 ]
+
+// Every scenario above must have run its check.
+#context assert.eq(query(<fallback-checked>).len(), 3)

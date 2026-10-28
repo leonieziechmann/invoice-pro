@@ -5,7 +5,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "xrechnung",
   sender: (
@@ -35,7 +35,7 @@
 #line-items[
   #item([Wartungsvertrag September], price: 250, quantity: 1)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #direct-debit(
   mandate: "M-2026-017",
   creditor-id: "DE98 ZZZ 0999 9999 999",

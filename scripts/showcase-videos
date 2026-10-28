@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Rebuilds the showcase videos of the documentation (docs/static/video). Each
+# scene of tools/videos/scenes is a document and the edits a user makes to it:
+# tools/videos/build.py compiles every step with the package of this checkout,
+# tools/videos/frames.typ draws each frame (the code being typed next to the
+# invoice it compiles to), and ffmpeg encodes the frames as an H.264 video with
+# a JPEG poster. Watch every changed video before committing it (see
+# MAINTENANCE.md).
+#
+# Usage: showcase-videos [scene ...]   (default: every scene)
+#
+# Needs Typst ($TYPST_BIN, default typst) with the fonts the presets and the
+# frames use (Inter and Liberation Sans), ffmpeg with libx264 ($FFMPEG_BIN,
+# default ffmpeg) and Python 3.11 or later ($PYTHON, default python3). The
+# invoices are dated by $VIDEOS_DATE_EPOCH, 22 September 2026 by default, so
+# that a rebuild without changes gives the same frames.
+set -euo pipefail
+
+if [ ! -f "typst.toml" ]; then
+  echo "Error: showcase-videos must be run from the root of the invoice-pro repository." >&2
+  exit 1
+fi
+
+exec "${PYTHON:-python3}" tools/videos/build.py "$@"

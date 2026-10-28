@@ -69,7 +69,7 @@
 // --- 3. The e-invoice states the currency the invoice prints ---
 #let consulting = [
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #model-test(currency: "USD", model => {
@@ -106,20 +106,17 @@
 
 // --- 4. Printed in the currency ---
 #invoice(
-  theme: () => (
-    themes.blank()
-      + (
-        line-items: (ctx, view, body) => {
-          assert.eq(plain-text(view.items.first().total), "1.000,00 $")
-          assert.eq(plain-text(view.total.gross), "1.190,00 $")
-          []
-        },
-        bank-details: (ctx, view) => {
-          // The EPC-QR code transfers euros only
-          assert.eq(view.qr-code.payload, none)
-          []
-        },
-      )
+  theme: theme.plain.with(
+    theme.custom.wrap("line-items", (ctx, view, inner) => {
+      assert.eq(plain-text(view.items.first().total), "1.000,00 $")
+      assert.eq(plain-text(view.total.gross), "1.190,00 $")
+      inner(ctx, view)
+    }),
+    theme.custom.part("bank-details", (ctx, view) => {
+      // The EPC-QR code transfers euros only
+      assert.eq(view.qr-code.payload, none)
+      []
+    }),
   ),
   locale: locale.de-de,
   currency: "USD",

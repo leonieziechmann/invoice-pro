@@ -27,6 +27,7 @@
 #let process-zugferd(
   ctx,
   item-data,
+  // the signal of `payment-terms`
   payment-goal: none,
   bank: none,
   payment-means: none,

@@ -1,16 +1,22 @@
 // The printed invoice shows what the law requires on an invoice and the
 // e-invoice states: the seller's tax number or VAT ID (IP-PRINT-03) and the
 // date of the supply (IP-PERIOD-03). Invoice-pro knows what a theme prints
-// only if the theme says so (`prints`): the DIN 5008 letter prints the
-// reference signs and the `extra` of the parties, and a footer of its own
-// whose text invoice-pro cannot read. The blank theme prints neither, so
-// nothing is checked there.
+// from the parts its layout hosts (`theming/prints.typ`): the DIN 5008
+// letter of the classic preset prints the reference signs, the `extra` of
+// the parties and, in its legal footer, the seller's VAT ID and tax number;
+// content of its own in an area (e.g. a footer text) cannot be read. The
+// plain theme prints no references, so nothing is checked there.
 
 #import "/src/lib.typ": *
 #import "/tests/zugferd/harness.typ": bank, buyer-de, seller
 
 #let day(month, day) = datetime(year: 2026, month: month, day: day)
-#let din = themes.DIN-5008(font: "libertinus serif")
+// The DIN 5008 letter without the legal footer, as 0.5 printed it: the
+// footer prints the seller's VAT ID and tax number (see section 3).
+#let din = theme.classic.with(
+  theme.custom.fonts(body: "libertinus serif"),
+  theme.custom.area("footer", none),
+)
 
 // Renders an EN 16931 invoice between German parties with `theme` (the DIN
 // 5008 letter by default) and hands the diagnostics of the e-invoice to
@@ -18,18 +24,19 @@
 // "STK" (IP-UNIT-01) of every invoice here, which shows the report. Each
 // shown report leaves a marker, which the end of the file counts.
 #let report-test(check, theme: din, ..args, body) = invoice(
-  theme: () => (
-    theme()
-      + (
-        zugferd-report: (ctx, result) => {
-          let diagnostics = result.diagnostics.filter(d => (
-            d.rule != "IP-UNIT-01"
-          ))
-          check(diagnostics.map(d => (d.rule, d.level)).sorted(), diagnostics)
-          [#metadata(none)<report-checked>]
-        },
-      )
-  ),
+  // the report is the `zugferd-report` part (a patch: `theme` is the
+  // parameter here, not the module)
+  theme: theme.with((
+    parts: (
+      zugferd-report: (ctx, result) => {
+        let diagnostics = result.diagnostics.filter(d => (
+          d.rule != "IP-UNIT-01"
+        ))
+        check(diagnostics.map(d => (d.rule, d.level)).sorted(), diagnostics)
+        [#metadata(none)<report-checked>]
+      },
+    ),
+  )),
   locale: locale.de-de,
   zugferd: "en16931",
   zugferd-errors: "report",
@@ -48,7 +55,7 @@
     #item([Wartung], price: 1000, ..dates)
     #item([Schrauben], price: 1, quantity: 10, unit: "STK")
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 // ... and below it (130.90 euros)
@@ -57,7 +64,7 @@
     #item([Wartung], price: 100)
     #item([Schrauben], price: 1, quantity: 10, unit: "STK")
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -139,15 +146,25 @@
     + (tax-nr: none, address: [Street 1 \ USt-IdNr. DE 123 456 789]),
   (rules, _) => assert.eq(rules, ()),
 )[#items()]
-// A footer of the theme may show it: not known
+// In the legal footer of the classic preset, which prints the seller's VAT ID
+// and tax number (`registration`)
 #report-test(
-  theme: themes.DIN-5008(font: "libertinus serif", footer: [Seller GmbH]),
+  theme: theme.classic.with(theme.custom.fonts(body: "libertinus serif")),
+  references: signs + (references.service-time(),),
+  (rules, _) => assert.eq(rules, ()),
+)[#items()]
+// A footer text of the theme may show it: not known
+#report-test(
+  theme: theme.classic.with(
+    theme.custom.fonts(body: "libertinus serif"),
+    theme.custom.area("footer", parts: ([Seller GmbH],)),
+  ),
   references: signs,
   (rules, _) => assert.eq(rules, (("IP-PERIOD-03", "error"),)),
 )[#items()]
-// The blank theme prints no references: not known
+// The plain theme prints no references: not known
 #report-test(
-  theme: themes.blank,
+  theme: theme.plain,
   references: signs,
   (rules, _) => assert.eq(rules, ()),
 )[#items()]
@@ -164,7 +181,7 @@
     #item([Wartung], price: 1000, date: day(8, 15))
     #item([Schrauben], price: 1, quantity: 10, unit: "STK", date: day(8, 15))
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #report-test(
@@ -244,7 +261,7 @@
       tax: tax.reverse-charge(),
     )
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 // A seller outside Germany: a warning if the date of the supply is not the
@@ -313,4 +330,4 @@
 )[#items()]
 
 // Every report above was shown and checked.
-#context assert.eq(query(<report-checked>).len(), 29)
+#context assert.eq(query(<report-checked>).len(), 30)

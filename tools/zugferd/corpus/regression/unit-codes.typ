@@ -21,5 +21,5 @@
   #item([Gewicht], price: 10, quantity: 2, unit: "t", tax: tax.vat(19%))
   #item([Arbeit], price: 10, quantity: 2, unit: unit.hour, tax: tax.vat(19%))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

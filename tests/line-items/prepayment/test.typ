@@ -3,7 +3,7 @@
 #import "/tests/test-locale.typ": test-locale
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: test-locale,
   sender: (name: "Test Sender", address: "Street 1", city: "City"),
   recipient: (name: "Test Recipient", address: "Street 2", city: "City"),
@@ -58,26 +58,24 @@
   assert.eq(prepayments.at(2).amount, decimal("119.00"))
   assert.eq(prepayments.at(2).label, "10% Kaution")
 
-  // Downstream checks (pass 2): payment-goal and bank-details use due amount
-  let pg = loom.query.find-signal(data, "payment-goal")
-  if pg != none {
-    assert.eq(
-      pg.total,
-      decimal("671.00"),
-      message: "payment-goal should use remaining due amount (671.00), got "
-        + repr(pg.total),
-    )
-  }
+  // Downstream checks (pass 2): payment-terms and bank-details use due amount
+  let pt = loom.query.find-signal(data, "payment-terms")
+  assert.ne(pt, none, message: "payment-terms signal not found")
+  assert.eq(
+    pt.total,
+    decimal("671.00"),
+    message: "payment-terms should use remaining due amount (671.00), got "
+      + repr(pt.total),
+  )
 
   let bank = loom.query.find-signal(data, "bank-details")
-  if bank != none {
-    assert.eq(
-      bank.payment-amount,
-      decimal("671.00"),
-      message: "bank-details should use remaining due amount (671.00), got "
-        + repr(bank.payment-amount),
-    )
-  }
+  assert.ne(bank, none, message: "bank-details signal not found")
+  assert.eq(
+    bank.payment-amount,
+    decimal("671.00"),
+    message: "bank-details should use remaining due amount (671.00), got "
+      + repr(bank.payment-amount),
+  )
 })[
   #line-items[
     #item(
@@ -106,5 +104,5 @@
     bic: "SOLADEST600",
   )
 
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
 ]

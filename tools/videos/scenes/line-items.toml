@@ -1,0 +1,84 @@
+# Line items: units, groups, bundles, VAT rates, discounts and prepayments
+# (api-reference/line-items/index.md).
+title = "Line Items"
+subtitle = "Groups, bundles, VAT rates, discounts and prepayments: calculated for you"
+outro = "Bill exactly what you deliver"
+poster = 6
+
+start = '''
+#import "@preview/invoice-pro:{version}": *
+
+#show: invoice.with(
+  locale: locale.en-de,
+  sender: (
+    name: "Atelier Nord GmbH",
+    address: "Hafenstraße 12",
+    city: "20457 Hamburg",
+    vat-id: "DE123456789",
+  ),
+  recipient: (
+    name: "Acme Corporation",
+    address: "Market Street 5",
+    city: "80331 Munich",
+  ),
+  invoice-nr: "2026-0142",
+)
+
+#line-items[
+  #item([Brand strategy], price: 2400)
+]
+'''
+
+[intro]
+caption = "One item"
+sub = "The table, the VAT and the total follow from it"
+
+[[step]]
+caption = "Quantities and units"
+sub = "Units print in the language of the invoice"
+edit = [{ find = "price: 2400)\n", with = "price: 2400)\n  #item([Consulting], quantity: 6, unit: unit.hour, price: 120)\n" }]
+focus = [1, 0.06, 0.28, 0.96, 0.47]
+
+[[step]]
+caption = "Groups with a subtotal"
+sub = "Numbered 2.1, 2.2, with a subtotal; the unit is set once"
+edit = [{ find = "price: 120)\n", with = '''price: 120)
+  #group([Website], unit: unit.day)[
+    #item([Design], quantity: 3, price: 900)
+    #item([Development], quantity: 5, price: 850)
+  ]
+''' }]
+focus = [1, 0.06, 0.28, 0.96, 0.57]
+
+[[step]]
+caption = "Bundles: several items, one line"
+sub = "The prices add up, the names become the description"
+edit = [{ find = "price: 850)\n  ]\n", with = '''price: 850)
+  ]
+  #bundle([Print kit])[
+    #item([Business cards], price: 90)
+    #item([Letterhead], price: 120)
+  ]
+''' }]
+focus = [1, 0.06, 0.28, 0.96, 0.61]
+
+[[step]]
+caption = "Different VAT rates"
+sub = "Each rate gets its own line in the totals"
+edit = [{ find = "price: 120)\n  ]\n", with = '''price: 120)
+  ]
+  #item([Brand book (printed)], price: 85, tax: 7%)
+''' }]
+focus = [1, 0.06, 0.28, 0.96, 0.65]
+
+[[step]]
+caption = "A discount on everything"
+sub = "Applied to every VAT rate, so the tax stays correct"
+edit = [{ find = "tax: 7%)\n", with = "tax: 7%)\n  #discount([Loyal customer], amount: 5%)\n" }]
+focus = [1, 0.06, 0.525, 0.96, 0.675]
+
+[[step]]
+caption = "Deposits already paid"
+sub = "Deducted after VAT: the invoice states the amount due"
+edit = [{ find = "amount: 5%)\n", with = "amount: 5%)\n  #prepayment(3000, name: [Deposit])\n" }]
+focus = [1, 0.06, 0.525, 0.96, 0.715]

@@ -1,0 +1,106 @@
+# invoice-pro in one minute: the product tour of the introduction page.
+title = "invoice-pro in one minute"
+subtitle = "Professional invoices in Typst, from a few lines of code"
+outro = "Write your first invoice"
+poster = 6
+
+start = '''
+#import "@preview/invoice-pro:{version}": *
+
+#show: invoice.with(
+  locale: locale.en-de,
+  sender: (
+    name: "Nordlicht Studio GmbH",
+    address: "Hafenstraße 12",
+    city: "20457 Hamburg",
+    vat-id: "DE123456789",
+  ),
+  recipient: (
+    name: "Acme Corporation",
+    address: "Market Street 5",
+    city: "80331 Munich",
+  ),
+  invoice-nr: "2026-0142",
+)
+
+#line-items[
+  #item([Workshop], quantity: 2, unit: unit.day, price: 950)
+]
+'''
+
+[intro]
+caption = "This is a complete invoice"
+sub = "Sender, recipient, one item: the layout follows DIN 5008"
+hold = 2.6
+
+[[step]]
+caption = "Add items"
+sub = "Totals and VAT are calculated for you"
+edit = [{ find = '''unit: unit.day, price: 950)
+''', with = '''unit: unit.day, price: 950)
+  #item([Logo design], price: 1200)
+  #item([Business cards], quantity: 500, price: 0.18)
+''' }]
+focus = [1, 0.06, 0.30, 0.96, 0.51]
+
+[[step]]
+caption = "A discount is one line"
+sub = "It applies to everything in its block"
+edit = [{ find = '''price: 0.18)
+''', with = '''price: 0.18)
+  #discount([Loyal customer], amount: 10%)
+''' }]
+focus = [1, 0.06, 0.30, 0.96, 0.51]
+
+[[step]]
+caption = "Payment terms and a QR code"
+sub = "Banking apps scan the EPC QR code (GiroCode)"
+edit = [{ find = '''amount: 10%)
+]
+''', with = '''amount: 10%)
+]
+
+#payment-terms(days: 14)
+#bank-details(
+  bank: "Hamburger Sparkasse",
+  iban: "DE75512108001245126199",
+  bic: "SOLADEST600",
+)
+''' }]
+focus = [1, 0.06, 0.53, 0.97, 0.67]
+
+[[step]]
+caption = "Pick a look"
+sub = "Ten presets, one word"
+edit = [{ find = '''#show: invoice.with(
+''', with = '''#show: invoice.with(
+  theme: theme.elegant,
+''' }]
+
+[[step]]
+caption = "Pick a look"
+sub = "Ten presets, one word"
+edit = [{ find = "theme.elegant", with = "theme.bold" }]
+
+[[step]]
+caption = "Make it yours"
+sub = "Your brand color: stripes, fills and text follow"
+edit = [{ find = "theme: theme.bold,", with = '''theme: theme.bold.with(
+    theme.custom.brand(color: rgb("#0f766e")),
+  ),''' }]
+
+[[step]]
+caption = "Speak your customer's language"
+sub = "German, English, French, Italian or Spanish: one word"
+edit = [{ find = "locale.en-de", with = "locale.de-de" }]
+focus = [1, 0.04, 0.09, 0.96, 0.42]
+
+[[step]]
+caption = "E-invoice included"
+sub = "ZUGFeRD / Factur-X, checked against EN 16931"
+edit = [{ find = '''  locale: locale.de-de,
+''', with = '''  locale: locale.de-de,
+  zugferd: "en16931",
+''' }]
+badge = "✓ factur-x.xml attached to the PDF"
+hold = 2.6

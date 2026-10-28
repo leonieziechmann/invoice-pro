@@ -1,4 +1,4 @@
-// An XRechnung with two cash discounts, stated once in `payment-goal`: the
+// An XRechnung with two cash discounts, stated once in `payment-terms`: the
 // invoice prints them, and the payment terms (BT-20) carry them in the Skonto
 // syntax of the KoSIT (BR-DE-18), one with a base amount. The account holder
 // given to `bank-details` is the account name (BT-85). Validated by
@@ -7,7 +7,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "xrechnung",
   sender: (
@@ -38,7 +38,7 @@
   #item([Büromaterial], price: 400, quantity: 1)
   #item([Druckerpatronen], price: 600, quantity: 1)
 ]
-#payment-goal(
+#payment-terms(
   days: 30,
   discount: (
     (days: 7, percent: 3%, basis: 400),

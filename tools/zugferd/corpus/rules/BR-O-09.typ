@@ -20,5 +20,5 @@
     grounds: "Nicht im Inland steuerbar",
   ))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

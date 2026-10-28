@@ -19,5 +19,5 @@
 #line-items[
   #item([Hotel], price: 90, quantity: 3, unit: "Nacht", tax: tax.vat(7%))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

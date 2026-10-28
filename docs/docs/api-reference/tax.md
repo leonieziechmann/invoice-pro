@@ -41,10 +41,13 @@ The functions of the categories without VAT (`exempt`, `reverse-charge`, `intra-
 ```typst
 #import "@preview/invoice-pro:0.5.0": item, tax
 
-item(
-  name: "Consulting (B2B EU)",
+// inside #line-items[..]
+#item(
+  [Consulting (B2B EU)],
   price: 1500.00,
-  tax: tax.reverse-charge(grounds: "Tax liability of the recipient according to...")
+  tax: tax.reverse-charge(
+    grounds: "Tax liability of the recipient according to...",
+  ),
 )
 ```
 
@@ -54,7 +57,11 @@ An exemption with its VATEX code:
 #import "@preview/invoice-pro:0.5.0": *
 
 #show: invoice.with(
-  sender: (name: "Praxis Dr. Muster", address: "Hauptstraße 1", city: "10115 Berlin"),
+  sender: (
+    name: "Praxis Dr. Muster",
+    address: "Hauptstraße 1",
+    city: "10115 Berlin",
+  ),
   recipient: (name: "Erika Mustermann", address: "Weg 5", city: "50667 Köln"),
 )
 
@@ -133,7 +140,7 @@ Only use this if you know exactly which UNTDID 5305 tax category code your accou
   rate: 0%,
   category: "E",
   label: "custom-exemption",
-  grounds: "Exempt based on local regulation paragraph 42."
+  grounds: "Exempt based on local regulation paragraph 42.",
 )
 ```
 

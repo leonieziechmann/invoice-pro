@@ -71,10 +71,13 @@
 )
 
 /// The invoice settings every case shares: the harness theme and the
-/// "report" mode, so one compilation yields the XML and the diagnostics.
+/// "report" mode, so one compilation yields the XML and the diagnostics, and
+/// no validation of the invoice data, which would withhold the XML of an
+/// invoice with missing data instead of validating it.
 #let setup = (
-  theme: harness(themes.blank),
+  theme: harness(theme.plain),
   locale: locale.de-de,
   zugferd-errors: "report",
+  validation: none,
   date: date,
 )

@@ -2,17 +2,23 @@
 //
 // `harness(theme)` wraps a theme so that, with `zugferd-errors: "report"`,
 // the diagnostics of invoice-pro's own validation are attached to the PDF as
-// `invoice-pro-diagnostics.json` instead of being rendered. One compilation
-// then yields both the XML invoice-pro writes and its verdict on it.
+// `invoice-pro-diagnostics.json` instead of being rendered: it replaces the
+// `zugferd-report` part of the theme. One compilation then yields both the
+// XML invoice-pro writes and its verdict on it.
 //
 //   #import "/src/lib.typ": *
 //   #import "/tools/zugferd/harness.typ": harness
 //   #show: invoice.with(
-//     theme: harness(themes.blank),
+//     theme: harness(theme.plain),
 //     zugferd: "en16931",
 //     zugferd-errors: "report",
+//     validation: none,
 //     ..
 //   )
+//
+// `validation: none` keeps the checks of the invoice data out of the way: the
+// corpus checks the e-invoice, and `validation: "draft"` would withhold the
+// XML of an invoice with missing data instead of validating it.
 //
 // The hook only runs when there are diagnostics: a PDF without the
 // attachment means that invoice-pro reported nothing.
@@ -55,8 +61,8 @@
   description: "invoice-pro diagnostics (conformance test harness)",
 )
 
-/// Wraps a theme (a function returning the theme dictionary) so that the
-/// e-invoice diagnostics are attached as JSON.
+/// Wraps a lazy theme (e.g. `theme.plain`) so that the e-invoice diagnostics
+/// are attached as JSON: its `zugferd-report` part is replaced.
 ///
 /// -> function
-#let harness(theme) = () => theme() + (zugferd-report: _report)
+#let harness(theme) = theme.with((parts: (zugferd-report: _report)))

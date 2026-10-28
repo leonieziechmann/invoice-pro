@@ -10,9 +10,11 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "minimum",
+  // incomplete e-invoice data must fail the build, not withhold the XML
+  validation: "strict",
   sender: (
     name: "Seller GmbH",
     address: "Street 1",
@@ -50,7 +52,7 @@
 
   #prepayment(300)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(
   bank: "Musterbank",
   iban: "DE75512108001245126199",

@@ -1,11 +1,8 @@
-// Source: docs/docs/api-reference/components.md — "Bulk Tax Application" (apply)
-#import "/src/lib.typ": *
+// Source: docs/docs/api-reference/components.md — "Example: Bulk Tax Application"
+// The block elides the document (`// ...`); the test puts the apply block into line-items.
+#import "/tests/docs/prelude.typ": *
 
-#show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
-  sender: (name: "Test Sender"),
-  recipient: (name: "Test Recipient"),
-)
+#show: invoice.with(..party)
 
 #line-items[
   #apply(tax: tax.vat(7%))[

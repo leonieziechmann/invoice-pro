@@ -16,7 +16,7 @@
 /// (`item-data`) and the totals it prints, and the data the root context
 /// gives the e-invoice.
 #let invariant-test(test, ..args, body) = invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "en16931",
   zugferd-errors: "ignore",
@@ -30,7 +30,7 @@
       let signal(kind) = loom.query.find-signal(data, kind)
       let items = signal("line-items")
       let inputs = (
-        payment-goal: signal("payment-goal"),
+        payment-goal: signal("payment-terms"),
         bank: signal("bank-details"),
         payment-means: payment-means(data),
       )
@@ -84,7 +84,7 @@
     #surcharge([Reisekosten], amount: 50)
     #prepayment(100, name: "Abschlag")
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -283,7 +283,7 @@
     #item([Gutschrift], price: -40, quantity: 2, tax: tax.vat(7%))
     #discount([Treuerabatt], amount: 3%)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -291,7 +291,7 @@
 // the line's net amount, within 0.02; 100.40 yen round to whole yen ---
 #let yen = [
   #line-items[#item([Leistung], price: 100.4, quantity: 1)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #invariant-test(
@@ -335,7 +335,7 @@
     #item([Kabel], price: decimal("0.325"), quantity: 1)
     #item([Buch], price: 19.99, quantity: 3, tax: tax.vat(7%))
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -349,7 +349,7 @@
   },
 )[
   #line-items[#item([Leistung], price: 100, quantity: 3)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 #invariant-test(zugferd: "xrechnung", (model, item-data, printed, _) => {
@@ -369,7 +369,7 @@
       modifier: discount([Rabatt], amount: 3%),
     )
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -401,6 +401,6 @@
     #item([Gerät], price: 100, quantity: 1)
     #for i in range(30) { item([Kleinteil #(i + 1)], price: 0.01) }
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]

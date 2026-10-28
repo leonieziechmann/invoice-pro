@@ -8,7 +8,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.en-de,
   zugferd: "en16931",
   tax: tax.outside-scope(grounds: "Not registered for VAT."),
@@ -37,4 +37,4 @@
 #line-items[
   #item([Design work], price: 400, quantity: 2, unit: unit.day)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)

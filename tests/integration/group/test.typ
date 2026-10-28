@@ -1,7 +1,10 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(form: "B", font: "libertinus serif"),
+  theme: theme.classic.with(
+    theme.custom.fonts(body: "libertinus serif"),
+    layout: theme.layout.din-5008-b,
+  ),
   locale: locale.en-de,
   sender: (
     name: "Acme Consulting GmbH",

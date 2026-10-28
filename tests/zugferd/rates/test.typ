@@ -30,7 +30,7 @@
   assert.eq(xml-values(model, "ram:CalculatedAmount"), ("4987.50",))
 })[
   #line-items[#item([Consulting], price: 50000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -48,7 +48,7 @@
     #item([A], price: 100, tax: tax.vat(8.125%))
     #item([B], price: 100, tax: tax.vat(8.13%))
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -67,7 +67,7 @@
     #item([A], price: 100, tax: tax.vat(8.125%))
     #item([B], price: 100, tax: tax.vat(8.12501%))
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -85,6 +85,6 @@
   assert.eq(sums(m), ())
 })[
   #line-items[#item([Consulting], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]

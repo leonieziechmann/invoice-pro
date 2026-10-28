@@ -5,7 +5,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.es-es,
   zugferd: "basic",
   tax-exempt-small-biz: true,
@@ -38,7 +38,7 @@
   #item([Mantenimiento], price: 25.00, quantity: 3, unit: unit.month)
 ]
 
-#payment-goal(days: 30)
+#payment-terms(days: 30)
 
 #bank-details(
   bank: "Banco Ejemplo",

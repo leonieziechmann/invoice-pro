@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+# Rebuilds the theme figures of the documentation (docs/static/img/themes)
+# and of the theming concept (docs/concepts/theming-api/figures) from the
+# fixtures of the tests: tools/figures/pages.typ renders the pages into
+# build/figures/pages, tools/figures/sheets.typ composes the labelled sheets.
+# Look at every changed figure before committing it (see MAINTENANCE.md).
+#
+# Usage: theme-figures
+#
+# Needs Typst ($TYPST_BIN, default typst) with the fonts the presets use
+# (Liberation Sans) and Python with Pillow ($PYTHON, default python3), which
+# reduces each sheet to a palette of 256 colours (flat document art: visually
+# lossless, about a third of the size). The invoices are dated by
+# $FIGURES_DATE_EPOCH, 22 September 2026 by default, so that a rebuild without
+# changes gives the same figures.
+set -euo pipefail
+
+if [ ! -f "typst.toml" ]; then
+  echo "Error: theme-figures must be run from the root of the invoice-pro repository." >&2
+  exit 1
+fi
+
+TYPST="${TYPST_BIN:-typst}"
+PYTHON="${PYTHON:-python3}"
+export SOURCE_DATE_EPOCH="${FIGURES_DATE_EPOCH:-1790078400}"
+
+R=build/figures/pages
+DOCS=docs/static/img/themes
+CONCEPT=docs/concepts/theming-api/figures
+rm -rf "$R"
+mkdir -p "$R"/g "$R"/m "$R"/l "$R"/p "$R"/v "$R"/s "$R"/a "$DOCS" "$CONCEPT"
+
+PRESETS="classic plain corporate elegant prestige bold technical soft compact boxed"
+LAYOUTS="din-5008-a din-5008-b a4-window-right a4-window-left sn-010130-right sn-010130-left us-letter-10 a4-digital us-letter-digital a4-band us-letter-band a4-sidebar us-letter-sidebar a4-dense us-letter-dense plain"
+
+page() { # out ppi input...
+  local out=$1 ppi=$2
+  shift 2
+  local inputs=()
+  for kv in "$@"; do inputs+=(--input "$kv"); done
+  "$TYPST" compile --root . "${inputs[@]}" tools/figures/pages.typ "$out" --ppi "$ppi"
+}
+
+echo "Rendering the pages..."
+# 1. the gallery invoice of each preset (page 1: preset-<name>.png)
+for p in $PRESETS; do
+  page "$R/g/$p-{p}.png" 90 page=gallery "preset=$p"
+done
+# 2. identical data, each preset on the layout it picks (layout: auto)
+for p in $PRESETS; do
+  page "$R/m/$p-auto-{p}.png" 120 page=matrix "look=$p" layout=auto
+done
+# 3. every layout with the classic look
+for l in $LAYOUTS; do
+  page "$R/l/$l-{p}.png" 120 page=matrix look=classic "layout=$l"
+done
+# 4. the print proof of four window layouts
+for l in din-5008-a sn-010130-right a4-window-right us-letter-10; do
+  page "$R/p/$l-{p}.png" 200 page=proof "layout=$l"
+done
+# 5. a draft and its report page
+page "$R/v/draft-{p}.png" 150 page=draft
+# 6. the stationery modes
+for m in print pdf einvoice; do
+  page "$R/s/p2-$m-{p}.png" 170 page=stationery "mode=$m"
+done
+# 7. any format: a third-party A5 sidebar layout and a thermal-roll receipt
+page "$R/a/p9-{p}.png" 150 page=acme
+page "$R/a/rc-{p}.png" 170 page=roll
+# 8. five presets on four layouts
+for p in classic corporate prestige technical boxed; do
+  for l in din-5008-a sn-010130-right us-letter-10 a4-digital; do
+    page "$R/m/$p-$l-{p}.png" 110 page=matrix "look=$p" "layout=$l"
+  done
+done
+
+echo "Composing the sheets..."
+sheet() { # name ppi
+  "$TYPST" compile --root . --input "fig=$1" --input "renders=/$R/" \
+    tools/figures/sheets.typ "$CONCEPT/fig-$1.png" --ppi "$2"
+  "$PYTHON" - "$CONCEPT/fig-$1.png" <<'PY'
+import sys
+from PIL import Image
+path = sys.argv[1]
+image = Image.open(path).convert("RGB")
+image.quantize(
+    colors=256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE
+).save(path, optimize=True)
+PY
+}
+sheet presets 190
+sheet presets-industry 190
+sheet layouts 190 # at 180, the first letter of the SN body lines is lost
+sheet proof 220
+sheet validation 220
+sheet stationery 240
+sheet any-format 220
+sheet matrix 180
+
+# the gallery pages, losslessly without their (opaque) alpha channel
+for p in $PRESETS; do
+  "$PYTHON" - "$R/g/$p-1.png" "$CONCEPT/preset-$p.png" <<'PY'
+import sys
+from PIL import Image
+Image.open(sys.argv[1]).convert("RGB").save(sys.argv[2], optimize=True)
+PY
+  cp "$CONCEPT/preset-$p.png" "$DOCS/preset-$p.png"
+done
+# the documentation shows six of the sheets
+for f in presets layouts proof validation stationery any-format; do
+  cp "$CONCEPT/fig-$f.png" "$DOCS/fig-$f.png"
+done
+
+echo ""
+ls -l "$DOCS" "$CONCEPT"
+echo "✔ The theme figures are rebuilt. Look at every changed figure before committing it."

@@ -78,7 +78,7 @@ A wrong check digit stops the e-invoice (`IP-ID-01`); `id.custom` takes an ident
 
 `trading-name` on the `sender` or `recipient` is the name the party trades under, besides its legal `name`. `legal-info` on the `sender` is additional legal information about the seller, such as its managing directors, its registered office or its share capital (e.g. `"SAS au capital de 10 000 €, RCS Paris 123 456 782"`). The seller's trading name is stated from the `"basic-wl"` profile on, the buyer's trading name and the legal information in `"en16931"` and `"xrechnung"`; a profile that cannot state an input reports it as a warning (`IP-PROFILE-01`).
 
-The built-in themes print none of these details: where the law requires them on the invoice, print them from the same value, e.g. in `extra` (see [Printing identifiers](../../api-reference/invoice/identifiers.md#printing-identifiers)).
+The built-in themes do not print these inputs: where the law requires them on the invoice, print them from the same value, e.g. as the `register` or `management` of the sender, which the legal footer of the themes prints, or in `extra` (see [Printing identifiers](../../api-reference/invoice/identifiers.md#printing-identifiers)).
 
 ## Contacts
 
@@ -101,7 +101,7 @@ Alternatively, you can define them as direct fields on `sender` (using keys `con
 
 ### Buyer Contact (BG-9)
 
-The `contact` of the `recipient` (or its keys `contact-name` and `phone`) is written as the buyer contact in `"en16931"` and `"xrechnung"`, with the same keys as the seller contact. An `email` of the recipient alone is not a contact point: it is where the invoice goes, the electronic address (see below). Earlier versions left the buyer contact out of the e-invoice. The built-in themes do not print it; to show it on the printed invoice, print it from the same value, e.g. in `extra` of the recipient, which the DIN 5008 theme prints in the annotation zone of the address field.
+The `contact` of the `recipient` (or its keys `contact-name` and `phone`) is written as the buyer contact in `"en16931"` and `"xrechnung"`, with the same keys as the seller contact. An `email` of the recipient alone is not a contact point: it is where the invoice goes, the electronic address (see below). Earlier versions left the buyer contact out of the e-invoice. The built-in themes do not print it; to show it on the printed invoice, print it from the same value, e.g. in `extra` of the recipient, which the built-in themes print with the address (in the DIN 5008 layouts in the annotation zone of the address field).
 
 ## Buyer Reference / Leitweg-ID (BT-10)
 

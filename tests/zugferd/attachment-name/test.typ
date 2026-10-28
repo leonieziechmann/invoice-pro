@@ -7,7 +7,7 @@
 #import "/tests/zugferd/harness.typ": bank, buyer-de, buyer-fr, seller
 
 #let e-invoice(..args) = invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   sender: seller,
   recipient: buyer-de,
@@ -16,7 +16,7 @@
   ..args,
 )[
   #line-items[#item([Beratung], price: 100, quantity: 2, unit: unit.hour)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 

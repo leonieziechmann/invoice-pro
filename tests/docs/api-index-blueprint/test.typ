@@ -1,11 +1,16 @@
 // Source: docs/docs/api-reference/index.md — "Architectural Blueprint"
+// Always import the required functions and modules
 #import "/src/lib.typ": *
 
 // 1. Invoice Module: Establish the document root and global context
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
-  sender: (name: "Acme Corp", vat-id: "DE123456789"), // Legally required identifier
-  recipient: (name: "Jane Doe"),
+  sender: (
+    name: "Acme Corp",
+    address: "Industriestraße 1",
+    city: "70173 Stuttgart",
+    vat-id: "DE123456789", // Legally required identifier
+  ),
+  recipient: (name: "Jane Doe", address: "Rosenweg 12", city: "10115 Berlin"),
   invoice-nr: "INV-2026-001",
 )
 
@@ -20,6 +25,6 @@
 ]
 
 // 3. Components Module: Append standalone visual metadata
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(iban: "DE75512108001245126199")
 #signature()

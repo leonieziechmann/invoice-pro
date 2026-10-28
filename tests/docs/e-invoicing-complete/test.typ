@@ -1,7 +1,7 @@
+// Source: docs/docs/e-invoicing/index.md — "Complete Example"
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
   // Enable the comfort EN 16931 e-invoicing profile
   zugferd: "en16931",
 
@@ -64,7 +64,7 @@
   )
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #bank-details(
   bank: "Global Business Bank",

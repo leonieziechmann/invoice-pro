@@ -1,181 +1,167 @@
+<!-- The package README (Typst Universe and the package archive). GitHub shows /.github/README.md instead: keep both in step. -->
+
 # invoice-pro
 
-Modern Invoice Template for Typst
+<p align="center">
+  <img src="https://leonieziechmann.github.io/invoice-pro/img/readme/hero.webp" alt="One invoice in five of the ten looks of invoice-pro" width="100%">
+</p>
 
-A professional, compliant, and automated invoice template for [Typst](https://typst.app) with integrated ZUGFeRD e-invoicing support. This package follows the German **DIN 5008** standard (Form A & B) and automates calculations, VAT handling, and payment details.
+<p align="center">
+  <strong>Professional invoices in Typst.</strong><br>
+  Calculated, compliant and e-invoice ready, from a few lines of code.
+</p>
 
-![Example Invoice](thumbnail.png)
+<p align="center">
+  <a href="https://leonieziechmann.github.io/invoice-pro/">Documentation</a> ·
+  <a href="https://leonieziechmann.github.io/invoice-pro/themes">Themes</a> ·
+  <a href="https://leonieziechmann.github.io/invoice-pro/e-invoicing">E-Invoicing</a> ·
+  <a href="https://github.com/leonieziechmann/invoice-pro">GitHub</a>
+</p>
 
-## Features
+---
 
-- **Internationalization (i18n) (New in v0.3.0):** Built-in support for English and German out of the box, plus a highly flexible `locale` API to inject custom translations for any language.
-- **DIN 5008 Compliant:** Supports both Form A and Form B layouts natively via the flexible Theming API.
-- **ZUGFeRD e-invoicing (New in v0.4.0):** (Experimental) Embed EN 16931-compliant Factur-X/ZUGFeRD XML metadata into your generated PDF/A-3B invoices for automated digital processing. The invoice data is checked against the rules of the selected profile, and all problems are reported at once.
-- **Block-based API:** Clean, scoped, and declarative data structure using `#line-items`, `#item`, `#group`, and `#bundle`—inspired by CeTZ, keeping your document clutter-free.
-- **Automatic Calculations:** Effortlessly handles line items, nested bundles, sub-totals, and calculates taxes automatically.
-- **EPC QR-Code (GiroCode):** Automatically generates a scannable banking QR code for quick and easy payments using banking apps.
-- **Payment Means:** Besides bank details for a transfer, `#direct-debit` (SEPA direct debit with mandate reference and creditor identifier), `#card-payment` and `#paid` for invoices that are paid already, and cash discounts with `#payment-goal(discount: ..)`. The printed invoice and the e-invoice state the same payment means.
-- **Legal Content:** The default references print what the law requires on an invoice, such as the seller's tax number or VAT ID and the date of the supply, and an e-invoice checks that the printed invoice shows them. Credit notes, corrected and self-billed invoices (`document-type`), notes, the payee and the VAT exemption reasons with their VATEX codes are stated as well.
-- **Identifiers:** Typed party identifiers, such as `id.gln(..)`, `id.siret(..)`, `id.leitweg(..)` or `id.register(..)` (commercial register), stated in the e-invoice, which checks their format and check digits.
-- **Advanced Modifiers:** Apply specific discounts, surcharges, and custom tax rates at the item, bundle, or global level.
-- **Highly Customizable:** Easy configuration of sender, recipient, payment goals, bank details, and visual themes to match your corporate identity.
+## See It in One Minute
 
-## Documentation
+<a href="https://leonieziechmann.github.io/invoice-pro/"><img src="https://leonieziechmann.github.io/invoice-pro/video/tour.jpg" alt="Video: invoice-pro in one minute" width="100%"></a>
 
-For comprehensive guides, API references, theming instructions, and advanced examples, please visit our official documentation:
+<p align="center"><sub>▶ Items, a discount, payment, two themes, a brand color, a language and the e-invoice, each in a line or two. The video plays in the documentation.</sub></p>
 
-👉 **[Read the Full Documentation Here](https://leonieziechmann.github.io/invoice-pro/)**
+## Highlights
 
-## Getting Started
+<table>
+<tr>
+<td width="50%" valign="top">
 
-### Installation
+### 🎨 Ten themes
 
-Import the package at the top of your Typst file:
+From a DIN 5008 business letter to a poster look. Your brand color and logo in one line, on page layouts for the window envelopes of several countries.
+
+</td>
+<td width="50%" valign="top">
+
+### 🌍 Five languages
+
+German, English, French, Italian and Spanish, with the number formats, VAT rates and invoicing rules of six countries.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### 🧮 Calculated for you
+
+Groups with subtotals, bundles, discounts, several VAT rates and prepayments: every total is computed for you.
+
+</td>
+<td valign="top">
+
+### 💶 Paid faster
+
+An EPC QR code for banking apps, cash discounts, SEPA direct debit and card payments.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### 🧾 E-invoice included
+
+ZUGFeRD / Factur-X and XRechnung, made from the numbers the page prints and checked against EN 16931 while you write (experimental).
+
+</td>
+<td valign="top">
+
+### ✅ Nothing missing
+
+A draft marks missing invoice data and lists it with its legal basis; `validation: "strict"` stops the build instead.
+
+</td>
+</tr>
+</table>
+
+## Ten Looks, One Line
+
+<p align="center">
+  <img src="https://leonieziechmann.github.io/invoice-pro/img/readme/looks.webp" alt="The example invoice in the ten looks, each named" width="100%">
+</p>
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#show: invoice.with(
+  theme: theme.bold.with(theme.custom.brand(
+    color: rgb("#0f766e"),
+    logo: image("logo.svg", alt: "Atelier Nord"),
+  )),
+  // sender: .., recipient: .., invoice-nr: ..
+)
 ```
 
-### Basic Usage
+Without a `theme`, an invoice uses `theme.classic`. Each look has a page with a sample and a quick start in the [documentation](https://leonieziechmann.github.io/invoice-pro/themes).
 
-Here is an example of how to create an invoice using the new v0.3.0 API:
+## Quick Start
+
+Start a project from the template:
+
+```bash
+typst init @preview/invoice-pro
+```
+
+or write the invoice yourself:
 
 ```typst
 #import "@preview/invoice-pro:0.5.0": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(form: "A"), // or form: "B"
   locale: locale.en-de,
   sender: (
-    name: "Your Company / Name",
-    address: "1 Example Street",
-    city: "12345 Example City",
-    tax-nr: "123/456/789",
+    name: "Atelier Nord GmbH",
+    address: "Hafenstraße 12",
+    city: "20457 Hamburg",
+    vat-id: "DE123456789",
   ),
   recipient: (
-    name: "Customer Name",
-    address: "5 Customer Street",
-    city: "98765 Customer City",
+    name: "Acme Corporation",
+    address: "Market Street 5",
+    city: "80331 Munich",
   ),
-  invoice-nr: "2026-01",
+  invoice-nr: "2026-0142",
 )
 
-// Add Invoice Items inside a scoped block
 #line-items[
-  #item(
-    [Consulting & Concept],
-    price: 85.00,
-    quantity: 5,
-    unit: "hrs"
-  )
-
-  #item(
-    [Web Design Layout (Flat Rate)],
-    price: 1200.00,
-  )
-
-  #item(
-    [Stock Licenses (Images)],
-    price: 25.00,
-    quantity: 4,
-  )
-
-  #discount([Project Discount (Regular Customer)], amount: 10%)
+  #item([Brand strategy], price: 2400)
+  #item([Web design], quantity: 3, unit: unit.day, price: 900)
+  #discount([Loyal customer], amount: 5%)
 ]
 
-// Payment Terms
-#payment-goal(days: 14)
-
-// Bank Details with QR Code
+#payment-terms(days: 14)
 #bank-details(
-  bank: "Example Bank",
-  iban: "DE07100202005821158846",
-  bic: "EXAMPLEBICX",
+  bank: "Hamburger Sparkasse",
+  iban: "DE75512108001245126199",
+  bic: "SOLADEST600",
 )
-
-#signature()
 ```
 
-## API Stability
+## Learn More
 
-With the major refactoring introduced in version 0.2.0, the package structure is solidifying. Here is the current stability status of the various API components:
+<table>
+<tr>
+<td width="33%" align="center"><a href="https://leonieziechmann.github.io/invoice-pro/themes"><img src="https://leonieziechmann.github.io/invoice-pro/video/theming.jpg" alt="Video: themes"></a><br><b>Themes</b></td>
+<td width="33%" align="center"><a href="https://leonieziechmann.github.io/invoice-pro/api-reference/locale"><img src="https://leonieziechmann.github.io/invoice-pro/video/languages.jpg" alt="Video: languages"></a><br><b>Languages</b></td>
+<td width="33%" align="center"><a href="https://leonieziechmann.github.io/invoice-pro/api-reference/line-items"><img src="https://leonieziechmann.github.io/invoice-pro/video/line-items.jpg" alt="Video: line items"></a><br><b>Line items</b></td>
+</tr>
+<tr>
+<td align="center"><a href="https://leonieziechmann.github.io/invoice-pro/api-reference/components"><img src="https://leonieziechmann.github.io/invoice-pro/video/payments.jpg" alt="Video: payments"></a><br><b>Payments</b></td>
+<td align="center"><a href="https://leonieziechmann.github.io/invoice-pro/e-invoicing"><img src="https://leonieziechmann.github.io/invoice-pro/video/e-invoicing.jpg" alt="Video: e-invoicing"></a><br><b>E-invoicing</b></td>
+<td align="center" valign="middle"><a href="https://leonieziechmann.github.io/invoice-pro/">All guides and<br>the API reference →</a></td>
+</tr>
+</table>
 
-- **Invoice Header (`invoice` arguments):** **Mostly Stable**. The core invoice configuration is established. Future updates to the header will be non-breaking and will primarily consist of adding new optional fields.
-- **Data Model (`#line-items`, `#group`, `#bundle`, `#item`):** **Stable**. The new block-based data model is considered almost finished and safe to use.
-  - _Note:_ The `unit` argument in `#item`, `#group`, and `#bundle` supports dictionary inputs (e.g., `(display: "Std.", code: "HUR")`) to comply with the standardized unit formats and codes required for ZUGFeRD e-invoicing.
-- **Theming (`theme`):** **Under Construction**. The theming engine is still evolving and will most likely experience breaking changes in the next updates as we refine customization capabilities.
-- **Localization (`locale`):** **Under Construction**. The localization and internationalization systems are actively being worked on and are subject to change.
+## Status
 
-## Known Limitations
+The data model (`line-items`, `item`, `group`, `bundle`) is stable. The theme API is stable since v0.6.0: `theme.classic`, `theme.plain`, the tokens, the layouts and the part names are frozen; the other presets may still be refined. The locale API may still change. E-invoicing is experimental: Typst cannot write the Factur-X XMP metadata yet, so PDF validators reject the PDF although its XML is valid ([workaround](https://leonieziechmann.github.io/invoice-pro/e-invoicing/limitations#factur-x-xmp-metadata)).
 
-- **Factur-X XMP metadata:** Typst cannot write custom XMP metadata yet, so the PDF lacks the Factur-X extension schema that announces the embedded XML. The embedded XML is valid, but validators that check the PDF itself (Factur-X / ZUGFeRD PDF validation) reject the PDF. An optional post-processing step with the Mustang command line tool, outside the package, is described in the [e-invoicing documentation](https://leonieziechmann.github.io/invoice-pro/e-invoicing/limitations#factur-x-xmp-metadata).
+## Credits
 
-## 🛠️ Development
-
-This project uses **Nix** to provide a reproducible, sandboxed development environment. You do not need to install Typst, linters, or formatters globally—the flake provides everything.
-
-### Try it out (No Install)
-
-You can instantly compile a `.typ` file using the latest unreleased version of this template directly from GitHub, without entering a development shell:
-
-```bash
-nix run github:leonieziechmann/invoice-pro -- my-invoice.typ
-# Or locally from the repository root:
-nix run .#default -- my-invoice.typ
-```
-
-### Quick Start
-
-1. **Enter the environment:**
-
-```bash
-nix develop
-# or if you use direnv:
-direnv allow
-```
-
-This activates a shell containing `typst`, `typstyle`, `markdownlint`, and `prettier`.
-
-2. **Automatic Package Linking:**
-   The environment automatically links the current directory to a sandboxed local package registry (inside `.typst-data`). You can import the package in your test files immediately without manual installation:
-
-```typst
-#import "@preview/invoice-pro:0.5.0": *
-```
-
-3. **Quality Control:**
-   To run the full suite of Pull Request checks (linter, tests, and documentation build) locally before submitting a PR, you can use the built-in test runner:
-
-```bash
-check-pr
-```
-
-## 🗺️ Roadmap
-
-I am actively working on improving this template. Here is what's planned for future releases:
-
-- [x] (v0.2.0) **Refactored API:** Moving away from global states to a more robust, scoped API (inspired by CeTZ) for better stability and flexibility.
-- [x] (v0.3.0) **Internationalization (i18n):** Built-in support for English and other languages (currently creates German invoices by default).
-- [x] (v0.4.0) **ZUGFeRD Support:** (Experimental) Embedding XML data for fully compliant e-invoicing.
-- [x] (v0.5.0) **Validated E-Invoicing:** (Experimental) Checking every e-invoice against the rules of EN 16931, Factur-X and XRechnung before its XML is attached.
-- [ ] (WIP) **Theming Engine:** Allow easy customization of accent colors and fonts to match corporate identities.
-- [ ] **Data Loading:** Helper functions to load invoice items directly from JSON, CSV, or YAML files.
-
-Have an idea? Feel free to open an issue or pull request!
-
-## Dependencies
-
-This template relies on these amazing packages:
-
-- `letter-pro` for the DIN layout.
-- `sepay` for EPC-QR-Code generation.
-- `ibanator` (through `sepay`) for the IBAN check of the EPC-QR-Code.
-- `loom` for reactive document rendering.
-
-**Acknowledgements:**
-
-- Special thanks to [classy-german-invoice](https://github.com/erictapen/typst-invoice) by Kerstin Humm, which served as inspiration and provided the logic for the EPC-QR-Code implementation.
-- The ZUGFeRD e-invoicing implementation was contributed by [Michael Fuchs (theexiile1305)](https://github.com/theexiile1305).
+invoice-pro uses [sepay](https://typst.app/universe/package/sepay) for the EPC QR code (with [ibanator](https://typst.app/universe/package/ibanator) for the IBAN check) and [loom](https://typst.app/universe/package/loom) for reactive rendering. Thanks to [classy-german-invoice](https://github.com/erictapen/typst-invoice) by Kerstin Humm, which inspired the template and the EPC QR code, to [Michael Fuchs (theexiile1305)](https://github.com/theexiile1305), who contributed the ZUGFeRD implementation, and to [letter-pro](https://typst.app/universe/package/letter-pro), which drew the DIN 5008 page up to v0.5.
 
 ## License
 

@@ -1,4 +1,4 @@
-﻿// Regression test for GitHub issue #39
+// Regression test for GitHub issue #39
 // https://github.com/leonieziechmann/invoice-pro/issues/39
 //
 // Bug reported:
@@ -9,26 +9,36 @@
 // entire tax section collapsed when no other taxes exist.
 
 #import "/src/lib.typ": *
-#import "/src/themes/components/line-items/line-items.typ": (
-  render-line-items as generic-render-line-items,
+
+// The 0% filter runs in measure: the totals row model (`view.totals.rows`),
+// which every totals renderer draws, has no row for a 0% rate. A wrap of the
+// `totals` part checks the tax rows, then renders the default totals. Every
+// check records its scenario `id`.
+//
+// The scenarios use minimal invoice data, so they render without validation
+// feedback (`validation: none`): the feedback is not what these checks are about.
+#let check-tax-rows(id, expected, message) = theme.plain.with(
+  theme.custom.wrap("totals", (ctx, view, inner) => {
+    let taxes = view.totals.rows.filter(r => r.kind == "tax")
+    assert.eq(
+      taxes.len(),
+      expected,
+      message: message + ", got " + repr(taxes),
+    )
+    [#metadata(id)<issue-39-checked>]
+    inner(ctx, view)
+  }),
 )
 
-// 1. Small business in exclusive mode: elements.taxes must be empty
+// 1. Small business in exclusive mode: no tax row
 #{
   let doc = invoice(
-    theme: themes.blank.with(
-      line-items: generic-render-line-items.with(
-        render-totals-body: (ctx, data, styles, elements) => {
-          assert.eq(
-            elements.taxes.len(),
-            0,
-            message: "Expected elements.taxes to be empty for small business (0% tax), got "
-              + repr(elements.taxes),
-          )
-          [Totals verified]
-        },
-      ),
+    theme: check-tax-rows(
+      1,
+      0,
+      "Expected no tax row for small business (0% tax)",
     ),
+    validation: none,
     locale: locale.de-de,
     sender: (
       name: "Kleinunternehmer",
@@ -51,22 +61,15 @@
   [#doc]
 }
 
-// 2. Small business in inclusive (B2C) mode: elements.taxes must be empty
+// 2. Small business in inclusive (B2C) mode: no tax row
 #{
   let doc = invoice(
-    theme: themes.blank.with(
-      line-items: generic-render-line-items.with(
-        render-totals-body: (ctx, data, styles, elements) => {
-          assert.eq(
-            elements.taxes.len(),
-            0,
-            message: "Expected elements.taxes to be empty in inclusive mode for small business, got "
-              + repr(elements.taxes),
-          )
-          [Totals B2C verified]
-        },
-      ),
+    theme: check-tax-rows(
+      2,
+      0,
+      "Expected no tax row in inclusive mode for small business",
     ),
+    validation: none,
     locale: locale.de-de,
     tax-mode: "inclusive",
     sender: (
@@ -90,22 +93,15 @@
   [#doc]
 }
 
-// 3. Mixed taxes: 19% VAT and 0% exempt -> only 19% tax should be in elements.taxes
+// 3. Mixed taxes: 19% VAT and 0% exempt -> only the 19% tax gets a row
 #{
   let doc = invoice(
-    theme: themes.blank.with(
-      line-items: generic-render-line-items.with(
-        render-totals-body: (ctx, data, styles, elements) => {
-          assert.eq(
-            elements.taxes.len(),
-            1,
-            message: "Expected exactly 1 tax (19%) in elements.taxes, got "
-              + repr(elements.taxes.len()),
-          )
-          [Mixed taxes verified]
-        },
-      ),
+    theme: check-tax-rows(
+      3,
+      1,
+      "Expected exactly 1 tax row (19%)",
     ),
+    validation: none,
     locale: locale.de-de,
     sender: (
       name: "Firma",
@@ -132,9 +128,15 @@
   [#doc]
 }
 
-// 4. Full DIN-5008 German personal invoice with small-biz exemption renders cleanly
+// Every scenario above must have run its check.
+#context {
+  let ran = query(<issue-39-checked>).map(m => m.value).dedup()
+  assert.eq(ran, (1, 2, 3), message: "checked scenarios: " + repr(ran))
+}
+
+// 4. Full classic German personal invoice with small-biz exemption renders cleanly
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
+  theme: theme.classic.with(theme.custom.fonts(body: "libertinus serif")),
   locale: locale.de-de,
   tax-mode: "inclusive",
   tax-exempt-small-biz: true,

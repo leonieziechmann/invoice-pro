@@ -20,5 +20,5 @@
   #item-s
   #shipping-with(tax.intra-community())
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

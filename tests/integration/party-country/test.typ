@@ -30,7 +30,7 @@
 /// Renders an invoice and calls `test` with the root context and the
 /// e-invoice data model.
 #let party-test(test, ..args) = invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "en16931",
   zugferd-errors: "ignore",
@@ -45,7 +45,7 @@
       test(ctx, build-model(
         ctx,
         signal("line-items").item-data,
-        payment-goal: signal("payment-goal"),
+        payment-goal: signal("payment-terms"),
         bank: signal("bank-details"),
       ))
     },

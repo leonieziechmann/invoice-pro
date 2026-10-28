@@ -24,5 +24,5 @@
     tax: tax.reverse-charge(grounds: "Autoliquidation"),
   )
 ]
-#payment-goal(days: 30)
+#payment-terms(days: 30)
 #bank

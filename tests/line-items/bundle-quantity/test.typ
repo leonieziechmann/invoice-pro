@@ -15,7 +15,7 @@
 // Computes an invoice and calls `test` with the line-items data (printed
 // values) and the e-invoice model built from it (XML values).
 #let check(test, ..args, body) = invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: test-locale,
   sender: (name: "Seller", address: "Street 1", city: "City"),
   recipient: (name: "Buyer", address: "Street 2", city: "City"),

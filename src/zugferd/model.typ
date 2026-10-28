@@ -370,6 +370,10 @@
       contact-name: true,
       phone: true,
       email: true,
+      // the commercial register entry and the management, which the
+      // `registration` part of the theme prints in the legal footer
+      register: false,
+      management: false,
     ),
   buyer: _address-keys
     + (
@@ -1314,7 +1318,8 @@
   // What the printed invoice shows besides the components (see
   // `logic/printed.typ`): whether it shows the seller's VAT ID or tax number
   // the XML states (BT-31, BT-32), which the law requires on the invoice;
-  // `none` if that cannot be known, e.g. with the blank theme.
+  // `none` if that cannot be known, e.g. with a theme that prints no
+  // references.
   let printed = ctx.at("printed", default: none)
   seller.insert("printed-tax-id", shows-identifier(printed, (
     seller.vat-id,
@@ -1425,7 +1430,7 @@
   }
   let printed-period = _printed-service-period(ctx)
 
-  // BT-9 and BT-20: the invoice's own `due-date` wins over the payment goal.
+  // BT-9 and BT-20: the invoice's own `due-date` wins over `payment-terms`.
   // `terms-input` is the input the payment terms come from.
   let due-date = none
   let terms = none
@@ -1450,9 +1455,9 @@
     }
     if terms == none and type(goal-date) != datetime {
       terms = payment-terms(goal-date)
-      if terms != none { terms-input = "payment-goal" }
+      if terms != none { terms-input = "payment-terms" }
     }
-    // Without days or a date, the payment goal prints that the amount is due
+    // Without days or a date, `payment-terms` prints that the amount is due
     // at once ("sofort nach Erhalt"), which are the payment terms. On a
     // document whose sender pays (a credit note or a self-billed invoice),
     // it prints that the sender pays at once ("umgehend") instead.
@@ -1465,10 +1470,10 @@
         soon = strings.at("deadline-soon-credit", default: soon)
       }
       terms = payment-terms(soon)
-      if terms != none { terms-input = "payment-goal" }
+      if terms != none { terms-input = "payment-terms" }
     }
   }
-  // The cash discounts of the payment goal follow the terms, each on a line
+  // The cash discounts of `payment-terms` follow the terms, each on a line
   // of its own: as the invoice prints them, and in XRechnung in its Skonto
   // syntax (BR-DE-18).
   let discounts = if payment-goal != none {
@@ -1484,7 +1489,7 @@
     }
     terms-xrechnung = _terms-lines(terms, lines)
     terms = _terms-lines(terms, notes)
-    if terms-input == none { terms-input = "payment-goal" }
+    if terms-input == none { terms-input = "payment-terms" }
   }
   // A paid invoice states what it prints about the payment.
   if means.paid != none and terms == none {
@@ -1612,7 +1617,7 @@
       terms: terms,
       terms-xrechnung: terms-xrechnung,
       terms-input: terms-input,
-      // The cash discounts of the payment goal: `days`, `percent` (in
+      // The cash discounts of `payment-terms`: `days`, `percent` (in
       // percent) and `basis` (`none` if not given).
       discounts: discounts.map(discount => (
         days: discount.days,

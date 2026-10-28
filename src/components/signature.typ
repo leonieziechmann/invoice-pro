@@ -1,5 +1,6 @@
 #import "../loom-wrapper.typ": loom, managed-motif
 #import "../utils/types.typ"
+#import "../theming/parts/body.typ": call-part
 
 /// Renders a signature block for the sender.
 ///
@@ -26,10 +27,6 @@
       nest("locale", {
         ensure("strings", (:))
       })
-
-      nest("theme", {
-        ensure("signature", (..) => panic("theme::signature is not provided"))
-      })
     }),
     measure: (ctx, _) => {
       let data = (
@@ -39,7 +36,7 @@
 
       (none, data)
     },
-    draw: (ctx, _, view, ..) => (ctx.theme.signature)(ctx, view),
+    draw: (ctx, _, view, ..) => call-part(ctx, "signature", view),
     none,
   )
 }

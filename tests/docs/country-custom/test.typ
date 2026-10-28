@@ -12,7 +12,7 @@
 )
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   sender: (
     name: "My Company GmbH",
     address: "Stubenring 1",

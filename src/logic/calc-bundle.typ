@@ -2,6 +2,7 @@
 #import "../utils/coercion.typ"
 #import "../data/tax.typ"
 #import "calc-item.typ": normalize-quantity, require-positive-base-quantity
+#import "../theming/access.typ": row-style-of
 
 #let create-virtual-tax-item(
   ctx,
@@ -71,6 +72,8 @@
 
     item-id: coercion.to-item-id(ctx.item-id),
     reference: ctx.reference,
+    // the row style of a `themed` scope around the bundle, as an item records it
+    style: row-style-of(ctx),
   )
 
   return loom.frame.new(

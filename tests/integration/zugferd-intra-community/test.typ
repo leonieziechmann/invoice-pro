@@ -6,7 +6,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.en-de,
   zugferd: "en16931",
   tax: tax.intra-community(),
@@ -38,7 +38,7 @@
   #item([Machine parts], price: 1250.00, quantity: 4, unit: unit.piece)
   #item([Freight], price: 180.00)
 ]
-#payment-goal(days: 30)
+#payment-terms(days: 30)
 #bank-details(
   bank: "Musterbank",
   iban: "DE75512108001245126199",

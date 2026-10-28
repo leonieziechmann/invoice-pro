@@ -13,16 +13,19 @@
 #let payee = (name: "Factoring Bank AG", id: id.gln("4000001543212"))
 #let iban = "DE89370400440532013000"
 
-// Records the references and the bank details view.
-#let capturing-theme = themes.blank.with(
-  document: (ctx, body) => {
+// Records the references (the context of the `title` part) and the bank
+// details view.
+#let capturing-theme = theme.plain.with(
+  theme.custom.wrap("title", (ctx, view, inner) => {
     [#metadata(ctx.references.map(((label, value)) => (
       label,
       plain-text(value),
     )))<references>]
-    body
-  },
-  bank-details: (ctx, view) => [#metadata(view)<bank-details>],
+    inner(ctx, view)
+  }),
+  theme.custom.part("bank-details", (ctx, view) => [#metadata(
+    view,
+  )<bank-details>]),
 )
 
 #let test-invoice(..bank, payee: payee, document-type: auto) = invoice(
@@ -36,7 +39,7 @@
   date: datetime(year: 2026, month: 9, day: 1),
 )[
   #line-items[#item([Beratung], price: 100, tax: tax.vat(19%))]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank-details(bank: "Factoring Bank", iban: iban, ..bank)
 ]
 
@@ -93,6 +96,6 @@
   )
 })[
   #line-items[#item([Beratung], price: 100, tax: tax.vat(19%))]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank-details(bank: "Factoring Bank", iban: iban)
 ]

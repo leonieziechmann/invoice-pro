@@ -1,9 +1,9 @@
 // Source: docs/docs/api-reference/invoice/country.md — "Stating the Country"
-#import "/src/lib.typ": country, invoice, item, line-items, themes
+#import "/src/lib.typ": country, invoice, item, line-items, theme
 #import "/tests/data-test.typ": data-test
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   sender: (
     name: "My Company GmbH",
     address: "Stubenring 1",

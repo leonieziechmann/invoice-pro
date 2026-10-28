@@ -1,0 +1,80 @@
+# E-invoicing: ZUGFeRD / Factur-X, its report while you write and the draft
+# that holds the XML back while data is missing (e-invoicing/index.md).
+title = "E-Invoicing"
+subtitle = "ZUGFeRD / Factur-X from the same lines, checked while you write"
+outro = "Send e-invoices with confidence"
+poster = 1
+
+start = '''
+#import "@preview/invoice-pro:{version}": *
+
+#show: invoice.with(
+  locale: locale.en-de,
+  sender: (
+    name: "Atelier Nord GmbH",
+    address: "Hafenstraße 12",
+    city: "20457 Hamburg",
+    vat-id: "DE123456789",
+  ),
+  recipient: (
+    name: "Acme Corporation",
+    address: "Market Street 5",
+    city: "80331 Munich",
+  ),
+  invoice-nr: "2026-0142",
+)
+
+#line-items[
+  #item([Brand strategy], price: 2400)
+  #item([Web design], quantity: 3, unit: unit.day, price: 900)
+]
+
+#payment-terms(days: 14)
+#bank-details(
+  bank: "Hamburger Sparkasse",
+  iban: "DE75512108001245126199",
+)
+'''
+
+[intro]
+caption = "A finished invoice"
+sub = "Made for people: now make it readable for software too"
+
+[[step]]
+caption = "One line makes it an e-invoice"
+sub = "EN 16931 XML from the same numbers the page prints"
+edit = [{ find = "  locale: locale.en-de,\n", with = "  locale: locale.en-de,\n  zugferd: \"en16931\",\n" }]
+badge = "✓ factur-x.xml attached to the PDF"
+
+[[step]]
+caption = "See every hint while you write"
+sub = "The rules of EN 16931 are checked on every compile"
+edit = [{ find = "  zugferd: \"en16931\",\n", with = "  zugferd: \"en16931\",\n  zugferd-errors: \"report\",\n" }]
+focus = [1, 0.06, 0.27, 0.96, 0.40]
+hold = 3.2
+
+[[step]]
+caption = "Follow the hint"
+sub = "Add what the report asks for, and it disappears"
+edit = [{ find = "    city: \"80331 Munich\",\n", with = "    city: \"80331 Munich\",\n    email: \"invoices@acme.example\",\n" }]
+badge = "✓ No warnings: factur-x.xml attached"
+
+[[step]]
+caption = "Missing data makes a draft"
+sub = "Marked on the page, listed on a report page, no XML attached"
+edit = [{ find = "  invoice-nr: \"2026-0142\",\n", with = "" }]
+look = 1.6
+focus = [1, 0.06, 0.24, 0.96, 0.50]
+hold = 2.6
+
+[[step]]
+caption = "A report page lists every problem"
+sub = "With its legal basis and the fix; the XML is held back"
+focus = [2, 0.06, 0.04, 0.96, 0.27]
+hold = 3.0
+
+[[step]]
+caption = "Complete it, and it is ready to send"
+sub = "The draft marks go, the e-invoice is attached again"
+edit = [{ find = "    email: \"invoices@acme.example\",\n  ),\n", with = "    email: \"invoices@acme.example\",\n  ),\n  invoice-nr: \"2026-0142\",\n" }]
+badge = "✓ factur-x.xml attached to the PDF"

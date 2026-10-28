@@ -36,7 +36,7 @@ Create `tests/<category>/<test-name>/.gitignore` with:
 
 ### 3. Create `test.typ`
 
-Use `data-test`, `test-locale`, and `themes.blank` for lightweight assertions:
+Use `data-test`, `test-locale`, `theme.plain` and `validation: none` (the parties are incomplete on purpose, which would render a draft) for lightweight assertions:
 
 ```typ
 #import "/src/lib.typ": *
@@ -44,7 +44,8 @@ Use `data-test`, `test-locale`, and `themes.blank` for lightweight assertions:
 #import "/tests/test-locale.typ": test-locale
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
+  validation: none,
   locale: test-locale,
   sender: (name: "Test Sender"),
   recipient: (name: "Test Recipient"),

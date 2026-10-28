@@ -1,6 +1,4 @@
 // Source: docs/docs/b2b.md — "2. Cross-Border B2B Invoice (Reverse Charge)"
-// Compile-only: the example must compile as documented (it used to
-// carry an invalid IBAN).
 #import "/src/lib.typ": *
 
 #show: invoice.with(
@@ -40,10 +38,10 @@
   #item([User Research Sessions], quantity: 8, unit: unit.hour, price: 100.00)
 ]
 
-#payment-goal(days: 30)
+#payment-terms(days: 30)
 
 #bank-details(
   bank: "Commerzbank Berlin",
-  iban: "DE89370400440532013000",
-  bic: "COBADEFFXXX",
+  iban: "DE38100400000532135700",
+  bic: "COBADEBBXXX",
 )

@@ -3,11 +3,10 @@
 // seller's tax number or VAT ID (IP-PRINT-03) and the date of the supply
 // (IP-PERIOD-03).
 //
-// Invoice-pro knows where a theme prints these details only if the theme
-// says so (`prints` of the theme dictionary, see `base-theme`): the DIN 5008
-// letter prints the reference signs and the `extra` of the parties. The blank
-// theme prints none of them, the document does: then nothing is known, and
-// nothing is reported.
+// Invoice-pro knows where a theme prints these details from its layout: the
+// parts its areas host (`prints-of` of `theming/prints.typ`). A theme whose
+// areas host no references prints none of them, the document does: then
+// nothing is known, and nothing is reported.
 
 #import "../utils/text.typ": plain-text
 
@@ -15,13 +14,19 @@
 /// e-invoice: whether the theme prints the reference signs (`known`), the
 /// printed references, the name and address lines of the sender and the
 /// recipient (which every invoice prints, and which may carry e.g. the
-/// sender's VAT ID), the `extra` details of the parties the theme prints,
-/// whether the theme prints content of its own on every page (e.g. a footer),
-/// and the drawn body, whose text is searched only when needed.
+/// sender's VAT ID), the sender's VAT ID and tax number if the theme prints
+/// its registration details, the `extra` details of the parties the theme
+/// prints, whether the theme prints content of its own on every page (e.g. a
+/// footer it cannot read), and the drawn body, whose text is searched only
+/// when needed.
+///
+/// `prints` says what the theme prints (see `prints-of` of
+/// `theming/prints.typ`): `references`, `sender-extra` and `recipient-extra`
+/// (or `party-extra` for both), `registration` and `page-content`, each
+/// `false` unless set.
 ///
 /// -> dictionary
-#let printed-record(theme, references, sender, recipient, body) = {
-  let prints = theme.at("prints", default: (:))
+#let printed-record(prints, references, sender, recipient, body) = {
   let party-extra = prints.at("party-extra", default: false)
   let lines = ()
   for party in (sender, recipient) {
@@ -29,13 +34,23 @@
       lines.push(party.at(key, default: none))
     }
   }
+  if prints.at("registration", default: false) == true {
+    for key in ("vat-id", "tax-nr") {
+      lines.push(sender.at(key, default: none))
+    }
+  }
+  let extra = ()
+  if prints.at("sender-extra", default: party-extra) == true {
+    extra.push(sender.at("extra", default: ()))
+  }
+  if prints.at("recipient-extra", default: party-extra) == true {
+    extra.push(recipient.at("extra", default: ()))
+  }
   (
     known: prints.at("references", default: false) == true,
     references: references,
     lines: lines,
-    extra: if party-extra {
-      (sender.at("extra", default: ()), recipient.at("extra", default: ()))
-    } else { () },
+    extra: extra,
     page-content: prints.at("page-content", default: false) == true,
     body: body,
   )

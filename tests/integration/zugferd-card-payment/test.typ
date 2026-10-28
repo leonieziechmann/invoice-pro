@@ -6,7 +6,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.en-de,
   zugferd: "en16931",
   sender: (

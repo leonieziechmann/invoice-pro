@@ -41,7 +41,7 @@
   item-tax: auto,
   ..args,
 ) = invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: zugferd,
   zugferd-errors: "ignore",
@@ -55,7 +55,7 @@
     test(process-zugferd(
       ctx,
       signal("line-items").item-data,
-      payment-goal: signal("payment-goal"),
+      payment-goal: signal("payment-terms"),
       bank: signal("bank-details"),
     ))
   })[
@@ -64,7 +64,7 @@
         #item([Consulting], price: 100, tax: item-tax)
       ]
     ]
-    #payment-goal(days: 14)
+    #payment-terms(days: 14)
     #bank-details(
       bank: "Musterbank",
       iban: "DE89370400440532013000",

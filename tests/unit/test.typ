@@ -20,15 +20,15 @@
 
   let u-piece-es = unit.piece(locale.es-es)
   assert.eq(u-piece-es.code, "H87")
-  assert.eq(u-piece-es.name, "unidad")
+  assert.eq(u-piece-es.name, (singular: "unidad", plural: "unidades"))
 
   let u-piece-fr = unit.piece(locale.fr-fr)
   assert.eq(u-piece-fr.code, "H87")
-  assert.eq(u-piece-fr.name, "pièce")
+  assert.eq(u-piece-fr.name, (singular: "pièce", plural: "pièces"))
 
   let u-piece-it = unit.piece(locale.it-it)
   assert.eq(u-piece-it.code, "H87")
-  assert.eq(u-piece-it.name, "pezzo")
+  assert.eq(u-piece-it.name, (singular: "pezzo", plural: "pezzi"))
 
   let u-set-de = unit.unit-set(locale.de-de)
   assert.eq(u-set-de.code, "SET")
@@ -148,10 +148,10 @@
 // --- Test items and bundles resolving units via ctx ---
 #import "/tests/data-test.typ": data-test
 #import "/tests/test-locale.typ": test-locale
-#import "/src/lib.typ": bundle, invoice, item, line-items, themes
+#import "/src/lib.typ": bundle, invoice, item, line-items, theme
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: test-locale,
   sender: (name: "Test Sender", address: "Street 1", city: "City"),
   recipient: (name: "Test Recipient", address: "Street 2", city: "City"),
@@ -692,13 +692,13 @@
 
 // --- Test backwards compatibility for 'tax-nr' ---
 #{
-  import "/src/lib.typ": invoice, themes
+  import "/src/lib.typ": invoice, theme
   import "/tests/test-locale.typ": test-locale
 
   // Helper function to test invoice signature behavior
   let test-invoice(..args) = {
     invoice(
-      theme: themes.blank,
+      theme: theme.plain,
       locale: test-locale,
       sender: (name: "Test Sender", address: "Street 1", city: "City"),
       recipient: (name: "Test Recipient", address: "Street 2", city: "City"),
@@ -714,7 +714,7 @@
   // 2. Check mutual exclusion with sender.tax-nr
   let res-conflict = catch(() => {
     invoice(
-      theme: themes.blank,
+      theme: theme.plain,
       locale: test-locale,
       sender: (
         name: "Test Sender",
@@ -978,15 +978,18 @@
 
 // --- Test bank-details BIC visibility ---
 #{
-  import "/src/themes/base-theme/bank-details.typ": render-bank-details
-  import "/src/lib.typ": locale
+  import "/src/lib.typ": bank-details, locale, theme, themed
   import "/src/locale/lang/base.typ": base-language
   import "/src/locale/region/base.typ": base-region
 
+  // The default `bank-details` part reads the resolved theme and the locale.
   let ctx = (
     locale: (locale.de-de)(base-language, base-region),
+    theme: theme.resolve(theme.classic),
   )
 
+  // The view as the component builds it (reference and text resolved into
+  // the one `payment-reference`, the IBAN grouped in fours).
   let base-view = (
     sender: (
       name: "Max Mustermann",
@@ -994,36 +997,57 @@
       iban: "DE75512108001245126199",
       bic: "",
     ),
-    qr-code: (
-      size: 5em,
-      display: true,
+    iban: (
+      value: "DE75512108001245126199",
+      text: "DE75\u{a0}5121\u{a0}0800\u{a0}1245\u{a0}1261\u{a0}99",
+      valid: true,
     ),
+    qr: none,
     reference: "INV-001",
+    text: none,
+    payment-reference: "INV-001",
     show-reference: true,
     payment-amount: 100.0,
   )
 
   // 1. When BIC is empty / omitted, BIC line should not be rendered
-  let res-no-bic = render-bank-details(ctx, base-view)
+  let res-no-bic = theme.parts.bank-details(ctx, base-view)
   let str-no-bic = repr(res-no-bic)
-  assert(not str-no-bic.contains("[BIC]"))
+  assert(not str-no-bic.contains("BIC"))
   assert(not str-no-bic.contains("SOLADEST600"))
 
   // 2. When BIC is provided, BIC line should be rendered
   let view-with-bic = base-view
   view-with-bic.sender.bic = "SOLADEST600"
-  let res-with-bic = render-bank-details(ctx, view-with-bic)
+  let res-with-bic = theme.parts.bank-details(ctx, view-with-bic)
   let str-with-bic = repr(res-with-bic)
-  assert(str-with-bic.contains("[BIC]"))
+  assert(str-with-bic.contains("BIC"))
   assert(str-with-bic.contains("SOLADEST600"))
 
   // 3. When unstructured text is provided instead of reference
   let view-with-text = base-view
   view-with-text.reference = none
   view-with-text.text = "Rechnung 2026-001"
-  let res-with-text = render-bank-details(ctx, view-with-text)
+  view-with-text.payment-reference = "Rechnung 2026-001"
+  let res-with-text = theme.parts.bank-details(ctx, view-with-text)
   let str-with-text = repr(res-with-text)
   assert(str-with-text.contains("Rechnung 2026-001"))
+
+  // 4. The component resolves unstructured text into the payment reference
+  //    that the part prints
+  themed(theme.custom.wrap("bank-details", (ctx, view, inner) => {
+    assert.eq(view.reference, none)
+    assert.eq(view.payment-reference, "Rechnung 2026-001")
+    let out = inner(ctx, view)
+    assert(repr(out).contains("Rechnung 2026-001"))
+    out
+  }))[
+    #bank-details(
+      bank: "Musterbank",
+      iban: "DE75512108001245126199",
+      text: "Rechnung 2026-001",
+    )
+  ]
 }
 
 
@@ -1121,8 +1145,8 @@
 // --- Test ZUGFeRD validation lists every problem at once (BT-49, BT-10, BG-6, BT-41, BT-42, BT-43, BT-34, BR-CO-26) ---
 #{
   import "/src/lib.typ": (
-    bank-details, country, invoice, item, line-items, locale, payment-goal, tax,
-    themes,
+    bank-details, country, invoice, item, line-items, locale, payment-terms,
+    tax, theme,
   )
 
   // Repro invoice from bug report (missing BT-49, BT-10, BG-6), as XRechnung
@@ -1144,9 +1168,12 @@
       city: (name: "Berlin", post-code: "10115"),
       country: country.de,
     )
+    // The checks of the invoice data are off: they would stop the invoice
+    // without the seller's tax IDs before the e-invoice is validated.
     invoice(
-      theme: themes.blank,
+      theme: theme.plain,
       locale: locale.de-de,
+      validation: none,
       zugferd: zugferd,
       sender: base-sender + sender-overrides,
       recipient: base-recipient + recipient-overrides,
@@ -1155,7 +1182,7 @@
         #line-items[
           #item([Consulting], price: 100, quantity: 1, tax: tax.vat(19%))
         ]
-        #payment-goal(days: 14)
+        #payment-terms(days: 14)
         #bank-details(
           bank: "Musterbank",
           iban: "DE89370400440532013000",
@@ -1335,6 +1362,33 @@
   assert.eq(en-res(u-en, 1), "hour")
   assert.eq(en-res(u-en, 8), "hours")
   assert.eq(en-res(u-en, 0), "hours")
+
+  // French takes the singular below 2 (1,5 heure), Italian and Spanish for 1
+  // only (1,5 ore, 1,5 horas)
+  let fr-res = locale.fr-fr(base-language, base-region).resolve-plural
+  let it-res = locale.it-it(base-language, base-region).resolve-plural
+  let es-res = locale.es-es(base-language, base-region).resolve-plural
+  let u-fr = unit.hour(locale.fr-fr).name
+  assert.eq(u-fr, (singular: "heure", plural: "heures"))
+  assert.eq(fr-res(u-fr, 1), "heure")
+  assert.eq(fr-res(u-fr, decimal("1.5")), "heure")
+  assert.eq(fr-res(u-fr, 0), "heure")
+  assert.eq(fr-res(u-fr, 2), "heures")
+  let u-it = unit.hour(locale.it-it).name
+  assert.eq(u-it, (singular: "ora", plural: "ore"))
+  assert.eq(it-res(u-it, 1), "ora")
+  assert.eq(it-res(u-it, decimal("1.5")), "ore")
+  assert.eq(it-res(u-it, 2), "ore")
+  let u-es = unit.hour(locale.es-es).name
+  assert.eq(u-es, (singular: "hora", plural: "horas"))
+  assert.eq(es-res(u-es, 1), "hora")
+  assert.eq(es-res(u-es, decimal("1.5")), "horas")
+  assert.eq(es-res(u-es, 2), "horas")
+  // Invariable names stay strings: "mois", "set", "a forfait"
+  assert.eq(unit.month(locale.fr-fr).name, "mois")
+  assert.eq(unit.unit-set(locale.it-it).name, "set")
+  assert.eq(unit.lump-sum(locale.it-it).name, "a forfait")
+  assert.eq(unit.pair(locale.it-it).name, (singular: "paio", plural: "paia"))
 
   // 3. Custom keys fallback to first pair
   let u-one-other = (one: "piece", other: "pieces")

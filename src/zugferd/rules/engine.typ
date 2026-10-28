@@ -1339,7 +1339,7 @@
   // Factur-X 1.09 no longer check in CII
   // (https://github.com/ConnectingEurope/eInvoicing-EN16931/issues/477).
   if model.totals.due > _zero and payment.due-date == none and terms == none {
-    out.push((key: "IP-PAY-06", field: "payment-goal"))
+    out.push((key: "IP-PAY-06", field: "payment-terms"))
   }
 
   out += _payment-means(model)

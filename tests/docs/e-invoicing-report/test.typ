@@ -1,20 +1,17 @@
 // Documentation: e-invoicing/validation.md, "Custom Report Layout". The
-// invoice misses
-// its payment terms, so `zugferd-errors: "report"` hands the problem to the
-// theme's `zugferd-report` function instead of failing.
+// invoice misses its payment terms, so `zugferd-errors: "report"` hands the
+// problem to the `zugferd-report` part of the theme instead of failing.
 
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes
-    .DIN-5008(font: "libertinus serif")
-    .with(
-      zugferd-report: (ctx, result) => {
-        for d in result.diagnostics [
-          - *#d.rule* (#d.level): #d.message
-        ]
-      },
-    ),
+  theme: theme.classic.with(
+    theme.custom.part("zugferd-report", (ctx, result) => {
+      for d in result.diagnostics [
+        - *#d.rule* (#d.level): #d.message
+      ]
+    }),
+  ),
   zugferd: "en16931",
   zugferd-errors: "report",
   sender: (

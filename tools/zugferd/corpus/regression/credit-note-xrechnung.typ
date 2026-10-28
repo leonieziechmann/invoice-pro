@@ -21,5 +21,5 @@
 #line-items[
   #item([Bonus 2026], price: 500, quantity: 1, tax: tax.vat(19%))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(bank: "Kundenbank", iban: "DE75512108001245126199")

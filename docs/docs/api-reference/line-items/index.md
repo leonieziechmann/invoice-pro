@@ -2,6 +2,8 @@
 sidebar_position: 2
 ---
 
+import Video from '@site/src/components/Video';
+
 # Line Items API
 
 This section details the functions used to build the core of your invoice: the line items. You can use these components to list services, group them into bundles, organize them into hierarchical groups, apply modifiers like discounts or surcharges, and record advance prepayments.
@@ -11,6 +13,8 @@ Many parameters (like `input-gross` and `tax`) are **cascading**. This means if 
 
 **Resolution Order:** Item Level → Bundle / Group Level → Line-Items Level → Document/Locale Default.
 :::
+
+<Video name="line-items" title="Units, a group, a bundle, two VAT rates, a discount and a deposit" />
 
 ---
 
@@ -86,7 +90,7 @@ The package provides three ways to pass the `unit` parameter:
    :::tip
    The names returned by functions in the `unit` module are **automatically translated** based on the active document locale. For instance, `unit.hour` resolves to `"hour"` in English, `"Stunde"` in German, `"hora"` in Spanish, `"heure"` in French, and `"ora"` in Italian.
 
-   Where the language has a plural form, the name follows the item's `quantity`: `1 Stunde`, `2 Stunden`, `2,5 Stunden`. The "unit for all items" note below the table always uses the singular.
+   Where the language has a plural form, the name follows the item's `quantity`: `1 Stunde`, `2 Stunden`, `2,5 Stunden`; in French, the singular holds below 2: `1,5 heure`, `2 heures`. The "unit for all items" note below the table always uses the singular.
    :::
 
 2. **Custom Dictionary:**
@@ -362,7 +366,7 @@ A `prepayment` represents an advance payment, deposit, or installment already re
 While a `discount` reduces the taxable base (net subtotal before VAT), a `prepayment` is deducted **post-tax** from the gross invoice total to determine the remaining amount due (_Fälliger Betrag_ / ZUGFeRD `BT-113` & `BT-115`).
 :::
 
-When a prepayment is specified, downstream components like `#payment-goal()` and the EPC-QR code in `#bank-details()` automatically target the **remaining balance due** rather than the full gross amount.
+When a prepayment is specified, downstream components like `#payment-terms()` and the EPC-QR code in `#bank-details()` automatically target the **remaining balance due** rather than the full gross amount.
 
 | Key           | Type                                                 | Description                                                                                                 |
 | :------------ | :--------------------------------------------------- | :---------------------------------------------------------------------------------------------------------- |

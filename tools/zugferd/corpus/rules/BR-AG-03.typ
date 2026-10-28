@@ -19,5 +19,5 @@
   #item-with(tax.special.ceuta-melilla(4%))
   #rebate
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

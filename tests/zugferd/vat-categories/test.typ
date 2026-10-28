@@ -39,7 +39,7 @@
     #item([Leistung], price: 100)
     #discount([Rabatt], amount: 5%)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -58,7 +58,7 @@
     #item([Leistung], price: 100)
     #discount([Rabatt], amount: 5%)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -66,7 +66,7 @@
   assert.eq(rules(model), ())
 })[
   #line-items[#item([Leistung], price: 100)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -78,7 +78,7 @@
   },
 )[
   #line-items[#item([Leistung], price: 100)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -112,7 +112,7 @@
   },
 )[
   #line-items[#item([Maschine], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -124,7 +124,7 @@
   assert.eq(rules(m), ("BR-S-02",))
 })[
   #line-items[#item([Leistung], price: 100)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -142,7 +142,7 @@
     #item([Leistung], price: 100)
     #surcharge([Versand], amount: 4.90)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -167,7 +167,7 @@
   },
 )[
   #line-items[#item([Bauleistung], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -184,7 +184,7 @@
   },
 )[
   #line-items[#item([Maschine], price: 1000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -202,7 +202,7 @@
   assert.eq(rule-registry().at("BR-CO-18").profiles, ("basic-wl",))
 })[
   #line-items[]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -218,7 +218,7 @@
   )
 })[
   #line-items[#item([Gebrauchtwagen], price: 10000)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -241,7 +241,7 @@
     #item([A], price: 100)
     #item([B], price: 100)
   ]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]
 
@@ -259,6 +259,6 @@
   )
 })[
   #line-items[#item([A], price: 100)]
-  #payment-goal(days: 14)
+  #payment-terms(days: 14)
   #bank
 ]

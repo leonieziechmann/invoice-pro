@@ -15,7 +15,7 @@
 #import "/tests/data-test.typ": data-test, loom
 #import "/tests/test-locale.typ": test-locale
 
-#let check(test, theme: themes.blank, ..args, body) = invoice(
+#let check(test, theme: theme.plain, ..args, body) = invoice(
   theme: theme,
   locale: test-locale,
   sender: (name: "Seller", address: "Street 1", city: "City"),
@@ -43,14 +43,17 @@
     assert.eq(model.taxes.first().reason, g14 + "; " + g21)
   },
   // The printed invoice: a marker per ground, on the items and the notes.
-  theme: themes.blank.with(line-items: (ctx, data, body) => {
-    assert.eq(data.items.map(i => i.tax.marker), ("*", "**", "*"))
-    let exempt = data.taxes.first()
-    assert.eq(exempt.grounds-list, (g14, g21))
-    assert.eq(exempt.grounds-markers, ("*", "**"))
-    assert.eq(exempt.itemized-grounds, true)
-    body
-  }),
+  theme: theme.plain.with(theme.custom.wrap(
+    "line-items",
+    (ctx, data, inner) => {
+      assert.eq(data.items.map(i => i.tax.marker), ("*", "**", "*"))
+      let exempt = data.taxes.first()
+      assert.eq(exempt.grounds-list, (g14, g21))
+      assert.eq(exempt.grounds-markers, ("*", "**"))
+      assert.eq(exempt.itemized-grounds, true)
+      inner(ctx, data)
+    },
+  )),
 )[
   #line-items[
     #item([Treatment], price: 90, tax: tax.exempt(grounds: g14))
@@ -110,13 +113,16 @@
   (li, model) => {
     assert.eq(li.item-data.taxes.at("0-E").grounds, g14)
   },
-  theme: themes.blank.with(line-items: (ctx, data, body) => {
-    assert.eq(data.items.map(i => i.tax.marker), (none, none, none))
-    let exempt = data.taxes.find(t => t.category == [E])
-    assert.eq(exempt.marker, "*")
-    assert.eq(exempt.itemized-grounds, false)
-    body
-  }),
+  theme: theme.plain.with(theme.custom.wrap(
+    "line-items",
+    (ctx, data, inner) => {
+      assert.eq(data.items.map(i => i.tax.marker), (none, none, none))
+      let exempt = data.taxes.find(t => t.category == [E])
+      assert.eq(exempt.marker, "*")
+      assert.eq(exempt.itemized-grounds, false)
+      inner(ctx, data)
+    },
+  )),
 )[
   #line-items[
     #item([Treatment], price: 90, tax: tax.exempt(grounds: g14))

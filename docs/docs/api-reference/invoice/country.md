@@ -23,7 +23,7 @@ Without `country` (or with `none` or an empty string, e.g. from an empty column 
 **Example Usage:**
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": invoice, country
+#import "@preview/invoice-pro:0.5.0": country, invoice
 
 #show: invoice.with(
   sender: (

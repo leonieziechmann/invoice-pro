@@ -16,5 +16,5 @@
 #line-items[
   #item-s
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #direct-debit(mandate: "M-2026-017", creditor-id: "DE98ZZZ09999999999")

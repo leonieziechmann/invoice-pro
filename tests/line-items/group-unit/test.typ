@@ -11,7 +11,7 @@
 #import "/tests/data-test.typ": data-test, loom
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.en-de,
   sender: (name: "Test Sender"),
   recipient: (name: "Test Recipient"),

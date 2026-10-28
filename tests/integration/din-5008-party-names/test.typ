@@ -1,21 +1,20 @@
-// The DIN-5008 theme with a sender name in several lines and styled names and
-// subject. The PDF metadata, the account holder and the EPC-QR code take the
-// plain text of the names, as the e-invoice does (BT-27); the theme used to
-// fail with "expected string or array, found content".
+// The DIN 5008 letter (classic preset) with a sender name in several lines
+// and styled names and subject. The PDF metadata, the account holder and the
+// EPC-QR code take the plain text of the names, as the e-invoice does
+// (BT-27); the theme used to fail with "expected string or array, found
+// content".
 
 #import "/src/lib.typ": *
-#import "/src/themes/base-theme/bank-details.typ": render-bank-details
 #import "/tests/integration/payment-reference/harness.typ": find-all
 
 #show: invoice.with(
-  theme: themes
-    .DIN-5008(font: "libertinus serif")
-    .with(
-      bank-details: (ctx, view) => {
-        let printed = render-bank-details(ctx, view)
-        [#metadata(printed)<bank-details>#printed]
-      },
-    ),
+  theme: theme.classic.with(
+    theme.custom.fonts(body: "libertinus serif"),
+    theme.custom.wrap("bank-details", (ctx, view, inner) => {
+      let printed = inner(ctx, view)
+      [#metadata(printed)<bank-details>#printed]
+    }),
+  ),
   locale: locale.de-de,
   zugferd: "en16931",
   sender: (
@@ -52,7 +51,7 @@
   )
 ]
 
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(bank: "Musterbank", iban: "DE89370400440532013000")
 
 #context {

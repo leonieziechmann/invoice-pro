@@ -7,7 +7,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.fr-fr,
   zugferd: "basic-wl",
   tax-exempt-small-biz: true,
@@ -41,7 +41,7 @@
   #discount([Remise fidélité], amount: 5%)
 ]
 
-#payment-goal(days: 30)
+#payment-terms(days: 30)
 
 #bank-details(
   bank: "Banque Exemple",

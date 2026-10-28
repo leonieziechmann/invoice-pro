@@ -18,5 +18,5 @@
 #line-items[
   #item-with(tax.new(rate: 7%, category: "Z"))
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

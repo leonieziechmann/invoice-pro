@@ -4,7 +4,7 @@
 #import "/tests/data-test.typ": data-test, loom
 
 #let example(test, body) = invoice(
-  theme: themes.DIN-5008(font: "libertinus serif"),
+  theme: theme.classic.with(theme.custom.fonts(body: "libertinus serif")),
   sender: (name: "Test Sender"),
   recipient: (name: "Test Recipient"),
   data-test(

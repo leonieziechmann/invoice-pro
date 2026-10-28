@@ -1,8 +1,7 @@
-// Source: docs/docs/api-reference/invoice.md — "Minimal Valid Configuration"
+// Source: docs/docs/api-reference/invoice/index.md — "Minimal Valid Configuration"
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
   sender: (
     name: "Max Mustermann",
     address: "Musterstraße 1",

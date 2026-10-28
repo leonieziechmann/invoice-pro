@@ -19,5 +19,5 @@
   #item-with(tax.exempt(grounds: "Steuerfrei nach § 4 Nr. 14 UStG"))
   #shipping
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

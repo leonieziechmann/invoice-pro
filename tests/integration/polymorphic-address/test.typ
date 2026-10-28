@@ -3,7 +3,7 @@
 #import "/tests/test-locale.typ": test-locale
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: test-locale,
   // The XML is only built to make sure polymorphic names and addresses can be
   // serialized; the test data is not a complete e-invoice.

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="110" height="30" viewBox="0 0 110 30">
+  <path d="M13 2 C13 2 3 14 3 20 a10 10 0 0 0 20 0 C23 14 13 2 13 2 Z" fill="#1d4ed8"/>
+  <path d="M14.5 9 L9 19 h4.5 L11.5 27 L18 16 h-4.5 Z" fill="#facc15"/>
+  <text x="29" y="15" font-family="Liberation Sans, Arial, sans-serif" font-size="9" font-weight="bold" fill="#1e293b">STADTWERKE</text>
+  <text x="29" y="25" font-family="Liberation Sans, Arial, sans-serif" font-size="7.4" fill="#475569">Musterstadt</text>
+</svg>

@@ -28,5 +28,5 @@
     ),
   )
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(bank: "Banque Client", iban: "FR7630006000011234567890189")

@@ -18,5 +18,5 @@
 #line-items[
   #item([Beratung], price: 100, quantity: 10, tax: tax.vat(19%))
 ]
-#payment-goal()
+#payment-terms()
 #card-payment(last4: "1234", holder: "Erika Kunde", kind: "credit")

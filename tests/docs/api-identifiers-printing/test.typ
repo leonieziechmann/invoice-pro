@@ -1,13 +1,11 @@
 // Documentation: api-reference/invoice/identifiers.md, "Printing
 // Identifiers". The register number is given once: as the legal registration
-// identifier of the e-invoice (BT-30) and printed next to the sender address.
-
+// identifier of the e-invoice (BT-30) and printed in the legal footer.
 #import "/src/lib.typ": *
 
 #let register = id.register("HRB 98765", court: "Amtsgericht München")
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
   zugferd: "en16931",
   sender: (
     name: "Tech Solutions GmbH",
@@ -21,8 +19,8 @@
       phone: "+49 89 123456",
       email: "rechnung@techsol.example",
     ),
-    // Printed by the DIN 5008 theme next to the sender address
-    extra: (("Handelsregister", register.id),),
+    // Printed in the legal footer: "Amtsgericht München, HRB 98765"
+    register: register.id,
   ),
   recipient: (
     name: "Kunde GmbH",
@@ -39,5 +37,5 @@
 #line-items[
   #item([Consulting], quantity: 8, unit: unit.hour, price: 120)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(iban: "DE89370400440532013000", bic: "COBADEFFXXX")

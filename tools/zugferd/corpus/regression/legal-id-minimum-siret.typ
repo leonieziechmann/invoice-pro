@@ -28,4 +28,4 @@
 #line-items[
   #item([Création du site web], price: 900, quantity: 1)
 ]
-#payment-goal(days: 30)
+#payment-terms(days: 30)

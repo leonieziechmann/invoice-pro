@@ -1,13 +1,11 @@
 // Documentation: e-invoicing/invoice-data/payment.md, "Direct Debit". An
 // XRechnung collected by
-// SEPA direct debit: the payment goal announces the debit, and the e-invoice
+// SEPA direct debit: `payment-terms` announces the debit, and the e-invoice
 // states the mandate reference, the creditor identifier and the debited
 // account. Validated by validate-all-zugferd.
-
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.DIN-5008(font: "libertinus serif"),
   locale: locale.en-de,
   zugferd: "xrechnung",
   sender: (
@@ -40,7 +38,7 @@
 
 // "The total amount of 297,50 € will be collected from your account by
 // direct debit within 14 days."
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 
 #direct-debit(
   mandate: "M-2026-017",

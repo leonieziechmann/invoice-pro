@@ -29,7 +29,7 @@
 
 // The seller trade party of the XML and the diagnostics of an invoice.
 #let seller-test(test, ..args) = invoice(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.en-de,
   zugferd: "en16931",
   sender: sender,
@@ -49,7 +49,7 @@
       let model = build-model(
         ctx,
         signal("line-items").item-data,
-        payment-goal: signal("payment-goal"),
+        payment-goal: signal("payment-terms"),
       )
       test(
         build-seller-trade-party(model.seller, model.profile),
@@ -60,7 +60,7 @@
     },
   )[
     #line-items[#item([Consulting], price: 100)]
-    #payment-goal(days: 14)
+    #payment-terms(days: 14)
   ],
 )
 

@@ -19,5 +19,5 @@
 #line-items[
   #item([Beratung], price: 100, quantity: 10)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

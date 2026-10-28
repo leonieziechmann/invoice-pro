@@ -38,11 +38,11 @@
       + skonto
       + "\n#SKONTO#TAGE=7#PROZENT=3.00#BASISBETRAG=150.00#\n",
   )
-  assert.eq(model.payment.terms-input, "payment-goal")
+  assert.eq(model.payment.terms-input, "payment-terms")
   assert.eq(rules(model), ())
 })[
   #line-items[#item([Consulting], price: 100, quantity: 2, unit: unit.hour)]
-  #payment-goal(
+  #payment-terms(
     date: "Zahlbar innerhalb von 30 Tagen netto.  \n  "
       + skonto
       + "\n#SKONTO#TAGE=7#PROZENT=3.00#BASISBETRAG=150.00#",

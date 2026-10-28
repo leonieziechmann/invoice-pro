@@ -17,5 +17,5 @@
   #item-s
   #item-with(tax.outside-scope())
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank

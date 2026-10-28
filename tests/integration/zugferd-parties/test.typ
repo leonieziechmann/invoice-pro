@@ -12,7 +12,7 @@
 #import "/src/lib.typ": *
 
 #show: invoice.with(
-  theme: themes.blank,
+  theme: theme.plain,
   locale: locale.de-de,
   zugferd: "xrechnung",
   tax: tax.outside-scope(grounds: "Nicht steuerbarer Schadensersatz."),
@@ -51,7 +51,7 @@
 #line-items[
   #item([Schadensersatz für beschädigte Ware], price: 450)
 ]
-#payment-goal(days: 14)
+#payment-terms(days: 14)
 #bank-details(
   bank: "Musterbank",
   iban: "DE89370400440532013000",

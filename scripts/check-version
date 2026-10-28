@@ -10,7 +10,8 @@ RG="${RIPGREP_BIN:-rg}"
 
 CURRENT_VERSION="${VERSION:-$(grep -E '^version\s*=' typst.toml | sed -E 's/version\s*=\s*"([^"]+)"/\1/')}"
 
-EXCLUDE="-g '!docs/versioned_docs/' -g '!docs/versioned_sidebars/' -g '!docs/build/' -g '!docs/node_modules/' -g '!docs/.docusaurus/'"
+# --hidden: .github/README.md, the README GitHub shows, carries the version too
+EXCLUDE="--hidden -g '!.git/' -g '!docs/versioned_docs/' -g '!docs/versioned_sidebars/' -g '!docs/build/' -g '!docs/node_modules/' -g '!docs/.docusaurus/'"
 GLOBS="-g '*.typ' -g '*.md' -g '*.toml'"
 
 echo "Current version: $CURRENT_VERSION"
