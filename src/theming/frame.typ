@@ -234,6 +234,21 @@
         * bodies.len(), column-gutter: 2em, ..grid-cells)
   }
   if type(a) == dictionary {
+    let a = a
+    let grid-cells = grid-cells
+    if a.at("skip-empty", default: false) == true {
+      // An empty cell gives up its place, with its track and its alignment
+      // where `columns` (or `rows`) and `align` list one per cell.
+      let keep = range(cells.len()).filter(i => not _empty(cells.at(i).last()))
+      if keep.len() == 0 { return [] }
+      let pick(xs) = if type(xs) == array and xs.len() == cells.len() {
+        keep.map(i => xs.at(i))
+      } else { xs }
+      for key in ("columns", "rows", "align") {
+        if key in a { a.insert(key, pick(a.at(key))) }
+      }
+      grid-cells = keep.map(i => grid-cells.at(i))
+    }
     let args = (:)
     if "columns" in a {
       args.columns = a.columns

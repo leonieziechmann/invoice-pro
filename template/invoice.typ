@@ -1,30 +1,37 @@
 #import "@preview/invoice-pro:0.5.0": *
 
 /*
- * Invoice Pro by Leonie Ziechmann
- *
+ * invoice-pro by Leonie Ziechmann
+ * Docs:   https://leonieziechmann.github.io/invoice-pro
  * GitHub: https://github.com/leonieziechmann/invoice-pro
- * If you have feature requests or find outdated information,
- * please create an Issue or Pull Request on GitHub.
+ *         (ideas, questions and bugs are welcome as issues)
  *
- * ZUGFeRD (experimental): Export as PDF/A-3B to embed XML.
- * - Web App: File > Export As -> PDF -> PDF/A-3B -> download icon
- * - CLI: typst compile --pdf-standard a-3b file.typ
+ * E-INVOICE (ZUGFeRD / Factur-X, experimental)
+ * With `zugferd` set, the invoice is attached to the PDF as XML. Download
+ * the PDF as PDF/A-3b, the format an e-invoice needs:
+ * - Web app: File > Export as > PDF, select "PDF/A-3b" under
+ *   "PDF standard", then click the download icon next to "PDF".
+ * - CLI: typst compile --pdf-standard=a-3b invoice.typ
+ * While required data is missing, the invoice is a draft with markers and
+ * a report page, and no XML is attached. `validation: "strict"` stops the
+ * compilation instead, e.g. before sending.
  *
- * Validation: while required data is missing, the invoice renders as a
- * draft with markers and a report page, and the XML is not embedded.
- * Use `validation: "strict"` (or --input invoice-pro-validation=strict)
- * to stop the compilation instead, e.g. before sending.
+ * THEMES
+ * `theme` sets the look: bold, classic, plain, corporate, elegant,
+ * prestige, technical, soft, compact or boxed. All ten in the docs:
+ * https://leonieziechmann.github.io/invoice-pro/themes
+ * - Your brand color and logo:
+ *     theme.bold.with(theme.custom.brand(
+ *       color: rgb("#e4572e"),
+ *       logo: image("logo.svg", alt: "Jane Doe"),
+ *     ))
+ * - For a window envelope: theme.bold.with(layout: theme.layout.din-5008-a)
  */
 
-
 #show: invoice.with(
-  // Presets: classic, plain, corporate, elegant, prestige, bold, technical,
-  // soft, compact, boxed. Add your brand with
-  // theme.classic.with(theme.custom.brand(color: rgb("#0f766e"))).
-  theme: theme.classic,
+  theme: theme.bold, // the look, see THEMES above
   locale: locale.de-de,
-  zugferd: "en16931",
+  zugferd: "en16931", // the e-invoice profile; none: a PDF without XML
   sender: (
     name: "Jane Doe",
     address: "Musterstraße 1",

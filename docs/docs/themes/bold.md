@@ -73,6 +73,7 @@ Copy this into a `.typ` file and compile it:
 - Capital monospace labels for "Bill to", the column heads and the bank details.
 - Heavy rules over the items table and the footer, stripes in a light tint of the brand color.
 - The amount to pay again on a bar of the brand color, below the totals.
+- A legal footer with the company, its contact details (`extra`), the register and tax numbers and the bank account.
 - Page numbers as "1 / 2", only on invoices with more than one page.
 
 ## Make It Yours
