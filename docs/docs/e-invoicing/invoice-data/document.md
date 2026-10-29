@@ -33,7 +33,7 @@ EN 16931 states a credit note with **positive** amounts: the items are the credi
 - In German, a credit note is titled "Rechnungskorrektur": the German VAT law reserves "Gutschrift" for self-billed invoices (§ 14 Abs. 2 Satz 2 UStG). A commercial credit note titled "Gutschrift" is permitted as well; set `subject: "Gutschrift"` together with `document-type: "credit-note"` if you prefer it.
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   zugferd: auto,

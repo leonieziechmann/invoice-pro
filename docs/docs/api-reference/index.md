@@ -57,7 +57,7 @@ Below is a foundational structural blueprint illustrating how the modules intera
 
 ```typst
 // Always import the required functions and modules
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 // 1. Invoice Module: Establish the document root and global context
 #show: invoice.with(

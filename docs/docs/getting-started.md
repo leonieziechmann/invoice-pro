@@ -12,7 +12,7 @@ To include `@preview/invoice-pro` in your Typst project, simply import it from t
 
 ```typst
 // Import the core invoice environment and necessary components
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 ```
 
 :::info
@@ -34,7 +34,7 @@ The most efficient workflow for initializing a document is to use a `#show` rule
 Here is a minimal, copy-paste example to get you started:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 // 1. Initialize the document using a show rule
 #show: invoice.with(

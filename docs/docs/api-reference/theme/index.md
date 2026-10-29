@@ -21,7 +21,7 @@ A theme is a **lazy value**, like a locale. Pass it uncalled and customize it wi
 [//]: # "check-docs-examples: skip"
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   theme: theme.classic.with(

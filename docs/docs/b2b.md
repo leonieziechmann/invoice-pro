@@ -56,7 +56,7 @@ Below are two standard B2B configurations showing how to implement these paramet
 For invoicing a business client within the same country (e.g., Germany) where standard VAT applies.
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   locale: locale.de-de,
@@ -134,7 +134,7 @@ For invoicing a business client within the same country (e.g., Germany) where st
 For invoicing a business client in another EU country where the recipient is responsible for reporting and paying the VAT.
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   locale: locale.en-de,

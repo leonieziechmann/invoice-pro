@@ -45,7 +45,7 @@ Create a dictionary containing your translations. Notice how we only override th
 
 ```typst
 // lang/pl.typ
-#import "@preview/invoice-pro:0.5.0": locale
+#import "@preview/invoice-pro:0.6.0": locale
 
 // Define the language overrides for Polish
 #let pl = (
@@ -79,7 +79,7 @@ Here, we define the currency, how dates are formatted, how values are **Normaliz
 
 ```typst
 // region/pl.typ
-#import "@preview/invoice-pro:0.5.0": locale, tax
+#import "@preview/invoice-pro:0.6.0": locale, tax
 
 // The region builder function
 #let region-pl = lang => (
@@ -120,7 +120,7 @@ Finally, expose your newly minted locale to the public by utilizing the `build-l
 
 ```typst
 // lib.typ
-#import "@preview/invoice-pro:0.5.0": locale
+#import "@preview/invoice-pro:0.6.0": locale
 
 // 1. Import your definitions
 #import "lang/pl.typ": pl
@@ -135,7 +135,7 @@ Users of your published package can now simply import your locale and pass it di
 [//]: # "check-docs-examples: skip"
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": invoice
+#import "@preview/invoice-pro:0.6.0": invoice
 #import "@preview/invoice-pro-europe-east:0.1.0": pl-pl
 
 #show: invoice.with(

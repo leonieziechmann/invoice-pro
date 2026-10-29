@@ -108,7 +108,7 @@ typst init @preview/invoice-pro
 or write the invoice yourself:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   locale: locale.en-de,

@@ -38,7 +38,7 @@ The Swiss layouts reserve no zone for a QR-bill; see [Swiss QR-Bill Zone](#swiss
 Without `layout:`, a preset picks its page master from the **sender's** country, because paper and envelopes belong to the sender: an English invoice from Germany still goes into a German envelope. The country is taken from `sender.country` (a value of the [`country`](../invoice/country.md) module), else from `sender.region`, else from the locale's region. An explicit `layout:` always wins.
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 // layout: auto (the default) follows the sender: an Austrian sender gets din-5008-b
 #show: invoice.with(
@@ -345,7 +345,7 @@ The window geometry comes from standards literature and manufacturer data (DIN 6
 A new format is a layout dictionary. Keys you leave out take their defaults, and the standard areas you leave out become empty stubs. An 80 mm thermal-roll receipt:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 // Any format is data: an 80 mm thermal-roll receipt (continuous page)
 #let roll = (

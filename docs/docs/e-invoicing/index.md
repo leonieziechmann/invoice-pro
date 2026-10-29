@@ -115,7 +115,7 @@ See [Validation and Error Reporting](./validation.md) for the details.
 Here is a full example of a ZUGFeRD-compliant invoice configuration:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   // Enable the comfort EN 16931 e-invoicing profile

@@ -64,7 +64,7 @@ Besides its name and description, an [`item`](../../api-reference/line-items/ind
 The dates of the items are the service period of the invoice, unless you set `service-period` (see [Service Period](./document.md#service-period-bt-72--bg-14)). Then the date of every item must lie within it: XRechnung requires this for an invoicing period (`PEPPOL-EN16931-R110` and `R111`, which the KoSIT validator reports as warnings and Mustang as errors, so `invoice-pro` reports an error); in the other profiles, and for a service period of a single day, a date outside it is a warning (`IP-PERIOD-02`).
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   zugferd: "en16931",
