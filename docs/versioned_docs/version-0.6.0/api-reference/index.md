@@ -1,0 +1,92 @@
+---
+sidebar_position: 10
+---
+
+# API Reference
+
+Welcome to the **invoice-pro** API Reference. We have structured this section to provide a comprehensive, methodical breakdown of all modules, components, and functions available within the package. Whether you are establishing a basic layout or configuring a complex, legally compliant document, these pages define the architectural primitives of our system.
+
+:::info
+The `invoice-pro` package relies on an underlying `loom` state engine. All structural components must be positioned **after** the initial document show rule to properly resolve global configurations.
+:::
+
+## Documentation Directory
+
+The API reference is divided into specialized modules, reflecting the technical anatomy of an invoice document.
+
+| Module                                               | Description                                                                                                                                                                                                                                                 |
+| :--------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[Invoice](api-reference/invoice)**                 | The root document configuration. Details global parameters (e.g., sender, recipient) and initializes the underlying layout engine.                                                                                                                          |
+| **[Validation](api-reference/invoice/validation)**   | The validation levels (`draft`, `strict`, `none`): which legally required data is checked, what a draft marks, and when the ZUGFeRD XML is withheld.                                                                                                        |
+| **[Line Items](api-reference/line-items)**           | The core billing mechanics. Explains how to construct services (`item`), group them (`bundle`, `group`), and apply adjustments (`modifier`). This section is critical for understanding automatic **Forward/Backward Calculation**.                         |
+| **[Components](api-reference/components)**           | Standalone visual entities. Includes technical specifications for rendering `bank-details`, stating the `payment-terms` and the payment means (`direct-debit`, `card-payment`, `paid`), adding a `signature`, and leveraging the `apply` scoping mechanism. |
+| **[Tax](api-reference/tax)**                         | Standardized tax resolution. Outlines available tax categories compliant with **UNTDID 5305** and **EU Directives**, detailing how to implement specialized margin schemes and legal exemptions.                                                            |
+| **[Country](api-reference/invoice/country)**         | Standardized country address resolutions. Defines country properties, dynamic address/city parser and formatter functions, and ZUGFeRD compliance country codes.                                                                                            |
+| **[Identifiers](api-reference/invoice/identifiers)** | Typed identifiers of parties (`id` module): GLN, D-U-N-S, SIREN, SIRET, Swiss UID, register numbers and Leitweg-IDs with their ISO/IEC 6523 scheme and check digit, for the e-invoice.                                                                      |
+| **[Unit](api-reference/line-items/unit)**            | Localized billing units. Details the standard builders and shorthands/aliases mapped to UN/ECE Recommendation 20 codes, resolved dynamically using the global locale context.                                                                               |
+| **[Locales](api-reference/locale)**                  | Language and regional localization. Covers translation overrides, native currency formatting, and regional default overrides.                                                                                                                               |
+| **[Theming](api-reference/theme)**                   | Brand customization, page layouts for window envelopes, and replaceable parts. Details how the theme places and styles the structured data on the page. The ten presets are presented under [Themes](../themes/index.md).                                   |
+
+## Core Architectural Concepts
+
+Before engaging with specific module APIs, developers and contributors must understand the fundamental data flows of the engine:
+
+### 1. Cascading Parameters
+
+Properties such as `tax` or `input-gross` are strongly **Cascading**. If defined at a higher context—like the `line-items` wrapper, a `bundle`, or a `group`—all nested descendant elements automatically inherit these properties unless explicitly overridden at the item level.
+
+### 2. Forward/Backward Calculation
+
+The engine guarantees mathematical integrity across all tax brackets. Depending on the active `tax-mode` (`inclusive` or `exclusive`), providing a raw unit price triggers strict **Forward/Backward Calculation** to derive the mathematically sound net and gross totals automatically.
+
+### 3. Normalized Data & Theming
+
+When the engine evaluates your item blocks and global configurations, it compiles them into strictly **Normalized** data objects. The layout of the selected theme places them on the page, and its parts render them. Compliance output (PDF metadata, the ZUGFeRD XML, legal notes, the EPC-QR payload) stays in the core, where no theme can drop it.
+
+:::warning
+Bypassing the API to directly mutate the internal state or the **Normalized** data pipeline is unsupported and will likely introduce breaking changes to the rendering layout.
+:::
+
+:::danger
+When utilizing the Tax module to declare 0% rates or specific exemptions (e.g., Reverse Charge, Intra-Community Supply), failing to provide the explicit legal **Grounds** parameter will frequently result in a legally invalid document under standard **EU Directives**. Always verify jurisdictional requirements.
+:::
+
+## Architectural Blueprint
+
+Below is a foundational structural blueprint illustrating how the modules interact within a standard implementation context.
+
+```typst
+// Always import the required functions and modules
+#import "@preview/invoice-pro:0.6.0": *
+
+// 1. Invoice Module: Establish the document root and global context
+#show: invoice.with(
+  sender: (
+    name: "Acme Corp",
+    address: "Industriestraße 1",
+    city: "70173 Stuttgart",
+    vat-id: "DE123456789", // Legally required identifier
+  ),
+  recipient: (name: "Jane Doe", address: "Rosenweg 12", city: "10115 Berlin"),
+  invoice-nr: "INV-2026-001",
+)
+
+// 2. Line Items Module: Define the billable content
+#line-items[
+  #item(
+    [System Architecture Consulting],
+    quantity: 10,
+    unit: "h",
+    price: 150.00, // Unit price subject to Forward/Backward Calculation
+  )
+]
+
+// 3. Components Module: Append standalone visual metadata
+#payment-terms(days: 14)
+#bank-details(iban: "DE75512108001245126199")
+#signature()
+```
+
+:::tip
+For a structured learning path, we recommend verifying your understanding of the [Invoice API](api-reference/invoice) first, followed by the deep dive into the [Line Items API](api-reference/line-items). These two modules cover 90% of standard implementation workflows.
+:::

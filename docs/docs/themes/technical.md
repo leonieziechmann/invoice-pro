@@ -21,7 +21,7 @@ A spec sheet for invoices. Labels and figures in a monospace font, a fine grid o
 Copy this into a `.typ` file and compile it:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   theme: theme.technical,

@@ -53,7 +53,7 @@ You can pass multiple custom overrides into your locale function. Only the field
 :::
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": invoice, locale
+#import "@preview/invoice-pro:0.6.0": invoice, locale
 
 #show: invoice.with(
   locale: locale.en-de.with(

@@ -32,7 +32,7 @@ Each payment means has a component that prints it and states it in the e-invoice
 A SEPA direct debit needs the mandate the buyer signed and your creditor identifier; XRechnung requires the IBAN of the debited account as well. `payment-terms` then announces the debit instead of asking for a transfer:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   locale: locale.en-de,

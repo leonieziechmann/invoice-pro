@@ -21,7 +21,7 @@ Maximum density for long invoices. 8.5 pt type, an item number column and a unit
 Copy this into a `.typ` file and compile it:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   theme: theme.compact,

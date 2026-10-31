@@ -71,7 +71,7 @@ A constructor never stops the compilation. What is wrong with an identifier is k
 The built-in themes do not print the legal registration identifier, the trading name or the legal information of a party. Where the law requires them on the invoice (e.g. the register and register court of a German GmbH, the SIREN or SIRET of a French company), print them from the same value, so that the printed invoice and the e-invoice cannot differ. The `register` of the sender is printed in the legal footer of the themes:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #let register = id.register("HRB 98765", court: "Amtsgericht München")
 

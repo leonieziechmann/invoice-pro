@@ -304,7 +304,7 @@ Metadata for the primary currency used in the region. This is essential for stru
 The currency formatters (`format.currency`, `format.currency-fine`) and the rounding (`normalize.money`, `normalize.money-fine`) derive from it. If a region or an override sets the `currency` without these functions, they are rebuilt from it, so the printed amounts always show the currency whose `code` the e-invoice states (BT-5):
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": invoice, locale
+#import "@preview/invoice-pro:0.6.0": invoice, locale
 
 #show: invoice.with(
   // Prints "1.234,50 $" and states USD in the e-invoice
@@ -357,7 +357,7 @@ Contains default standard tax objects utilized by the region.
 When building your own tools or customizing a layout, you can leverage the cascading merge by specifying only the nested keys you wish to alter.
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": invoice, locale
+#import "@preview/invoice-pro:0.6.0": invoice, locale
 
 #let custom-lang = (
   payment: (

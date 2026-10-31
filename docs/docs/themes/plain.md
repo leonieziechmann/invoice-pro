@@ -21,7 +21,7 @@ The classic look without furniture: no letterhead zone, no envelope window, no m
 Copy this into a `.typ` file and compile it:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   theme: theme.plain, // no letterhead and no marks: everything in the text flow

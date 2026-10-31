@@ -39,7 +39,7 @@ The functions of the categories without VAT (`exempt`, `reverse-charge`, `intra-
 **Example Usage:**
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": item, tax
+#import "@preview/invoice-pro:0.6.0": item, tax
 
 // inside #line-items[..]
 #item(
@@ -54,7 +54,7 @@ The functions of the categories without VAT (`exempt`, `reverse-charge`, `intra-
 An exemption with its VATEX code:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   sender: (
@@ -134,7 +134,7 @@ Only use this if you know exactly which UNTDID 5305 tax category code your accou
 **Example:**
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": tax
+#import "@preview/invoice-pro:0.6.0": tax
 
 #let custom-tax = tax.new(
   rate: 0%,

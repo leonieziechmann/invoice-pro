@@ -155,7 +155,7 @@ The default `references` and every [preset](../api-reference/invoice/references.
 `invoice-pro` reads what the page shows from the layout of the theme (see [What the Theme Prints](../api-reference/theme/parts.md#what-the-theme-prints)): the reference signs, the `extra` of the parties, and the seller's VAT identifier and tax number of the legal footer (the `registration` part), wherever an area of the layout hosts them. A theme whose areas host no reference signs, such as `theme.plain`, is not checked. Content the check cannot read (content cells of an area, parts of your own, wrapped or replaced parts, stationery) may show the tax number, so `IP-PRINT-03` is not reported then. The theme owns the page, so a page header or footer of your own (`set page(header: ..)`) does not apply: give company details such as the tax number to the theme instead, e.g. as content in its `footer` area (`theme.custom.area("footer", parts: (..))`).
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   zugferd: "en16931",

@@ -17,7 +17,7 @@ You can either pass the evaluated unit dictionary directly or pass the function 
 **Example Usage:**
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   locale: locale.de-de, // Sets document language to German

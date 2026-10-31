@@ -21,7 +21,7 @@ The invoice as part of the brand. A full-bleed onyx band carries the name in cha
 Copy this into a `.typ` file and compile it:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   theme: theme.prestige, // digital first: the band prints to the edge of the sheet
