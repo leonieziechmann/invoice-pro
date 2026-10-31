@@ -106,8 +106,9 @@ The current architecture relies on the following optimized packages:
 **Acknowledgements:**
 
 - Special thanks to [classy-german-invoice](https://github.com/erictapen/typst-invoice) by Kerstin Humm, which served as architectural inspiration and provided the foundational logic for the EPC-QR-Code implementation.
-- The ZUGFeRD e-invoicing implementation was contributed by [Michael Fuchs (theexiile1305)](https://github.com/theexiile1305).
+- [Michael Fuchs (theexiile1305)](https://github.com/theexiile1305) wrote the first ZUGFeRD export in v0.4.0, which started the e-invoicing of invoice-pro. Since v0.5.0, a new implementation builds and validates the e-invoice.
 - Up to v0.5, the DIN 5008 page layout was drawn by [letter-pro](https://typst.app/universe/package/letter-pro). Since v0.6.0, invoice-pro draws its page frame itself.
+- Everyone who has helped with code, bug reports or ideas is listed on the [Contributors](./contributors.md) page.
   :::
 
 ## License
