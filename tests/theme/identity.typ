@@ -31,8 +31,14 @@
   view,
 ) = context [#view.document.title (#measure(view.document.number).width) #view.document.date.text]
 
-/// An invoice whose title part is `title`, on a4-digital.
-#let identity-invoice(title, validation: "draft") = invoice(
+// number and date, nothing else
+#let plain(ctx, view) = [#view.document.number #view.document.date.text]
+// the date only
+#let date-only(ctx, view) = view.document.date.text
+
+/// An invoice whose title part is `title`, on a4-digital; `args` replace the
+/// invoice's arguments (e.g. its number and date).
+#let identity-invoice(title, validation: "draft", ..args) = invoice(
   theme: theme.classic.with(
     theme.custom.part("title", title),
     layout: theme.layout.a4-digital,
@@ -40,5 +46,6 @@
   locale: test-locale,
   validation: validation,
   ..party,
+  ..args,
   body(),
 )
