@@ -42,6 +42,9 @@
 
 #let _blank(v) = v == none or v == "" or v == []
 
+// The characters with a meaning in a regular expression, to match a text as it is.
+#let _regex-special = regex("[\\\\.+*?()|\\[\\]{}^$#&\\-~]")
+
 /// A party record: the normalized input plus `lines` (formatted address lines).
 /// Under `validation: "draft"` a missing name or address is replaced by its
 /// inline marker (`mark(id)` returns the marker or none).
@@ -726,12 +729,24 @@
       first-view.document.date.text = tagged
     }
   }
+  // One show rule for all string values, the longest first: with a rule per
+  // value, the inner rule wins where both match (the number "1" at the start of
+  // the date "16.10.2026"), and the date then no longer matches. A match tags
+  // the value it is, so the number inside the date does not count.
+  let strings = needles
+    .filter(((w, n)) => type(n) == str)
+    .sorted(key: ((w, n)) => -n.len())
+  let any = regex(
+    strings
+      .map(((w, n)) => n.replace(_regex-special, m => "\\" + m.text))
+      .join("|", default: ""),
+  )
   let tag-identity(c) = {
-    let c = c
-    for (what, n) in needles.filter(((w, n)) => type(n) == str) {
-      c = {
-        show n: it => [#it#metadata(what)<ip-identity>]
-        c
+    if strings == () { return c }
+    show any: it => {
+      it
+      for (what, n) in strings {
+        if it.text == n [#metadata(what)<ip-identity>]
       }
     }
     c
