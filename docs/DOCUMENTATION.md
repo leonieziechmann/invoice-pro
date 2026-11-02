@@ -5,7 +5,7 @@ This document tracks all code sections in the documentation and their maintenanc
 ## Key Rules
 
 1. **Every non-trivial code block** must be listed in the registry below.
-2. **Code blocks with version numbers** (e.g., `@preview/invoice-pro:0.5.0`) must be flagged with the version so they can be updated during releases.
+2. **Code blocks with version numbers** (e.g., `@preview/invoice-pro:0.6.0`) must be flagged with the version so they can be updated during releases.
 3. **When adding a new code section**, register it here and — if possible — create a corresponding test under `tests/docs/`. See [TESTING.md](/tests/TESTING.md) for test setup instructions.
 4. **Discrepancy resolution:** When docs and tests diverge, take syntax from the test and structure from the docs. See [TESTING.md](/tests/TESTING.md) for the full rule.
 5. **Formatting:** Typst code blocks that start with `#` or `//` are typstyle-formatted, so their tests can contain them verbatim.
@@ -27,44 +27,44 @@ Tests of blocks that elide the invoice header (`// sender: .., recipient: .., in
 
 | Code ID        | Description                                         | Version | Test                  | Notes |
 | :------------- | :-------------------------------------------------- | :------ | :-------------------- | :---- |
-| `quick-glance` | Full invoice with items, discount, and bank details | `0.5.0` | `docs/intro-minimal/` |       |
+| `quick-glance` | Full invoice with items, discount, and bank details | `0.6.0` | `docs/intro-minimal/` |       |
 
 ### `getting-started.md`
 
 | Code ID         | Description                                      | Version | Test                            | Notes                             |
 | :-------------- | :----------------------------------------------- | :------ | :------------------------------ | :-------------------------------- |
-| `import`        | Package import statement                         | `0.5.0` | —                               | Trivial one-liner, no test needed |
+| `import`        | Package import statement                         | `0.6.0` | —                               | Trivial one-liner, no test needed |
 | `nix-run`       | Compile with Nix without installation            | —       | —                               | Bash command, not Typst           |
-| `first-invoice` | Minimal invoice with items and tax configuration | `0.5.0` | `docs/getting-started-minimal/` |                                   |
+| `first-invoice` | Minimal invoice with items and tax configuration | `0.6.0` | `docs/getting-started-minimal/` |                                   |
 | `choose-look`   | Another preset with a brand color                | —       | `docs/getting-started-look/`    |                                   |
 
 ### `b2b.md`
 
 | Code ID          | Description                                            | Version | Test                       | Notes |
 | :--------------- | :----------------------------------------------------- | :------ | :------------------------- | :---- |
-| `national`       | National B2B invoice with register and management keys | `0.5.0` | `docs/b2b-national/`       |       |
-| `reverse-charge` | Cross-border B2B invoice with reverse charge           | `0.5.0` | `docs/b2b-reverse-charge/` |       |
+| `national`       | National B2B invoice with register and management keys | `0.6.0` | `docs/b2b-national/`       |       |
+| `reverse-charge` | Cross-border B2B invoice with reverse charge           | `0.6.0` | `docs/b2b-reverse-charge/` |       |
 
 ### `b2c.md`
 
 | Code ID     | Description                                 | Version | Test                  | Notes |
 | :---------- | :------------------------------------------ | :------ | :-------------------- | :---- |
-| `national`  | National B2C invoice with gross prices      | `0.5.0` | `docs/b2c-national/`  |       |
-| `small-biz` | B2C invoice under the small business scheme | `0.5.0` | `docs/b2c-small-biz/` |       |
+| `national`  | National B2C invoice with gross prices      | `0.6.0` | `docs/b2c-national/`  |       |
+| `small-biz` | B2C invoice under the small business scheme | `0.6.0` | `docs/b2c-small-biz/` |       |
 
 ### `contributing.md`
 
 | Code ID      | Description                              | Version | Test | Notes                    |
 | :----------- | :--------------------------------------- | :------ | :--- | :----------------------- |
 | `dev-shell`  | Nix development shell commands           | —       | —    | Bash commands, not Typst |
-| `dev-import` | Import snippet showing package injection | `0.5.0` | —    | Trivial snippet          |
+| `dev-import` | Import snippet showing package injection | `0.6.0` | —    | Trivial snippet          |
 | `pre-commit` | Pre-commit run command                   | —       | —    | Bash command, not Typst  |
 
 ### `api-reference/index.md`
 
 | Code ID     | Description                                                             | Version | Test                        | Notes |
 | :---------- | :---------------------------------------------------------------------- | :------ | :-------------------------- | :---- |
-| `blueprint` | Full architectural blueprint with items, payment terms, bank, signature | `0.5.0` | `docs/api-index-blueprint/` |       |
+| `blueprint` | Full architectural blueprint with items, payment terms, bank, signature | `0.6.0` | `docs/api-index-blueprint/` |       |
 
 ### `api-reference/invoice/index.md`
 
@@ -78,14 +78,14 @@ Tests of blocks that elide the invoice header (`// sender: .., recipient: .., in
 | `references-dict`     | References as dictionary                                    | —       | —                           | Snippet (partial), no test needed |
 | `compile-a3b`         | Compile command with PDF/A-3b                               | —       | —                           | Bash command, not Typst           |
 | `zugferd-example`     | Show rule with the `en16931` profile                        | —       | `docs/api-invoice-zugferd/` | Followed by `body()`              |
-| `minimal-config`      | Minimal valid configuration with a single item              | `0.5.0` | `docs/api-invoice-minimal/` |                                   |
+| `minimal-config`      | Minimal valid configuration with a single item              | `0.6.0` | `docs/api-invoice-minimal/` |                                   |
 | `document-type`       | Credit note with `document-type` and `preceding-invoice-nr` | —       | —                           | Snippet (partial), no test needed |
 
 ### `api-reference/invoice/validation.md`
 
 | Code ID         | Description                                      | Version | Test                                  | Notes                                               |
 | :-------------- | :----------------------------------------------- | :------ | :------------------------------------ | :-------------------------------------------------- |
-| `draft`         | Draft with a missing number and address, ZUGFeRD | `0.5.0` | `docs/api-invoice-validation-draft/`  | Renders the draft and the report page               |
+| `draft`         | Draft with a missing number and address, ZUGFeRD | `0.6.0` | `docs/api-invoice-validation-draft/`  | Renders the draft and the report page               |
 | `cli`           | `--input invoice-pro-validation` commands        | —       | —                                     | Bash commands, not Typst                            |
 | `strict-output` | Message of the draft example under `strict`      | —       | `docs/api-invoice-validation-strict/` | Asserts the message with `catch` and renders it     |
 | `locale-patch`  | Custom inline marker through a locale patch      | —       | `docs/api-invoice-validation-locale/` | The test sets `invoice-nr: none` to show the marker |
@@ -94,7 +94,7 @@ Tests of blocks that elide the invoice header (`// sender: .., recipient: .., in
 
 | Code ID          | Description                                        | Version | Test                    | Notes                                                     |
 | :--------------- | :------------------------------------------------- | :------ | :---------------------- | :-------------------------------------------------------- |
-| `country-usage`  | Country configurations for both parties            | `0.5.0` | `docs/country-example/` | The test adds a theme and asserts the parsed addresses    |
+| `country-usage`  | Country configurations for both parties            | `0.6.0` | `docs/country-example/` | The test adds a theme and asserts the parsed addresses    |
 | `post-code-dict` | City and post code as a dictionary                 | —       | `docs/country-custom/`  | Snippet (partial), asserted in the test                   |
 | `country-with`   | Custom country name via `.with`                    | —       | —                       | Snippet (let binding), no test needed                     |
 | `country-custom` | Countries outside the module with `country.custom` | —       | `docs/country-custom/`  | The test adds an invoice and asserts the parsed addresses |
@@ -104,13 +104,13 @@ Tests of blocks that elide the invoice header (`// sender: .., recipient: .., in
 | Code ID                | Description                                                                      | Version | Test                             | Notes                             |
 | :--------------------- | :------------------------------------------------------------------------------- | :------ | :------------------------------- | :-------------------------------- |
 | `where-ids-go`         | Identifiers of the `id` module on the parties                                    | —       | —                                | Snippet (partial), no test needed |
-| `printing-identifiers` | Register number as legal registration identifier and printed in the legal footer | `0.5.0` | `docs/api-identifiers-printing/` |                                   |
+| `printing-identifiers` | Register number as legal registration identifier and printed in the legal footer | `0.6.0` | `docs/api-identifiers-printing/` |                                   |
 
 ### `api-reference/invoice/references.md`
 
 | Code ID             | Description                                    | Version | Test | Notes                                     |
 | :------------------ | :--------------------------------------------- | :------ | :--- | :---------------------------------------- |
-| `import`            | Import of the `references` module              | `0.5.0` | —    | Trivial one-liner                         |
+| `import`            | Import of the `references` module              | `0.6.0` | —    | Trivial one-liner                         |
 | `preset-b2b`        | `preset-b2b()` and its expansion               | —       | —    | Snippet (partial), no test needed         |
 | `preset-b2g`        | `preset-b2g()` and its expansion               | —       | —    | Snippet (partial), no test needed         |
 | `preset-project`    | `preset-project()` and its expansion           | —       | —    | Snippet (partial), no test needed         |
@@ -135,7 +135,7 @@ Tests of blocks that elide the invoice header (`// sender: .., recipient: .., in
 
 | Code ID      | Description                                | Version | Test | Notes                                     |
 | :----------- | :----------------------------------------- | :------ | :--- | :---------------------------------------- |
-| `unit-usage` | Units from the `unit` module in a document | `0.5.0` | —    | ⚠️ Snippet with `// ...`; not implemented |
+| `unit-usage` | Units from the `unit` module in a document | `0.6.0` | —    | ⚠️ Snippet with `// ...`; not implemented |
 | `unit-dict`  | Structure of a resolved unit               | —       | —    | Data structure, not runnable              |
 
 ### `api-reference/components.md`
@@ -150,23 +150,23 @@ Tests of blocks that elide the invoice header (`// sender: .., recipient: .., in
 | `card-payment`           | Payment by credit card                                | —       | `docs/api-components-payment/` | Same test                                                           |
 | `paid`                   | Paid invoice in cash                                  | —       | `docs/api-components-payment/` | Same test                                                           |
 | `paid-card`              | Paid invoice by card                                  | —       | `docs/api-components-payment/` | Same test                                                           |
-| `apply-bulk-tax`         | Apply block wrapping items with shared lower tax rate | `0.5.0` | `docs/api-components-apply/`   | The test places the block in `line-items`                           |
-| `info-usage`             | `info` motifs in body text                            | `0.5.0` | `docs/api-components-info/`    | `info.due-date` and `info.iban` currently render empty in body text |
+| `apply-bulk-tax`         | Apply block wrapping items with shared lower tax rate | `0.6.0` | `docs/api-components-apply/`   | The test places the block in `line-items`                           |
+| `info-usage`             | `info` motifs in body text                            | `0.6.0` | `docs/api-components-info/`    | `info.due-date` and `info.iban` currently render empty in body text |
 | `info-dynamic`           | `info.dynamic` path queries                           | —       | `docs/api-components-info/`    | Same test as `info-usage`                                           |
 
 ### `api-reference/tax.md`
 
 | Code ID          | Description                         | Version | Test | Notes                                   |
 | :--------------- | :---------------------------------- | :------ | :--- | :-------------------------------------- |
-| `reverse-charge` | Reverse-charge tax usage on an item | `0.5.0` | —    | Snippet only (no full document context) |
-| `custom-tax`     | Custom tax category with `tax.new`  | `0.5.0` | —    | Snippet only (let binding)              |
-| `exemption-code` | Exemption with its VATEX code       | `0.5.0` | —    | Compiled by check-docs-examples         |
+| `reverse-charge` | Reverse-charge tax usage on an item | `0.6.0` | —    | Snippet only (no full document context) |
+| `custom-tax`     | Custom tax category with `tax.new`  | `0.6.0` | —    | Snippet only (let binding)              |
+| `exemption-code` | Exemption with its VATEX code       | `0.6.0` | —    | Compiled by check-docs-examples         |
 
 ### `api-reference/theme/index.md`
 
 | Code ID       | Description                                       | Version | Test                          | Notes                             |
 | :------------ | :------------------------------------------------ | :------ | :---------------------------- | :-------------------------------- |
-| `quick-start` | `theme.classic` with a brand, a logo and no marks | `0.5.0` | `docs/api-theme-quick-start/` | Logo fixture `logo.svg`           |
+| `quick-start` | `theme.classic` with a brand, a logo and no marks | `0.6.0` | `docs/api-theme-quick-start/` | Logo fixture `logo.svg`           |
 | `passing`     | The forms of passing a theme                      | —       | `docs/api-theme-passing/`     | The test also resolves every form |
 | `pick-preset` | Picking a preset by name from `--input`           | —       | `docs/api-theme-pick-preset/` | Renders the default (`classic`)   |
 
@@ -186,13 +186,13 @@ Tests of blocks that elide the invoice header (`// sender: .., recipient: .., in
 
 | Code ID       | Description                                           | Version | Test                                  | Notes                                        |
 | :------------ | :---------------------------------------------------- | :------ | :------------------------------------ | :------------------------------------------- |
-| `region`      | `layout: auto` for an Austrian sender                 | `0.5.0` | `docs/api-theme-layouts-region/`      | Asserts `din-5008-b`                         |
+| `region`      | `layout: auto` for an Austrian sender                 | `0.6.0` | `docs/api-theme-layouts-region/`      | Asserts `din-5008-b`                         |
 | `for-region`  | A region function from a job file                     | —       | `docs/api-theme-layouts-for-region/`  | Asserts the region mapping                   |
 | `areas`       | Area patches: logo right, references moved, no header | —       | `docs/api-theme-layouts-areas/`       | Logo fixture `logo.svg`                      |
 | `derive`      | A company layout with `theme.layout.derive`           | —       | `docs/api-theme-layouts-derive/`      |                                              |
 | `stationery`  | The three stationery modes from one input             | —       | `docs/api-theme-layouts-stationery/`  | Renders the default mode `pdf`; SVG fixtures |
 | `proof`       | Envelopes and the print proof                         | —       | `docs/api-theme-layouts-proof/`       | The test switches the proof on by default    |
-| `roll`        | An 80 mm thermal-roll receipt                         | `0.5.0` | `docs/api-theme-layouts-roll/`        |                                              |
+| `roll`        | An 80 mm thermal-roll receipt                         | `0.6.0` | `docs/api-theme-layouts-roll/`        |                                              |
 | `din-listing` | DIN 5008 form A and B as data                         | —       | `docs/api-theme-layouts-din-listing/` | Asserts equality with the shipped layouts    |
 | `qr-bill`     | Swiss layout with the QR-bill zone (0.6.x preview)    | —       | `docs/api-theme-layouts-qr-bill/`     | The test switches the zone on by default     |
 
@@ -206,7 +206,7 @@ Tests of blocks that elide the invoice header (`// sender: .., recipient: .., in
 | `custom-area`    | A prefixed custom part in a new foreground area  | —       | `docs/api-theme-parts-custom-area/`    |                                                 |
 | `themed`         | `themed` scopes for a group and the bank details | —       | `docs/api-theme-parts-themed/`         | The test adds the show rule                     |
 | `package-lib`    | A zero-import theme package                      | —       | `docs/api-theme-parts-package/`        | The package is the local file `acme-theme.typ`  |
-| `package-usage`  | Using the package with a preset                  | `0.5.0` | `docs/api-theme-parts-package/`        |                                                 |
+| `package-usage`  | Using the package with a preset                  | `0.6.0` | `docs/api-theme-parts-package/`        |                                                 |
 | `package-ci`     | `theme.resolve` in the package CI                | —       | `docs/api-theme-parts-package/`        |                                                 |
 | `resolve`        | `theme.resolve` assertions                       | —       | `docs/api-theme-parts-resolve/`        | The test also renders an invoice with the theme |
 
@@ -223,7 +223,7 @@ Tests of blocks that elide the invoice header (`// sender: .., recipient: .., in
 | Code ID            | Description                        | Version | Test                         | Notes                   |
 | :----------------- | :--------------------------------- | :------ | :--------------------------- | :---------------------- |
 | `compile`          | PDF/A-3b compile command           | —       | —                            | Bash command, not Typst |
-| `complete-example` | Complete ZUGFeRD-compliant invoice | `0.5.0` | `docs/e-invoicing-complete/` |                         |
+| `complete-example` | Complete ZUGFeRD-compliant invoice | `0.6.0` | `docs/e-invoicing-complete/` |                         |
 
 ### `e-invoicing/architecture.md`
 
@@ -239,7 +239,7 @@ Tests of blocks that elide the invoice header (`// sender: .., recipient: .., in
 | `error-output`          | Example of the compiler error listing all problems     | —       | —                          | Compiler output, not Typst        |
 | `zugferd-errors-report` | Enabling `zugferd-errors: "report"`                    | —       | —                          | Snippet (partial), no test needed |
 | `custom-report`         | A `zugferd-report` part for a custom list              | —       | `docs/e-invoicing-report/` |                                   |
-| `printed-details`       | References with the seller's VAT ID and date of supply | `0.5.0` | —                          | Compiled by check-docs-examples   |
+| `printed-details`       | References with the seller's VAT ID and date of supply | `0.6.0` | —                          | Compiled by check-docs-examples   |
 
 ### `e-invoicing/limitations.md`
 
@@ -259,7 +259,7 @@ Tests of blocks that elide the invoice header (`// sender: .., recipient: .., in
 | :-------------- | :--------------------------------------------------------------- | :------ | :---------------------------- | :-------------------------------- |
 | `unit-snippets` | Unit builder and dictionary units                                | —       | —                             | Snippets (partial)                |
 | `money-fine`    | Unit prices rounded to 6 decimals with `locale.custom.normalize` | —       | —                             | Snippet (partial), no test needed |
-| `item-data`     | Note, date and country of origin of items                        | `0.5.0` | `docs/e-invoicing-item-data/` |                                   |
+| `item-data`     | Note, date and country of origin of items                        | `0.6.0` | `docs/e-invoicing-item-data/` |                                   |
 
 ### `e-invoicing/invoice-data/taxes.md`
 
@@ -271,7 +271,7 @@ Tests of blocks that elide the invoice header (`// sender: .., recipient: .., in
 
 | Code ID         | Description                                                   | Version | Test                           | Notes              |
 | :-------------- | :------------------------------------------------------------ | :------ | :----------------------------- | :----------------- |
-| `direct-debit`  | XRechnung collected by SEPA direct debit                      | `0.5.0` | `docs/e-invoicing-sepa-debit/` |                    |
+| `direct-debit`  | XRechnung collected by SEPA direct debit                      | `0.6.0` | `docs/e-invoicing-sepa-debit/` |                    |
 | `paid-snippets` | Paid invoices in cash and by card                             | —       | —                              | Snippets (partial) |
 | `cash-discount` | Cash discount of `payment-terms`, and in a textual `due-date` | —       | —                              | Snippets (partial) |
 
@@ -279,7 +279,7 @@ Tests of blocks that elide the invoice header (`// sender: .., recipient: .., in
 
 | Code ID          | Description                                              | Version | Test                            | Notes                             |
 | :--------------- | :------------------------------------------------------- | :------ | :------------------------------ | :-------------------------------- |
-| `credit-note`    | Credit note (document type 381) with a preceding invoice | `0.5.0` | `docs/e-invoicing-credit-note/` |                                   |
+| `credit-note`    | Credit note (document type 381) with a preceding invoice | `0.6.0` | `docs/e-invoicing-credit-note/` |                                   |
 | `service-period` | `service-period` printed by `references.service-time()`  | —       | —                               | Snippet (partial), no test needed |
 | `notes`          | Invoice notes, one with a subject code                   | —       | —                               | Snippet (partial), no test needed |
 | `currency`       | Invoice in US dollars                                    | —       | —                               | Snippet (partial), no test needed |
@@ -299,70 +299,70 @@ No code blocks. The tables are generated by `tools/zugferd/bt_disposition.py --u
 
 | Code ID         | Description                                       | Version | Test                          | Notes                   |
 | :-------------- | :------------------------------------------------ | :------ | :---------------------------- | :---------------------- |
-| `quick-start`   | Classic on its window layout (engineering office) | `0.5.0` | `docs/themes-classic/`        |                         |
+| `quick-start`   | Classic on its window layout (engineering office) | `0.6.0` | `docs/themes-classic/`        |                         |
 | `make-it-yours` | Brand, logo, fold marks only and DIN 5008 form B  | —       | `docs/themes-classic-custom/` | Logo fixture `logo.svg` |
 
 ### `themes/plain.md`
 
 | Code ID         | Description                                                      | Version | Test                        | Notes |
 | :-------------- | :--------------------------------------------------------------- | :------ | :-------------------------- | :---- |
-| `quick-start`   | Plain with the small-business rule (translator)                  | `0.5.0` | `docs/themes-plain/`        |       |
+| `quick-start`   | Plain with the small-business rule (translator)                  | `0.6.0` | `docs/themes-plain/`        |       |
 | `make-it-yours` | Pre-printed letterhead paper: stationery, removed areas, margins | —       | `docs/themes-plain-custom/` |       |
 
 ### `themes/corporate.md`
 
 | Code ID         | Description                                         | Version | Test                            | Notes                   |
 | :-------------- | :-------------------------------------------------- | :------ | :------------------------------ | :---------------------- |
-| `quick-start`   | Corporate with purchase-order references and groups | `0.5.0` | `docs/themes-corporate/`        |                         |
+| `quick-start`   | Corporate with purchase-order references and groups | `0.6.0` | `docs/themes-corporate/`        |                         |
 | `make-it-yours` | Two brand colors and a logo                         | —       | `docs/themes-corporate-custom/` | Logo fixture `logo.svg` |
 
 ### `themes/elegant.md`
 
 | Code ID         | Description                      | Version | Test                          | Notes                   |
 | :-------------- | :------------------------------- | :------ | :---------------------------- | :---------------------- |
-| `quick-start`   | Elegant fee note (law firm)      | `0.5.0` | `docs/themes-elegant/`        |                         |
+| `quick-start`   | Elegant fee note (law firm)      | `0.6.0` | `docs/themes-elegant/`        |                         |
 | `make-it-yours` | Ink color, heading font and logo | —       | `docs/themes-elegant-custom/` | Logo fixture `logo.svg` |
 
 ### `themes/prestige.md`
 
 | Code ID         | Description                                          | Version | Test                           | Notes                                 |
 | :-------------- | :--------------------------------------------------- | :------ | :----------------------------- | :------------------------------------ |
-| `quick-start`   | Prestige guest folio with gross prices and split VAT | `0.5.0` | `docs/themes-prestige/`        |                                       |
+| `quick-start`   | Prestige guest folio with gross prices and split VAT | `0.6.0` | `docs/themes-prestige/`        |                                       |
 | `make-it-yours` | Band and accent colors, a light logo for the band    | —       | `docs/themes-prestige-custom/` | Fixtures `logo.svg`, `logo-light.svg` |
 
 ### `themes/bold.md`
 
 | Code ID         | Description                                 | Version | Test                       | Notes                   |
 | :-------------- | :------------------------------------------ | :------ | :------------------------- | :---------------------- |
-| `quick-start`   | Bold agency invoice with a package discount | `0.5.0` | `docs/themes-bold/`        |                         |
+| `quick-start`   | Bold agency invoice with a package discount | `0.6.0` | `docs/themes-bold/`        |                         |
 | `make-it-yours` | Brand color and logo                        | —       | `docs/themes-bold-custom/` | Logo fixture `logo.svg` |
 
 ### `themes/technical.md`
 
 | Code ID         | Description                                            | Version | Test                            | Notes                   |
 | :-------------- | :----------------------------------------------------- | :------ | :------------------------------ | :---------------------- |
-| `quick-start`   | Technical invoice with a sprint group (software house) | `0.5.0` | `docs/themes-technical/`        |                         |
+| `quick-start`   | Technical invoice with a sprint group (software house) | `0.6.0` | `docs/themes-technical/`        |                         |
 | `make-it-yours` | Brand, logo and monospace label and figure fonts       | —       | `docs/themes-technical-custom/` | Logo fixture `logo.svg` |
 
 ### `themes/soft.md`
 
 | Code ID         | Description                                 | Version | Test                       | Notes                   |
 | :-------------- | :------------------------------------------ | :------ | :------------------------- | :---------------------- |
-| `quick-start`   | Soft B2C catering invoice with gross prices | `0.5.0` | `docs/themes-soft/`        |                         |
+| `quick-start`   | Soft B2C catering invoice with gross prices | `0.6.0` | `docs/themes-soft/`        |                         |
 | `make-it-yours` | Brand, logo and corner radii                | —       | `docs/themes-soft-custom/` | Logo fixture `logo.svg` |
 
 ### `themes/compact.md`
 
 | Code ID         | Description                                  | Version | Test                          | Notes                   |
 | :-------------- | :------------------------------------------- | :------ | :---------------------------- | :---------------------- |
-| `quick-start`   | Compact collective invoice with item numbers | `0.5.0` | `docs/themes-compact/`        |                         |
+| `quick-start`   | Compact collective invoice with item numbers | `0.6.0` | `docs/themes-compact/`        |                         |
 | `make-it-yours` | Brand, logo and a larger body size           | —       | `docs/themes-compact-custom/` | Logo fixture `logo.svg` |
 
 ### `themes/boxed.md`
 
 | Code ID         | Description                                 | Version | Test                        | Notes                   |
 | :-------------- | :------------------------------------------ | :------ | :-------------------------- | :---------------------- |
-| `quick-start`   | Boxed tradesman invoice with a down payment | `0.5.0` | `docs/themes-boxed/`        |                         |
+| `quick-start`   | Boxed tradesman invoice with a down payment | `0.6.0` | `docs/themes-boxed/`        |                         |
 | `make-it-yours` | Brand color and logo                        | —       | `docs/themes-boxed-custom/` | Logo fixture `logo.svg` |
 
 ### `api-reference/locale/index.md`
@@ -370,7 +370,7 @@ No code blocks. The tables are generated by `tools/zugferd/bt_disposition.py --u
 | Code ID            | Description                                         | Version | Test                                  | Notes                                       |
 | :----------------- | :-------------------------------------------------- | :------ | :------------------------------------ | :------------------------------------------ |
 | `locale-usage`     | Setting locale in show rule                         | —       | —                                     | Trivial snippet                             |
-| `locale-customize` | Locale customization with `locale.custom` overrides | `0.5.0` | `docs/api-locale-customize/`          | Two pages, to show the page label           |
+| `locale-customize` | Locale customization with `locale.custom` overrides | `0.6.0` | `docs/api-locale-customize/`          | Two pages, to show the page label           |
 | `currency-format`  | Custom currency formatting override                 | —       | `docs/api-locale-currency/`           |                                             |
 | `validation-texts` | Custom validation marker through a locale patch     | —       | `docs/api-invoice-validation-locale/` | Same code as `validation.md` `locale-patch` |
 
@@ -378,16 +378,16 @@ No code blocks. The tables are generated by `tools/zugferd/bt_disposition.py --u
 
 | Code ID       | Description                                 | Version | Test                         | Notes                          |
 | :------------ | :------------------------------------------ | :------ | :--------------------------- | :----------------------------- |
-| `pl-language` | Polish language dictionary definition       | `0.5.0` | `docs/api-locale-custom-pl/` | File `lang/pl.typ` of the test |
-| `pl-region`   | Polish region builder function              | `0.5.0` | `docs/api-locale-custom-pl/` | File `region/pl.typ`           |
-| `pl-factory`  | Building locale with `build-locale` factory | `0.5.0` | `docs/api-locale-custom-pl/` | File `lib.typ`                 |
-| `pl-usage`    | Using the custom locale in a document       | `0.5.0` | `docs/api-locale-custom-pl/` | `test.typ`                     |
+| `pl-language` | Polish language dictionary definition       | `0.6.0` | `docs/api-locale-custom-pl/` | File `lang/pl.typ` of the test |
+| `pl-region`   | Polish region builder function              | `0.6.0` | `docs/api-locale-custom-pl/` | File `region/pl.typ`           |
+| `pl-factory`  | Building locale with `build-locale` factory | `0.6.0` | `docs/api-locale-custom-pl/` | File `lib.typ`                 |
+| `pl-usage`    | Using the custom locale in a document       | `0.6.0` | `docs/api-locale-custom-pl/` | `test.typ`                     |
 
 ### `api-reference/locale/base.md`
 
 | Code ID           | Description                                     | Version | Test                             | Notes |
 | :---------------- | :---------------------------------------------- | :------ | :------------------------------- | :---- |
-| `schema-override` | Schema inspection and partial language override | `0.5.0` | `docs/api-locale-base-override/` |       |
+| `schema-override` | Schema inspection and partial language override | `0.6.0` | `docs/api-locale-base-override/` |       |
 
 ### `README.md` and `.github/README.md`
 
@@ -397,7 +397,7 @@ GitHub shows `.github/README.md`; the package, and with it Typst Universe, uses 
 | :------------ | :----------------------------------------- | :------ | :----------------------------- | :------------------------------------------- |
 | `theme`       | A preset with a brand and a logo           | —       | `docs/readme-theming/`         | Logo fixture `logo.svg`                      |
 | `init`        | A project from the template (`typst init`) | —       | —                              | Bash command, not Typst                      |
-| `quick-start` | Full invoice                               | `0.5.0` | `docs/readme-getting-started/` |                                              |
+| `quick-start` | Full invoice                               | `0.6.0` | `docs/readme-getting-started/` |                                              |
 | `nix-run`     | Compile with Nix                           | —       | —                              | Bash command, not Typst; `.github/README.md` |
 
 The package template `template/invoice.typ` is compiled by the tytanic template test (`@template`) and validated by `scripts/validate-all-zugferd`.
@@ -406,7 +406,7 @@ The package template `template/invoice.typ` is compiled by the tytanic template 
 
 ## Showcase Videos
 
-Six pages embed a video that types an invoice step by step next to the invoice it compiles to (`<Video name=".." />`). Its code is not a code block of the page: it lives in the scenes of `tools/videos/scenes/`, and `scripts/showcase-videos` compiles every step with the package of the checkout, so a step that no longer compiles stops the build. The editor and the end card show the import with the version (`0.5.0`), so the videos are rebuilt at every version bump. See [MAINTENANCE.md](/MAINTENANCE.md#showcase-videos).
+Six pages embed a video that types an invoice step by step next to the invoice it compiles to (`<Video name=".." />`). Its code is not a code block of the page: it lives in the scenes of `tools/videos/scenes/`, and `scripts/showcase-videos` compiles every step with the package of the checkout, so a step that no longer compiles stops the build. The editor and the end card show the import with the version (`0.6.0`), so the videos are rebuilt at every version bump. See [MAINTENANCE.md](/MAINTENANCE.md#showcase-videos).
 
 | Page                                | Video         | Scene                                  |
 | :---------------------------------- | :------------ | :------------------------------------- |

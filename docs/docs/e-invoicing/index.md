@@ -115,7 +115,7 @@ See [Validation and Error Reporting](./validation.md) for the details.
 Here is a full example of a ZUGFeRD-compliant invoice configuration:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   // Enable the comfort EN 16931 e-invoicing profile
@@ -193,4 +193,4 @@ Here is a full example of a ZUGFeRD-compliant invoice configuration:
 
 ## Contributions
 
-The ZUGFeRD implementation in `invoice-pro` was contributed by [Michael Fuchs (theexiile1305)](https://github.com/theexiile1305).
+The e-invoicing of `invoice-pro` started with the first ZUGFeRD export by [Michael Fuchs (theexiile1305)](https://github.com/theexiile1305) in v0.4.0. Since v0.5.0, a new implementation builds and validates the e-invoice (see [How It Works](./architecture.md)). Everyone who has helped is listed on the [Contributors](../contributors.md) page.

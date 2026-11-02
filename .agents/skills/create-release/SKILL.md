@@ -1,6 +1,6 @@
 ---
 name: create-release
-description: Step-by-step guide for creating a new invoice-pro release, including pre-checks, version bump, thumbnail regeneration, Docusaurus doc version snapshotting, package packaging, tagging, and patch notes.
+description: Step-by-step guide for creating a new invoice-pro release, including pre-checks, version bump, thumbnail regeneration, the contributors page, Docusaurus doc version snapshotting, package packaging, tagging, and patch notes.
 ---
 
 # Creating a Release for invoice-pro
@@ -43,7 +43,15 @@ This ensures the template preview in `README.md` and the Typst Universe package 
 
 ---
 
-## Step 4: Create Docusaurus Versioned Docs Snapshot
+## Step 4: Update the Contributors Page
+
+Add everyone who has helped since the last release to `docs/docs/contributors.md`, following the checklist in `MAINTENANCE.md` (section Contributors): merged pull requests of others go to features, bug fixes or tooling, issues to bug reports or ideas.
+
+Do this before the docs snapshot, so that the snapshot of the release lists them.
+
+---
+
+## Step 5: Create Docusaurus Versioned Docs Snapshot
 
 Create a frozen snapshot of the current documentation for the new release:
 
@@ -59,7 +67,7 @@ This generates `docs/versioned_docs/version-<version>/` and updates `docs/versio
 
 ---
 
-## Step 5: Verify Release Tarball Packaging
+## Step 6: Verify Release Tarball Packaging
 
 Verify that the release package archive builds cleanly:
 
@@ -70,7 +78,7 @@ ls -la result/
 
 ---
 
-## Step 6: Commit and Create Git Tag
+## Step 7: Commit and Create Git Tag
 
 1. Stage and commit all version bump, thumbnail, and documentation snapshot changes:
    ```bash
@@ -89,7 +97,7 @@ ls -la result/
 
 ---
 
-## Step 7: GitHub Actions Release Automation
+## Step 8: GitHub Actions Release Automation
 
 Pushing the release tag triggers:
 
@@ -98,7 +106,7 @@ Pushing the release tag triggers:
 
 ---
 
-## Step 8: Generate and Provide Release Notes Artifact
+## Step 9: Generate and Provide Release Notes Artifact
 
 Generate structured release notes summarizing all changes, features, and fixes since the previous release. Provide them to the user as an artifact in the chat so they can be easily reviewed, published, or pasted into GitHub Releases.
 

@@ -13,7 +13,7 @@ This offers fine-grained control over which fields are displayed, their layout o
 The `references` module is exported directly from the package root:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": invoice, references
+#import "@preview/invoice-pro:0.6.0": invoice, references
 ```
 
 ---

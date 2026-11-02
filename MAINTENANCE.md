@@ -43,6 +43,7 @@ When releasing a new version, the version string must be updated in multiple loc
   - `api-reference/locale/base.md`
 - [ ] **`docs/DOCUMENTATION.md`** — Update all version numbers in the Code Block Registry tables
 - [ ] **Showcase videos** — Rebuild them after the version change (`./scripts/showcase-videos`, see [Showcase Videos](#showcase-videos)): the editor and the end card of every video show the import with the version
+- [ ] **`docs/docs/contributors.md`** — Add everyone who has helped since the last release (see [Contributors](#contributors)), before the docs snapshot so that the snapshot lists them
 - [ ] **Docusaurus versioned docs** — Create a new versioned snapshot if needed (`docs/versioned_docs/version-X.Y.Z/`). Do **not** manually edit old versioned docs — they are frozen snapshots.
 
 ### Verification
@@ -68,8 +69,8 @@ nix run .#check-version -- 0.3.0
 
 | File                    | What to change                         | Example               |
 | :---------------------- | :------------------------------------- | :-------------------- |
-| `typst.toml`            | `version = "X.Y.Z"`                    | `version = "0.5.0"`   |
-| `src/loom-wrapper.typ`  | `#let loom-key = <invoice-pro:X.Y.Z>`  | `<invoice-pro:0.5.0>` |
+| `typst.toml`            | `version = "X.Y.Z"`                    | `version = "0.6.0"`   |
+| `src/loom-wrapper.typ`  | `#let loom-key = <invoice-pro:X.Y.Z>`  | `<invoice-pro:0.6.0>` |
 | `README.md`             | `#import "@preview/invoice-pro:X.Y.Z"` | 1 import statement    |
 | `.github/README.md`     | `#import "@preview/invoice-pro:X.Y.Z"` | 1 import statement    |
 | `template/invoice.typ`  | `#import "@preview/invoice-pro:X.Y.Z"` | 1 import statement    |
@@ -171,3 +172,28 @@ The title image and the ten looks (`docs/static/img/readme/`) are rendered from 
 - [ ] After a change to `README.md`, look at a Typst Universe page of the release, and at the Markdown preview of GitHub for `.github/README.md`.
 
 The script needs Typst (`$TYPST_BIN`) with Inter and Liberation Sans installed and Python with Pillow (`$PYTHON`). The invoice is dated 22 September 2026 unless `README_DATE_EPOCH` sets another date, so a rebuild without changes gives the same images.
+
+---
+
+## Contributors
+
+The page [Contributors](https://leonieziechmann.github.io/invoice-pro/contributors) (`docs/docs/contributors.md`) lists everyone who has helped, by the kind of help. Both READMEs, the acknowledgements of `docs/docs/contributing.md` and the e-invoicing overview link to it. Update it at every release, before the docs snapshot, so that the snapshot of the release names everyone up to it.
+
+### Checklist
+
+- [ ] Find the merged pull requests of others since the last release. With the tags fetched (`git fetch --tags`), `git log --merges --format='%s' v<last>..origin/main` names each one (`Merge pull request #N from <user>/<branch>`); on GitHub, search `is:pr is:merged merged:>YYYY-MM-DD -author:leonieziechmann`.
+- [ ] Find the issues others opened since the last release: `is:issue created:>YYYY-MM-DD -author:leonieziechmann -author:app/github-actions`.
+- [ ] Add each person to the group of their help, in alphabetical order (ignoring case): what changed for users in a few words, the linked pull request or issue, and for code the version it ships in. A person can be in several groups.
+- [ ] Check the credits of `README.md` and `.github/README.md` and the acknowledgements of `docs/docs/contributing.md`: a contribution that started a whole area, like the first ZUGFeRD export, is named there too, in words that stay true when the code changes later.
+
+### Groups
+
+| Group                      | Who goes in                                                       |
+| :------------------------- | :---------------------------------------------------------------- |
+| Features                   | a merged pull request that adds something users can do            |
+| Bug Fixes                  | a merged pull request that fixes a bug                            |
+| Tooling and CI             | a merged pull request for the build, the tests, CI or the release |
+| Bug Reports                | an issue that reports a bug                                       |
+| Ideas and Feature Requests | an issue that proposes a feature or a change                      |
+
+Pull requests closed without merging, the maintainer and bots are not listed. A new kind of help, such as documentation or a translation, gets a group of its own with its first contribution.

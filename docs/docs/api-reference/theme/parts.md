@@ -311,7 +311,7 @@ Users combine it with any preset:
 [//]: # "check-docs-examples: skip"
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 #import "@preview/acme-theme:0.1.0" as acme
 
 #show: invoice.with(

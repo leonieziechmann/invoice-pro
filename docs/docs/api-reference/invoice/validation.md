@@ -15,7 +15,7 @@ invoice-pro checks every invoice for legally required data and for output the th
 | `none`              | No checks. The document renders what it was given. With `zugferd` set, nothing withholds the XML: the rules of the e-invoice apply as `zugferd-errors` says.                                                                                                            | thumbnails, tests; never for sending |
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 // draft (the default): the invoice renders, the gaps are marked, a report page follows
 #show: invoice.with(

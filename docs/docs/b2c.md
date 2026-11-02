@@ -52,7 +52,7 @@ Below are two standard B2C configurations showing how to implement these paramet
 For invoicing a private consumer within your own country, showing gross prices and calculating VAT retrospectively.
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   locale: locale.de-de,
@@ -113,7 +113,7 @@ For invoicing a private consumer within your own country, showing gross prices a
 For small businesses operating under a local exemption tax scheme (such as the _Kleinunternehmerregelung_ in Germany under § 19 UStG) where no VAT is charged to consumers.
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   locale: locale.de-de,

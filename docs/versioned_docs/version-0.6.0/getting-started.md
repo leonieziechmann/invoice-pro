@@ -1,0 +1,112 @@
+---
+sidebar_position: 2
+---
+
+# Getting Started
+
+Welcome to `invoice-pro`. This guide provides the "Fast Path" to generating your first professional invoice, outlining the installation, a minimal setup, and the core architectural workflow.
+
+## Installation
+
+To include `@preview/invoice-pro` in your Typst project, simply import it from the official package repository.
+
+```typst
+// Import the core invoice environment and necessary components
+#import "@preview/invoice-pro:0.6.0": *
+```
+
+:::info
+Always check for the latest package version in the Typst Universe to ensure you have the most recent **Normalized** tax templates and locale dictionaries.
+:::
+
+### Try it out via Nix
+
+If you use [Nix](https://nixos.org/), you can instantly compile a `.typ` file using the latest version of this template directly from GitHub, without any local installation:
+
+```bash
+nix run github:leonieziechmann/invoice-pro -- my-invoice.typ
+```
+
+## Your First Invoice
+
+The most efficient workflow for initializing a document is to use a `#show` rule with the `invoice.with(..)` function at the root of your Typst file. This establishes the document layout and allows global configuration to automatically propagate to all underlying elements.
+
+Here is a minimal, copy-paste example to get you started:
+
+```typst
+#import "@preview/invoice-pro:0.6.0": *
+
+// 1. Initialize the document using a show rule
+#show: invoice.with(
+  // Sender and recipient configurations
+  sender: (
+    name: "Acme Corporation",
+    address: "123 Business Rd",
+    city: "Metropolis, NY 10001",
+    vat-id: "DE123456789", // Your VAT ID or tax number (tax-nr) is required
+  ),
+  recipient: (
+    name: "John Doe",
+    address: "456 Consumer Way",
+    city: "Gotham, NJ 07001",
+  ),
+
+  // Document metadata
+  invoice-nr: "INV-2026-001", // Unique document identifier
+  date: datetime.today(), // Sets the invoice date to compilation time
+
+  // Financial configuration
+  tax-mode: "exclusive", // Base prices do not include tax
+  tax: tax.vat(19%), // Applies a 19% default tax rate
+)
+
+// 2. Define the invoice body
+= Services Rendered
+
+// Add individual line items; these automatically inherit root settings
+#line-items[
+  #item(
+    [Consultation Fee],
+    description: "Initial system architecture review.",
+    quantity: 10,
+    price: 150.00,
+  )
+
+  #item(
+    [Server Migration],
+    quantity: 1,
+    price: 500.00,
+  )
+]
+```
+
+If a legally required field is missing (say, the invoice number), the invoice still renders, but as a draft: the gap is marked in place, and a report page at the end lists every problem with its legal basis. Compile with `validation: "strict"` (or `--input invoice-pro-validation=strict`) to stop instead. See [Validation](./api-reference/invoice/validation.md).
+
+:::tip
+If your business falls under a small enterprise exemption scheme (e.g., _Kleinunternehmerregelung_ in Germany), simply set `tax-exempt-small-biz: true` and `tax: auto` in the root `#show` rule. The module will automatically suppress tax rendering and output the correct legal **Grounds** based on your configured `locale`.
+:::
+
+## Understanding the Workflow
+
+`invoice-pro` relies on a robust top-down data architecture to ensure consistency and precision across the document.
+
+1. **The Root Context:** The `invoice` function acts as the primary orchestrator. Settings defined here—such as `theme`, `locale`, `tax-mode`, and default `tax` rates—are aggressively **Normalized** to ensure a standard data shape across the entire pipeline.
+2. **Cascading Data:** Once initialized, this context begins **Cascading** downward. When you invoke an `#item()` block in the document body, it does not need to redefine the tax rate or currency; it implicitly inherits the active state from the root environment.
+3. **Multi-Pass Evaluation:** The underlying engine runs a two-pass calculation step. As components are evaluated, the system uses **Forward/Backward Calculation** to accurately compute line-item totals, aggregate all financial data into respective tax **Grounds**, and build the final balances table dynamically at the bottom of your document.
+
+:::warning
+Do not bypass the root `invoice` wrapper when using `invoice-pro` components. Because these components are built on top of the `loom` state engine, attempting to declare an `item` outside of the `invoice` context will result in a missing dependency state. The components will simply not render or execute at all.
+:::
+
+## Choosing a Look
+
+The default theme, `theme.classic`, picks its page layout from the sender's country (DIN 5008 for a German sender). To change the look, pass another preset and your brand:
+
+```typst
+#show: invoice.with(
+  theme: theme.elegant.with(theme.custom.brand(color: rgb("#1c2a48"))),
+  // sender: .., recipient: .., invoice-nr: ..
+)
+```
+
+The [Themes](./themes/index.md) section shows all ten themes, each with a quick start. The [Theming API](./api-reference/theme/index.md) explains every way to customize them.

@@ -108,7 +108,7 @@ typst init @preview/invoice-pro
 or write the invoice yourself:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   locale: locale.en-de,
@@ -161,7 +161,7 @@ The data model (`line-items`, `item`, `group`, `bundle`) is stable. The theme AP
 
 ## Credits
 
-invoice-pro uses [sepay](https://typst.app/universe/package/sepay) for the EPC QR code (with [ibanator](https://typst.app/universe/package/ibanator) for the IBAN check) and [loom](https://typst.app/universe/package/loom) for reactive rendering. Thanks to [classy-german-invoice](https://github.com/erictapen/typst-invoice) by Kerstin Humm, which inspired the template and the EPC QR code, to [Michael Fuchs (theexiile1305)](https://github.com/theexiile1305), who contributed the ZUGFeRD implementation, and to [letter-pro](https://typst.app/universe/package/letter-pro), which drew the DIN 5008 page up to v0.5.
+invoice-pro uses [sepay](https://typst.app/universe/package/sepay) for the EPC QR code (with [ibanator](https://typst.app/universe/package/ibanator) for the IBAN check) and [loom](https://typst.app/universe/package/loom) for reactive rendering. Thanks to [classy-german-invoice](https://github.com/erictapen/typst-invoice) by Kerstin Humm, which inspired the template and the EPC QR code, to [Michael Fuchs (theexiile1305)](https://github.com/theexiile1305), whose first ZUGFeRD export in v0.4.0 started the e-invoicing, and to [letter-pro](https://typst.app/universe/package/letter-pro), which drew the DIN 5008 page up to v0.5. Everyone who has helped with code, bug reports or ideas is on the [contributors page](https://leonieziechmann.github.io/invoice-pro/contributors).
 
 ## License
 

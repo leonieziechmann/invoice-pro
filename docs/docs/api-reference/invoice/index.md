@@ -313,7 +313,7 @@ While the `invoice` function offers many ways to customize your document, you on
 Here is an example of the minimal boilerplate needed to get started:
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 #show: invoice.with(
   sender: (

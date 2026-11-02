@@ -250,7 +250,7 @@ While a `bundle` aggregates items into a single grouped line item and a `group` 
 If you have multiple items that share a specific tax rate (e.g., books with a reduced 7% tax rate), you can wrap them in an `apply` block instead of setting the `tax` parameter on every single item.
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": apply, item, tax
+#import "@preview/invoice-pro:0.6.0": apply, item, tax
 
 // ...
 #apply(tax: tax.vat(7%))[
@@ -280,7 +280,7 @@ The `info` module provides a suite of draw-only motifs and pre-configured access
 ### Usage in Invoice Text
 
 ```typst
-#import "@preview/invoice-pro:0.5.0": *
+#import "@preview/invoice-pro:0.6.0": *
 
 Thank you for your order #info.order-nr from #info.order-date.
 Please settle the total of #info.total.gross by #info.due-date to IBAN #info.iban.
