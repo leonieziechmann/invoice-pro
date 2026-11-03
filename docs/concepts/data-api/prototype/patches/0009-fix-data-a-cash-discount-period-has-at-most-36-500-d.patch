@@ -1,0 +1,422 @@
+From 97b00012f5ffeb473c76c8375b366d2060fc6a5a Mon Sep 17 00:00:00 2001
+From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
+Date: Tue, 3 Nov 2026 10:12:22 +0000
+Subject: [PATCH 09/10] fix(data): a cash discount period has at most 36 500
+ days, as the payment days
+
+The v3 corpus accepted Skonto days of 36 501 and 10^15; they are now a data
+issue (schema maximum and decoder), with conformance fixtures and a unit test.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RaaQussN1QVEE8zRWeeCD3
+---
+ src/contract/invoice.schema.json     |   1 +
+ src/contract/schema.typ              |   3 +-
+ tests/data/conformance/fixtures.json | 346 +++++++++++++++++++++++++++
+ tests/data/contract/test.typ         |   7 +
+ 4 files changed, 356 insertions(+), 1 deletion(-)
+
+diff --git a/src/contract/invoice.schema.json b/src/contract/invoice.schema.json
+index 728004f..6e3fb6e 100644
+--- a/src/contract/invoice.schema.json
++++ b/src/contract/invoice.schema.json
+@@ -3348,6 +3348,7 @@
+         "days": {
+           "type": "integer",
+           "minimum": 1,
++          "maximum": 36500,
+           "description": "Days.",
+           "x-invoice-pro-since": "1.0"
+         },
+diff --git a/src/contract/schema.typ b/src/contract/schema.typ
+index 253cac5..34408e5 100644
+--- a/src/contract/schema.typ
++++ b/src/contract/schema.typ
+@@ -838,7 +838,8 @@
+     ),
+   ),
+   cash-discount: object(doc: "A cash discount.", (
+-    days: field(t.integer(min: 1), doc: "Days.", required: true),
++    // at most 100 years, as the payment days
++    days: field(t.integer(min: 1, max: 36500), doc: "Days.", required: true),
+     percent: field(
+       t.percent(min: 0%, max: 100%, exclusive: true, digits: 2),
+       doc: "Percentage, more than 0% and less than 100%, with at most 2 decimals.",
+diff --git a/tests/data/conformance/fixtures.json b/tests/data/conformance/fixtures.json
+index f32e20d..d725841 100644
+--- a/tests/data/conformance/fixtures.json
++++ b/tests/data/conformance/fixtures.json
+@@ -21758,6 +21758,352 @@
+    }
+   }
+  },
++ {
++  "name": "discount-days-36500",
++  "expect": "valid",
++  "doc": {
++   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "format": "invoice-pro/1",
++   "invoice-nr": "2026-0042",
++   "date": "2026-11-02",
++   "service-period": {
++    "start": "2026-10-01",
++    "end": "2026-10-31"
++   },
++   "customer-nr": "K-10077",
++   "order-nr": "PO-7781",
++   "project": "Gewerbeentsorgung 2026",
++   "notes": [
++    "Vielen Dank für Ihren Auftrag.",
++    {
++     "text": "Leistungen gemäß Rahmenvertrag RV-2025-03.",
++     "subject-code": "AAI"
++    }
++   ],
++   "recipient": {
++    "name": "Bayerische Beispiel AG",
++    "address": [
++     "Marienplatz 8",
++     "z. Hd. Einkauf"
++    ],
++    "city": {
++     "name": "München",
++     "post-code": "80331"
++    },
++    "country": "DE",
++    "vat-id": "DE987654321",
++    "buyer-reference": "04011000-1234512345-06",
++    "electronic-address": "einkauf@beispiel-ag.example",
++    "contact": {
++     "name": "Max Einkauf",
++     "email": "einkauf@beispiel-ag.example"
++    },
++    "custom": {
++     "segment": "enterprise",
++     "bezirk": "Altstadt-Lehel"
++    }
++   },
++   "items": [
++    {
++     "name": "Leerung Restmüll 1100 l",
++     "quantity": "8",
++     "unit": "H87",
++     "price": "38.90",
++     "tax": "19%",
++     "date": {
++      "start": "2026-10-01",
++      "end": "2026-10-31"
++     },
++     "item-id": {
++      "seller": "RM-1100"
++     },
++     "custom": {
++      "behaelter": "RM-1100-0815"
++     }
++    },
++    {
++     "kind": "group",
++     "name": "Sonderleistungen",
++     "show-subtotal": true,
++     "items": [
++      {
++       "name": "Sperrmüllabholung",
++       "date": "2026-10-17",
++       "price": "45.00",
++       "tax": "19%"
++      },
++      {
++       "name": "Behälterreinigung",
++       "quantity": "2",
++       "unit": "H87",
++       "price": "15.00",
++       "tax": "19%",
++       "modifiers": [
++        {
++         "kind": "discount",
++         "name": "Kulanz",
++         "amount": "50%"
++        }
++       ]
++      },
++      {
++       "name": "Gutachten Abfallbilanz",
++       "total": "80.00",
++       "tax": {
++        "category": "E",
++        "grounds": "Steuerfrei nach § 4 Nr. 21 UStG",
++        "code": "VATEX-EU-132"
++       }
++      }
++     ]
++    },
++    {
++     "kind": "bundle",
++     "name": "Starterpaket Gewerbe",
++     "quantity": "1",
++     "unit": "SET",
++     "items": [
++      {
++       "name": "Wertstofftonne 240 l",
++       "price": "29.00",
++       "tax": "19%"
++      },
++      {
++       "name": "Sortierleitfaden (Druck)",
++       "price": "4.50",
++       "tax": "7%"
++      }
++     ],
++     "modifiers": [
++      {
++       "kind": "discount",
++       "name": "Paketpreis",
++       "amount": "3.50"
++      }
++     ]
++    },
++    {
++     "name": "Strom Presscontainer",
++     "quantity": "120",
++     "unit": {
++      "code": "KWH",
++      "display": "kWh"
++     },
++     "price": "0.32",
++     "tax": "19%"
++    }
++   ],
++   "modifiers": [
++    {
++     "kind": "surcharge",
++     "name": "Energiekostenzuschlag",
++     "amount": "2.5%"
++    }
++   ],
++   "prepayments": [
++    {
++     "amount": "100.00",
++     "name": "Abschlag Oktober",
++     "date": "2026-10-05",
++     "reference": "AB-2026-0117"
++    }
++   ],
++   "payment": {
++    "terms": {
++     "days": 14,
++     "discount": [
++      {
++       "days": 36500,
++       "percent": "2%"
++      }
++     ]
++    },
++    "method": "direct-debit",
++    "direct-debit": {
++     "mandate": "MND-2025-0815",
++     "debtor-iban": "DE02120300000000202051"
++    }
++   },
++   "custom": {
++    "tarif": "Gewerbe M",
++    "wappen": "muenchen",
++    "kampagne-ende": "2026-12-31"
++   }
++  }
++ },
++ {
++  "name": "discount-days-36501",
++  "expect": "invalid",
++  "doc": {
++   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "format": "invoice-pro/1",
++   "invoice-nr": "2026-0042",
++   "date": "2026-11-02",
++   "service-period": {
++    "start": "2026-10-01",
++    "end": "2026-10-31"
++   },
++   "customer-nr": "K-10077",
++   "order-nr": "PO-7781",
++   "project": "Gewerbeentsorgung 2026",
++   "notes": [
++    "Vielen Dank für Ihren Auftrag.",
++    {
++     "text": "Leistungen gemäß Rahmenvertrag RV-2025-03.",
++     "subject-code": "AAI"
++    }
++   ],
++   "recipient": {
++    "name": "Bayerische Beispiel AG",
++    "address": [
++     "Marienplatz 8",
++     "z. Hd. Einkauf"
++    ],
++    "city": {
++     "name": "München",
++     "post-code": "80331"
++    },
++    "country": "DE",
++    "vat-id": "DE987654321",
++    "buyer-reference": "04011000-1234512345-06",
++    "electronic-address": "einkauf@beispiel-ag.example",
++    "contact": {
++     "name": "Max Einkauf",
++     "email": "einkauf@beispiel-ag.example"
++    },
++    "custom": {
++     "segment": "enterprise",
++     "bezirk": "Altstadt-Lehel"
++    }
++   },
++   "items": [
++    {
++     "name": "Leerung Restmüll 1100 l",
++     "quantity": "8",
++     "unit": "H87",
++     "price": "38.90",
++     "tax": "19%",
++     "date": {
++      "start": "2026-10-01",
++      "end": "2026-10-31"
++     },
++     "item-id": {
++      "seller": "RM-1100"
++     },
++     "custom": {
++      "behaelter": "RM-1100-0815"
++     }
++    },
++    {
++     "kind": "group",
++     "name": "Sonderleistungen",
++     "show-subtotal": true,
++     "items": [
++      {
++       "name": "Sperrmüllabholung",
++       "date": "2026-10-17",
++       "price": "45.00",
++       "tax": "19%"
++      },
++      {
++       "name": "Behälterreinigung",
++       "quantity": "2",
++       "unit": "H87",
++       "price": "15.00",
++       "tax": "19%",
++       "modifiers": [
++        {
++         "kind": "discount",
++         "name": "Kulanz",
++         "amount": "50%"
++        }
++       ]
++      },
++      {
++       "name": "Gutachten Abfallbilanz",
++       "total": "80.00",
++       "tax": {
++        "category": "E",
++        "grounds": "Steuerfrei nach § 4 Nr. 21 UStG",
++        "code": "VATEX-EU-132"
++       }
++      }
++     ]
++    },
++    {
++     "kind": "bundle",
++     "name": "Starterpaket Gewerbe",
++     "quantity": "1",
++     "unit": "SET",
++     "items": [
++      {
++       "name": "Wertstofftonne 240 l",
++       "price": "29.00",
++       "tax": "19%"
++      },
++      {
++       "name": "Sortierleitfaden (Druck)",
++       "price": "4.50",
++       "tax": "7%"
++      }
++     ],
++     "modifiers": [
++      {
++       "kind": "discount",
++       "name": "Paketpreis",
++       "amount": "3.50"
++      }
++     ]
++    },
++    {
++     "name": "Strom Presscontainer",
++     "quantity": "120",
++     "unit": {
++      "code": "KWH",
++      "display": "kWh"
++     },
++     "price": "0.32",
++     "tax": "19%"
++    }
++   ],
++   "modifiers": [
++    {
++     "kind": "surcharge",
++     "name": "Energiekostenzuschlag",
++     "amount": "2.5%"
++    }
++   ],
++   "prepayments": [
++    {
++     "amount": "100.00",
++     "name": "Abschlag Oktober",
++     "date": "2026-10-05",
++     "reference": "AB-2026-0117"
++    }
++   ],
++   "payment": {
++    "terms": {
++     "days": 14,
++     "discount": [
++      {
++       "days": 36501,
++       "percent": "2%"
++      }
++     ]
++    },
++    "method": "direct-debit",
++    "direct-debit": {
++     "mandate": "MND-2025-0815",
++     "debtor-iban": "DE02120300000000202051"
++    }
++   },
++   "custom": {
++    "tarif": "Gewerbe M",
++    "wappen": "muenchen",
++    "kampagne-ende": "2026-12-31"
++   }
++  }
++ },
+  {
+   "name": "invoice-nr-fs",
+   "expect": "valid",
+diff --git a/tests/data/contract/test.typ b/tests/data/contract/test.typ
+index e1e10e1..37290a5 100644
+--- a/tests/data/contract/test.typ
++++ b/tests/data/contract/test.typ
+@@ -345,6 +345,13 @@
+   )),
+   ("schema/payment/terms/discount/0/percent",),
+ )
++// a cash discount period of at most 100 years, as the payment days
++#assert.eq(
++  ids-of((
++    payment: (terms: (days: 14, discount: ((days: 36501, percent: "2%"),))),
++  )),
++  ("schema/payment/terms/discount/0/days",),
++)
+ // check() reports data that is no object instead of stopping
+ #for x in (none, (1, 2), 42, "abc", bytes("[1]"), true) {
+   let r = invoice-data.check(x)
+-- 
+2.43.0
+

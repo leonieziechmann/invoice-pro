@@ -247,7 +247,7 @@ The recipient's structured post code `80331` drives the Wappen rule of the skele
 
 ```json
 {
-  "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+  "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
   "format": "invoice-pro/1",
   "invoice-nr": "2026-0042",
   "date": "2026-11-02",
@@ -1113,7 +1113,7 @@ Branch `feature-data-api`, concept at `docs/concepts/data-api/README.md` with a 
 - **Q15 Internal speed PRs in 0.7.0?** _Recommendation:_ yes, as separate API-neutral PRs: `format-item`, exact page seed, shared item resolver, then the other resolvers; keep-together's cheaper check goes to a theme concept. _Alternative:_ later (maintainer judge: out of the feature PR).
 - **Q16 YAML and TOML.** _Recommendation:_ JSON canonical; TOML and YAML supported by file extension (TOML gives native dates). _Alternative:_ JSON only.
 - **Q17 `format` required.** _Recommendation:_ required (a missing one is an issue, another major panics). _Alternative:_ optional with default 1 (B, C).
-- **Q18 Schema `$id` host.** _Recommendation:_ the docs site, versioned by format major only (`https://invoice-pro.dev/schema/invoice-pro/1/…` or the real docs host).
+- **Q18 Schema `$id` host.** _Recommendation:_ the docs site, versioned by format major only (`https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/…` or the real docs host).
 - **Q19 Tier.** _Recommendation:_ `invoice-data`, `payment`, `invoice(data:, custom:)` experimental; the format provisional. _Alternative:_ provisional throughout.
 - **Q20 `item(custom:)`.** _Recommendation:_ 0.7.x, for preview parity with data rows, and freeze `view.items[i].custom` in the part contract.
 - **Q21 Batch in one process.** _Recommendation:_ processes in 0.7.0; a documented 0.15 bundle pattern (or helper) later. _Alternative:_ `invoice-data.batch` now (D).

@@ -1,0 +1,4094 @@
+From 3adb8e368e2f7265ba9278397657c0006b49c68c Mon Sep 17 00:00:00 2001
+From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 22:35:33 +0000
+Subject: [PATCH 01/10] feat(data): contract core, invoice(data:, custom:)
+ re-entry, rows engine, payment(..)
+
+Consolidated prototype of the unified data-hydration design (SYNTHESIS.md):
+descriptor-driven decoder and JSON Schema export (design D, trimmed to the
+invoice-pro/1 format), re-entry precedence in invoice(), design C's bulk
+rows engine behind the implicit items slot and the explicit marker, design
+B's payment(..) block with the paid-by-transfer account, region VAT rates,
+sealed ctx.custom and a lazy result record.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RaaQussN1QVEE8zRWeeCD3
+---
+ src/components/dynamic.typ     |   4 +
+ src/components/line-items.typ  |  34 +-
+ src/components/payment.typ     | 201 +++++++
+ src/components/root.typ        |  53 ++
+ src/contract/decode.typ        | 951 +++++++++++++++++++++++++++++++++
+ src/contract/export.typ        | 211 ++++++++
+ src/contract/hydrate.typ       | 160 ++++++
+ src/contract/input.typ         | 151 ++++++
+ src/contract/result-schema.typ | 110 ++++
+ src/contract/result.typ        | 142 +++++
+ src/contract/rows.typ          | 352 ++++++++++++
+ src/contract/schema.typ        | 860 +++++++++++++++++++++++++++++
+ src/contract/types.typ         | 172 ++++++
+ src/invoice.typ                |  88 +++
+ src/lib.typ                    |   2 +
+ src/locale/region/at.typ       |   3 +
+ src/locale/region/base.typ     |   6 +
+ src/locale/region/ch.typ       |   3 +
+ src/locale/region/de.typ       |   3 +
+ src/locale/region/es.typ       |   3 +
+ src/locale/region/fr.typ       |   3 +
+ src/locale/region/it.typ       |   3 +
+ src/public/invoice-data.typ    | 166 ++++++
+ src/theming/access.typ         |   5 +-
+ src/zugferd/model.typ          |   4 +-
+ tests/theme/exports/test.typ   |  19 +-
+ 26 files changed, 3703 insertions(+), 6 deletions(-)
+ create mode 100644 src/components/payment.typ
+ create mode 100644 src/contract/decode.typ
+ create mode 100644 src/contract/export.typ
+ create mode 100644 src/contract/hydrate.typ
+ create mode 100644 src/contract/input.typ
+ create mode 100644 src/contract/result-schema.typ
+ create mode 100644 src/contract/result.typ
+ create mode 100644 src/contract/rows.typ
+ create mode 100644 src/contract/schema.typ
+ create mode 100644 src/contract/types.typ
+ create mode 100644 src/public/invoice-data.typ
+
+diff --git a/src/components/dynamic.typ b/src/components/dynamic.typ
+index be6db52..d109873 100644
+--- a/src/components/dynamic.typ
++++ b/src/components/dynamic.typ
+@@ -23,6 +23,10 @@
+ // of this size takes time, and `info` creates one element per value when
+ // the package is imported.
+ #let _draw(pos, default, format, ctx, body) = {
++  // custom fields travel sealed (invoice.typ): paths read through them, and
++  // the function form gets them unsealed
++  let c = ctx.at("custom", default: none)
++  let ctx = if type(c) == content { ctx + (custom: c.value) } else { ctx }
+   if pos.len() == 0 {
+     return _to-content(default)
+   }
+diff --git a/src/components/line-items.typ b/src/components/line-items.typ
+index d0748b2..c226a9e 100755
+--- a/src/components/line-items.typ
++++ b/src/components/line-items.typ
+@@ -1,4 +1,4 @@
+-#import "../loom-wrapper.typ": loom, managed-motif
++#import "../loom-wrapper.typ": loom, managed-motif, motif
+ #import "../logic/modifier-applicator.typ": modifier-applicator
+ #import "../logic/tax-applicator.typ": tax-applicator
+ #import "../logic/tree.typ": resolve-tree
+@@ -10,6 +10,36 @@
+ #import "../theming/parts/body.typ": call-part
+ #import "../data/tax.typ" as m-tax
+ 
++// The items slot, the implicit binding point of the data's `items`,
++// `modifiers` and `prepayments`: the body of `line-items` is a preview sample.
++// Without data it passes the children through. Hydrated (`ctx.hydration`,
++// sealed by invoice()), the rows of the data take the place of the whole
++// body (ONE motif emits their frames, contract/rows.typ), unless the body
++// has an explicit `invoice-data.items[..]` marker, which then places them
++// (static rows outside it stay). The marker leaves a frame of its own kind
++// for this slot to count and remove. The engine is imported only when used.
++#let _items-slot(body) = motif(
++  measure: (ctx, children) => {
++    let markers = children.filter(f => f.kind == "invoice-data-items").len()
++    if markers > 1 {
++      panic(
++        "`invoice-data.items[..]` is the binding point of the data's line items: a `line-items` may have at most one, found "
++          + str(markers)
++          + ".",
++      )
++    }
++    let kept = if markers == 0 { children } else {
++      children.filter(f => f.kind != "invoice-data-items")
++    }
++    let h = ctx.at("hydration", default: none)
++    if h == none or markers > 0 { return (kept, false) }
++    import "../contract/rows.typ": compute, env-of
++    (compute(h.value.rows, env-of(ctx)), true)
++  },
++  draw: (ctx, _, hydrated, body) => if not hydrated { body },
++  body,
++)
++
+ /// The root container for all invoice items, bundles, and modifiers.
+ /// It establishes overarching tax settings, manages the global application of modifiers,
+ /// and handles the formatting of the generated invoice data.
+@@ -721,6 +751,6 @@
+     (
+       modifier-applicator,
+       tax-applicator,
+-    ).fold(body, (c, f) => f(c)),
++    ).fold(_items-slot(body), (c, f) => f(c)),
+   )
+ }
+diff --git a/src/components/payment.typ b/src/components/payment.typ
+new file mode 100644
+index 0000000..fa902a7
+--- /dev/null
++++ b/src/components/payment.typ
+@@ -0,0 +1,201 @@
++// The payment block (design B's component, one copy): one place in the
++// skeleton for everything about the payment, given in the shape of the data
++// format's `payment` section. It
++// writes the components the arguments call for (payment-terms, direct-debit,
++// card-payment or paid, bank-details), so a hydrated invoice can change WHICH
++// of them exist: the data chooses the method.
++#import "../loom-wrapper.typ": loom, loom-key, motif
++#import "../utils/types.typ"
++#import "payment-terms.typ": payment-terms
++#import "bank-details.typ": bank-details
++#import "payment-means.typ": (
++  card-payment, direct-debit as direct-debit-component, paid as paid-component,
++)
++
++#let _hydration(ctx) = {
++  let h = ctx.at("hydration", default: none)
++  if type(h) == content { h.value } else { h }
++}
++
++#let _missing(v) = v in (none, "", [])
++
++// The components of the block, and the data issues of an incomplete method.
++#let _components(a, show-reference, qr-code) = {
++  let method = if a.method != auto { a.method } else if a.paid != none {
++    "paid"
++  } else if a.direct-debit != none { "direct-debit" } else if a.card != none {
++    "card"
++  } else { "transfer" }
++  let issues = ()
++  let parts = ()
++  // a missing detail of the method: a data issue, and the component is left out
++  let missing(path) = {
++    import "../validation/issue.typ": issue
++    issue(
++      "schema/" + path.replace(".", "/"),
++      "data",
++      "invoice data: `"
++        + path
++        + "` is required: the payment method is \""
++        + method
++        + "\".",
++      ref: "invoice-pro/1 · " + path,
++      key: "schema-required",
++      args: (path: "/" + path.replace(".", "/")),
++    )
++  }
++  let p = if a.paid == none { (:) } else { a.paid }
++  if method == "paid" {
++    parts.push(paid-component(
++      method: p.at("method", default: auto),
++      date: p.at("date", default: none),
++    ))
++  } else if a.terms != none {
++    // the data's free-text terms (BT-20) are the text `date` of payment-terms
++    let t = a.terms
++    if "text" in t {
++      t.date = t.remove("text")
++    }
++    parts.push(payment-terms(..t))
++  }
++  if method == "direct-debit" {
++    let d = if a.direct-debit == none { (:) } else { a.direct-debit }
++    if _missing(d.at("mandate", default: none)) {
++      issues.push(missing("payment.direct-debit.mandate"))
++    }
++    if _missing(a.creditor-id) { issues.push(missing("payment.creditor-id")) }
++    if issues.len() == 0 {
++      parts.push(direct-debit-component(
++        mandate: d.mandate,
++        creditor-id: a.creditor-id,
++        debtor-iban: d.at("debtor-iban", default: none),
++      ))
++    }
++  } else if method == "card" {
++    let c = if a.card == none { (:) } else { a.card }
++    if _missing(c.at("last4", default: none)) {
++      issues.push(missing("payment.card.last4"))
++    } else {
++      parts.push(card-payment(
++        last4: c.last4,
++        holder: c.at("holder", default: none),
++        kind: c.at("kind", default: auto),
++      ))
++    }
++  }
++  // The account is the payment means of a transfer only: an invoice states
++  // one payment means (BT-81, CII-SR-467), so a direct debit, a card or a
++  // paid invoice leaves it out; an invoice paid BY transfer keeps it (the
++  // e-invoice needs the account then, CII-SR-470; design A).
++  let by-transfer = method == "paid" and p.at("method", default: auto) == "transfer"
++  if a.bank != none and (method == "transfer" or by-transfer) {
++    parts.push(bank-details(
++      ..a.bank,
++      show-reference: show-reference,
++      qr-code: qr-code,
++    ))
++  }
++  (parts.join(), issues)
++}
++
++/// The payment of the invoice in one block: the payment terms, the method
++/// (credit transfer, SEPA direct debit, payment card, or already paid) and the
++/// account to pay to. It places `payment-terms`, `direct-debit`,
++/// `card-payment` or `paid`, and `bank-details` as these arguments call for.
++///
++/// When the invoice is hydrated (`invoice(data: ..)`), the `payment` section
++/// of the data applies key by key: `terms`, `method`, `bank` and `creditor-id`
++/// keep this call's value unless the data gives them; `direct-debit`, `card`
++/// and `paid` describe one invoice and come from the data only (the values
++/// here are preview samples).
++///
++/// -> content
++#let payment(
++  /// The payment terms: `(days: 14)`, `(date: datetime(..))`, optionally
++  /// with `discount: (days: 7, percent: 2%)` (see `payment-terms`). `none`
++  /// prints none.
++  /// -> none | dictionary
++  terms: none,
++  /// How the recipient pays: `"transfer"`, `"direct-debit"`, `"card"` or
++  /// `"paid"`. `auto`: the method whose details are given, else a transfer.
++  /// -> auto | "transfer" | "direct-debit" | "card" | "paid"
++  method: auto,
++  /// The account to pay to: `(name: .., bank: .., iban: .., bic: ..)` (see
++  /// `bank-details`).
++  /// -> none | dictionary
++  bank: none,
++  /// The SEPA creditor identifier of the sender, for `"direct-debit"`.
++  /// -> none | str
++  creditor-id: none,
++  /// `(mandate: .., debtor-iban: ..)` of a direct debit.
++  /// -> none | dictionary
++  direct-debit: none,
++  /// `(last4: .., holder: .., kind: ..)` of a card payment.
++  /// -> none | dictionary
++  card: none,
++  /// `(method: .., date: ..)` of an invoice that is already paid.
++  /// -> none | dictionary
++  paid: none,
++  /// Layout: whether the bank details print the payment reference.
++  /// -> bool
++  show-reference: true,
++  /// Layout: the EPC QR code of the bank details, see `bank-details`.
++  /// -> dictionary
++  qr-code: (:),
++) = {
++  types.require(terms, "payment::terms", none, dictionary)
++  types.require(
++    method,
++    "payment::method",
++    auto,
++    "transfer",
++    "direct-debit",
++    "card",
++    "paid",
++  )
++  types.require(bank, "payment::bank", none, dictionary)
++  types.require(creditor-id, "payment::creditor-id", none, str, content)
++  types.require(direct-debit, "payment::direct-debit", none, dictionary)
++  types.require(card, "payment::card", none, dictionary)
++  types.require(paid, "payment::paid", none, dictionary)
++  types.require(show-reference, "payment::show-reference", bool)
++
++  let own = (
++    terms: terms,
++    method: method,
++    bank: bank,
++    creditor-id: creditor-id,
++    direct-debit: direct-debit,
++    card: card,
++    paid: paid,
++  )
++  let effective(ctx) = {
++    let h = _hydration(ctx)
++    if h == none { return own }
++    import "../contract/hydrate.typ": payment-args
++    payment-args(own, h.payment)
++  }
++  // The components exist only once the data is known (in the weave), so the
++  // block weaves them itself, like the content cells of a theme
++  // (loom-wrapper.typ `eval-content`).
++  motif(
++    measure: (ctx, _) => {
++      let (parts, issues) = _components(effective(ctx), show-reference, qr-code)
++      let (_, frames) = loom.core.intertwine(
++        ctx,
++        parts,
++        key: loom-key,
++        draw: false,
++      )
++      (
++        frames + (loom.frame.new(kind: "payment", signal: (issues: issues)),),
++        none,
++      )
++    },
++    draw: (ctx, ..) => {
++      let (parts, _) = _components(effective(ctx), show-reference, qr-code)
++      loom.core.intertwine(ctx, parts, key: loom-key, draw: true).first()
++    },
++    none,
++  )
++}
+diff --git a/src/components/root.typ b/src/components/root.typ
+index 5c30073..1edf82f 100644
+--- a/src/components/root.typ
++++ b/src/components/root.typ
+@@ -96,6 +96,38 @@
+   issues
+ }
+ 
++// The coverage check of the contract: a section of hydrated data that the
++// skeleton has no binding point for would be lost silently.
++#let _coverage-issues(ctx, view) = {
++  let h = ctx.at("hydration", default: none)
++  if h == none { return () }
++  let h = h.value
++  let issues = ()
++  if h.has-items and not view.has-line-items {
++    issues.push(issue(
++      "schema/items",
++      "data",
++      "invoice data: the data has line items, but the skeleton has no `line-items`: add `#line-items[]` where the items belong.",
++      ref: "invoice-pro/1 · items (binding point line-items)",
++      fix: "#line-items[]",
++      key: "schema-unbound",
++      args: (path: "/items"),
++    ))
++  }
++  if h.has-payment and view.payment-blocks.len() == 0 {
++    issues.push(issue(
++      "schema/payment",
++      "data",
++      "invoice data: the data has a `payment` section, but the skeleton has no `payment(..)` block: replace `payment-terms`/`bank-details` by `payment(terms: .., bank: ..)`.",
++      ref: "invoice-pro/1 · payment (binding point payment)",
++      fix: "#payment(terms: (days: 14), bank: (iban: ..))",
++      key: "schema-unbound",
++      args: (path: "/payment"),
++    ))
++  }
++  issues
++}
++
+ /// The internal root container that wraps the invoice body.
+ /// It initializes the global context and provides the base document structure to the theme.
+ ///
+@@ -245,6 +277,9 @@
+           message: "An invoice that is `paid` has no payment terms: nothing is left to pay, but `due-date` is a text of payment terms. Remove `due-date`, or give the date the payment was due as a `datetime`.",
+         )
+       }
++      // the blocks of `payment(..)`: their data issues, and whether the
++      // skeleton has a binding point for the payment section of the data
++      let payment-blocks = loom.query.collect-signals(children, kind: "payment")
+       let payment-means = resolve-payment-means(
+         bank-signals,
+         payment-means-signals.direct-debit,
+@@ -296,6 +331,8 @@
+         payment-means: payment-means,
+         // all bank details of the body: an account each (the first is `bank`)
+         banks: bank-signals,
++        payment-blocks: payment-blocks,
++        has-line-items: all-line-itmes.len() > 0,
+         total: total,
+         formated-total: formated-total,
+       )
+@@ -472,6 +509,8 @@
+             )
+             + _bank-issues(view.banks)
+             + _direct-debit-issues(view.payment-means.direct-debit)
++            + view.payment-blocks.map(b => b.issues).flatten()
++            + _coverage-issues(ctx, view)
+         )
+       }
+       let issues = enforce(issues, level)
+@@ -498,6 +537,8 @@
+       )
+ 
+       let body = body
++      // the e-invoice outcome, for the result contract
++      let e-result = none
+       if ctx.zugferd != none and not withheld {
+         // Loaded here rather than at the top of the module, so that invoices
+         // without an e-invoice do not load the e-invoice modules (code lists,
+@@ -523,6 +564,7 @@
+           payment-means: view.payment-means,
+         )
+         let errors = result.diagnostics.filter(d => d.level == "error")
++        e-result = result
+         // The report module loads only when there is something to report.
+         if errors.len() > 0 and ctx.zugferd-errors == "panic" {
+           import "../zugferd/report.typ": format-report
+@@ -602,6 +644,17 @@
+         description: if description == "" { none } else { description },
+         keywords: keywords,
+       )
++      // The result contract (contract/result.typ): what a program needs
++      // back, as JSON-friendly strings, for `typst query`/`typst eval`. A
++      // hydrated invoice has it; another one on request only (its module
++      // loads only then, and it loads no descriptor).
++      if (
++        "hydration" in ctx
++          or sys.inputs.at("invoice-pro-result", default: none) == "1"
++      ) {
++        import "../contract/result.typ": result-element
++        body = result-element(ctx, view, issues, withheld, e-result) + body
++      }
+       render-frame(ctx, body)
+     },
+     body,
+diff --git a/src/contract/decode.typ b/src/contract/decode.typ
+new file mode 100644
+index 0000000..96c4030
+--- /dev/null
++++ b/src/contract/decode.typ
+@@ -0,0 +1,951 @@
++// The decoder: interprets the descriptor (schema.typ) over parsed data.
++//
++// Pure data in, Typst values out: no eval, no file access, no panic for a
++// problem in the data. Every problem becomes ONE `data` issue whose id is
++// "schema" + the JSON Pointer of the value ("schema/items/3/price"), so the
++// validation level decides what happens (draft: report + XML withheld,
++// strict: stop, none: silent). The invalid value is left out, so a required
++// key the data got wrong is also reported by the legal checks (check-data).
++//
++// What the decoder accepts is the JSON Schema of export.typ plus three
++// documented leniencies: JSON null = absent (also as `kind`), JSON numbers
++// for decimals (converted exactly), and native TOML dates. The conformance
++// fixtures check that every document the JSON Schema accepts decodes without
++// issues, and the reverse.
++//
++// Crash-free (Typst has no try/catch): every value is pattern-checked before
++// `decimal()`, `datetime()` or a constructor sees it, every type is checked
++// before a method call, `in` never sees `none`, and the rules the loom guards
++// would check for a hand-written body (nesting, the VAT scope of a modifier,
++// note/origin in a bundle, amounts in range) are checked here, because data
++// rows do not pass through those guards.
++#import "schema.typ" as s
++#import "../validation/issue.typ": issue
++#import "../utils/patch.typ": did-you-mean
++#import "../data/tax.typ" as m-tax
++#import "../public/id.typ" as m-id
++#import "../public/unit.typ" as m-unit
++
++// "no value": absent, null, or invalid (then an issue says why)
++#let _drop = auto
++
++// ---- paths --------------------------------------------------------------------
++
++#let _escape(k) = str(k).replace("~", "~0").replace("/", "~1")
++/// JSON Pointer (RFC 6901) of a path given as an array of keys/indices.
++#let pointer(path) = path.map(k => "/" + _escape(k)).join()
++#let _ptr(path) = if path.len() == 0 { "" } else { pointer(path) }
++// what a person reads: items[3].price
++#let dotted(path) = {
++  let out = ""
++  for k in path {
++    if type(k) == int { out += "[" + str(k) + "]" } else if out == "" {
++      out += k
++    } else { out += "." + k }
++  }
++  if out == "" { "(document)" } else { out }
++}
++
++// the subject of a message: "invoice data" or "invoice data: `items[3]`"
++#let _where(path) = if path.len() == 0 { "invoice data" } else {
++  "invoice data: `" + dotted(path) + "`"
++}
++
++#let _kind(v) = {
++  let t = type(v)
++  if v == none { "null" } else if t == str { "string" } else if t == int {
++    "integer"
++  } else if t == float { "number" } else if t == bool { "boolean" } else if (
++    t == dictionary
++  ) { "object" } else if t == array { "array" } else if t == datetime {
++    "date"
++  } else if t == decimal { "decimal" } else if t == ratio { "ratio" } else {
++    str(t)
++  }
++}
++#let _shown(v) = {
++  let r = if type(v) == str { "\"" + v + "\"" } else { repr(v) }
++  if r.len() > 40 { r.slice(0, 37) + "…" } else { r }
++}
++
++/// The issue of a problem at `path`. `key` names the kind of problem; the
++/// locale string `strings.validation.issues.schema-<key>` may translate it.
++#let problem(path, key, message, fix: none, args: (:)) = issue(
++  "schema" + _ptr(path),
++  "data",
++  message,
++  ref: s.format + " · " + dotted(path),
++  fix: fix,
++  key: "schema-" + key,
++  args: (path: _ptr(path)) + args,
++)
++#let _bad(path, expected, v, fix: none) = (
++  _drop,
++  (
++    problem(
++      path,
++      "type",
++      "invoice data: `"
++        + dotted(path)
++        + "` must be "
++        + expected
++        + ", found "
++        + _shown(v)
++        + ".",
++      fix: fix,
++      args: (expected: expected, found: _kind(v)),
++    ),
++  ),
++)
++
++// ---- scalar parsers (value only, so Typst memoizes repeated values) ----------
++
++// ASCII classes: `\d` matches every Unicode digit (and is slower in Typst).
++#let _date-re = regex("^([0-9]{4})-([0-9]{2})-([0-9]{2})$")
++#let _dec-re = regex("^-?[0-9]{1,20}(\.[0-9]{1,10})?$")
++#let _pct-re = regex("^([0-9]{1,3}(?:\.[0-9]{1,6})?)%$")
++
++#let _days-in(y, m) = if m == 2 {
++  if calc.rem(y, 4) == 0 and (calc.rem(y, 100) != 0 or calc.rem(y, 400) == 0) {
++    29
++  } else { 28 }
++} else if m in (4, 6, 9, 11) { 30 } else { 31 }
++
++#let _date-of(x) = {
++  let m = x.match(_date-re)
++  if m == none { return none }
++  let (y, mo, d) = m.captures.map(int)
++  if mo >= 1 and mo <= 12 and d >= 1 and d <= _days-in(y, mo) {
++    datetime(year: y, month: mo, day: d)
++  }
++}
++// a decimal Typst can hold: at most 28 significant digits (the pattern alone
++// admits 30, which `decimal()` rejects with a hard error)
++#let _decimal-of(x) = {
++  let m = x.match(_dec-re)
++  if m == none { return none }
++  let parts = x.trim("-", at: start).split(".")
++  let (int-part, frac) = (parts.first(), parts.at(1, default: ""))
++  if int-part.trim("0", at: start).len() + frac.len() > 28 { return none }
++  decimal(x)
++}
++// float(n) / 100 * 100% equals the Typst literal bit for bit (n * 1% does
++// not, e.g. for 9.975%); the regions' tax inference compares with ==.
++#let _percent-of(x) = {
++  let m = x.match(_pct-re)
++  if m != none { float(m.captures.first()) / 100 * 100% }
++}
++
++// ---- converters: decoded JSON -> the Typst value of the API -------------------
++
++#let _unit-names = dictionary(m-unit)
++#let _unit-fn(name) = _unit-names.at(if name == "set" { "unit-set" } else {
++  name
++})
++
++// The labels of the `tax.*` constructors by UNTDID 5305 category (a tax
++// object of the data equals the constructor's dictionary).
++#let _tax-labels = (
++  S: "vat",
++  Z: "zero",
++  E: "exempt",
++  AE: "reverse-charge",
++  K: "intra-community",
++  G: "export",
++  O: "outside-scope",
++  A: "mixed",
++  AA: "lower-rate",
++  AB: "exempt-for-resale",
++  AC: "vat-not-due",
++  AD: "vat-previous",
++  B: "transferred",
++  C: "duty-paid",
++  D: "margin-travel",
++  F: "margin-second-hand",
++  H: "higher-rate",
++  I: "margin-art",
++  J: "margin-antiques",
++  L: "canary-islands",
++  M: "ceuta-melilla",
++  N: "standard-additional",
++)
++
++#let _convert(conv, v, path) = {
++  if conv == "tax" {
++    if type(v) == ratio {
++      if v == 0% {
++        return (
++          _drop,
++          (
++            problem(
++              path,
++              "tax-zero",
++              "invoice data: `"
++                + dotted(path)
++                + "` is \"0%\": a rate of zero needs its category, e.g. {\"category\": \"E\", \"grounds\": \"…\"} (exempt), \"AE\" (reverse charge), \"K\" (intra-community), \"G\" (export), \"O\" (outside scope) or \"Z\" (zero rated).",
++              fix: "{\"category\": \"E\", \"grounds\": \"§ 4 Nr. 14 UStG\"}",
++            ),
++          ),
++        )
++      }
++      // "19%" stays the ratio: the region's `infer-tax` resolves it exactly
++      // as `tax: 19%` written in Typst (the region pass checks the rate)
++      return (v, ())
++    }
++    let c = v.category
++    let rate = v.at("rate", default: 0%)
++    if c == "S" and rate == 0% {
++      return (
++        _drop,
++        (
++          problem(
++            path + ("rate",),
++            "tax-rate",
++            "invoice data: `"
++              + dotted(path)
++              + "` has category \"S\" (standard rate) but no rate: give \"rate\": \"19%\", or the category of a zero rate.",
++            fix: "\"rate\": \"19%\"",
++          ),
++        ),
++      )
++    }
++    return (
++      m-tax.new(
++        rate: rate,
++        category: c,
++        label: v.at("label", default: _tax-labels.at(c)),
++        grounds: v.at("grounds", default: if c == "AE" {
++          "Reverse charge"
++        }),
++        code: v.at("code", default: none),
++      ),
++      (),
++    )
++  }
++  if conv == "unit" {
++    if type(v) == str {
++      let name = s.unit-codes.at(v, default: none)
++      // another Rec 20 code prints as the code (the alias table of the
++      // e-invoice knows it as such)
++      if name == none { return ((code: v, display: v), ()) }
++      return (_unit-fn(name), ())
++    }
++    return (v, ())
++  }
++  if conv == "identifier" {
++    if type(v) != dictionary { return (v, ()) }
++    let sc = v.scheme
++    let made = if sc == "gln" { m-id.gln(v.id) } else if sc == "duns" {
++      m-id.duns(v.id)
++    } else if sc == "siren" { m-id.siren(v.id) } else if sc == "siret" {
++      m-id.siret(v.id)
++    } else if sc == "uid-ch" { m-id.uid-ch(v.id) } else if sc == "leitweg" {
++      m-id.leitweg(v.id)
++    } else if sc == "register" {
++      m-id.register(v.id, court: v.at("court", default: none))
++    } else { (scheme: sc, id: v.id) }
++    return (made, ())
++  }
++  if conv == "leitweg" { return (m-id.leitweg(v), ()) }
++  (v, ())
++}
++
++// ---- rules of the line items (the loom guards of hand-written rows) ------------
++
++// containers nest at most this deep: `collect-signals(depth: 10)` in
++// calculate-modifier would leave deeper items out of the totals silently
++#let max-nesting = 8
++#let _row-rules = ("item", "group", "bundle")
++#let _level(path) = path.filter(k => k == "items").len()
++
++// whether rows hold at least one item (a modifier without a pinned tax takes
++// its VAT category from them)
++#let has-item(rows) = rows.any(r => {
++  let k = r.at("kind", default: "item")
++  if k == "item" { true } else { has-item(r.at("items", default: ())) }
++})
++
++// amounts Typst's decimals can compute with (price × quantity ÷ base)
++#let _in-range(row) = {
++  let q = calc.abs(float(row.at("quantity", default: decimal("1"))))
++  let b = float(row.at("base-quantity", default: decimal("1")))
++  let a = calc.abs(float(row.at("price", default: row.at(
++    "total",
++    default: decimal("0"),
++  ))))
++  a * calc.max(q, 1.0) / calc.min(b, 1.0) < 1e18
++}
++
++// (row or false, issues) of a decoded row at `path`
++#let _rule-row(name, row, path) = {
++  let issues = ()
++  if name in ("group", "bundle") and _level(path) > max-nesting {
++    return (
++      false,
++      (
++        problem(
++          path,
++          "nesting",
++          _where(path)
++            + " nests groups and bundles deeper than "
++            + str(max-nesting)
++            + " levels; flatten it.",
++        ),
++      ),
++    )
++  }
++  if name == "item" and not _in-range(row) {
++    return (
++      false,
++      (
++        problem(
++          path,
++          "range",
++          _where(path)
++            + " has an amount out of range (price × quantity must stay below 10^18).",
++        ),
++      ),
++    )
++  }
++  if name == "bundle" {
++    let kids = row.at("items", default: ())
++    let fixed = ()
++    for (i, kid) in kids.enumerate() {
++      if kid.kind == "item" and ("note" in kid or "origin" in kid) {
++        issues.push(problem(
++          path + ("items", i),
++          "placement",
++          "invoice data: `"
++            + dotted(path + ("items", i))
++            + "` is an item of a bundle, which prints as one line: `note` and `origin` are left out.",
++        ))
++        let _ = kid.remove("note", default: none)
++        let _ = kid.remove("origin", default: none)
++      }
++      fixed.push(kid)
++    }
++    row.items = fixed
++    if not has-item(fixed) {
++      return (
++        false,
++        issues
++          + (
++            problem(
++              path + ("items",),
++              "required",
++              _where(path) + " has no valid item.",
++            ),
++          ),
++      )
++    }
++  }
++  (row, issues)
++}
++
++// Document modifiers without a pinned `tax` take their VAT category from the
++// items; without any item they would stop the compilation.
++#let _scope-issues(values) = {
++  let mods = values.at("modifiers", default: ())
++  if mods.len() == 0 or has-item(values.at("items", default: ())) {
++    return (values, ())
++  }
++  let issues = ()
++  let kept = ()
++  for (i, m) in mods.enumerate() {
++    if "tax" in m { kept.push(m) } else {
++      issues.push(problem(
++        ("modifiers", i),
++        "placement",
++        "invoice data: `modifiers["
++          + str(i)
++          + "]` takes its VAT category from the items, but the data has no valid item: give it a `tax`, or add items.",
++        fix: "\"tax\": \"19%\"",
++      ))
++    }
++  }
++  values.modifiers = kept
++  (values, issues)
++}
++
++// ---- the region pass: "19%" must be a VAT rate of the locale's region ------------
++
++#let _rate-issue(path, r, region, rates) = problem(
++  path,
++  "tax-rate",
++  "invoice data: `"
++    + dotted(path)
++    + "`: "
++    + repr(r)
++    + " is no VAT rate of region "
++    + region
++    + " ("
++    + rates.map(repr).join(", ")
++    + "); for another rate write {\"category\": \"S\", \"rate\": \""
++    + repr(r)
++    + "\"}.",
++  fix: "{\"category\": \"S\", \"rate\": \"" + repr(r) + "\"}",
++)
++
++// A value whose `tax` is a rate the region does not know: the tax is left out
++// (an issue says why), so the region's `infer-tax` never panics on data.
++#let _region-of(x, path, region, rates) = {
++  let issues = ()
++  if type(x) == dictionary {
++    let t = x.at("tax", default: none)
++    if type(t) == ratio and t not in rates {
++      issues.push(_rate-issue(path + ("tax",), t, region, rates))
++      let _ = x.remove("tax")
++    }
++    for key in ("items", "modifiers") {
++      let kids = x.at(key, default: none)
++      if type(kids) != array { continue }
++      let out = ()
++      for (i, kid) in kids.enumerate() {
++        let (y, iss) = _region-of(kid, path + (key, i), region, rates)
++        out.push(y)
++        issues += iss
++      }
++      x.insert(key, out)
++    }
++  }
++  (x, issues)
++}
++
++/// The region pass over decoded values: `rates` are the region's VAT rates
++/// (`locale.normalize.vat-rates`); `none` skips it (a region that does not
++/// list them: its `infer-tax` decides, as for `tax: 16%` written in Typst).
++/// -> array
++#let region-pass(values, region, rates) = {
++  if rates == none or type(values) != dictionary { return (values, ()) }
++  _region-of(values, (), region, rates)
++}
++
++// ---- the interpreter ------------------------------------------------------------
++
++#let _finish(ty, value, issues, path) = {
++  if value != _drop and ty.at("conv", default: none) != none {
++    let (value, more) = _convert(ty.conv, value, path)
++    (value, issues + more)
++  } else { (value, issues) }
++}
++
++// The JSON kinds a type accepts (for unions and messages).
++#let _kinds(ty, objs) = {
++  let t = ty.t
++  if t in ("text", "enum") { ("string",) } else if t == "lines" {
++    ("string", "array")
++  } else if t == "decimal" {
++    ("string", "integer", "number", "decimal")
++  } else if (
++    t in ("percent", "amount")
++  ) { ("string", "ratio", "decimal") } else if t == "int" {
++    ("integer",)
++  } else if (
++    t == "bool"
++  ) { ("boolean",) } else if t == "date" { ("string", "date") } else if (
++    t == "period"
++  ) { ("string", "date", "object") } else if t in ("ref", "map", "tagged") {
++    ("object",)
++  } else if t == "array" { ("array",) } else if t == "const" {
++    (_kind(ty.value),)
++  } else if t == "union" { ty.of.map(x => _kinds(x, objs)).flatten() } else {
++    ("string", "integer", "number", "boolean", "object", "array", "date")
++  }
++}
++
++#let _expected(ty) = {
++  let t = ty.t
++  if t == "text" {
++    if ty.pattern-doc != none { ty.pattern-doc } else { "a string" }
++  } else if t == "lines" { "a string or an array of strings" } else if (
++    t == "decimal"
++  ) { "a decimal number written as a string such as \"12.30\"" } else if (
++    t == "percent"
++  ) { "a percentage such as \"19%\"" } else if t == "amount" {
++    "an amount such as \"50.00\" or \"10%\""
++  } else if t == "int" { "a whole number" } else if t == "bool" {
++    "true or false"
++  } else if t == "date" { "a date \"YYYY-MM-DD\"" } else if t == "period" {
++    "a date \"YYYY-MM-DD\" or {\"start\": .., \"end\": ..}"
++  } else if t == "enum" {
++    "one of " + ty.values.map(x => "\"" + x + "\"").join(", ")
++  } else if t == "const" { _shown(ty.value) } else if t in ("ref", "map") {
++    "an object"
++  } else if t == "tagged" { "an object" } else if t == "array" {
++    "an array"
++  } else if t == "union" { ty.of.map(_expected).join(", or ") } else {
++    "a value"
++  }
++}
++
++#let decode-value(ty, v, path, objs, ctx) = {
++  let t = ty.t
++  if t == "ref" {
++    // a named object: closed unless declared open, plus its cross-field rules
++    let name = ty.name
++
++    if type(v) != dictionary { return _bad(path, "an object", v) }
++    let obj = objs.value.at(ty.name)
++    let fields = obj.fields
++    let out = (:)
++    let issues = ()
++    let seen = ()
++    for (key, x) in v {
++      if key not in fields {
++        // a bag keeps what it is given, JSON null as `none`
++        if obj.open { out.insert(key, x) } else if x != none {
++          // party keys: the alias table of the e-invoice (plz, mail, ust-id, …)
++          let hint = if (
++            name
++              in ("seller", "buyer", "ship-to", "payee", "tax-representative")
++          ) {
++            import "../zugferd/keys.typ": unknown-key
++            let u = unknown-key(
++              key,
++              fields.keys().map(x => (x, true)).to-dict(),
++            )
++            (
++              if u.like != none { " Did you mean `" + u.like + "`?" } else {
++                ""
++              }
++                + if u.hint != none { " " + u.hint } else { "" }
++            )
++          } else { did-you-mean(key, fields.keys()) }
++          let newer = if ctx.minor > s.minor {
++            (
++              " The data is written for "
++                + s.format
++                + "."
++                + str(ctx.minor)
++                + "; this invoice-pro reads "
++                + s.format
++                + "."
++                + str(s.minor)
++                + ": update invoice-pro, or leave the key out."
++            )
++          } else { "" }
++          issues.push(problem(
++            path + (key,),
++            "unknown-key",
++            _where(path)
++              + " has an unknown key `"
++              + key
++              + "`."
++              + hint
++              + newer
++              + " Allowed keys: "
++              + fields.keys().filter(x => x != "$schema").join(", ")
++              + ". Your own fields belong in `custom`.",
++            args: (key: key),
++          ))
++        }
++        continue
++      }
++      // null = absent, at every level
++      if x == none { continue }
++      let f = fields.at(key)
++      if x == "" and f.type.t in ("text", "lines") {
++        if f.required {
++          issues.push(problem(
++            path + (key,),
++            "required",
++            "invoice data: `" + dotted(path + (key,)) + "` must not be empty.",
++          ))
++          seen.push(key)
++        }
++        continue
++      }
++      seen.push(key)
++      let (y, iss) = decode-value(f.type, x, path + (key,), objs, ctx)
++      issues += iss
++      if y != _drop { out.insert(key, y) }
++    }
++    // keys the data gave whose value was invalid (an issue said why)
++    let invalid = seen.filter(x => x not in out)
++    let broken = false
++    for (key, f) in fields {
++      if not f.required { continue }
++      if key in invalid { broken = true }
++      if key not in seen {
++        broken = true
++        issues.push(problem(
++          path + (key,),
++          "required",
++          _where(path)
++            + " needs `"
++            + key
++            + "`"
++            + if f.doc != none { " (" + f.doc.trim(".", at: end) + ")" } else {
++              ""
++            }
++            + ".",
++          fix: if f.example != none {
++            "\"" + key + "\": " + json.encode(f.example)
++          },
++          args: (key: key),
++        ))
++      }
++    }
++    for group in obj.exactly-one {
++      let given = group.filter(x => x in seen)
++      if given.len() != 1 {
++        broken = true
++        issues.push(problem(
++          path,
++          "exactly-one",
++          _where(path)
++            + " needs exactly one of "
++            + group.map(x => "`" + x + "`").join(" or ")
++            + ", found "
++            + if given.len() == 0 { "none" } else { given.join(" and ") }
++            + ".",
++        ))
++      } else if given.first() in invalid { broken = true }
++    }
++    for group in obj.at-most-one + obj.exclusive {
++      let given = group.filter(x => x in seen)
++      if given.len() > 1 {
++        issues.push(problem(
++          path,
++          "exclusive",
++          _where(path)
++            + " cannot have both "
++            + given.map(x => "`" + x + "`").join(" and ")
++            + ".",
++        ))
++        for x in given.slice(1) { let _ = out.remove(x, default: none) }
++      }
++    }
++    for (a, b) in obj.excludes-if-true {
++      if out.at(a, default: false) == true and b in out {
++        issues.push(problem(
++          path + (b,),
++          "exclusive",
++          _where(path)
++            + " cannot have `"
++            + b
++            + "` together with `"
++            + a
++            + "`: true.",
++        ))
++        let _ = out.remove(b)
++      }
++    }
++    // An object that lacks what it needs is left out as a whole (a line
++    // without a price cannot be computed), unless the schema keeps a partial
++    // one (parties: the legal checks then name what is missing).
++    if broken and not obj.partial { return (_drop, issues) }
++    if name in _row-rules {
++      let (row, more) = _rule-row(name, out, path)
++      issues += more
++      if row == false { return (_drop, issues) }
++      out = row
++    }
++    return _finish(ty, out, issues, path)
++  }
++  let k = _kind(v)
++  let result = if t == "any" { (v, ()) } else if t == "text" {
++    if k != "string" {
++      _bad(path, _expected(ty), v, fix: if k in ("integer", "number") {
++        "\"" + str(v) + "\""
++      })
++    } else if ty.max != none and v.len() > ty.max {
++      (
++        _drop,
++        (
++          problem(
++            path,
++            "length",
++            "invoice data: `"
++              + dotted(path)
++              + "` has "
++              + str(v.len())
++              + " characters; at most "
++              + str(ty.max)
++              + " are allowed.",
++          ),
++        ),
++      )
++    } else if ty.pattern != none and v.match(regex(ty.pattern)) == none {
++      _bad(path, _expected(ty), v, fix: ty.at("example", default: none))
++    } else { (v, ()) }
++  } else if t == "lines" {
++    if k == "string" { (v, ()) } else if (
++      k == "array" and v.all(x => type(x) == str)
++    ) { (v, ()) } else { _bad(path, _expected(ty), v) }
++  } else if t == "decimal" {
++    let d = if k == "string" { _decimal-of(v) } else if k == "integer" {
++      decimal(v)
++    } else if k == "number" { _decimal-of(str(v)) } else if k == "decimal" {
++      v
++    }
++    if d == none {
++      _bad(path, _expected(ty), v, fix: "\"12.30\"")
++    } else if ty.positive and d <= 0 {
++      _bad(path, "a decimal greater than 0", v)
++    } else if ty.min != none and d < ty.min {
++      _bad(path, "a decimal of at least " + str(ty.min), v)
++    } else { (d, ()) }
++  } else if t == "percent" {
++    let r = if k == "string" { _percent-of(v) } else if k == "ratio" { v }
++    if r == none {
++      _bad(path, _expected(ty), v, fix: "\"19%\"")
++    } else if ty.min != none and r < ty.min {
++      _bad(path, "a percentage of at least " + repr(ty.min), v)
++    } else if ty.max != none and r > ty.max {
++      _bad(path, "a percentage of at most " + repr(ty.max), v)
++    } else { (r, ()) }
++  } else if t == "amount" {
++    if (k == "string" and v.ends-with("%")) or k == "ratio" {
++      decode-value((t: "percent", min: 0%, max: none), v, path, objs, ctx)
++    } else {
++      decode-value(
++        (t: "decimal", min: decimal("0"), positive: false),
++        v,
++        path,
++        objs,
++        ctx,
++      )
++    }
++  } else if t == "int" {
++    if k != "integer" { _bad(path, _expected(ty), v) } else if (
++      ty.min != none and v < ty.min
++    ) { _bad(path, "a whole number of at least " + str(ty.min), v) } else if (
++      ty.max != none and v > ty.max
++    ) { _bad(path, "a whole number of at most " + str(ty.max), v) } else {
++      (v, ())
++    }
++  } else if t == "bool" {
++    if k == "boolean" { (v, ()) } else { _bad(path, _expected(ty), v) }
++  } else if t == "date" {
++    let d = if k == "string" { _date-of(v) } else if (
++      k == "date" and v.day() != none
++    ) { v }
++    if d == none { _bad(path, _expected(ty), v, fix: "\"2026-11-02\"") } else {
++      (d, ())
++    }
++  } else if t == "period" {
++    if k == "object" {
++      let unknown = v.keys().filter(x => x not in ("start", "end"))
++      if unknown.len() > 0 or "start" not in v or "end" not in v {
++        _bad(
++          path,
++          _expected(ty),
++          v,
++          fix: "{\"start\": \"2026-10-01\", \"end\": \"2026-10-31\"}",
++        )
++      } else {
++        let (a, ia) = decode-value(
++          (t: "date"),
++          v.start,
++          path + ("start",),
++          objs,
++          ctx,
++        )
++        let (b, ib) = decode-value(
++          (t: "date"),
++          v.end,
++          path + ("end",),
++          objs,
++          ctx,
++        )
++        if ia.len() + ib.len() > 0 { (_drop, ia + ib) } else if b < a {
++          (
++            _drop,
++            (
++              problem(
++                path,
++                "period",
++                "invoice data: `" + dotted(path) + "` ends before it starts.",
++              ),
++            ),
++          )
++        } else { ((a, b), ()) }
++      }
++    } else { decode-value((t: "date"), v, path, objs, ctx) }
++  } else if t == "enum" {
++    if k == "string" and v in ty.values { (v, ()) } else {
++      let hint = if k == "string" { did-you-mean(v, ty.values) } else { "" }
++      (
++        _drop,
++        (
++          problem(
++            path,
++            "enum",
++            "invoice data: `"
++              + dotted(path)
++              + "` must be "
++              + _expected(ty)
++              + ", found "
++              + _shown(v)
++              + "."
++              + hint,
++            args: (allowed: ty.values.join(", ")),
++          ),
++        ),
++      )
++    }
++  } else if t == "const" {
++    if v == ty.value { (v, ()) } else { _bad(path, _expected(ty), v) }
++  } else if t == "array" {
++    if k != "array" { _bad(path, _expected(ty), v) } else if (
++      ty.min != none and v.len() < ty.min
++    ) {
++      (
++        _drop,
++        (
++          problem(
++            path,
++            "length",
++            "invoice data: `"
++              + dotted(path)
++              + "` needs at least "
++              + str(ty.min)
++              + " entries.",
++          ),
++        ),
++      )
++    } else {
++      let out = ()
++      let issues = ()
++      for (i, x) in v.enumerate() {
++        if x == none {
++          issues.push(problem(
++            path + (i,),
++            "type",
++            "invoice data: `"
++              + dotted(path + (i,))
++              + "` is null; leave the entry out of the array.",
++          ))
++          continue
++        }
++        let (y, iss) = decode-value(ty.of, x, path + (i,), objs, ctx)
++        issues += iss
++        if y != _drop { out.push(y) }
++      }
++      (out, issues)
++    }
++  } else if t == "map" {
++    if k != "object" { _bad(path, _expected(ty), v) } else {
++      let out = (:)
++      let issues = ()
++      for (key, x) in v {
++        if x == none { continue }
++        let (y, iss) = decode-value(ty.of, x, path + (key,), objs, ctx)
++        issues += iss
++        if y != _drop { out.insert(key, y) }
++      }
++      (out, issues)
++    }
++  } else if t == "tagged" {
++    if k != "object" { _bad(path, "an object", v) } else {
++      // absent and null select the default case (generated models dump null)
++      let tag = v.at(ty.key, default: none)
++      if tag == none { tag = ty.default }
++      if type(tag) != str or tag not in ty.cases {
++        (
++          _drop,
++          (
++            problem(
++              path + (ty.key,),
++              "enum",
++              "invoice data: `"
++                + dotted(path + (ty.key,))
++                + "` must be one of "
++                + ty.cases.keys().map(x => "\"" + x + "\"").join(", ")
++                + ", found "
++                + _shown(tag)
++                + "."
++                + if type(tag) == str {
++                  did-you-mean(tag, ty.cases.keys())
++                } else { "" },
++            ),
++          ),
++        )
++      } else {
++        let (row, issues) = decode-value(
++          (t: "ref", name: ty.cases.at(tag)),
++          v,
++          path,
++          objs,
++          ctx,
++        )
++        // the engine reads the kind of every row
++        if row != _drop { row.insert(ty.key, tag) }
++        (row, issues)
++      }
++    }
++  } else if t == "union" {
++    let alt = ty.of.find(x => k in _kinds(x, objs))
++    if alt == none { _bad(path, _expected(ty), v) } else {
++      decode-value(alt, v, path, objs, ctx)
++    }
++  } else { panic("internal: unknown contract type " + repr(t)) }
++  // converters build the Typst value of the API from the decoded one
++  let (value, issues) = result
++  _finish(ty, value, issues, path)
++}
++
++// ---- documents ----------------------------------------------------------------------
++
++#let _format-re = regex("^invoice-pro/([0-9]+)(?:\.([0-9]+))?$")
++
++/// Decodes one document. Returns (values, issues, major, minor, fatal):
++/// `fatal` is a message when the data is in a format this package cannot
++/// read at all (another major version). `region` (e.g. `"de"`) adds the
++/// region pass with `rates`, the region's VAT rates.
++/// -> dictionary
++#let decode-document(raw, region: none, rates: none) = {
++  if type(raw) != dictionary {
++    return (
++      values: (:),
++      issues: (
++        problem(
++          (),
++          "type",
++          "invoice data must be a JSON object, found " + _kind(raw) + ".",
++        ),
++      ),
++      major: none,
++      minor: 0,
++      fatal: none,
++    )
++  }
++  let f = raw.at("format", default: none)
++  let m = if type(f) == str { f.match(_format-re) }
++  let major = if m != none { int(m.captures.at(0)) }
++  let minor = if m != none and m.captures.at(1) != none {
++    int(m.captures.at(1))
++  } else { 0 }
++  let fatal = if major != none and major != s.major {
++    (
++      "invoice data is in format \""
++        + f
++        + "\"; this invoice-pro reads "
++        + s.format
++        + " only. Convert the data, or use an invoice-pro that reads "
++        + s.family
++        + "/"
++        + str(major)
++        + "."
++    )
++  }
++  // The descriptor travels sealed: every call of the recursive decoder is
++  // memoized by Typst, which hashes its arguments, and the descriptor is
++  // large (a sealed value hashes in constant time).
++  let (values, issues) = decode-value(
++    (t: "ref", name: "invoice"),
++    raw,
++    (),
++    metadata(s.objects),
++    (minor: minor),
++  )
++  let (values, more) = _scope-issues(values)
++  issues += more
++  if region != none {
++    let (v, ri) = region-pass(values, region, rates)
++    values = v
++    issues += ri
++  }
++  (values: values, issues: issues, major: major, minor: minor, fatal: fatal)
++}
+diff --git a/src/contract/export.typ b/src/contract/export.typ
+new file mode 100644
+index 0000000..f7303e4
+--- /dev/null
++++ b/src/contract/export.typ
+@@ -0,0 +1,211 @@
++// Writes a descriptor (schema.typ for the data, result-schema.typ for the
++// result) as a JSON Schema 2020-12 document. Nothing here is hand-maintained
++// per field: the JSON Schema and the decoder read the same table.
++//
++// Codegen-friendly by construction (checked with datamodel-codegen,
++// json-schema-to-typescript and typify in the prior-art research): closed
++// objects (`additionalProperties: false`) except the named `custom` bags,
++// `$defs` + `$ref`, string patterns for decimals and dates, `const`
++// discriminators, and optional properties that also accept `null` (what
++// generated models write for an unset field; the decoder reads null as
++// absent). Contract metadata travels as annotations the validators and
++// generators ignore: `x-en16931` (business term), `x-invoice-pro-role`,
++// `x-invoice-pro-bind`, `x-invoice-pro-since`.
++
++#let _dec = "-?[0-9]{1,20}(\\.[0-9]{1,10})?"
++#let _udec = "[0-9]{1,20}(\\.[0-9]{1,10})?"
++#let scalar-defs = (
++  decimal: (
++    type: "string",
++    pattern: "^" + _dec + "$",
++    description: "An exact decimal number as a string (JSON numbers are binary floats).",
++    examples: ("12.30", "-5", "0.5"),
++  ),
++  decimal-positive: (
++    allOf: (
++      ("$ref": "#/$defs/decimal-unsigned"),
++      ("not": (pattern: "^0+(\\.0+)?$")),
++    ),
++    description: "A decimal number greater than 0, as a string.",
++    examples: ("1", "0.5"),
++  ),
++  decimal-unsigned: (
++    type: "string",
++    pattern: "^" + _udec + "$",
++    description: "A decimal number of at least 0, as a string.",
++  ),
++  percent: (
++    type: "string",
++    pattern: "^[0-9]{1,3}(\\.[0-9]{1,6})?%$",
++    description: "A percentage such as \"19%\".",
++    examples: ("19%", "7%", "2.5%"),
++  ),
++  percent-unsigned: (
++    type: "string",
++    pattern: "^[0-9]{1,3}(\\.[0-9]{1,6})?%$",
++    description: "A percentage of at least 0% such as \"19%\".",
++  ),
++  percent-0-100: (
++    type: "string",
++    pattern: "^(100(\\.0{1,6})?|[0-9]{1,2}(\\.[0-9]{1,6})?)%$",
++    description: "A percentage from 0% to 100%.",
++  ),
++  amount: (
++    type: "string",
++    pattern: "^(" + _udec + "|[0-9]{1,3}(\\.[0-9]{1,6})?%)$",
++    description: "An absolute amount \"50.00\" or a relative one \"10%\" (never negative).",
++    examples: ("50.00", "10%"),
++  ),
++  date: (
++    type: "string",
++    format: "date",
++    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
++    description: "A calendar date (ISO 8601).",
++    examples: ("2026-11-02",),
++  ),
++  period: (
++    anyOf: (
++      ("$ref": "#/$defs/date"),
++      (
++        type: "object",
++        properties: (
++          start: ("$ref": "#/$defs/date"),
++          end: ("$ref": "#/$defs/date"),
++        ),
++        required: ("start", "end"),
++        additionalProperties: false,
++      ),
++    ),
++    description: "A date, or a period from start to end (inclusive).",
++  ),
++)
++
++#let _r(name) = ("$ref": "#/$defs/" + name)
++
++#let type-schema(ty) = {
++  let t = ty.t
++  if t == "text" {
++    (
++      (type: "string")
++        + if ty.max != none { (maxLength: ty.max) } else { (:) }
++        + if ty.pattern != none { (pattern: ty.pattern) } else { (:) }
++    )
++  } else if t == "lines" {
++    (anyOf: ((type: "string"), (type: "array", items: (type: "string"))))
++  } else if t == "decimal" {
++    if ty.positive { _r("decimal-positive") } else if (
++      ty.min != none and ty.min == 0
++    ) { _r("decimal-unsigned") } else { _r("decimal") }
++  } else if t == "percent" {
++    if ty.min == 0% and ty.max == 100% { _r("percent-0-100") } else if (
++      ty.min == 0%
++    ) { _r("percent-unsigned") } else { _r("percent") }
++  } else if t == "amount" { _r("amount") } else if t == "int" {
++    (
++      (type: "integer")
++        + if ty.min != none { (minimum: ty.min) } else { (:) }
++        + if ty.max != none { (maximum: ty.max) } else { (:) }
++    )
++  } else if t == "bool" { (type: "boolean") } else if t == "date" {
++    _r("date")
++  } else if t == "period" { _r("period") } else if t == "enum" {
++    (type: "string", enum: ty.values)
++  } else if t == "const" { (const: ty.value) } else if t == "ref" {
++    _r(ty.name)
++  } else if t == "array" {
++    (
++      (type: "array", items: type-schema(ty.of))
++        + if ty.min != none { (minItems: ty.min) } else { (:) }
++    )
++  } else if t == "map" {
++    (type: "object", additionalProperties: type-schema(ty.of))
++  } else if t == "any" { (:) } else if t == "union" {
++    (anyOf: ty.of.map(type-schema))
++  } else if t == "tagged" {
++    (oneOf: ty.cases.values().map(_r))
++  } else { panic("internal: unknown contract type " + repr(t)) }
++}
++
++// "key is given and not null" (the decoder reads null as absent)
++#let _present(k) = (
++  required: (k,),
++  properties: ((k): ("not": (type: "null"))),
++)
++
++#let field-schema(key, f) = {
++  let inner = type-schema(f.type)
++  if f.required and f.type.t == "text" { inner += (minLength: 1) }
++  let desc = (
++    (if f.doc != none { f.doc } else { "" })
++      + if f.bt != none { " (EN 16931 " + f.bt + ")" } else { "" }
++  ).trim()
++  let ann = (
++    ..if desc != "" { (description: desc) },
++    ..if f.example != none { (examples: (f.example,)) },
++    // an optional discriminator states its default case (codegen writes
++    // `kind: Literal["item"] = "item"`); no default of invoice() is copied
++    ..if f.type.t == "const" and not f.required { (default: f.type.value) },
++    ..if f.bt != none { (x-en16931: f.bt) },
++    ..if f.role != none { (x-invoice-pro-role: f.role) },
++    ..if f.bind != none { (x-invoice-pro-bind: f.bind) },
++    x-invoice-pro-since: f.since,
++  )
++  if f.required { inner + ann } else {
++    (anyOf: (inner, (type: "null"))) + ann
++  }
++}
++
++#let object-schema(obj) = {
++  let props = (:)
++  for (k, f) in obj.fields { props.insert(k, field-schema(k, f)) }
++  let required = obj
++    .fields
++    .pairs()
++    .filter(((k, f)) => f.required)
++    .map(p => p.first())
++  let rules = ()
++  for group in obj.exactly-one {
++    rules.push((oneOf: group.map(_present)))
++  }
++  for group in obj.at-most-one + obj.exclusive {
++    let pairs = ()
++    for (i, a) in group.enumerate() {
++      for b in group.slice(i + 1) {
++        pairs.push((allOf: (_present(a), _present(b))))
++      }
++    }
++    rules.push(("not": (anyOf: pairs)))
++  }
++  for (a, b) in obj.at("excludes-if-true", default: ()) {
++    rules.push((
++      "not": (
++        allOf: (
++          (required: (a,), properties: ((a): (const: true))),
++          _present(b),
++        ),
++      ),
++    ))
++  }
++  (
++    (type: "object")
++      + if obj.doc != none { (description: obj.doc) } else { (:) }
++      + (properties: props)
++      + if required.len() > 0 { (required: required) } else { (:) }
++      + (additionalProperties: obj.open)
++      + if rules.len() > 0 { (allOf: rules) } else { (:) }
++  )
++}
++
++/// The JSON Schema 2020-12 document of a descriptor.
++#let json-schema(objs, root: "invoice", id: none, title: none) = {
++  let defs = scalar-defs
++  for (name, obj) in objs {
++    if name != root { defs.insert(name, object-schema(obj)) }
++  }
++  let head = (
++    "$schema": "https://json-schema.org/draft/2020-12/schema",
++    ..if id != none { ("$id": id) },
++    ..if title != none { (title: title) },
++  )
++  head + object-schema(objs.at(root)) + ("$defs": defs)
++}
+diff --git a/src/contract/hydrate.typ b/src/contract/hydrate.typ
+new file mode 100644
+index 0000000..9f71164
+--- /dev/null
++++ b/src/contract/hydrate.typ
+@@ -0,0 +1,160 @@
++// Hydration: applies a decoded record to one invoice() call. Loaded only by
++// a hydrated invoice (and by `invoice-data.load`/`decode`).
++//
++// The precedence is not written here per key: it is the `role` of each
++// field in schema.typ (`invoice-params`).
++//  - "design" (theme, locale, references, zugferd, ...): never data, passed
++//    through unchanged;
++//  - "issuer": the skeleton's value unless the data gives the key; a given
++//    value replaces it as a whole (no deep merge: a partial merge could pair
++//    the skeleton's VAT ID with another name);
++//  - "document" (and `custom`): from the data alone. A key the data lacks is
++//    LEFT OUT of the re-entered call, so invoice()'s own signature default
++//    applies: no default is copied anywhere, and a sample can never leak.
++// The body sections (items, modifiers, prepayments, payment) go sealed to
++// their binding points in the loom context.
++#import "schema.typ" as s
++#import "decode.typ": decode-document, region-pass
++#import "input.typ": is-record, resolve-data
++#import "../locale/lang/base.typ": base-language
++#import "../locale/region/base.typ": base-region
++#import "../validation/issue.typ": issue
++
++/// Decodes raw data into a record: sealed content, so it cannot be
++/// confused with raw data and travels through loom at no hashing cost.
++/// `origin`: what the data was read from ("input", "file", "value"), for the
++/// one-source rule.
++/// -> content
++#let make-record(raw, origin: "value", region: none, rates: none) = {
++  let d = decode-document(raw, region: region, rates: rates)
++  metadata((
++    kind: "invoice-pro-record",
++    format: if d.major == none { none } else {
++      s.family + "/" + str(d.major) + "." + str(d.minor)
++    },
++    origin: origin,
++    values: d.values,
++    issues: d.issues,
++    fatal: d.fatal,
++  ))
++}
++
++/// The VAT rates of a region (`"de"`), as its `infer-tax` knows them
++/// (`normalize.vat-rates` of the region), or `none`.
++/// -> none | array
++#let rates-of(region) = {
++  if type(region) != str { return none }
++  import "../locale/region/region.typ" as regions
++  let make = dictionary(regions).at(region, default: none)
++  if make == none { return none }
++  make(base-language).normalize.at("vat-rates", default: none)
++}
++
++// Required keys whose absence check-data reports (validation/data.typ): with
++// its inline marker and legal reference, once.
++#let _legal-checks = ("/invoice-nr", "/recipient", "/recipient/name", "/items")
++
++// The rows of the bulk motif (rows.typ) in print order: the items tree, the
++// document modifiers, the prepayments; a bundle's modifiers follow its items,
++// as in a hand-written bundle.
++#let _engine-row(r) = {
++  if r.kind == "bundle" {
++    r.items = r.items.map(_engine-row) + r.at("modifiers", default: ())
++    let _ = r.remove("modifiers", default: none)
++  } else if r.kind == "group" {
++    r.items = r.items.map(_engine-row)
++  }
++  r
++}
++#let engine-rows(v) = (
++  v.at("items", default: ()).map(_engine-row)
++    + v.at("modifiers", default: ())
++    + v.at("prepayments", default: ()).map(p => p + (kind: "prepayment"))
++)
++
++/// The arguments of the re-entered invoice() call and the applied marker,
++/// or `none` when the call is not hydrated. `given`: every parameter of the
++/// call as (name: value).
++/// -> none | dictionary
++#let hydrate(data, given, inputs: sys.inputs) = {
++  let src = resolve-data(data, inputs: inputs)
++  if src == none { return none }
++  let rec = if is-record(src) { src } else {
++    make-record(src.raw, origin: src.origin)
++  }
++  let r = rec.value
++  // another major version cannot be read at all: no level can honour it
++  if r.fatal != none { panic(r.fatal) }
++  // the region checks of the locale (a "16%" is no VAT rate of "de")
++  let loc = (given.locale)(base-language, base-region)
++  let region = lower(str(loc.meta.at("region", default: "")))
++  let rates = loc.at("normalize", default: (:)).at("vat-rates", default: none)
++  let (v, more) = region-pass(r.values, region, rates)
++  let issues = r.issues + more
++
++  let args = (:)
++  for (key, class) in s.invoice-params {
++    if class == "design" { args.insert(key, given.at(key)) } else if (
++      class == "issuer"
++    ) { args.insert(key, v.at(key, default: given.at(key))) } else if (
++      class == "document" and key in v
++    ) { args.insert(key, v.at(key)) }
++  }
++  // The small-business exemption excludes a tax, across the layers: the
++  // data's exemption drops the skeleton's tax; the data's tax under the
++  // skeleton's exemption is an issue (invoice() would stop).
++  if args.tax-exempt-small-biz == true and args.tax != auto {
++    if "tax" in v {
++      issues.push(issue(
++        "schema/tax",
++        "data",
++        "invoice data: `tax` is given, but the skeleton has `tax-exempt-small-biz: true`: give `\"tax-exempt-small-biz\": false` with it, or leave `tax` out.",
++        ref: s.format + " · tax",
++        key: "schema-exclusive",
++        args: (path: "/tax"),
++      ))
++    }
++    args.tax = auto
++  }
++  let sections = (
++    rows: engine-rows(v),
++    has-items: "items" in v or "modifiers" in v or "prepayments" in v,
++    // absent: the skeleton's payment(..) applies, its document details
++    // (mandate, card, paid) dropped
++    payment: v.at("payment", default: (:)),
++    has-payment: "payment" in v,
++    format: r.format,
++  )
++  (
++    args: args,
++    marker: metadata((
++      kind: "invoice-pro-applied",
++      issues: issues.filter(i => not (
++        i.key == "schema-required" and i.args.path in _legal-checks
++      )),
++      sections: sections,
++    )),
++  )
++}
++
++/// The arguments of `payment(..)` with the `payment` section applied by the
++/// roles of schema.typ (`own`: the arguments of the call).
++/// -> dictionary
++#let payment-args(own, data) = {
++  let args = own
++  for (key, f) in s.objects.payment.fields {
++    if key in data { args.insert(key, data.at(key)) } else if (
++      f.role == "document"
++    ) { args.insert(key, none) }
++  }
++  // details of a method without the method: that method
++  if (
++    "method" not in data
++      and ("direct-debit", "card", "paid").any(k => k in data)
++  ) { args.method = auto }
++  // a paid invoice has no terms (the root forbids paid + terms)
++  if args.method == "paid" or (args.method == auto and args.paid != none) {
++    args.terms = none
++  }
++  args
++}
+diff --git a/src/contract/input.typ b/src/contract/input.typ
+new file mode 100644
+index 0000000..a9c722a
+--- /dev/null
++++ b/src/contract/input.typ
+@@ -0,0 +1,151 @@
++// Where invoice data comes from, and the rule "one source" (R7).
++//
++// The CLI contract ("one input = one JSON document"):
++//   --input invoice-pro-data=<JSON text>    read by invoice-pro itself
++//   --input invoice-pro-data-file=<path>    read by the skeleton's `read`
++//                                           callback (a package cannot open
++//                                           the user's files)
++// Embedders (typst as a library, phase 2) may pass a dictionary as the value
++// of `invoice-pro-data` instead of JSON text. Loaded only when an invoice is
++// hydrated (invoice.typ looks up the two keys itself) or by `invoice-data`.
++
++/// The `--input` key with the data of one invoice as JSON text.
++/// -> str
++#let input-key = "invoice-pro-data"
++/// The `--input` key with the path of a data file (.json, .toml, .yaml).
++/// -> str
++#let file-key = "invoice-pro-data-file"
++
++#let _short(s) = if s.len() > 60 { s.slice(0, 57) + "..." } else { s }
++
++#let _load-line = "`data: invoice-data.load(read: p => read(p, encoding: none))`"
++
++/// Whether `x` is a record of `invoice-data.load`/`decode` (sealed content).
++/// -> bool
++#let is-record(x) = (
++  type(x) == content
++    and x.func() == metadata
++    and type(x.value) == dictionary
++    and x.value.at("kind", default: none) == "invoice-pro-record"
++)
++
++#let _parse-text(s, origin) = {
++  let s = s.trim("\u{feff}", at: start)
++  if s.trim().starts-with("{") { return json(bytes(s)) }
++  panic(
++    origin
++      + " is not a JSON object: a string is JSON text, not a path. A package cannot open your files: for a file use --input "
++      + file-key
++      + "=<path> and "
++      + _load-line
++      + " in the skeleton.",
++  )
++}
++
++// A file read by the user's callback: the extension decides the format.
++#let _parse-file(path, read) = {
++  let raw = read(path)
++  let b = if type(raw) == str { bytes(raw) } else { raw }
++  let lower-path = lower(path)
++  if lower-path.ends-with(".toml") { toml(b) } else if (
++    lower-path.ends-with(".yaml") or lower-path.ends-with(".yml")
++  ) { yaml(b) } else {
++    // JSON; a byte order mark is tolerated (Typst's decoder rejects it)
++    let s = str(b).trim("\u{feff}", at: start)
++    json(bytes(s))
++  }
++}
++
++#let _two-sources(what) = panic(
++  "invoice data is given twice: "
++    + what
++    + ". An invoice is hydrated from ONE source: remove one of them.",
++)
++
++/// The raw data the CLI gives, or `none`: `(raw: .., origin: "input" |
++/// "file")`. `read`: a function defined in the skeleton, so that a path
++/// resolves against the skeleton and not inside the package.
++/// -> none | dictionary
++#let from-inputs(read: none, inputs: sys.inputs) = {
++  let has-data = input-key in inputs
++  let has-file = file-key in inputs
++  if has-data and has-file {
++    _two-sources("--input " + input-key + " and --input " + file-key)
++  }
++  if has-data {
++    let v = inputs.at(input-key)
++    let raw = if type(v) == dictionary { v } else {
++      _parse-text(v, "--input " + input-key + "=" + _short(v))
++    }
++    return (raw: raw, origin: "input")
++  }
++  if has-file {
++    if read == none {
++      panic(
++        "--input "
++          + file-key
++          + "="
++          + inputs.at(file-key)
++          + " needs one line in the skeleton, because a package cannot open your files: "
++          + _load-line
++          + ".",
++      )
++    }
++    return (raw: _parse-file(inputs.at(file-key), read), origin: "file")
++  }
++  none
++}
++
++/// Resolves `invoice(data: ..)`: `none` (not hydrated), a record, or
++/// `(raw: .., origin: ..)` to decode. Panics when a data input is given but
++/// would not be consumed, and when two sources are given (R7).
++/// -> none | content | dictionary
++#let resolve-data(data, inputs: sys.inputs) = {
++  let given = (input-key, file-key).filter(k => k in inputs)
++  if data == auto { return from-inputs(inputs: inputs) }
++  if data == none {
++    if given.len() > 0 {
++      panic(
++        "the CLI hands over invoice data (--input "
++          + given.first()
++          + "), but the skeleton says `data: none`, so the invoice would show its samples: remove `data: none`"
++          + if file-key in given { ", and write " + _load-line } else { "" }
++          + ".",
++      )
++    }
++    return none
++  }
++  if is-record(data) {
++    // every data input must be the one the record read
++    let origin = data.value.at("origin", default: "value")
++    let unread = given.filter(k => not (
++      (k == input-key and origin == "input")
++        or (k == file-key and origin == "file")
++    ))
++    if unread.len() > 0 {
++      _two-sources(
++        "--input " + unread.first() + " and a record of invoice-data.decode",
++      )
++    }
++    return data
++  }
++  if given.len() > 0 {
++    _two-sources("--input " + given.first() + " and `invoice::data`")
++  }
++  if type(data) == dictionary { return (raw: data, origin: "value") }
++  if type(data) == bytes {
++    return (raw: _parse-text(str(data), "`invoice::data`"), origin: "value")
++  }
++  if type(data) == str {
++    return (
++      raw: _parse-text(data, "`invoice::data`(\"" + _short(data) + "\")"),
++      origin: "value",
++    )
++  }
++  // Typst 0.15: a `path` made in the user's file crosses the package boundary
++  if str(type(data)) == "path" { return (raw: json(data), origin: "value") }
++  panic(
++    "variable `invoice::data` must be of auto | none | dictionary | bytes | str (JSON text) | a record of invoice-data.load/decode, found "
++      + str(type(data)),
++  )
++}
+diff --git a/src/contract/result-schema.typ b/src/contract/result-schema.typ
+new file mode 100644
+index 0000000..dc019d6
+--- /dev/null
++++ b/src/contract/result-schema.typ
+@@ -0,0 +1,110 @@
++// The shape of the result "invoice-pro-result/1", declared with the
++// vocabulary of the input format, so `invoice-data.schema(kind: "result")`
++// exports it as a JSON Schema. Loaded only by `schema`: the result record
++// itself (result.typ) never loads a descriptor.
++#import "types.typ" as t
++#import "types.typ": field, object
++
++/// The format of the result.
++/// -> str
++#let format = "invoice-pro-result/1"
++/// The `$id` of its JSON Schema (the format major only, no package version).
++/// -> str
++#let schema-id = "https://invoice-pro.dev/schema/invoice-pro/1/result.schema.json"
++
++#let _req(ty, doc) = field(ty, doc: doc, required: true)
++#let _opt(ty, doc) = field(ty, doc: doc)
++
++/// The result as a descriptor (for its JSON Schema and documentation).
++#let objects = (
++  result: object(doc: "The result of one compiled invoice.", (
++    format: _req(t.const(format), "Format and version of the result."),
++    package: _req(t.text(), "invoice-pro version that compiled it."),
++    data-format: _req(
++      t.union(t.text(), t.const(none)),
++      "Format of the hydrating data (\"invoice-pro/1.0\"), null when not hydrated.",
++    ),
++    status: _req(
++      t.enum("ok", "draft", "unchecked"),
++      "ok: no problem found; draft: problems found, rendered as a draft and the e-invoice withheld; unchecked: validation none.",
++    ),
++    validation: _req(
++      t.enum("none", "draft", "strict"),
++      "The validation level in effect.",
++    ),
++    invoice-nr: _req(
++      t.union(t.text(), t.const(none)),
++      "Invoice number (BT-1).",
++    ),
++    date: _req(t.union(t.date(), t.const(none)), "Issue date (BT-2)."),
++    due-date: _req(
++      t.union(t.date(), t.const(none)),
++      "Due date (BT-9): the invoice's own, else that of the payment terms.",
++    ),
++    currency: _req(t.text(), "Invoice currency (BT-5)."),
++    document-type: _req(t.text(), "UNTDID 1001 code (BT-3)."),
++    recipient: _req(t.union(t.text(), t.const(none)), "Buyer name (BT-44)."),
++    totals: _req(t.ref("totals"), "Document totals (BG-22)."),
++    taxes: _req(t.array(t.ref("tax-line")), "VAT breakdown (BG-23)."),
++    lines: _req(t.integer(min: 0), "Number of invoice lines (BG-25)."),
++    issues: _req(t.array(t.ref("issue")), "Problems the validation found."),
++    e-invoice: _req(t.ref("e-invoice"), "Outcome of the e-invoice."),
++  )),
++  totals: object(doc: "Document totals as decimal strings.", (
++    net: _req(
++      t.decimal(),
++      "Sum of net line amounts after allowances (BT-109).",
++    ),
++    tax: _req(t.decimal(), "Total VAT (BT-110)."),
++    gross: _req(t.decimal(), "Total with VAT (BT-112)."),
++    prepaid: _req(t.decimal(), "Paid amount (BT-113)."),
++    due: _req(t.decimal(), "Amount due for payment (BT-115)."),
++  )),
++  tax-line: object(doc: "One VAT category and rate.", (
++    category: _req(t.text(), "UNTDID 5305 category (BT-118)."),
++    rate: _req(t.percent(), "Rate (BT-119)."),
++    basis: _req(t.decimal(), "Taxable amount (BT-116)."),
++    amount: _req(t.decimal(), "VAT amount (BT-117)."),
++    code: _opt(t.text(), "VATEX exemption reason code (BT-121)."),
++  )),
++  issue: object(doc: "A problem the validation found.", (
++    id: _req(
++      t.text(),
++      "Stable id; schema/<JSON pointer> for problems of the data.",
++    ),
++    class: _req(t.enum("data", "theme", "lint"), "Issue class."),
++    path: _req(
++      t.union(t.text(), t.const(none)),
++      "JSON Pointer into the data, for problems of the data.",
++    ),
++    message: _req(t.text(), "Message in English."),
++    ref: _opt(t.text(), "Legal or normative reference."),
++  )),
++  e-invoice: object(
++    doc: "Outcome of the e-invoice (ZUGFeRD / Factur-X / XRechnung).",
++    (
++      requested: _req(
++        t.union(t.text(), t.const(none)),
++        "The `zugferd` profile asked for, null for none.",
++      ),
++      profile: _req(t.union(t.text(), t.const(none)), "The profile written."),
++      status: _req(
++        t.enum("none", "attached", "draft", "withheld"),
++        "none: not requested; attached: valid XML attached; draft: XML with errors attached as invoice-draft.xml; withheld: not attached because data issues are open.",
++      ),
++      file: _req(t.union(t.text(), t.const(none)), "Name of the attached XML."),
++      errors: _req(t.integer(min: 0), "Number of errors."),
++      warnings: _req(t.integer(min: 0), "Number of warnings."),
++      diagnostics: _req(t.array(t.ref("diagnostic")), "Rule findings."),
++    ),
++  ),
++  diagnostic: object(doc: "A finding of the e-invoice rules.", (
++    level: _req(t.enum("error", "warning"), "Severity."),
++    rule: _req(t.text(), "Rule id (BR-…, IP-…)."),
++    field: _req(
++      t.union(t.text(), t.const(none)),
++      "Input path the rule refers to.",
++    ),
++    message: _req(t.text(), "Message."),
++  )),
++)
+diff --git a/src/contract/result.typ b/src/contract/result.typ
+new file mode 100644
+index 0000000..f12442a
+--- /dev/null
++++ b/src/contract/result.typ
+@@ -0,0 +1,142 @@
++// The result contract "invoice-pro-result/1": what a program that generated
++// an invoice needs back (number, totals, VAT breakdown, the problems found,
++// the e-invoice outcome), in ONE labelled metadata per invoice. Emitted by
++// root for a hydrated invoice, or with `--input invoice-pro-result=1`.
++// Loaded only then (root.typ), and it loads no descriptor: its JSON Schema is
++// declared in result-schema.typ.
++//
++// Values are JSON-friendly: strings for decimals, percentages and dates
++// (Typst's encoders would write `decimal("12.30")`), integers, booleans,
++// null.
++#import "../utils/text.typ": plain-text
++
++#let format = "invoice-pro-result/1"
++
++// ---- values -------------------------------------------------------------------
++
++#let _s(v) = if v == none or v == auto { none } else if type(v) == datetime {
++  v.display("[year]-[month]-[day]")
++} else if type(v) in (decimal, int) { str(v) } else if type(v) == float {
++  str(decimal(str(v)))
++} else if type(v) == str { v } else if type(v) == content {
++  plain-text(v)
++} else {
++  repr(v)
++}
++#let _date(v) = if type(v) == datetime { _s(v) } else { none }
++// a tax rate (decimal fraction or ratio) as "19%"
++#let _pct(r) = {
++  let d = if type(r) == ratio { decimal(str(float(r))) } else if (
++    type(r) == float
++  ) {
++    decimal(str(r))
++  } else { decimal(r) }
++  let x = str(d * 100)
++  if x.contains(".") { x = x.trim("0", at: end).trim(".", at: end) }
++  x + "%"
++}
++#let _ptr-of(i) = if i.id.starts-with("schema/") or i.id == "schema" {
++  i.id.slice(6)
++} else { none }
++
++#let _version = toml("../../typst.toml").package.version
++
++// The due date as the e-invoice states it (BT-9, zugferd/model.typ): the
++// invoice's own, else the date of the payment terms, else date + days.
++#let _due-date(ctx, view) = {
++  let own = ctx.at("due-date", default: none)
++  if type(own) == datetime { return own }
++  let goal = view.at("payment-terms", default: none)
++  if goal == none { return none }
++  let d = goal.at("date", default: none)
++  if type(d) == datetime { return d }
++  let days = goal.at("days", default: none)
++  let date = ctx.at("invoice-date", default: none)
++  if type(days) == int and type(date) == datetime {
++    date + duration(days: days)
++  }
++}
++
++/// The result record of one invoice (root.typ draw).
++#let result-record(ctx, view, issues, withheld, e-result) = {
++  let level = ctx.validation.level
++  let d = ctx.at("hydration", default: none)
++  let d = if type(d) == content { d.value } else { d }
++  let total = view.total
++  let taxes = view.item-data.at("taxes", default: (:)).values()
++  let tax-total = taxes
++    .map(x => x.at("absolute", default: decimal("0")))
++    .fold(decimal("0"), (a, b) => a + b)
++  let diagnostics = if e-result == none { () } else { e-result.diagnostics }
++  let errors = diagnostics.filter(x => x.level == "error").len()
++  let requested = if ctx.zugferd == none { none } else if ctx.zugferd == auto {
++    "auto"
++  } else { ctx.zugferd }
++  let draft-xml = errors > 0 and ctx.zugferd-errors == "report"
++  (
++    format: format,
++    package: _version,
++    data-format: if d == none { none } else { d.format },
++    status: if level == none { "unchecked" } else if issues.len() > 0 {
++      "draft"
++    } else { "ok" },
++    validation: if level == none { "none" } else { level },
++    invoice-nr: _s(ctx.at("invoice-nr", default: none)),
++    date: _date(ctx.at("invoice-date", default: none)),
++    due-date: _date(_due-date(ctx, view)),
++    currency: ctx.locale.currency.code,
++    document-type: ctx.at("document-type", default: (code: "380")).code,
++    recipient: _s(ctx.recipient.at("name-inline", default: ctx.recipient.at(
++      "name",
++      default: none,
++    ))),
++    totals: (
++      net: _s(total.net),
++      tax: _s(tax-total),
++      gross: _s(total.gross),
++      prepaid: _s(total.prepaid),
++      due: _s(total.due),
++    ),
++    taxes: taxes.map(x => (
++      category: x.category,
++      rate: _pct(x.rate),
++      basis: _s(x.at("basis", default: decimal("0"))),
++      amount: _s(x.at("absolute", default: decimal("0"))),
++      ..if x.at("codes", default: ()).len() > 0 { (code: x.codes.first()) },
++    )),
++    lines: view.item-data.at("items", default: ()).len(),
++    issues: issues.map(i => (
++      id: i.id,
++      class: i.class,
++      path: _ptr-of(i),
++      message: i.message,
++      ..if i.at("ref", default: none) != none { (ref: i.ref) },
++    )),
++    e-invoice: (
++      requested: requested,
++      profile: if e-result != none { e-result.profile.id },
++      status: if requested == none { "none" } else if withheld {
++        "withheld"
++      } else if draft-xml { "draft" } else { "attached" },
++      file: if e-result == none { none } else if draft-xml {
++        "invoice-draft.xml"
++      } else { e-result.profile.at("file-name", default: "factur-x.xml") },
++      errors: errors,
++      warnings: diagnostics.len() - errors,
++      diagnostics: diagnostics.map(x => (
++        level: x.level,
++        rule: x.rule,
++        field: _s(x.field),
++        message: _s(x.message),
++      )),
++    ),
++  )
++}
++
++/// The labelled metadata element of the result, read by
++/// `typst query <file> "<invoice-pro-result>"` (0.14) or `typst eval
++/// 'query(<invoice-pro-result>).first().value' --in <file>` (0.15).
++/// -> content
++#let result-element(ctx, view, issues, withheld, e-result) = [#metadata(
++    result-record(ctx, view, issues, withheld, e-result),
++  )<invoice-pro-result>]
+diff --git a/src/contract/rows.typ b/src/contract/rows.typ
+new file mode 100644
+index 0000000..40bccac
+--- /dev/null
++++ b/src/contract/rows.typ
+@@ -0,0 +1,352 @@
++// The line items of hydrated data as ONE loom motif (design C's engine).
++//
++// The binding point (`items-slot`, the body of every `line-items`, or the
++// explicit `invoice-data.items[..]` marker) replaces N `item` / `group` /
++// `bundle` / `discount` / `surcharge` / `prepayment` motifs by one raw motif
++// whose `measure` emits exactly the frames those motifs emit (kinds "item",
++// "group", "bundle", "modifier", "prepayment"), so line-items, the
++// applicators, resolve-tree, the theme parts and the e-invoice stay as they
++// are. Loaded only by a hydrated invoice or a skeleton with a marker.
++//
++// Speed rules (measured, see design/C-performance.md):
++// 1. `compute(rows, env)` is a PURE function of decoded rows and a small,
++//    pass-independent environment: Typst memoizes it, so loom's second pass
++//    is a cache hit. `env` never holds `global` or `sys.pass`.
++// 2. No loom.mutator per row (each op hashes the full ctx, ~22 us): the
++//    cascade of item/group/bundle scopes is replayed on a small dictionary.
++// 3. The locale travels sealed (metadata) into the per-unit helper, so its
++//    215 leaves are not hashed per call.
++#import "../loom-wrapper.typ": loom, loom-key, motif
++#import "../logic/calc-item.typ": calculate-item-data
++#import "../logic/calc-bundle.typ": calculate-bundle
++#import "../logic/modifier-applicator.typ": calculate-modifier
++#import "../logic/unit.typ" as unit-logic
++#import "../public/unit.typ" as m-unit
++#import "../data/tax.typ" as m-tax
++#import "../utils/coercion.typ"
++#import "../theming/access.typ": row-style-of
++#import "../components/item.typ": evaluate-modifier
++
++// ctx keys the scopes of item/bundle/modifier/prepayment read from their
++// parent (set by line-items, group, bundle or `apply` around the slot)
++#let _cascade-keys = (
++  "description",
++  "quantity",
++  "base-quantity",
++  "unit",
++  "date",
++  "item-price",
++  "item-total",
++  "tax-mode",
++  "input-gross",
++  "item-id",
++  "reference",
++  "modifier",
++  "label",
++  "name",
++  "method",
++)
++
++#let _or(v, d) = if v == none { d } else { v }
++
++/// The environment of the slot, taken from its ctx ONCE per pass. Small and
++/// identical in both loom passes, so `compute` is memoized.
++#let env-of(ctx) = {
++  let c = (:)
++  for k in _cascade-keys { if k in ctx { c.insert(k, ctx.at(k)) } }
++  // the item scope resolves a cascaded tax (a raw ratio from
++  // `line-items(tax: 19%)`, `none` = implicit zero)
++  c.tax = if "tax" in ctx { m-tax.resolve(ctx, ctx.tax, "item") } else {
++    m-tax.implicit-zero()
++  }
++  if "modifier" in c and c.modifier not in (auto, none) {
++    c.modifier = evaluate-modifier(ctx, c.modifier)
++  }
++  let locale = ctx.locale
++  let strings = locale.at("strings", default: (:))
++  let li = strings.at("line-items", default: (:))
++  (
++    c: c,
++    small-biz: if ctx.at("tax-exempt-small-biz", default: false) {
++      locale.tax.small-enterprise-special-scheme
++    } else { none },
++    // what calc-item / calc-bundle / calc-modifier read of the locale
++    lite-locale: (
++      normalize: (
++        money: locale.normalize.money,
++        money-fine: locale.normalize.money-fine,
++      ),
++      format: (percent: locale.format.percent),
++      strings: (line-items: (conjunction: li.at("conjunction", default: "and"))),
++    ),
++    infer-tax: locale.at("normalize", default: (:)).at("infer-tax", default: none),
++    labels: (
++      discount: li.at("discount", default: "Discount"),
++      surcharge: li.at("surcharge", default: "Surcharge"),
++      prepayment: strings.at("summary", default: (:)).at("prepayment", default: "Prepayment"),
++    ),
++    format-date: locale.format.date,
++    sealed-locale: metadata(locale),
++    style: row-style-of(ctx),
++    path: loom.path.get(ctx),
++  )
++}
++
++// memoized per (unit, quantity): the locale is sealed, hashing is cheap
++#let _unit(u, q, sealed-locale, default) = unit-logic.resolve(
++  u,
++  sealed-locale.value,
++  quantity: q,
++  default: default,
++)
++
++#let _resolve-tax(env, t) = {
++  if type(t) == ratio {
++    if env.infer-tax == none { panic("item::tax can not be of type `ratio`.") }
++    (env.infer-tax)(t)
++  } else { m-tax.to-tax(t) }
++}
++
++#let _frame(kind, path, signal) = loom.frame.new(
++  kind: kind,
++  key: path.last(default: ("unknown",)),
++  path: path,
++  signal: signal,
++)
++
++// `modifier` measure, from a decoded modifier row and the cascade `c`
++#let modifier-signal(env, c, m) = {
++  let kind = m.kind
++  let raw = m.at("amount", default: decimal("0"))
++  let amount = if kind == "discount" { -raw } else { raw }
++  let is-discount = if kind == "discount" { true } else if kind == "surcharge" {
++    false
++  } else { auto }
++  let tax = m.at("tax", default: auto)
++  let modifier-tax = if tax == auto { none } else if env.small-biz != none {
++    env.small-biz
++  } else { _resolve-tax(env, tax) }
++  let description = m.at("description", default: c.at("description", default: none))
++  let input-gross = m.at("input-gross", default: _or(
++    c.at("input-gross", default: none),
++    c.at("tax-mode", default: "exclusive") == "inclusive",
++  ))
++  let label = m.at("label", default: _or(c.at("label", default: none), auto))
++
++  let (value, type-) = if type(amount) == ratio {
++    (coercion.to-ratio(amount), "relative")
++  } else { ((env.lite-locale.normalize.money)(amount), "absolute") }
++  let discount-mode = if is-discount != auto { is-discount } else { value < 0 }
++  (
++    name: m.name,
++    label: if label == auto {
++      if discount-mode { env.labels.discount } else { env.labels.surcharge }
++    } else { label },
++    description: description,
++    type: type-,
++    amount: value,
++    is-gross: input-gross,
++    tax: modifier-tax,
++  )
++}
++
++// the item scope (item.typ:200-293) replayed on `c`, then the unchanged
++// `calculate-item-data`
++#let item-signal(env, c, row) = {
++  let q = row.at("quantity", default: auto)
++  let quantity = if q != auto { q } else {
++    _or(c.at("quantity", default: none), decimal("1"))
++  }
++  let bq = row.at("base-quantity", default: auto)
++  let unit-input = row.at("unit", default: c.at("unit", default: auto))
++  let unit-q = if q != auto { q } else { c.at("quantity", default: decimal("1")) }
++  let t = row.at("tax", default: auto)
++  let tax = if t == auto { c.tax } else { _resolve-tax(env, t) }
++  if env.small-biz != none { tax = env.small-biz }
++  let mods = if "modifiers" in row {
++    row.modifiers.map(m => {
++      let s = modifier-signal(env, c, m)
++      (
++        name: s.name,
++        label: s.label,
++        amount: if s.type == "relative" { float(s.amount) * 100% } else {
++          s.amount
++        },
++        description: s.description,
++        tax: s.tax,
++      )
++    })
++  } else { _or(c.at("modifier", default: none), ()) }
++  let ictx = (
++    locale: env.lite-locale,
++    description: row.at("description", default: c.at("description", default: none)),
++    quantity: quantity,
++    base-quantity: if bq != auto { bq } else {
++      _or(c.at("base-quantity", default: none), decimal("1"))
++    },
++    unit: _unit(unit-input, unit-q, env.sealed-locale, m-unit.pc),
++    unit-singular: _unit(unit-input, decimal("1"), env.sealed-locale, m-unit.pc),
++    date: row.at("date", default: c.at("date", default: none)),
++    item-price: row.at("price", default: _or(c.at("item-price", default: none), auto)),
++    item-total: row.at("total", default: _or(c.at("item-total", default: none), auto)),
++    tax-mode: _or(c.at("tax-mode", default: none), "exclusive"),
++    input-gross: row.at("input-gross", default: _or(
++      c.at("input-gross", default: none),
++      c.at("tax-mode", default: "exclusive") == "inclusive",
++    )),
++    tax: tax,
++    item-id: row.at("item-id", default: c.at("item-id", default: none)),
++    reference: row.at("reference", default: c.at("reference", default: none)),
++    modifier: mods,
++    ..if "note" in row { (note: row.note) },
++    ..if "origin" in row { (origin: row.origin) },
++  )
++  let signal = calculate-item-data(ictx, row.name) + (style: env.style)
++  if "custom" in row { signal.insert("custom", row.custom) }
++  signal
++}
++
++#let prepayment-signal(env, c, p) = {
++  let raw = calc.abs(p.amount)
++  let rel = type(raw) == ratio
++  let get(k) = p.at(k, default: c.at(k, default: none))
++  let label = p.at("label", default: _or(c.at("label", default: none), auto))
++  let date = get("date")
++  (
++    name: get("name"),
++    label: if label == auto { env.labels.prepayment } else { label },
++    date: if date == auto or date == none { none } else if type(date) == datetime {
++      (env.format-date)(date)
++    } else { date },
++    reference: get("reference"),
++    description: get("description"),
++    method: get("method"),
++    type: if rel { "relative" } else { "absolute" },
++    raw-amount: raw,
++    amount: if rel { coercion.to-ratio(raw) } else {
++      (env.lite-locale.normalize.money)(raw)
++    },
++  )
++}
++
++/// Frames of a list of decoded rows under the cascade `c` at `path`.
++#let frames-of(env, c, rows, path) = {
++  let out = ()
++  for (i, row) in rows.enumerate() {
++    let kind = row.kind
++    let p = path + ((kind, i),)
++    if kind == "item" {
++      out.push(_frame("item", p, item-signal(env, c, row)))
++    } else if kind in ("discount", "surcharge", "modifier") {
++      out.push(_frame("modifier", p, modifier-signal(env, c, row)))
++    } else if kind == "prepayment" {
++      out.push(_frame("prepayment", p, prepayment-signal(env, c, row)))
++    } else if kind == "group" {
++      // group.typ scope: input-gross, date, tax (resolved) and the
++      // unresolved unit cascade; the description does not
++      let g = c
++      if "input-gross" in row { g.input-gross = row.input-gross }
++      if row.at("date", default: none) != none { g.date = row.date }
++      if "tax" in row { g.tax = _resolve-tax(env, row.tax) }
++      if row.at("unit", default: none) != none { g.unit = row.unit }
++      out.push(_frame("group", p, (
++        kind: "group",
++        name: row.name,
++        description: row.at("description", default: none),
++        show-subtotal: row.at("show-subtotal", default: true),
++        style: env.style,
++        children: frames-of(env, g, row.items, p),
++      )))
++    } else if kind == "bundle" {
++      // bundle.typ scope
++      let bq = row.at("quantity", default: decimal("1"))
++      let bunit = row.at("unit", default: c.at("unit", default: auto))
++      let b = c
++      b.description = row.at("description", default: c.at("description", default: none))
++      let _ = b.remove("quantity", default: none)
++      let _ = b.remove("base-quantity", default: none)
++      let _ = b.remove("modifier", default: none)
++      b.date = row.at("date", default: c.at("date", default: none))
++      b.input-gross = row.at("input-gross", default: _or(
++        c.at("input-gross", default: none),
++        c.at("tax-mode", default: "exclusive") == "inclusive",
++      ))
++      b.tax-mode = _or(c.at("tax-mode", default: none), "exclusive")
++      if "tax" in row { b.tax = _resolve-tax(env, row.tax) }
++      b.item-id = row.at("item-id", default: c.at("item-id", default: none))
++      b.reference = row.at("reference", default: c.at("reference", default: none))
++      b.bundle-quantity = bq
++      let kids = frames-of(env, b, row.items, p)
++      let bctx = (
++        locale: env.lite-locale,
++        tax-mode: b.tax-mode,
++        bundle-description: c.at("description", default: row.at("description", default: auto)),
++        bundle-quantity: bq,
++        bundle-base-quantity: row.at("base-quantity", default: decimal("1")),
++        bundle-unit: _unit(bunit, bq, env.sealed-locale, m-unit.pcs),
++        bundle-unit-singular: _unit(bunit, decimal("1"), env.sealed-locale, m-unit.pcs),
++        bundle-date: row.at("date", default: c.at("date", default: auto)),
++        item-id: b.item-id,
++        reference: b.reference,
++        theme: (options: (row: env.style)),
++        sys: (path: p),
++      )
++      let app = _frame("modifier-applicator", p, calculate-modifier(bctx, kids))
++      let children = (app,) + kids.filter(k => k.kind != "modifier")
++      out.push(_frame("bundle", p, calculate-bundle(bctx, children, row.name)))
++    }
++  }
++  out
++}
++
++/// PURE: all frames of the rows. Called once per loom pass with identical
++/// arguments, so the second call is a memo hit.
++#let compute(rows, env) = frames-of(env, env.c, rows, env.path)
++
++#let _sections(ctx) = {
++  let h = ctx.at("hydration", default: none)
++  if type(h) == content { h.value } else { h }
++}
++
++// The frame a marker leaves for the slot of its `line-items`, which removes
++// it (components/line-items.typ): the rows of the data are placed already.
++#let _marker-kind = "invoice-data-items"
++
++/// The explicit binding point `invoice-data.items[..]`: without data the
++/// `sample` renders exactly as written; hydrated, the rows of the data take
++/// its place and the sample is never traversed (it is held in this closure,
++/// not in the motif's body). Rows outside it stay (a fixed fee). It must be
++/// a direct child of `line-items` (an `apply` around it is transparent).
++/// -> content
++#let items-marker(sample) = motif(
++  measure: (ctx, _) => {
++    let parent = loom.path.get(ctx).last(default: (none, none)).first()
++    if parent != "line-items" {
++      panic(
++        "`invoice-data.items[..]` must be a direct child of `line-items` (it places groups, modifiers and prepayments of the data), found it inside "
++          + if parent == none { "no `line-items`" } else {
++            "a `" + parent + "`"
++          }
++          + ".",
++      )
++    }
++    let marker = loom.frame.new(kind: _marker-kind)
++    let h = _sections(ctx)
++    if h == none {
++      let (_, frames) = loom.core.intertwine(
++        ctx,
++        sample,
++        key: loom-key,
++        draw: false,
++      )
++      return ((frames, marker), false)
++    }
++    ((compute(h.rows, env-of(ctx)), marker), true)
++  },
++  draw: (ctx, _, hydrated, _) => {
++    if not hydrated {
++      loom.core.intertwine(ctx, sample, key: loom-key, draw: true).at(0)
++    }
++  },
++  none,
++)
+diff --git a/src/contract/schema.typ b/src/contract/schema.typ
+new file mode 100644
+index 0000000..cb9c955
+--- /dev/null
++++ b/src/contract/schema.typ
+@@ -0,0 +1,860 @@
++// The invoice data format "invoice-pro/1": the single source of truth.
++//
++// Every key the format knows is declared ONCE here, with its type, its
++// EN 16931 business term, its precedence role and a sentence of
++// documentation. decode.typ reads this table to decode and validate data,
++// hydrate.typ to apply it to invoice() (by role, re-entering invoice() so
++// that absent document keys take the signature's own defaults: no default
++// is copied here), export.typ to write the JSON Schema. Keys are the names of
++// the Typst API (kebab-case); the format is the canonical, JSON-friendly
++// subset of it: one encoding per concept (no `street` alias, no flat
++// `contact-name`, units as codes only, taxes as "19%" or an object).
++#import "types.typ" as t
++#import "types.typ": field, object
++
++/// The format family and the version this package reads.
++#let family = "invoice-pro"
++#let major = 1
++#let minor = 0
++#let format = family + "/" + str(major)
++/// The canonical `$id` of the JSON Schema (no package version in it: the
++/// format is versioned on its own, SchemaVer-style).
++#let schema-id = "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json"
++
++// ---- shared types -----------------------------------------------------------
++
++#let _tax-categories = (
++  "S",
++  "Z",
++  "E",
++  "AE",
++  "K",
++  "G",
++  "O",
++  "L",
++  "M",
++  "A",
++  "AA",
++  "AB",
++  "AC",
++  "AD",
++  "B",
++  "C",
++  "D",
++  "F",
++  "H",
++  "I",
++  "J",
++  "N",
++)
++/// UN/ECE Recommendation 20 codes the unit module knows (BT-130), mapped to
++/// the `unit.*` function that prints them in the locale's language. The
++/// format takes codes only (any Rec 20 code by pattern, e.g. "KWH"; one
++/// spelling per unit: a second spelling broke the Rust code generator); the
++/// codes not listed here print as the code itself.
++#let unit-codes = (
++  H87: "piece",
++  SET: "set",
++  PR: "pair",
++  LS: "lump-sum",
++  HUR: "hour",
++  DAY: "day",
++  MON: "month",
++  ANN: "year",
++  KGM: "kilogram",
++  GRM: "gram",
++  TNE: "tonne",
++  MTR: "metre",
++  MTK: "square-metre",
++  MMT: "millimetre",
++  CMT: "centimetre",
++  KMT: "kilometre",
++  LTR: "litre",
++  MTQ: "cubic-metre",
++)
++
++#let _tax = t.union(
++  t.percent(min: 0%),
++  t.ref("tax"),
++  conv: "tax",
++)
++#let _unit = t.union(
++  t.text(
++    pattern: "^[A-Z0-9]{2,3}$",
++    pattern-doc: "a UN/ECE Rec 20 unit code such as \"HUR\" or \"H87\"",
++    example: "HUR",
++  ),
++  t.ref("unit"),
++  conv: "unit",
++)
++#let _identifier = t.union(t.text(), t.ref("identifier"), conv: "identifier")
++#let _city = t.union(t.text(), t.ref("city"), conv: "city")
++#let _country = t.text(
++  pattern: "^[A-Za-z]{2}$",
++  pattern-doc: "an ISO 3166-1 alpha-2 code such as \"DE\"",
++  example: "DE",
++)
++#let _currency = t.text(
++  pattern: "^[A-Z]{3}$",
++  pattern-doc: "an ISO 4217 code such as \"EUR\"",
++  example: "EUR",
++)
++#let _iban = t.text(
++  pattern: "^[A-Z]{2}[0-9]{2}[A-Z0-9 ]{11,40}$",
++  pattern-doc: "an IBAN such as \"DE75512108001245126199\"",
++)
++#let _document-type = t.union(
++  t.text(
++    pattern: "^(invoice|credit-note|corrected|prepayment|self-billed|self-billed-credit-note|[0-9]{3})$",
++    pattern-doc: "\"invoice\", \"credit-note\", \"corrected\", \"prepayment\", \"self-billed\", \"self-billed-credit-note\" or a UNTDID 1001 code such as \"380\"",
++  ),
++)
++#let _notes = t.union(
++  t.text(),
++  t.array(t.union(t.text(), t.ref("note"))),
++  conv: "notes",
++)
++#let _item-id = t.union(t.text(), t.ref("item-id"))
++#let _custom = t.ref("custom")
++#let _rows = t.array(t.tagged("kind", "item", (
++  item: "item",
++  group: "group",
++  bundle: "bundle",
++)))
++// a bundle holds items and bundles (as `bundle()`), no groups
++#let _bundle-rows = t.array(t.tagged("kind", "item", (
++  item: "item",
++  bundle: "bundle",
++)))
++
++// The address keys every party has (zugferd/model.typ `_address-keys`).
++#let _address(name-bt, address-bt, city-bt, country-bt) = (
++  name: field(
++    t.lines(),
++    doc: "Name; an array prints one line per entry.",
++    bt: name-bt,
++    required: true,
++    example: "Muster GmbH",
++  ),
++  address: field(
++    t.lines(),
++    doc: "Street and number; an array prints one line per entry.",
++    bt: address-bt,
++    example: "Hauptstraße 1",
++  ),
++  city: field(
++    _city,
++    doc: "\"10115 Berlin\" (parsed by the country's post-code rules) or {name, post-code, state}.",
++    bt: city-bt,
++    example: "10115 Berlin",
++  ),
++  country: field(
++    _country,
++    doc: "Country; absent = the region of the skeleton's locale.",
++    bt: country-bt,
++  ),
++  extra: field(
++    t.map(t.text()),
++    doc: "Printed label → value pairs (phone, web, …); never in the e-invoice.",
++  ),
++  custom: field(
++    t.ref("custom-party"),
++    doc: "Your own fields: read by theme parts as ctx.<party>.custom; never printed or in the e-invoice by invoice-pro.",
++  ),
++)
++
++#let _contact = field(
++  t.ref("contact"),
++  doc: "Contact person.",
++  bt: "BG-6",
++)
++
++// ---- the objects --------------------------------------------------------------
++
++#let objects = (
++  invoice: object(
++    partial: true,
++    doc: "One invoice in the invoice-pro data format.",
++    excludes-if-true: (("tax-exempt-small-biz", "tax"),),
++    (
++      "$schema": field(
++        t.text(),
++        doc: "URL of this JSON Schema, for editors; not read.",
++      ),
++      format: field(
++        t.text(
++          pattern: "^invoice-pro/1(\\.[0-9]+)?$",
++          pattern-doc: "\"invoice-pro/1\" or \"invoice-pro/1.<minor>\"",
++        ),
++        doc: "Format and version of the data: \"invoice-pro/1\" (optionally with the minor version the data needs, \"invoice-pro/1.0\").",
++        required: true,
++        example: "invoice-pro/1",
++      ),
++      invoice-nr: field(
++        t.text(),
++        doc: "Invoice number.",
++        bt: "BT-1",
++        required: true,
++        role: "document",
++        example: "2026-0042",
++      ),
++      date: field(
++        t.date(),
++        doc: "Issue date.",
++        bt: "BT-2",
++        required: true,
++        role: "document",
++        example: "2026-11-02",
++      ),
++      document-type: field(
++        _document-type,
++        doc: "Kind of document; absent = the skeleton's (else a commercial invoice, 380).",
++        bt: "BT-3",
++        role: "issuer",
++      ),
++      currency: field(
++        _currency,
++        doc: "Invoice currency; absent = the skeleton's (else the locale's).",
++        bt: "BT-5",
++        role: "issuer",
++      ),
++      due-date: field(
++        t.date(),
++        doc: "Payment due date (a date, never text: payment terms text comes from payment.terms).",
++        bt: "BT-9",
++        role: "document",
++      ),
++      service-period: field(
++        t.period(),
++        doc: "Delivery date, or the invoicing period {start, end}.",
++        bt: "BT-72/BG-14",
++        role: "document",
++      ),
++      subject: field(
++        t.text(),
++        doc: "Subject line; absent = the skeleton's (else the title of the document type and the number).",
++        role: "issuer",
++      ),
++      notes: field(
++        _notes,
++        doc: "Invoice notes: a text, or a list of texts and {text, subject-code}.",
++        bt: "BG-1",
++        role: "issuer",
++      ),
++      customer-nr: field(
++        t.text(),
++        doc: "Customer number (printed).",
++        role: "document",
++      ),
++      order-nr: field(
++        t.text(),
++        doc: "Purchase order reference.",
++        bt: "BT-13",
++        role: "document",
++      ),
++      order-date: field(
++        t.date(),
++        doc: "Date of the order (printed).",
++        role: "document",
++      ),
++      project: field(
++        t.text(),
++        doc: "Project reference.",
++        bt: "BT-11",
++        role: "document",
++      ),
++      contract-nr: field(
++        t.text(),
++        doc: "Contract reference.",
++        bt: "BT-12",
++        role: "document",
++      ),
++      quote-nr: field(
++        t.text(),
++        doc: "Quote number (printed).",
++        role: "document",
++      ),
++      delivery-note-nr: field(
++        t.text(),
++        doc: "Despatch advice reference.",
++        bt: "BT-16",
++        role: "document",
++      ),
++      preceding-invoice-nr: field(
++        t.text(),
++        doc: "Preceding invoice (credit notes, corrections).",
++        bt: "BT-25",
++        role: "document",
++      ),
++      preceding-invoice-date: field(
++        t.date(),
++        doc: "Issue date of the preceding invoice.",
++        bt: "BT-26",
++        role: "document",
++      ),
++      payment-reference: field(
++        t.text(max: 140),
++        doc: "Remittance information; absent = the invoice number.",
++        bt: "BT-83",
++        role: "document",
++      ),
++      sender: field(
++        t.ref("seller"),
++        doc: "The seller; absent = the skeleton's letterhead. A given sender replaces it as a whole.",
++        bt: "BG-4",
++        role: "issuer",
++      ),
++      recipient: field(
++        t.ref("buyer"),
++        doc: "The buyer.",
++        bt: "BG-7",
++        required: true,
++        role: "document",
++      ),
++      delivery-address: field(
++        t.ref("ship-to"),
++        doc: "Where the goods or services go, if not the buyer's address.",
++        bt: "BG-13/BG-15",
++        role: "document",
++      ),
++      payee: field(
++        t.ref("payee"),
++        doc: "Who receives the payment, if not the seller.",
++        bt: "BG-10",
++        role: "issuer",
++      ),
++      tax: field(
++        _tax,
++        doc: "Default tax of the line items: \"19%\" (standard rate) or a tax object.",
++        bt: "BG-23",
++        role: "issuer",
++      ),
++      tax-mode: field(
++        t.enum("exclusive", "inclusive"),
++        doc: "Whether prices are net (\"exclusive\") or gross (\"inclusive\").",
++        role: "issuer",
++      ),
++      tax-exempt-small-biz: field(
++        t.boolean(),
++        doc: "Small business exemption (e.g. § 19 UStG); true excludes `tax`.",
++        role: "issuer",
++      ),
++      items: field(
++        _rows,
++        doc: "The line items: items, groups and bundles in print order.",
++        bt: "BG-25",
++        required: true,
++        bind: "line-items",
++      ),
++      modifiers: field(
++        t.array(t.ref("modifier")),
++        doc: "Document-level discounts and surcharges.",
++        bt: "BG-20/BG-21",
++        bind: "line-items",
++      ),
++      prepayments: field(
++        t.array(t.ref("prepayment")),
++        doc: "Amounts already paid.",
++        bt: "BT-113",
++        bind: "line-items",
++      ),
++      payment: field(
++        t.ref("payment"),
++        doc: "Terms and means of payment (filled into the skeleton's payment(..) block).",
++        bt: "BG-16",
++        bind: "payment",
++      ),
++      custom: field(
++        _custom,
++        doc: "Your own fields: theme parts read ctx.custom, the body info.get(\"custom\", ..); never interpreted, never in the e-invoice. Replaces the skeleton's sample custom as a whole.",
++        role: "document",
++      ),
++    ),
++  ),
++  // ---- parties (zugferd/model.typ `party-keys`) ------------------------------
++  seller: object(
++    partial: true,
++    doc: "The seller (BG-4).",
++    _address("BT-27", "BT-35", "BT-37/BT-38", "BT-40")
++      + (
++        trading-name: field(t.text(), doc: "Trading name.", bt: "BT-28"),
++        vat-id: field(t.text(), doc: "VAT identifier.", bt: "BT-31"),
++        tax-nr: field(t.text(), doc: "Tax registration number.", bt: "BT-32"),
++        id: field(_identifier, doc: "Seller identifier.", bt: "BT-29"),
++        global-id: field(
++          _identifier,
++          doc: "Global seller identifier (GLN, DUNS, …).",
++          bt: "BT-29",
++        ),
++        legal-id: field(
++          _identifier,
++          doc: "Legal registration (e.g. {scheme: \"register\", id: \"HRB 12345\", court: \"Amtsgericht Berlin\"}).",
++          bt: "BT-30",
++        ),
++        legal-info: field(
++          t.lines(),
++          doc: "Additional legal information.",
++          bt: "BT-33",
++        ),
++        electronic-address: field(
++          _identifier,
++          doc: "Electronic address: an e-mail, or {scheme, id}.",
++          bt: "BT-34",
++        ),
++        contact: _contact,
++        tax-representative: field(
++          t.ref("tax-representative"),
++          doc: "Seller's tax representative.",
++          bt: "BG-11",
++        ),
++        register: field(t.text(), doc: "Register entry (printed only)."),
++        management: field(t.lines(), doc: "Management (printed only)."),
++      ),
++  ),
++  buyer: object(
++    partial: true,
++    doc: "The buyer (BG-7).",
++    exclusive: (("buyer-reference", "leitweg-id"),),
++    _address("BT-44", "BT-50", "BT-52/BT-53", "BT-55")
++      + (
++        trading-name: field(t.text(), doc: "Trading name.", bt: "BT-45"),
++        vat-id: field(t.text(), doc: "VAT identifier.", bt: "BT-48"),
++        tax-nr: field(t.text(), doc: "Tax number (printed only)."),
++        id: field(_identifier, doc: "Buyer identifier.", bt: "BT-46"),
++        global-id: field(
++          _identifier,
++          doc: "Global buyer identifier.",
++          bt: "BT-46",
++        ),
++        legal-id: field(
++          _identifier,
++          doc: "Legal registration identifier.",
++          bt: "BT-47",
++        ),
++        electronic-address: field(
++          _identifier,
++          doc: "Electronic address: an e-mail, or {scheme, id}.",
++          bt: "BT-49",
++        ),
++        contact: field(t.ref("contact"), doc: "Contact person.", bt: "BG-9"),
++        buyer-reference: field(
++          t.text(),
++          doc: "Buyer reference.",
++          bt: "BT-10",
++        ),
++        leitweg-id: field(
++          t.converted(t.text(), "leitweg"),
++          doc: "Leitweg-ID (German public buyers); check digits are verified.",
++          bt: "BT-10",
++        ),
++      ),
++  ),
++  ship-to: object(
++    partial: true,
++    doc: "The delivery address (BG-13/BG-15).",
++    _address("BT-70", "BT-75", "BT-77/BT-78", "BT-80")
++      + (
++        id: field(_identifier, doc: "Location identifier.", bt: "BT-71"),
++        global-id: field(
++          _identifier,
++          doc: "Global location identifier.",
++          bt: "BT-71",
++        ),
++      ),
++  ),
++  payee: object(partial: true, doc: "The payee (BG-10).", (
++    name: field(t.lines(), doc: "Name.", bt: "BT-59", required: true),
++    id: field(_identifier, doc: "Payee identifier.", bt: "BT-60"),
++    global-id: field(_identifier, doc: "Global payee identifier.", bt: "BT-60"),
++    legal-id: field(
++      _identifier,
++      doc: "Legal registration identifier.",
++      bt: "BT-61",
++    ),
++    custom: field(
++      t.ref("custom-party"),
++      doc: "Your own fields: read by theme parts as ctx.payee.custom; never in the e-invoice.",
++    ),
++  )),
++  tax-representative: object(
++    partial: true,
++    doc: "Seller's tax representative (BG-11).",
++    (
++      name: field(t.lines(), doc: "Name.", bt: "BT-62", required: true),
++      address: field(t.lines(), doc: "Street and number.", bt: "BT-64"),
++      city: field(_city, doc: "Post code and city.", bt: "BT-66/BT-67"),
++      country: field(_country, doc: "Country.", bt: "BT-69"),
++      vat-id: field(
++        t.text(),
++        doc: "VAT identifier.",
++        bt: "BT-63",
++        required: true,
++      ),
++    ),
++  ),
++  contact: object(partial: true, doc: "A contact person.", (
++    name: field(t.text(), doc: "Name.", bt: "BT-41/BT-56"),
++    phone: field(t.text(), doc: "Phone.", bt: "BT-42/BT-57"),
++    email: field(t.text(), doc: "E-mail.", bt: "BT-43/BT-58"),
++  )),
++  city: object(doc: "A city with its post code given separately.", (
++    name: field(t.text(), doc: "City.", required: true),
++    post-code: field(
++      t.text(),
++      doc: "Post code, as a string (leading zeros).",
++      example: "01067",
++    ),
++    state: field(t.text(), doc: "State or region."),
++  )),
++  identifier: object(doc: "An identifier with its scheme.", (
++    scheme: field(
++      t.text(
++        pattern: "^(gln|duns|siren|siret|uid-ch|leitweg|register|EM|[0-9]{4})$",
++        pattern-doc: "gln, duns, siren, siret, uid-ch, leitweg, register, EM or an ISO 6523 ICD code such as \"0088\"",
++      ),
++      doc: "Scheme: a name (check digits are verified) or an ISO 6523 ICD code.",
++      required: true,
++    ),
++    id: field(t.text(), doc: "The identifier.", required: true),
++    court: field(t.text(), doc: "Register court (scheme \"register\")."),
++  )),
++  tax: object(doc: "A tax of an explicit category.", (
++    category: field(
++      t.enum(.._tax-categories),
++      doc: "UNTDID 5305 category: S standard, Z zero, E exempt, AE reverse charge, K intra-community, G export, O outside scope, …",
++      bt: "BT-151",
++      required: true,
++    ),
++    rate: field(t.percent(min: 0%), doc: "Rate; absent = 0%.", bt: "BT-152"),
++    grounds: field(t.text(), doc: "Exemption reason (printed).", bt: "BT-120"),
++    code: field(
++      t.text(pattern: "^VATEX-", pattern-doc: "a VATEX code"),
++      doc: "VATEX exemption reason code.",
++      bt: "BT-121",
++    ),
++    label: field(
++      t.text(),
++      doc: "Label of the tax; absent = the category's (\"vat\", \"exempt\", …).",
++    ),
++  )),
++  unit: object(doc: "A unit given by code and printed name.", (
++    code: field(
++      t.text(pattern: "^[A-Z0-9]{2,3}$", pattern-doc: "a UN/ECE Rec 20 code"),
++      doc: "UN/ECE Recommendation 20 code.",
++      bt: "BT-130",
++    ),
++    display: field(t.text(), doc: "Printed name.", required: true),
++  )),
++  note: object(doc: "An invoice note with a subject code.", (
++    text: field(t.text(), doc: "The note.", bt: "BT-22", required: true),
++    subject-code: field(
++      t.text(),
++      doc: "UNTDID 4451 subject code.",
++      bt: "BT-21",
++    ),
++  )),
++  item-id: object(doc: "Item identifiers.", (
++    seller: field(t.text(), doc: "Seller's item identifier.", bt: "BT-155"),
++    buyer: field(t.text(), doc: "Buyer's item identifier.", bt: "BT-156"),
++    standard: field(t.text(), doc: "Standard identifier (GTIN).", bt: "BT-157"),
++  )),
++  // ---- line items --------------------------------------------------------------
++  item: object(
++    doc: "A line item (BG-25).",
++    exactly-one: (("price", "total"),),
++    (
++      kind: field(t.const("item"), doc: "Optional discriminator."),
++      name: field(t.text(), doc: "Item name.", bt: "BT-153", required: true),
++      description: field(t.text(), doc: "Description.", bt: "BT-154"),
++      quantity: field(
++        t.decimal(),
++        doc: "Quantity; absent = 1.",
++        bt: "BT-129",
++        example: "2",
++      ),
++      base-quantity: field(
++        t.decimal(positive: true),
++        doc: "The quantity the price refers to; absent = 1.",
++        bt: "BT-149",
++      ),
++      unit: field(
++        _unit,
++        doc: "Unit: a UN/ECE Rec 20 code (\"HUR\", \"DAY\", \"H87\", …) printed in the locale's language, or {code, display}.",
++        bt: "BT-130",
++      ),
++      price: field(
++        t.decimal(),
++        doc: "Unit price (net, or gross with tax-mode inclusive).",
++        bt: "BT-146",
++        example: "120.00",
++      ),
++      total: field(
++        t.decimal(),
++        doc: "Line total instead of a price.",
++        bt: "BT-131",
++      ),
++      date: field(
++        t.period(),
++        doc: "Delivery date or period of the line.",
++        bt: "BG-26",
++      ),
++      tax: field(_tax, doc: "Tax of the line.", bt: "BG-30"),
++      input-gross: field(
++        t.boolean(),
++        doc: "Whether price/total is gross.",
++      ),
++      item-id: field(
++        _item-id,
++        doc: "Item identifiers: a text (seller's) or {seller, buyer, standard}.",
++      ),
++      reference: field(
++        t.text(),
++        doc: "Buyer accounting reference of the line.",
++        bt: "BT-133",
++      ),
++      note: field(t.text(), doc: "Line note.", bt: "BT-127"),
++      origin: field(_country, doc: "Country of origin.", bt: "BT-159"),
++      modifiers: field(
++        t.array(t.ref("modifier")),
++        doc: "Discounts and surcharges of the line.",
++        bt: "BG-27/BG-28",
++      ),
++      custom: field(
++        t.ref("custom-item"),
++        doc: "Your own fields of the line: theme parts read view.items[i].custom.",
++      ),
++    ),
++  ),
++  group: object(doc: "A group of items with a subtotal.", (
++    kind: field(t.const("group"), doc: "Discriminator.", required: true),
++    name: field(t.text(), doc: "Group title.", required: true),
++    description: field(t.text(), doc: "Description."),
++    show-subtotal: field(t.boolean(), doc: "Print a subtotal; absent = true."),
++    tax: field(_tax, doc: "Default tax of the group's items."),
++    input-gross: field(t.boolean(), doc: "Default input-gross of the items."),
++    date: field(t.period(), doc: "Default date of the items."),
++    unit: field(_unit, doc: "Default unit of the items."),
++    items: field(_rows, doc: "The group's rows.", required: true),
++  )),
++  bundle: object(doc: "Items sold as one line, one line per VAT rate.", (
++    kind: field(t.const("bundle"), doc: "Discriminator.", required: true),
++    name: field(t.text(), doc: "Bundle name.", bt: "BT-153", required: true),
++    description: field(
++      t.text(),
++      doc: "Description; absent = the items' names.",
++    ),
++    quantity: field(t.decimal(), doc: "Quantity; absent = 1."),
++    base-quantity: field(t.decimal(positive: true), doc: "Base quantity."),
++    unit: field(_unit, doc: "Unit; absent = sets."),
++    date: field(t.period(), doc: "Date or period."),
++    tax: field(_tax, doc: "Default tax of the bundle's items."),
++    input-gross: field(t.boolean(), doc: "Default input-gross."),
++    item-id: field(_item-id, doc: "Item identifiers."),
++    reference: field(t.text(), doc: "Accounting reference."),
++    items: field(
++      _bundle-rows,
++      doc: "The bundle's items and bundles.",
++      required: true,
++    ),
++    modifiers: field(
++      t.array(t.ref("modifier")),
++      doc: "Discounts and surcharges inside the bundle.",
++    ),
++  )),
++  modifier: object(doc: "A discount or surcharge.", (
++    kind: field(
++      t.enum("discount", "surcharge"),
++      doc: "Discount or surcharge.",
++      required: true,
++    ),
++    name: field(t.text(), doc: "Reason.", bt: "BT-97/BT-104", required: true),
++    amount: field(
++      t.amount(),
++      doc: "\"10%\" (relative) or \"50.00\" (absolute), never negative.",
++      bt: "BT-92/BT-99",
++      required: true,
++    ),
++    label: field(t.text(), doc: "Printed label; absent = the locale's."),
++    description: field(t.text(), doc: "Description."),
++    tax: field(
++      _tax,
++      doc: "Pin to one VAT rate; absent = split over the rates (document level).",
++    ),
++    input-gross: field(
++      t.boolean(),
++      doc: "Whether an absolute amount is gross.",
++    ),
++  )),
++  prepayment: object(doc: "An amount already paid.", (
++    amount: field(
++      t.amount(),
++      doc: "\"100.00\" or a share of the gross total \"30%\".",
++      bt: "BT-113",
++      required: true,
++    ),
++    name: field(t.text(), doc: "Name."),
++    label: field(t.text(), doc: "Printed label."),
++    date: field(t.date(), doc: "Date of the payment."),
++    reference: field(t.text(), doc: "Reference."),
++    description: field(t.text(), doc: "Description."),
++    method: field(t.text(), doc: "How it was paid."),
++  )),
++  // ---- payment -----------------------------------------------------------------
++  payment: object(
++    partial: true,
++    doc: "Terms and means of payment.",
++    exclusive: (("paid", "terms"),),
++    at-most-one: (("direct-debit", "card", "paid"),),
++    (
++      terms: field(
++        t.ref("terms"),
++        doc: "Payment terms; absent = the skeleton's.",
++        bt: "BT-20",
++        role: "issuer",
++      ),
++      method: field(
++        t.enum("transfer", "direct-debit", "card", "paid"),
++        doc: "Payment method; absent = the method whose details are given, else the skeleton's.",
++        bt: "BT-81",
++        role: "issuer",
++      ),
++      bank: field(
++        t.ref("bank"),
++        doc: "The account to pay to; absent = the skeleton's.",
++        bt: "BG-17",
++        role: "issuer",
++      ),
++      creditor-id: field(
++        t.text(),
++        doc: "SEPA creditor identifier (direct debit); absent = the skeleton's.",
++        bt: "BT-90",
++        role: "issuer",
++      ),
++      direct-debit: field(
++        t.ref("direct-debit"),
++        doc: "SEPA direct debit of this invoice.",
++        bt: "BG-19",
++        role: "document",
++      ),
++      card: field(
++        t.ref("card"),
++        doc: "Card payment of this invoice.",
++        bt: "BG-18",
++        role: "document",
++      ),
++      paid: field(
++        t.ref("paid"),
++        doc: "The invoice is already paid.",
++        role: "document",
++      ),
++    ),
++  ),
++  terms: object(
++    partial: true,
++    doc: "Payment terms.",
++    at-most-one: (("days", "date", "text"),),
++    (
++      days: field(t.integer(min: 0), doc: "Days to pay."),
++      date: field(t.date(), doc: "Pay by this date.", bt: "BT-9"),
++      text: field(
++        t.text(),
++        doc: "Payment terms as free text (printed and stated as BT-20).",
++        bt: "BT-20",
++      ),
++      discount: field(
++        t.array(t.ref("cash-discount")),
++        doc: "Cash discounts (Skonto).",
++      ),
++    ),
++  ),
++  cash-discount: object(doc: "A cash discount.", (
++    days: field(t.integer(min: 1), doc: "Days.", required: true),
++    percent: field(
++      t.percent(min: 0%, max: 100%),
++      doc: "Percentage.",
++      required: true,
++    ),
++    basis: field(t.decimal(), doc: "Basis amount; absent = the total."),
++  )),
++  bank: object(partial: true, doc: "A bank account.", (
++    iban: field(_iban, doc: "IBAN.", bt: "BT-84", required: true),
++    bic: field(t.text(), doc: "BIC.", bt: "BT-86"),
++    bank: field(t.text(), doc: "Name of the bank (printed)."),
++    name: field(t.text(), doc: "Account holder.", bt: "BT-85"),
++  )),
++  direct-debit: object(doc: "A SEPA direct debit.", (
++    mandate: field(
++      t.text(),
++      doc: "Mandate reference.",
++      bt: "BT-89",
++      required: true,
++    ),
++    debtor-iban: field(_iban, doc: "Debited account.", bt: "BT-91"),
++  )),
++  card: object(doc: "A card payment.", (
++    last4: field(
++      t.text(pattern: "^[0-9]{4,6}$", pattern-doc: "4 to 6 digits"),
++      doc: "Last digits of the card number, as a string.",
++      bt: "BT-87",
++      required: true,
++    ),
++    holder: field(t.text(), doc: "Card holder.", bt: "BT-88"),
++    kind: field(t.enum("credit", "debit"), doc: "Credit or debit card."),
++  )),
++  paid: object(doc: "An invoice that is already paid.", (
++    method: field(
++      t.enum("cash", "cheque", "online", "transfer", "card", "direct-debit"),
++      doc: "How it was paid.",
++    ),
++    date: field(t.date(), doc: "When it was paid."),
++  )),
++  // ---- custom (open unless the skeleton declares fields) ------------------------
++  custom: object(
++    doc: "Your own document fields (an open bag).",
++    open: true,
++    partial: true,
++    (:),
++  ),
++  custom-party: object(
++    doc: "Your own party fields.",
++    open: true,
++    partial: true,
++    (:),
++  ),
++  custom-item: object(
++    doc: "Your own line-item fields.",
++    open: true,
++    partial: true,
++    (:),
++  ),
++)
++
++/// The class of every `invoice()` parameter, for the re-entry of a hydrated
++/// call and for the signature test (tools/contract/signature.py), which fails
++/// when a parameter of `invoice()` is missing here:
++/// - "design": passed through unchanged, never data;
++/// - "document" / "issuer": the role of the format key of the same name
++///   (`objects.invoice.fields`);
++/// - "data", "body": the hydration source and the body.
++/// -> dictionary
++#let invoice-params = {
++  let roles = objects
++    .invoice
++    .fields
++    .pairs()
++    .filter(p => p.last().role != none)
++    .map(((k, f)) => (k, f.role))
++    .to-dict()
++  let fixed = (
++    theme: "design",
++    locale: "design",
++    references: "design",
++    zugferd: "design",
++    zugferd-errors: "design",
++    validation: "design",
++    tax-nr: "design",
++    data: "data",
++    body: "body",
++  )
++  fixed + roles
++}
+diff --git a/src/contract/types.typ b/src/contract/types.typ
+new file mode 100644
+index 0000000..ab1b471
+--- /dev/null
++++ b/src/contract/types.typ
+@@ -0,0 +1,172 @@
++// The type vocabulary of the invoice data contract.
++//
++// ONE vocabulary describes the input format ("invoice-pro/1") and the result
++// ("invoice-pro-result/1"). Each constructor returns a plain dictionary
++// `(t: <kind>, ..)`; nothing here decodes or exports. Two interpreters read
++// the same descriptors: decode.typ turns parsed JSON/TOML/YAML into Typst
++// values and issues, export.typ writes a JSON Schema 2020-12 document.
++//
++// Internal: this module shadows `text`, `decimal`, `array` and friends of the
++// standard library (`t.text()` reads well in the descriptor); it must not call
++// the standard functions itself, and it is never re-exported (the public
++// namespace `invoice-data` shadows no builtin).
++
++/// A string. `max`: maximum length in characters (e.g. 35 for the
++/// structured payment reference of an EPC QR code). `pattern`: a regular
++/// expression the whole string must match, `pattern-doc` says it in words.
++/// -> dictionary
++#let text(max: none, pattern: none, pattern-doc: none, example: none) = (
++  t: "text",
++  max: max,
++  pattern: pattern,
++  pattern-doc: pattern-doc,
++  example: example,
++)
++
++/// A string, or an array of strings printed as lines (names, addresses).
++/// -> dictionary
++#let lines() = (t: "lines")
++
++/// An exact decimal number written as a string, `"12.30"`. JSON numbers are
++/// read too (converted exactly via their shortest representation), but the
++/// JSON Schema documents strings: a JSON number is a binary float.
++/// -> dictionary
++#let decimal(min: none, positive: false) = (
++  t: "decimal",
++  min: min,
++  positive: positive,
++)
++
++/// A percentage written as a string, `"19%"`, `"2.5%"`. Becomes a Typst
++/// ratio that equals the literal (`19%`) bit for bit.
++/// -> dictionary
++#let percent(min: none, max: none) = (t: "percent", min: min, max: max)
++
++/// An amount that is either absolute (a decimal, `"50.00"`) or relative (a
++/// percentage, `"10%"`): the `%` sign decides.
++/// -> dictionary
++#let amount() = (t: "amount")
++
++/// A whole JSON number.
++/// -> dictionary
++#let integer(min: none, max: none) = (t: "int", min: min, max: max)
++
++/// `true` or `false`.
++/// -> dictionary
++#let boolean() = (t: "bool")
++
++/// A calendar date `"YYYY-MM-DD"` (ISO 8601). TOML dates are read natively.
++/// -> dictionary
++#let date() = (t: "date")
++
++/// A date, or a period `{"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}`.
++/// -> dictionary
++#let period() = (t: "period")
++
++/// One of the given strings.
++/// -> dictionary
++#let enum(..values) = (t: "enum", values: values.pos())
++
++/// Exactly this value (used for discriminators).
++/// -> dictionary
++#let const(value) = (t: "const", value: value)
++
++/// A named object of the schema (closed: unknown keys are reported).
++/// -> dictionary
++#let ref(name) = (t: "ref", name: name)
++
++/// A list of values of one type.
++/// -> dictionary
++#let array(of, min: none) = (t: "array", of: of, min: min)
++
++/// An open object whose values all have one type (e.g. `extra` labels).
++/// -> dictionary
++#let map(of) = (t: "map", of: of)
++
++/// Any JSON value, passed through as decoded (the open `custom` bag).
++/// -> dictionary
++#let any() = (t: "any")
++
++/// One of several types, chosen by the JSON kind of the value (string,
++/// number, object, array): the alternatives must differ in kind. `conv` names
++/// the converter that builds the Typst value (decode.typ `_convert`).
++/// -> dictionary
++#let union(..of, conv: none) = (t: "union", of: of.pos(), conv: conv)
++
++/// An object chosen by a discriminator key (`kind`), with a default case.
++/// -> dictionary
++#let tagged(key, default, cases) = (
++  t: "tagged",
++  key: key,
++  default: default,
++  cases: cases,
++)
++
++/// Marks a type with the converter that turns the decoded JSON value into
++/// the Typst value of the API (a tax dictionary, a `unit.*` function, an
++/// `id.*` identifier).
++/// -> dictionary
++#let converted(type, conv) = type + (conv: conv)
++
++/// A field of an object: its type plus the contract metadata.
++/// - doc:      one sentence for the reference and the JSON Schema
++/// - bt:       the EN 16931 business term or group (`"BT-1"`, `"BG-25"`)
++/// - required: the data must give it (JSON Schema `required`)
++/// - role:     precedence when a skeleton is hydrated (`invoice()` keys and
++///             the keys of `payment`): "document" = identifies ONE invoice,
++///             from the data only (the skeleton's value is a sample; absent =
++///             the signature's own default, never a copy of it); "issuer" =
++///             the skeleton's value stays unless the data gives the key; none
++///             = not a parameter (a body section or a nested key)
++/// - bind:     where a top-level section goes instead of an invoice()
++///             parameter: "line-items" (the items slot), "payment" (the
++///             `payment(..)` block)
++/// - example:  a JSON example value
++/// - since:    the format minor version that added the field ("1.0")
++/// -> dictionary
++#let field(
++  type,
++  doc: none,
++  bt: none,
++  required: false,
++  role: none,
++  bind: none,
++  example: none,
++  since: "1.0",
++) = (
++  type: type,
++  doc: doc,
++  bt: bt,
++  required: required,
++  role: role,
++  bind: bind,
++  example: example,
++  since: since,
++)
++
++/// A named object: its fields, whether unknown keys are allowed, and the
++/// cross-field rules (`exactly-one`, `at-most-one`/`exclusive`, and
++/// `excludes-if-true`: `(a, b)` = `b` must be absent when `a` is `true`).
++/// `partial`: an object that lacks a required key is kept (parties: the legal
++/// checks name the gap); otherwise it is left out as a whole (a line without
++/// a price).
++/// -> dictionary
++#let object(
++  fields,
++  doc: none,
++  open: false,
++  partial: false,
++  exactly-one: (),
++  at-most-one: (),
++  exclusive: (),
++  excludes-if-true: (),
++) = (
++  fields: fields,
++  doc: doc,
++  open: open,
++  partial: partial,
++  exactly-one: exactly-one,
++  at-most-one: at-most-one,
++  exclusive: exclusive,
++  excludes-if-true: excludes-if-true,
++)
+diff --git a/src/invoice.typ b/src/invoice.typ
+index ff79607..1b130ec 100644
+--- a/src/invoice.typ
++++ b/src/invoice.typ
+@@ -212,11 +212,91 @@
+   /// `--input invoice-pro-validation=strict|draft|none` overrides this value.
+   /// -> none | "draft" | "strict"
+   validation: "draft",
++  /// Fields of your own, which invoice-pro does not interpret: theme parts
++  /// read them as `ctx.custom`, the body as `info.get("custom", ..)`. A
++  /// preview sample: a hydrated invoice takes its custom fields from the data
++  /// alone.
++  /// -> none | dictionary
++  custom: none,
++  /// The data of the invoice (format "invoice-pro/1"), to hydrate this call
++  /// as a skeleton. What identifies one invoice (number, dates, recipient,
++  /// delivery address, references, line items, the details of a direct
++  /// debit, card or paid invoice, custom fields) then comes from the data
++  /// alone: the skeleton's values for it are preview samples. The issuer's
++  /// settings (sender, payee, currency, subject, document type, notes, tax
++  /// settings, payment terms, method and bank) keep the skeleton's value
++  /// unless the data gives them, as a whole. Design never comes from data.
++  /// Problems in the data are `data` issues (see `validation`).
++  ///
++  /// `auto`: the JSON of `--input invoice-pro-data` if it is given, else the
++  /// invoice is not hydrated. Also: a record of `invoice-data.load(..)` or
++  /// `invoice-data.decode(..)`, a dictionary (`json(..)`, `toml(..)`,
++  /// `yaml(..)`), JSON as bytes or text, or (Typst 0.15) a `path`.
++  /// -> auto | none | dictionary | bytes | str | content
++  data: auto,
+ 
+   /// The content of the invoice, typically containing line-items and other components.
+   /// -> content
+   body,
+ ) = {
++  /** Hydration (contract/hydrate.typ) **/
++  // A hydrated call re-enters invoice() with the effective arguments and the
++  // sealed "applied" marker as `data`; a document key the data lacks is left
++  // out of that call, so the defaults of this signature apply. Without data,
++  // only two `sys.inputs` keys are looked up.
++  let applied = none
++  if (
++    type(data) == content
++      and data.func() == metadata
++      and type(data.value) == dictionary
++      and data.value.at("kind", default: none) == "invoice-pro-applied"
++  ) {
++    applied = data.value
++  } else if (
++    data not in (auto, none)
++      or "invoice-pro-data" in sys.inputs
++      or "invoice-pro-data-file" in sys.inputs
++  ) {
++    import "contract/hydrate.typ": hydrate
++    let h = hydrate(data, (
++      theme: theme,
++      locale: locale,
++      currency: currency,
++      sender: sender,
++      recipient: recipient,
++      delivery-address: delivery-address,
++      payee: payee,
++      tax-nr: tax-nr,
++      date: date,
++      service-period: service-period,
++      subject: subject,
++      document-type: document-type,
++      references: references,
++      invoice-nr: invoice-nr,
++      customer-nr: customer-nr,
++      order-nr: order-nr,
++      order-date: order-date,
++      project: project,
++      contract-nr: contract-nr,
++      quote-nr: quote-nr,
++      delivery-note-nr: delivery-note-nr,
++      preceding-invoice-nr: preceding-invoice-nr,
++      preceding-invoice-date: preceding-invoice-date,
++      due-date: due-date,
++      payment-reference: payment-reference,
++      notes: notes,
++      tax: tax,
++      tax-mode: tax-mode,
++      tax-exempt-small-biz: tax-exempt-small-biz,
++      zugferd: zugferd,
++      zugferd-errors: zugferd-errors,
++      validation: validation,
++      custom: custom,
++    ))
++    if h != none { return invoice(..h.args, data: h.marker, body) }
++  }
++  types.require(custom, "invoice::custom", none, dictionary)
++
+   if type(theme) != function {
+     panic(
+       "variable `invoice::theme` must be of function (a lazy theme such as `theme.classic`), found "
+@@ -557,6 +637,8 @@
+           ),
+           region: lower(str(eval-locale.meta.region)),
+         )
++        // the problems of the hydrating data (contract/decode.typ)
++        + if applied != none { applied.issues } else { () }
+     )
+   }
+ 
+@@ -612,6 +694,12 @@
+     preceding-invoice-date: preceding-invoice-date,
+     // `(text: .., subject-code: ..)` each, see `normalize-notes`.
+     notes: normalize-notes(notes),
++    // A hydrated invoice: the body sections for the binding points (the items
++    // slot, `payment(..)`) and the format of the data, for the result. The
++    // custom fields. Both sealed like the theme: a large payload would
++    // otherwise be hashed with every loom call.
++    hydration: if applied != none { metadata(applied.sections) },
++    custom: if custom != none { metadata(custom) },
+   ) {
+     if value not in (none, auto, ()) { inputs.insert(key, value) }
+   }
+diff --git a/src/lib.typ b/src/lib.typ
+index d0ac401..450e5a8 100755
+--- a/src/lib.typ
++++ b/src/lib.typ
+@@ -14,6 +14,7 @@
+ #import "components/bank-details.typ": bank-details
+ #import "components/payment-means.typ": card-payment, direct-debit, paid
+ #import "components/payment-terms.typ": payment-terms
++#import "components/payment.typ": payment
+ #import "components/signature.typ": signature
+ #import "components/dynamic.typ": dynamic
+ 
+@@ -26,3 +27,4 @@
+ #import "public/unit.typ"
+ #import "public/references.typ"
+ #import "public/info.typ" as info
++#import "public/invoice-data.typ"
+diff --git a/src/locale/region/at.typ b/src/locale/region/at.typ
+index 34c18ca..585b3b0 100644
+--- a/src/locale/region/at.typ
++++ b/src/locale/region/at.typ
+@@ -36,6 +36,9 @@
+ 
+     normalize: (
+       infer-tax: infer-tax-at,
++      // The rates `infer-tax` resolves, for checks before it runs (a
++      // rate of invoice data that is not listed is an issue, not a panic).
++      vat-rates: (20%, 13%, 10%),
+     ),
+ 
+     tax: (
+diff --git a/src/locale/region/base.typ b/src/locale/region/base.typ
+index 3b25671..9aed414 100644
+--- a/src/locale/region/base.typ
++++ b/src/locale/region/base.typ
+@@ -54,6 +54,12 @@
+       /// and maps it to a structured regional tax object.
+       /// -> (ratio | float | decimal | int) => tax
+       infer-tax: x => panic("Can't infer tax for region:`base`!"),
++
++      /// The rates `infer-tax` resolves (e.g. `(19%, 7%)`), so that a rate of
++      /// invoice data is checked before `infer-tax` runs; `none`: not listed
++      /// (`infer-tax` decides).
++      /// -> none | array
++      vat-rates: none,
+     ),
+ 
+     format: (
+diff --git a/src/locale/region/ch.typ b/src/locale/region/ch.typ
+index 7c52881..7308be0 100644
+--- a/src/locale/region/ch.typ
++++ b/src/locale/region/ch.typ
+@@ -50,6 +50,9 @@
+ 
+     normalize: (
+       infer-tax: infer-tax-ch,
++      // The rates `infer-tax` resolves, for checks before it runs (a
++      // rate of invoice data that is not listed is an issue, not a panic).
++      vat-rates: (8.1%, 2.6%, 3.8%),
+     ),
+ 
+     format: (
+diff --git a/src/locale/region/de.typ b/src/locale/region/de.typ
+index c41d0ed..c7bb4af 100644
+--- a/src/locale/region/de.typ
++++ b/src/locale/region/de.typ
+@@ -34,6 +34,9 @@
+ 
+     normalize: (
+       infer-tax: infer-tax-de,
++      // The rates `infer-tax` resolves, for checks before it runs (a
++      // rate of invoice data that is not listed is an issue, not a panic).
++      vat-rates: (19%, 7%),
+     ),
+ 
+     tax: (
+diff --git a/src/locale/region/es.typ b/src/locale/region/es.typ
+index 53c4420..ec858c8 100644
+--- a/src/locale/region/es.typ
++++ b/src/locale/region/es.typ
+@@ -31,6 +31,9 @@
+ 
+     normalize: (
+       infer-tax: infer-tax-es,
++      // The rates `infer-tax` resolves, for checks before it runs (a
++      // rate of invoice data that is not listed is an issue, not a panic).
++      vat-rates: (21%, 10%, 4%),
+     ),
+ 
+     tax: (
+diff --git a/src/locale/region/fr.typ b/src/locale/region/fr.typ
+index 11725a7..a08d94c 100644
+--- a/src/locale/region/fr.typ
++++ b/src/locale/region/fr.typ
+@@ -56,6 +56,9 @@
+ 
+     normalize: (
+       infer-tax: infer-tax-fr,
++      // The rates `infer-tax` resolves, for checks before it runs (a
++      // rate of invoice data that is not listed is an issue, not a panic).
++      vat-rates: (20%, 10%, 5.5%, 2.1%),
+     ),
+ 
+     format: m-format.make-formatters(numeric-format, currency-meta),
+diff --git a/src/locale/region/it.typ b/src/locale/region/it.typ
+index 4d59b8d..03a31a6 100644
+--- a/src/locale/region/it.typ
++++ b/src/locale/region/it.typ
+@@ -42,6 +42,9 @@
+ 
+     normalize: (
+       infer-tax: infer-tax-it,
++      // The rates `infer-tax` resolves, for checks before it runs (a
++      // rate of invoice data that is not listed is an issue, not a panic).
++      vat-rates: (22%, 10%, 5%, 4%),
+     ),
+ 
+     tax: (
+diff --git a/src/public/invoice-data.typ b/src/public/invoice-data.typ
+new file mode 100644
+index 0000000..d63e287
+--- /dev/null
++++ b/src/public/invoice-data.typ
+@@ -0,0 +1,166 @@
++// The invoice data contract: the format "invoice-pro/1", its CLI keys and
++// the layout-free tools a program or a skeleton needs. Everything else of
++// the contract is generated from ONE descriptor (contract/schema.typ).
++//
++// Named `invoice-data`, not `data`: a root export `data` would take the
++// place of a user's `#let data = json(..)`; and `import invoice-data: *`
++// shadows no Typst builtin. Every function imports its module inside its
++// body, so the package import costs nothing for invoices without data.
++
++/// The invoice data format this version reads: `"invoice-pro/1"`.
++/// -> str
++#let format = "invoice-pro/1"
++
++/// The `--input` key that carries the data of one invoice as JSON text.
++/// -> str
++#let input-key = "invoice-pro-data"
++
++/// The `--input` key that names a data file (JSON, TOML or YAML), opened by
++/// the skeleton's `read` callback (see `load`).
++/// -> str
++#let file-key = "invoice-pro-data-file"
++
++/// Decodes and validates data without rendering: a record for
++/// `invoice(data:)`, `values` and `check`. Never panics on bad data (problems
++/// become issues with JSON Pointers); `region` adds the region checks
++/// invoice() makes with its locale (e.g. `"16%"` is no VAT rate of `"de"`).
++/// -> content
++#let decode(
++  /// A dictionary (`json(..)`, `toml(..)`, `yaml(..)`), JSON as bytes or
++  /// text, or (Typst 0.15) a `path`.
++  /// -> dictionary | bytes | str
++  data,
++  /// -> none | str
++  region: none,
++) = {
++  import "../contract/input.typ": resolve-data
++  import "../contract/hydrate.typ": make-record, rates-of
++  // the value given here is the one source (inputs are not consulted)
++  let src = resolve-data(data, inputs: (:))
++  if src == none { return none }
++  make-record(src.raw, region: region, rates: rates-of(region))
++}
++
++/// The record of the data the CLI hands over, for `invoice(data: ..)`:
++/// the JSON text of `--input invoice-pro-data` (or a dictionary an embedder
++/// passes), or the file named by `--input invoice-pro-data-file`, opened with
++/// `read`. A package cannot open your files: pass
++/// `p => read(p, encoding: none)`, written in your file; a relative path
++/// resolves against that file, `/…` against the project root, `/dev/stdin`
++/// reads stdin (with `--root /`). The file extension picks the decoder
++/// (`.json`, `.toml`, `.yaml`, `.yml`; a UTF-8 BOM is tolerated). `none`
++/// without input: the skeleton renders its samples.
++/// -> none | content
++#let load(
++  /// The skeleton's reader, `p => read(p, encoding: none)`. Without it, a
++  /// given `--input invoice-pro-data-file` panics with this fix.
++  /// -> none | function
++  read: none,
++  /// The CLI inputs; injectable for tests (tytanic cannot pass `--input`).
++  /// -> dictionary
++  inputs: sys.inputs,
++) = {
++  if not ("invoice-pro-data" in inputs or "invoice-pro-data-file" in inputs) {
++    return none
++  }
++  import "../contract/input.typ": from-inputs
++  import "../contract/hydrate.typ": make-record
++  let src = from-inputs(read: read, inputs: inputs)
++  make-record(src.raw, origin: src.origin)
++}
++
++/// A JSON-friendly validation report, layout-free (CI, phase-2 bindings):
++/// `(format: "invoice-pro-check/1", valid: bool,
++///   issues: ((id, path, key, message, fix), ..))`.
++/// -> dictionary
++#let check(
++  /// -> dictionary | bytes | str | content
++  data,
++  /// -> none | str
++  region: none,
++) = {
++  import "../contract/input.typ": is-record
++  let rec = if is-record(data) { data } else { decode(data, region: region) }
++  let r = rec.value
++  let issues = r.issues.map(i => (
++    id: i.id,
++    path: i.args.at("path", default: none),
++    key: i.key,
++    message: i.message,
++    fix: i.fix,
++  ))
++  if r.fatal != none {
++    issues.insert(0, (
++      id: "schema/format",
++      path: "/format",
++      key: "schema-version",
++      message: r.fatal,
++      fix: none,
++    ))
++  }
++  (format: "invoice-pro-check/1", valid: issues.len() == 0, issues: issues)
++}
++
++/// The decoded, typed values of a record (datetimes, decimals, ratios, unit
++/// functions, tax dictionaries, `id.*` values, custom bags as given): for
++/// design decisions in the skeleton at evaluation time. `none` for `none`.
++/// -> none | dictionary
++#let values(
++  /// -> none | content
++  record,
++) = if record == none { none } else { record.value.values }
++
++/// A party as invoice() normalises it (`post-code`, `city-name`, `country`,
++/// `*-inline`), for design decisions before invoice() runs: the post code of
++/// `"80331 München"` or of `(name: "München", post-code: "80331")`.
++/// -> dictionary
++#let party(
++  /// -> none | dictionary
++  party,
++  /// The region of a party without a country (the skeleton's locale region).
++  /// -> str
++  region: "de",
++) = {
++  if type(party) != dictionary { return (:) }
++  import "../logic/country.typ": normalize-party
++  normalize-party(party, region)
++}
++
++/// The explicit binding point of the data's line items inside `line-items`:
++/// without data it renders `sample` exactly as written; with data the rows of
++/// the data take its place and `sample` is never traversed. Rows outside it
++/// stay on every invoice (a fixed fee). At most one per `line-items`, as a
++/// direct child of it. Without a marker, the whole body of `line-items` is
++/// the binding point.
++/// -> content
++#let items(
++  /// -> content
++  sample,
++) = {
++  import "../contract/rows.typ": items-marker
++  items-marker(sample)
++}
++
++/// The JSON Schema 2020-12 of the data format (`"data"`) or of the result
++/// record `<invoice-pro-result>` (`"result"`), generated from the descriptor:
++/// `typst eval '{ import "@preview/invoice-pro:<version>": invoice-data;
++/// invoice-data.schema() }'`.
++/// -> dictionary
++#let schema(
++  /// -> "data" | "result"
++  kind: "data",
++) = {
++  import "../contract/export.typ": json-schema
++  if kind == "data" {
++    import "../contract/schema.typ" as s
++    json-schema(s.objects, id: s.schema-id, title: "invoice-pro/1 invoice data")
++  } else if kind == "result" {
++    import "../contract/result-schema.typ" as r
++    json-schema(r.objects, root: "result", id: r.schema-id, title: r.format)
++  } else {
++    panic(
++      "variable `invoice-data.schema::kind` must be \"data\" or \"result\", found "
++        + repr(kind),
++    )
++  }
++}
+diff --git a/src/theming/access.typ b/src/theming/access.typ
+index 4ac3774..7d57aa4 100644
+--- a/src/theming/access.typ
++++ b/src/theming/access.typ
+@@ -19,5 +19,8 @@
+ }
+ #let unsealed(ctx) = {
+   let t = ctx.at("theme", default: none)
+-  if type(t) == content { ctx + (theme: t.value) } else { ctx }
++  let ctx = if type(t) == content { ctx + (theme: t.value) } else { ctx }
++  // the `custom` fields of hydrated data travel sealed too (invoice.typ)
++  let c = ctx.at("custom", default: none)
++  if type(c) == content { ctx + (custom: c.value) } else { ctx }
+ }
+diff --git a/src/zugferd/model.typ b/src/zugferd/model.typ
+index 09dc8d0..302f0df 100644
+--- a/src/zugferd/model.typ
++++ b/src/zugferd/model.typ
+@@ -347,6 +347,8 @@
+   country: true,
+   region: true,
+   extra: false,
++  // fields of your own (invoice data format `custom`): never in the e-invoice
++  custom: false,
+ )
+ 
+ /// The keys each party knows, by role: the seller (`sender`), the buyer
+@@ -403,7 +405,7 @@
+     ),
+   ship-to: _address-keys + (id: true, location-id: true, global-id: true),
+   tax-representative: _address-keys + (vat-id: true),
+-  payee: (name: true, id: true, global-id: true, legal-id: true),
++  payee: (name: true, id: true, global-id: true, legal-id: true, custom: false),
+ )
+ 
+ // The keys of a party's `contact`, by role. The e-invoice writes the seller
+diff --git a/tests/theme/exports/test.typ b/tests/theme/exports/test.typ
+index 8857bfc..650d7f8 100644
+--- a/tests/theme/exports/test.typ
++++ b/tests/theme/exports/test.typ
+@@ -22,8 +22,8 @@
+ }
+ 
+ // the package root: the 0.5 names (payment-goal renamed, themes removed) plus
+-// theme, themed, the payment means (card-payment, direct-debit, paid) and the
+-// identifiers (id)
++// theme, themed, the payment means (card-payment, direct-debit, paid), the
++// identifiers (id), and the data contract (invoice-data, payment)
+ #expect("invoice-pro", lib, (
+   "apply",
+   "bank-details",
+@@ -38,11 +38,13 @@
+   "id",
+   "info",
+   "invoice",
++  "invoice-data",
+   "item",
+   "line-items",
+   "locale",
+   "modifier",
+   "paid",
++  "payment",
+   "payment-terms",
+   "prepayment",
+   "references",
+@@ -214,3 +216,16 @@
+     )
+   }
+ }
++// the data contract: 10 names, none shadowing a Typst builtin
++#expect("invoice-data", invoice-data, (
++  "check",
++  "decode",
++  "file-key",
++  "format",
++  "input-key",
++  "items",
++  "load",
++  "party",
++  "schema",
++  "values",
++))
+-- 
+2.43.0
+

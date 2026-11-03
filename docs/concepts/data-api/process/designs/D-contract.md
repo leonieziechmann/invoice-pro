@@ -48,7 +48,7 @@ Plus `payment(..)` instead of `payment-terms`/`bank-details` if the data chooses
 2. Accept that _every_ invoice publishes `<invoice-pro-result>` (zero output change, verified), §8.
 3. Confirm the encodings that differ from the Typst API: money as decimal strings, units as UN/ECE codes only, `null` = absent, `due-date` always a date, §2.2.
 4. Confirm the role of the borderline keys (document vs issuer: `subject`, `notes`, `document-type`, `currency`), §6.
-5. Choose the canonical `$id` host for the schemas (prototype: `https://invoice-pro.dev/schema/invoice-pro/1/…`), §2.8.
+5. Choose the canonical `$id` host for the schemas (prototype: `https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/…`), §2.8.
 
 ---
 
@@ -239,7 +239,7 @@ Absent ≡ `null` ≡ "not given" (generated models write `null`). For an option
 
 ```json
 {
-  "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+  "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
   "format": "invoice-pro/1",
   "invoice-nr": "2026-0042",
   "date": "2026-11-02",

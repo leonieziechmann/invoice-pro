@@ -1,0 +1,198 @@
+From f4148469392853b7f7e3bb9d5eaddb35f8cf8ef0 Mon Sep 17 00:00:00 2001
+From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 23:08:40 +0000
+Subject: [PATCH 04/10] perf(data): decoder hot path
+
+Plain values of plain types are decoded in the object loop without a
+recursive call; invalid keys are tracked directly; required keys and the
+JSON kinds of union alternatives are computed once, when the descriptor is
+built. Reports byte-identical on the 72 conformance fixtures and the 69
+documents of the fault corpus; about 25-35 % less decoder time per row.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RaaQussN1QVEE8zRWeeCD3
+---
+ src/contract/decode.typ | 60 ++++++++++++++++++++++++++++++++++-------
+ src/contract/types.typ  | 39 ++++++++++++++++++++++++++-
+ 2 files changed, 88 insertions(+), 11 deletions(-)
+
+diff --git a/src/contract/decode.typ b/src/contract/decode.typ
+index 40351dd..89e29ad 100644
+--- a/src/contract/decode.typ
++++ b/src/contract/decode.typ
+@@ -260,7 +260,11 @@
+ /// -> int
+ #let max-nesting = 8
+ #let _row-rules = ("item", "group", "bundle")
+-#let _level(path) = path.filter(k => k == "items").len()
++#let _level(path) = {
++  let n = 0
++  for k in path { if k == "items" { n += 1 } }
++  n
++}
+ 
+ /// Whether rows hold at least one item (a modifier without a pinned tax
+ /// takes its VAT category from them).
+@@ -515,6 +519,8 @@
+     let out = (:)
+     let issues = ()
+     let seen = ()
++    // keys the data gave whose value was invalid (an issue says why)
++    let invalid = ()
+     for (key, x) in v {
+       if key not in fields {
+         // a bag keeps what it is given, JSON null as `none`
+@@ -577,19 +583,44 @@
+             "invoice data: `" + dotted(path + (key,)) + "` must not be empty.",
+           ))
+           seen.push(key)
++          invalid.push(key)
+         }
+         continue
+       }
+       seen.push(key)
+-      let (y, iss) = decode-value(f.type, x, path + (key,), objs, ctx)
++      // Hot path (most values of most rows): a plain value of a plain type
++      // is taken here, without a recursive (memoized, hashed) call. Anything
++      // else, and every value that does not fit, takes the general path.
++      let ft = f.type
++      let t = ft.t
++      let fast = if "conv" in ft { none } else if t == "text" {
++        if (
++          type(x) == str and ft.max == none and ft.pattern == none
++        ) { x }
++      } else if t == "decimal" {
++        if type(x) == str and not ft.positive and ft.min == none {
++          _decimal-of(x)
++        }
++      } else if t == "lines" {
++        if type(x) == str { x }
++      } else if t == "bool" {
++        if type(x) == bool { x }
++      } else if t == "date" {
++        if type(x) == str { _date-of(x) }
++      } else if t == "enum" {
++        if type(x) == str and x in ft.values { x }
++      }
++      if fast != none {
++        out.insert(key, fast)
++        continue
++      }
++      let (y, iss) = decode-value(ft, x, path + (key,), objs, ctx)
+       issues += iss
+-      if y != _drop { out.insert(key, y) }
++      if y != _drop { out.insert(key, y) } else { invalid.push(key) }
+     }
+-    // keys the data gave whose value was invalid (an issue said why)
+-    let invalid = seen.filter(x => x not in out)
+     let broken = false
+-    for (key, f) in fields {
+-      if not f.required { continue }
++    for key in obj.required-keys {
++      let f = fields.at(key)
+       if key in invalid { broken = true }
+       if key not in seen {
+         broken = true
+@@ -612,7 +643,8 @@
+       }
+     }
+     for group in obj.exactly-one {
+-      let given = group.filter(x => x in seen)
++      let given = ()
++      for x in group { if x in seen { given.push(x) } }
+       if given.len() != 1 {
+         broken = true
+         issues.push(problem(
+@@ -628,7 +660,8 @@
+       } else if given.first() in invalid { broken = true }
+     }
+     for group in obj.at-most-one + obj.exclusive {
+-      let given = group.filter(x => x in seen)
++      let given = ()
++      for x in group { if x in seen { given.push(x) } }
+       if given.len() > 1 {
+         issues.push(problem(
+           path,
+@@ -666,6 +699,7 @@
+       if row == false { return (_drop, issues) }
+       out = row
+     }
++    if "conv" not in ty { return (out, issues) }
+     return _finish(ty, out, issues, path)
+   }
+   let k = _kind(v)
+@@ -901,7 +935,13 @@
+       }
+     }
+   } else if t == "union" {
+-    let alt = ty.of.find(x => k in _kinds(x, objs))
++    let alt = none
++    for (i, ks) in ty.kinds.enumerate() {
++      if k in ks {
++        alt = ty.of.at(i)
++        break
++      }
++    }
+     if alt == none { _bad(path, _expected(ty), v) } else {
+       decode-value(alt, v, path, objs, ctx)
+     }
+diff --git a/src/contract/types.typ b/src/contract/types.typ
+index ab1b471..ce48f02 100644
+--- a/src/contract/types.typ
++++ b/src/contract/types.typ
+@@ -91,7 +91,41 @@
+ /// number, object, array): the alternatives must differ in kind. `conv` names
+ /// the converter that builds the Typst value (decode.typ `_convert`).
+ /// -> dictionary
+-#let union(..of, conv: none) = (t: "union", of: of.pos(), conv: conv)
++// The JSON kinds a type accepts (the decoder picks a union's alternative by
++// them; computed once, when the descriptor is built).
++#let _kinds-of(ty) = {
++  let t = ty.t
++  if t in ("text", "enum") { ("string",) } else if t == "lines" {
++    ("string", "array")
++  } else if t == "decimal" {
++    ("string", "integer", "number", "decimal")
++  } else if t in ("percent", "amount") {
++    ("string", "ratio", "decimal")
++  } else if (
++    t == "int"
++  ) { ("integer",) } else if t == "bool" { ("boolean",) } else if t == "date" {
++    ("string", "date")
++  } else if t == "period" { ("string", "date", "object") } else if (
++    t in ("ref", "map", "tagged")
++  ) { ("object",) } else if t == "array" { ("array",) } else if t == "const" {
++    (
++      if ty.value == none { "null" } else if type(ty.value) == str {
++        "string"
++      } else { "other" },
++    )
++  } else if t == "union" {
++    ty.of.map(_kinds-of).flatten()
++  } else {
++    ("string", "integer", "number", "boolean", "object", "array", "date")
++  }
++}
++
++#let union(..of, conv: none) = (
++  t: "union",
++  of: of.pos(),
++  conv: conv,
++  kinds: of.pos().map(_kinds-of),
++)
+ 
+ /// An object chosen by a discriminator key (`kind`), with a default case.
+ /// -> dictionary
+@@ -162,6 +196,9 @@
+   excludes-if-true: (),
+ ) = (
+   fields: fields,
++  // the decoder's hot path checks these only (computed once, when the
++  // descriptor is built)
++  required-keys: fields.keys().filter(k => fields.at(k).required),
+   doc: doc,
+   open: open,
+   partial: partial,
+-- 
+2.43.0
+

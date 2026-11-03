@@ -1,0 +1,507 @@
+From 46b04c903bf15e3a3b76ca6149f9d5a8f9645f59 Mon Sep 17 00:00:00 2001
+From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 22:58:46 +0000
+Subject: [PATCH 03/10] test(data): contract unit test, signature coverage,
+ LAZY_MODULES; docs
+
+- tests/data/contract/test.typ: load with injected inputs (inline, file,
+  TOML, BOM), typed values, null = absent, check, party, precedence by role,
+  payment section by role, sealed custom fields, region VAT rates pin
+- tools/contract/signature.py: every invoice() parameter is classified in
+  the descriptor and passed to hydrate(..)
+- tools/perf/gate.py: src/contract/* in LAZY_MODULES
+- invoice-data.decode passes a record through; doc comments
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RaaQussN1QVEE8zRWeeCD3
+---
+ src/contract/decode.typ      |  19 +++-
+ src/contract/hydrate.typ     |   2 +
+ src/contract/result.typ      |   3 +
+ src/contract/rows.typ        |  17 ++-
+ src/public/invoice-data.typ  |   2 +-
+ tests/data/contract/test.typ | 214 +++++++++++++++++++++++++++++++++++
+ tools/contract/signature.py  |  60 ++++++++++
+ tools/perf/gate.py           |  11 ++
+ 8 files changed, 318 insertions(+), 10 deletions(-)
+ create mode 100644 tests/data/contract/test.typ
+ create mode 100755 tools/contract/signature.py
+
+diff --git a/src/contract/decode.typ b/src/contract/decode.typ
+index 7947a2a..40351dd 100644
+--- a/src/contract/decode.typ
++++ b/src/contract/decode.typ
+@@ -33,9 +33,11 @@
+ 
+ #let _escape(k) = str(k).replace("~", "~0").replace("/", "~1")
+ /// JSON Pointer (RFC 6901) of a path given as an array of keys/indices.
++/// -> str
+ #let pointer(path) = path.map(k => "/" + _escape(k)).join()
+ #let _ptr(path) = if path.len() == 0 { "" } else { pointer(path) }
+-// what a person reads: items[3].price
++/// The path as a person reads it: `items[3].price`.
++/// -> str
+ #let dotted(path) = {
+   let out = ""
+   for k in path {
+@@ -70,6 +72,7 @@
+ 
+ /// The issue of a problem at `path`. `key` names the kind of problem; the
+ /// locale string `strings.validation.issues.schema-<key>` may translate it.
++/// -> dictionary
+ #let problem(path, key, message, fix: none, args: (:)) = issue(
+   "schema" + _ptr(path),
+   "data",
+@@ -252,14 +255,16 @@
+ 
+ // ---- rules of the line items (the loom guards of hand-written rows) ------------
+ 
+-// containers nest at most this deep: `collect-signals(depth: 10)` in
+-// calculate-modifier would leave deeper items out of the totals silently
++/// How deep groups and bundles nest at most: `collect-signals(depth: 10)` in
++/// calculate-modifier would leave deeper items out of the totals silently.
++/// -> int
+ #let max-nesting = 8
+ #let _row-rules = ("item", "group", "bundle")
+ #let _level(path) = path.filter(k => k == "items").len()
+ 
+-// whether rows hold at least one item (a modifier without a pinned tax takes
+-// its VAT category from them)
++/// Whether rows hold at least one item (a modifier without a pinned tax
++/// takes its VAT category from them).
++/// -> bool
+ #let has-item(rows) = rows.any(r => {
+   let k = r.at("kind", default: "item")
+   if k == "item" { true } else { has-item(r.at("items", default: ())) }
+@@ -494,6 +499,10 @@
+   }
+ }
+ 
++/// Decodes value `v` of descriptor type `ty` at `path` (`objs`: the sealed
++/// objects of the descriptor, `ctx`: the minor version of the data).
++/// Returns (value or `auto` = left out, issues).
++/// -> array
+ #let decode-value(ty, v, path, objs, ctx) = {
+   let t = ty.t
+   if t == "ref" {
+diff --git a/src/contract/hydrate.typ b/src/contract/hydrate.typ
+index c86acdf..c98323b 100644
+--- a/src/contract/hydrate.typ
++++ b/src/contract/hydrate.typ
+@@ -66,6 +66,8 @@
+   }
+   r
+ }
++/// The rows of the bulk motif from decoded values (see above).
++/// -> array
+ #let engine-rows(v) = (
+   v.at("items", default: ()).map(_engine-row)
+     + v.at("modifiers", default: ())
+diff --git a/src/contract/result.typ b/src/contract/result.typ
+index b06d0ed..1ae2bcd 100644
+--- a/src/contract/result.typ
++++ b/src/contract/result.typ
+@@ -10,6 +10,8 @@
+ // null.
+ #import "../utils/text.typ": plain-text
+ 
++/// The format of the result record.
++/// -> str
+ #let format = "invoice-pro-result/1"
+ 
+ // ---- values -------------------------------------------------------------------
+@@ -58,6 +60,7 @@
+ }
+ 
+ /// The result record of one invoice (root.typ draw).
++/// -> dictionary
+ #let result-record(ctx, view, issues, withheld, e-result) = {
+   let level = ctx.validation.level
+   let d = ctx.at("hydration", default: none)
+diff --git a/src/contract/rows.typ b/src/contract/rows.typ
+index 655bc07..c788f50 100644
+--- a/src/contract/rows.typ
++++ b/src/contract/rows.typ
+@@ -51,6 +51,7 @@
+ 
+ /// The environment of the slot, taken from its ctx ONCE per pass. Small and
+ /// identical in both loom passes, so `compute` is memoized.
++/// -> dictionary
+ #let env-of(ctx) = {
+   let c = (:)
+   for k in _cascade-keys { if k in ctx { c.insert(k, ctx.at(k)) } }
+@@ -120,7 +121,9 @@
+   signal: signal,
+ )
+ 
+-// `modifier` measure, from a decoded modifier row and the cascade `c`
++/// The signal `modifier` measures, from a decoded modifier row and the
++/// cascade `c`.
++/// -> dictionary
+ #let modifier-signal(env, c, m) = {
+   let kind = m.kind
+   let raw = m.at("amount", default: decimal("0"))
+@@ -159,8 +162,9 @@
+   )
+ }
+ 
+-// the item scope (item.typ:200-293) replayed on `c`, then the unchanged
+-// `calculate-item-data`
++/// The signal of an item: the item scope (item.typ:200-293) replayed on `c`,
++/// then the unchanged `calculate-item-data`.
++/// -> dictionary
+ #let item-signal(env, c, row) = {
+   let q = row.at("quantity", default: auto)
+   let quantity = if q != auto { q } else {
+@@ -231,6 +235,8 @@
+   signal
+ }
+ 
++/// The signal `prepayment` measures, from a decoded prepayment row.
++/// -> dictionary
+ #let prepayment-signal(env, c, p) = {
+   let raw = calc.abs(p.amount)
+   let rel = type(raw) == ratio
+@@ -256,6 +262,7 @@
+ }
+ 
+ /// Frames of a list of decoded rows under the cascade `c` at `path`.
++/// -> array
+ #let frames-of(env, c, rows, path) = {
+   let out = ()
+   for (i, row) in rows.enumerate() {
+@@ -340,7 +347,9 @@
+ }
+ 
+ /// PURE: all frames of the rows. Called once per loom pass with identical
+-/// arguments, so the second call is a memo hit.
++/// arguments, so the second call is a memo hit (`env` must never hold
++/// `global` or `sys`: the perf gate fails loudly then).
++/// -> array
+ #let compute(rows, env) = frames-of(env, env.c, rows, env.path)
+ 
+ #let _sections(ctx) = {
+diff --git a/src/public/invoice-data.typ b/src/public/invoice-data.typ
+index d63e287..088cc7a 100644
+--- a/src/public/invoice-data.typ
++++ b/src/public/invoice-data.typ
+@@ -37,7 +37,7 @@
+   import "../contract/hydrate.typ": make-record, rates-of
+   // the value given here is the one source (inputs are not consulted)
+   let src = resolve-data(data, inputs: (:))
+-  if src == none { return none }
++  if type(src) != dictionary { return src }
+   make-record(src.raw, region: region, rates: rates-of(region))
+ }
+ 
+diff --git a/tests/data/contract/test.typ b/tests/data/contract/test.typ
+new file mode 100644
+index 0000000..ea34e77
+--- /dev/null
++++ b/tests/data/contract/test.typ
+@@ -0,0 +1,214 @@
++// The invoice data contract without layout: load with injected inputs,
++// decode (types, null = absent), check, party, the precedence of the
++// re-entered call by role, the sealed custom fields, the region VAT rates.
++// Every assertion panics on failure (compile this file).
++#import "/src/lib.typ": *
++#import "/src/contract/hydrate.typ": hydrate, payment-args
++#import "/src/theming/access.typ": unsealed
++#import "/src/zugferd/model.typ": party-keys
++
++#let minimal = (
++  format: "invoice-pro/1",
++  invoice-nr: "1",
++  date: "2026-01-02",
++  recipient: (name: "X", city: (name: "München", post-code: "80331")),
++  items: ((name: "A", price: "12.30", unit: "HUR", tax: "19%"),),
++)
++#let json-text = json.encode(minimal)
++#let files = (
++  "d.json": bytes("\u{feff}" + json-text),
++  "d.toml": bytes(
++    "format = \"invoice-pro/1\"\ninvoice-nr = \"1\"\ndate = 2026-01-02\n[recipient]\nname = \"X\"\ncity = { name = \"München\", post-code = \"80331\" }\n[[items]]\nname = \"A\"\nprice = \"12.30\"\nunit = \"HUR\"\ntax = \"19%\"\n",
++  ),
++)
++#let reader = p => files.at(p)
++
++// ---- load: inline, file (JSON with BOM, TOML), none -------------------------
++#let a = invoice-data.load(inputs: (invoice-pro-data: json-text))
++#let b = invoice-data.load(read: reader, inputs: (
++  invoice-pro-data-file: "d.json",
++))
++#let c = invoice-data.load(read: reader, inputs: (
++  invoice-pro-data-file: "d.toml",
++))
++#assert.eq(invoice-data.load(inputs: (:)), none)
++#assert.eq(a.value.origin, "input")
++#assert.eq(b.value.origin, "file")
++#assert.eq(invoice-data.values(a), invoice-data.values(b))
++#assert.eq(invoice-data.values(a), invoice-data.values(c))
++#assert.eq(a.value.format, "invoice-pro/1.0")
++// an embedder may pass a dictionary
++#assert.eq(
++  invoice-data.values(invoice-data.load(inputs: (invoice-pro-data: minimal))),
++  invoice-data.values(a),
++)
++
++// ---- decode: typed values -----------------------------------------------------
++#let v = invoice-data.values(a)
++#assert.eq(v.date, datetime(year: 2026, month: 1, day: 2))
++#let row = v.items.first()
++#assert.eq(row.kind, "item")
++#assert.eq(row.price, decimal("12.30"))
++#assert.eq(row.tax, 19%)
++#assert.eq(type(row.unit), function)
++#assert.eq(invoice-data.format, "invoice-pro/1")
++#assert.eq(invoice-data.input-key, "invoice-pro-data")
++#assert.eq(invoice-data.file-key, "invoice-pro-data-file")
++
++// null = absent, also as `kind`; an optional "" is absent
++#let n = invoice-data.values(invoice-data.decode(
++  minimal
++    + (
++      due-date: none,
++      subject: "",
++      items: ((kind: none, name: "A", price: "1", description: none),),
++    ),
++))
++#assert("due-date" not in n and "subject" not in n)
++#assert.eq(n.items.first().kind, "item")
++#assert("description" not in n.items.first())
++
++// ---- check: a report of JSON Pointers -------------------------------------------
++#let r = invoice-data.check(minimal + (items: ((name: "A", price: "12,30"),)))
++#assert.eq(r.format, "invoice-pro-check/1")
++#assert.eq(r.valid, false)
++#assert(r.issues.any(i => i.path == "/items/0/price"))
++#assert(invoice-data.check(minimal).valid)
++// the region pass: "16%" is no rate of "de"
++#let r16 = invoice-data.check(
++  minimal + (items: ((name: "A", price: "1", tax: "16%"),)),
++  region: "de",
++)
++#assert(r16.issues.any(i => i.id == "schema/items/0/tax"))
++#assert(
++  invoice-data
++    .check(
++      minimal + (items: ((name: "A", price: "1", tax: "16%"),)),
++    )
++    .valid,
++)
++
++// ---- party ---------------------------------------------------------------------
++#assert.eq(
++  invoice-data.party((name: "X", city: "80331 München")).post-code,
++  "80331",
++)
++#assert.eq(invoice-data.party(v.recipient).post-code, "80331")
++#assert.eq(invoice-data.party(none), (:))
++
++// ---- precedence of the re-entered call (R2, R3, R8) ------------------------------
++#let given = (
++  theme: theme.classic,
++  locale: locale.de-de,
++  currency: auto,
++  sender: (name: "Skeleton GmbH"),
++  recipient: (name: "SAMPLE"),
++  delivery-address: none,
++  payee: none,
++  tax-nr: none,
++  date: datetime(year: 2020, month: 1, day: 1),
++  service-period: none,
++  subject: "Sample subject",
++  document-type: "credit-note",
++  references: auto,
++  invoice-nr: "MUSTER-0001",
++  customer-nr: "K-SAMPLE",
++  order-nr: none,
++  order-date: none,
++  project: none,
++  contract-nr: none,
++  quote-nr: none,
++  delivery-note-nr: none,
++  preceding-invoice-nr: none,
++  preceding-invoice-date: none,
++  due-date: none,
++  payment-reference: none,
++  notes: "Skeleton note",
++  tax: auto,
++  tax-mode: "inclusive",
++  tax-exempt-small-biz: false,
++  zugferd: none,
++  zugferd-errors: "panic",
++  validation: "draft",
++  custom: (tarif: "Sample"),
++)
++#let h(data) = hydrate(data, given, inputs: (:)).args
++// document keys: the data's or LEFT OUT (the signature default applies)
++#let x = h(minimal)
++#assert.eq(x.invoice-nr, "1")
++#assert("customer-nr" not in x)
++#assert("custom" not in x)
++#assert.eq(x.recipient.name, "X")
++// absent, null and "" are the same for a document key
++#assert("customer-nr" not in h(minimal + (customer-nr: none)))
++#assert("customer-nr" not in h(minimal + (customer-nr: "")))
++#assert.eq(h(minimal + (customer-nr: "K-1")).customer-nr, "K-1")
++// issuer keys: the skeleton's value unless the data gives it, as a whole
++#assert.eq(x.sender, (name: "Skeleton GmbH"))
++#assert.eq(x.document-type, "credit-note")
++#assert.eq(x.tax-mode, "inclusive")
++#assert.eq(x.notes, "Skeleton note")
++#assert.eq(h(minimal + (sender: (name: "Data AG"))).sender, (name: "Data AG"))
++#assert.eq(h(minimal + (notes: ())).notes, ())
++#assert.eq(h(minimal + (tax-mode: none)).tax-mode, "inclusive")
++// design keys pass through
++#assert.eq(x.theme, theme.classic)
++#assert.eq(x.validation, "draft")
++// the data's custom fields replace the sample as a whole
++#assert.eq(h(minimal + (custom: (a: 1))).custom, (a: 1))
++// small business: the data's exemption drops the skeleton's tax
++#assert.eq(
++  hydrate(
++    minimal + (tax-exempt-small-biz: true),
++    given + (tax: tax.vat(19%)),
++    inputs: (:),
++  )
++    .args
++    .tax,
++  auto,
++)
++
++// ---- payment section by role (R4) -----------------------------------------------
++#let own = (
++  terms: (days: 14),
++  method: auto,
++  bank: (iban: "DE75512108001245126199"),
++  creditor-id: "DE98ZZZ09999999999",
++  direct-debit: (mandate: "SAMPLE"),
++  card: none,
++  paid: none,
++)
++#let p0 = payment-args(own, (:))
++#assert.eq(p0.direct-debit, none)
++#assert.eq(p0.terms, (days: 14))
++#let p1 = payment-args(own, (card: (last4: "4242")))
++#assert.eq(p1.method, auto)
++#assert.eq(p1.card, (last4: "4242"))
++#assert.eq(p1.bank, own.bank)
++#assert.eq(payment-args(own, (paid: (method: "cash"))).terms, none)
++
++// ---- custom fields: sealed in ctx, unsealed for parts ---------------------------
++#assert.eq(unsealed((custom: metadata((a: 1)))).custom, (a: 1))
++#assert.eq(unsealed((x: 1)), (x: 1))
++// the party bag is a reserved print-only key (no IP-KEY-01 warning)
++#assert.eq(party-keys.buyer.custom, false)
++#assert.eq(party-keys.payee.custom, false)
++
++// ---- region VAT rates: each listed rate is one infer-tax resolves ------------------
++#for loc in (
++  locale.de-de,
++  locale.de-at,
++  locale.de-ch,
++  locale.fr-fr,
++  locale.it-it,
++  locale.es-es,
++) {
++  import "/src/locale/lang/base.typ": base-language
++  import "/src/locale/region/base.typ": base-region
++  let l = loc(base-language, base-region)
++  let rates = l.normalize.vat-rates
++  assert(rates.len() > 0)
++  for rate in rates {
++    assert.eq((l.normalize.infer-tax)(rate).category, "S")
++  }
++}
+diff --git a/tools/contract/signature.py b/tools/contract/signature.py
+new file mode 100755
+index 0000000..bd97f77
+--- /dev/null
++++ b/tools/contract/signature.py
+@@ -0,0 +1,60 @@
++#!/usr/bin/env python3
++"""Signature coverage of the hydration roles (SYNTHESIS.md §4.2).
++
++A hydrated invoice() re-enters itself with arguments built by role from the
++descriptor (src/contract/schema.typ `invoice-params`). Typst cannot list a
++function's parameters, so this test parses the signature of `invoice()` in
++src/invoice.typ and fails unless every parameter is classified (design,
++document, issuer, data, body) and every classified name is a parameter. It
++also checks that src/invoice.typ passes every parameter to `hydrate(..)`.
++
++usage: signature.py [--root <repo>] [--typst <typst binary>]
++exit 0: covered; exit 1: a parameter is not classified (or vice versa).
++"""
++import argparse, json, os, re, subprocess, sys
++
++def signature(path):
++    src = open(path, encoding="utf-8").read()
++    m = re.search(r"^#let invoice\(\n(.*?)^\) = \{", src, re.S | re.M)
++    if not m: sys.exit("signature.py: no `#let invoice(` signature in " + path)
++    names = re.findall(r"^  ([a-z][a-z0-9-]*)(?::|,)", m.group(1), re.M)
++    return names, src
++
++def hydrate_call(src):
++    m = re.search(r"hydrate\(data, \((.*?)\n    \)\)", src, re.S)
++    return re.findall(r"^\s+([a-z][a-z0-9-]*): ", m.group(1), re.M) if m else []
++
++def main():
++    ap = argparse.ArgumentParser()
++    ap.add_argument("--root", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
++    ap.add_argument("--typst", default="typst")
++    a = ap.parse_args()
++    root = os.path.abspath(a.root)
++    params, src = signature(os.path.join(root, "src", "invoice.typ"))
++    out = subprocess.run([a.typst, "eval", "--root", root,
++                          '{ import "/src/contract/schema.typ" as s; s.invoice-params }'],
++                         capture_output=True, text=True)
++    if out.returncode != 0: sys.exit("signature.py: typst eval failed:\n" + out.stderr)
++    classes = json.loads(out.stdout)
++    problems = []
++    for p in params:
++        if p not in classes:
++            problems.append(f"invoice() parameter `{p}` has no class in src/contract/schema.typ "
++                            "(`invoice-params`: design | document | issuer | data | body); "
++                            "a hydrated invoice would drop or ignore it")
++    for k in classes:
++        if k not in params:
++            problems.append(f"`{k}` is classified in src/contract/schema.typ but is no parameter of invoice()")
++    passed = hydrate_call(src)
++    for p in params:
++        if p not in ("data", "body") and p not in passed:
++            problems.append(f"invoice() does not pass `{p}` to hydrate(..) in src/invoice.typ")
++    for line in problems: print("FAIL " + line)
++    if not problems:
++        roles = {}
++        for k, v in classes.items(): roles.setdefault(v, []).append(k)
++        print(f"ok: {len(params)} invoice() parameters, all classified: "
++              + ", ".join(f"{k} {len(v)}" for k, v in sorted(roles.items())))
++    sys.exit(1 if problems else 0)
++
++main()
+diff --git a/tools/perf/gate.py b/tools/perf/gate.py
+index 13fbd5d..d2d1d5a 100755
+--- a/tools/perf/gate.py
++++ b/tools/perf/gate.py
+@@ -76,6 +76,17 @@ LAZY_MODULES = (
+     "src/zugferd/rules/messages.typ",  # the messages of failed checks
+     "src/zugferd/rules/xrechnung-messages.typ",
+     "src/zugferd/document.typ",  # a title that may name another document type
++    # the invoice data contract: only a hydrated invoice (or a skeleton with
++    # an `invoice-data.items` marker, or --input invoice-pro-result=1) loads it
++    "src/contract/types.typ",
++    "src/contract/schema.typ",
++    "src/contract/decode.typ",
++    "src/contract/export.typ",
++    "src/contract/input.typ",
++    "src/contract/hydrate.typ",
++    "src/contract/rows.typ",
++    "src/contract/result.typ",
++    "src/contract/result-schema.typ",
+ )
+ LAZY_CALLS = ()
+ 
+-- 
+2.43.0
+

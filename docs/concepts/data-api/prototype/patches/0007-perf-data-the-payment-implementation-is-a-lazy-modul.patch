@@ -1,0 +1,28 @@
+From f2700f2de40fc88ebf5bc068252b6eafee44a358 Mon Sep 17 00:00:00 2001
+From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
+Date: Tue, 3 Nov 2026 04:34:02 +0000
+Subject: [PATCH 07/10] perf(data): the payment implementation is a lazy module
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RaaQussN1QVEE8zRWeeCD3
+---
+ tools/perf/gate.py | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/tools/perf/gate.py b/tools/perf/gate.py
+index d2d1d5a..a0c4e1a 100755
+--- a/tools/perf/gate.py
++++ b/tools/perf/gate.py
+@@ -87,6 +87,9 @@ LAZY_MODULES = (
+     "src/contract/rows.typ",
+     "src/contract/result.typ",
+     "src/contract/result-schema.typ",
++    # the implementation of `payment(..)`: the root export is a facade
++    # (src/public/payment.typ) that loads it only when an invoice uses it
++    "src/components/payment.typ",
+ )
+ LAZY_CALLS = ()
+ 
+-- 
+2.43.0
+

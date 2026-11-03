@@ -1,0 +1,117 @@
+From 2963ca6df8c5889c73e43a09d4480f0d489c0184 Mon Sep 17 00:00:00 2001
+From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 23:41:40 +0000
+Subject: [PATCH 05/10] refactor(data): coverage issues live in the lazy
+ contract module
+
+root.typ calls contract/hydrate.typ coverage-issues(..) only for a hydrated
+invoice: no issue key without locale texts in the files tests/theme/report-lang
+pins (the localized schema-* texts are L16, not part of this prototype), and
+less code parsed at import.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RaaQussN1QVEE8zRWeeCD3
+---
+ src/components/root.typ  | 39 ++++++---------------------------------
+ src/contract/hydrate.typ | 31 +++++++++++++++++++++++++++++++
+ 2 files changed, 37 insertions(+), 33 deletions(-)
+
+diff --git a/src/components/root.typ b/src/components/root.typ
+index 1edf82f..10f1be5 100644
+--- a/src/components/root.typ
++++ b/src/components/root.typ
+@@ -96,38 +96,6 @@
+   issues
+ }
+ 
+-// The coverage check of the contract: a section of hydrated data that the
+-// skeleton has no binding point for would be lost silently.
+-#let _coverage-issues(ctx, view) = {
+-  let h = ctx.at("hydration", default: none)
+-  if h == none { return () }
+-  let h = h.value
+-  let issues = ()
+-  if h.has-items and not view.has-line-items {
+-    issues.push(issue(
+-      "schema/items",
+-      "data",
+-      "invoice data: the data has line items, but the skeleton has no `line-items`: add `#line-items[]` where the items belong.",
+-      ref: "invoice-pro/1 · items (binding point line-items)",
+-      fix: "#line-items[]",
+-      key: "schema-unbound",
+-      args: (path: "/items"),
+-    ))
+-  }
+-  if h.has-payment and view.payment-blocks.len() == 0 {
+-    issues.push(issue(
+-      "schema/payment",
+-      "data",
+-      "invoice data: the data has a `payment` section, but the skeleton has no `payment(..)` block: replace `payment-terms`/`bank-details` by `payment(terms: .., bank: ..)`.",
+-      ref: "invoice-pro/1 · payment (binding point payment)",
+-      fix: "#payment(terms: (days: 14), bank: (iban: ..))",
+-      key: "schema-unbound",
+-      args: (path: "/payment"),
+-    ))
+-  }
+-  issues
+-}
+-
+ /// The internal root container that wraps the invoice body.
+ /// It initializes the global context and provides the base document structure to the theme.
+ ///
+@@ -510,7 +478,12 @@
+             + _bank-issues(view.banks)
+             + _direct-debit-issues(view.payment-means.direct-debit)
+             + view.payment-blocks.map(b => b.issues).flatten()
+-            + _coverage-issues(ctx, view)
++            // a section of hydrated data without a binding point in the
++            // skeleton (contract/hydrate.typ, loaded only when hydrated)
++            + if "hydration" in ctx {
++              import "../contract/hydrate.typ": coverage-issues
++              coverage-issues(ctx.hydration.value, view)
++            } else { () }
+         )
+       }
+       let issues = enforce(issues, level)
+diff --git a/src/contract/hydrate.typ b/src/contract/hydrate.typ
+index c98323b..3c7bb27 100644
+--- a/src/contract/hydrate.typ
++++ b/src/contract/hydrate.typ
+@@ -162,3 +162,34 @@
+   }
+   args
+ }
++
++/// The coverage check of the contract (root measure, hydrated invoices):
++/// a section of the data that the skeleton has no binding point for would
++/// be lost silently, so it is a data issue. `h`: the sealed sections.
++/// -> array
++#let coverage-issues(h, view) = {
++  let issues = ()
++  if h.has-items and not view.has-line-items {
++    issues.push(issue(
++      "schema/items",
++      "data",
++      "invoice data: the data has line items, but the skeleton has no `line-items`: add `#line-items[]` where the items belong.",
++      ref: "invoice-pro/1 · items (binding point line-items)",
++      fix: "#line-items[]",
++      key: "schema-unbound",
++      args: (path: "/items"),
++    ))
++  }
++  if h.has-payment and view.payment-blocks.len() == 0 {
++    issues.push(issue(
++      "schema/payment",
++      "data",
++      "invoice data: the data has a `payment` section, but the skeleton has no `payment(..)` block: replace `payment-terms`/`bank-details` by `payment(terms: .., bank: ..)`.",
++      ref: "invoice-pro/1 · payment (binding point payment)",
++      fix: "#payment(terms: (days: 14), bank: (iban: ..))",
++      key: "schema-unbound",
++      args: (path: "/payment"),
++    ))
++  }
++  issues
++}
+-- 
+2.43.0
+

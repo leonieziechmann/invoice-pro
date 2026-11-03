@@ -1,0 +1,1273 @@
+From 29486ec6ec1a79f07dd16b6e980e64335f7685e5 Mon Sep 17 00:00:00 2001
+From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
+Date: Tue, 3 Nov 2026 13:49:41 +0000
+Subject: [PATCH 10/10] chore(data): host the schemas on the documentation site
+
+The $id of the data and result schemas named a domain the project does
+not own. They now point at the documentation site, versioned by the
+format major only.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RaaQussN1QVEE8zRWeeCD3
+---
+ src/contract/invoice.schema.json     |   2 +-
+ src/contract/result-schema.typ       |   2 +-
+ src/contract/result.schema.json      |   2 +-
+ src/contract/schema.typ              |   2 +-
+ tests/data/conformance/fixtures.json | 266 +++++++++++++--------------
+ 5 files changed, 137 insertions(+), 137 deletions(-)
+
+diff --git a/src/contract/invoice.schema.json b/src/contract/invoice.schema.json
+index 6e3fb6e..1225b84 100644
+--- a/src/contract/invoice.schema.json
++++ b/src/contract/invoice.schema.json
+@@ -1,6 +1,6 @@
+ {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+-  "$id": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++  "$id": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+   "title": "invoice-pro/1 invoice data",
+   "type": "object",
+   "description": "One invoice in the invoice-pro data format.",
+diff --git a/src/contract/result-schema.typ b/src/contract/result-schema.typ
+index 98d8ade..b29bb64 100644
+--- a/src/contract/result-schema.typ
++++ b/src/contract/result-schema.typ
+@@ -10,7 +10,7 @@
+ #let format = "invoice-pro-result/1"
+ /// The `$id` of its JSON Schema (the format major only, no package version).
+ /// -> str
+-#let schema-id = "https://invoice-pro.dev/schema/invoice-pro/1/result.schema.json"
++#let schema-id = "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/result.schema.json"
+ 
+ #let _req(ty, doc) = field(ty, doc: doc, required: true)
+ #let _opt(ty, doc) = field(ty, doc: doc)
+diff --git a/src/contract/result.schema.json b/src/contract/result.schema.json
+index 439e468..e92a983 100644
+--- a/src/contract/result.schema.json
++++ b/src/contract/result.schema.json
+@@ -1,6 +1,6 @@
+ {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+-  "$id": "https://invoice-pro.dev/schema/invoice-pro/1/result.schema.json",
++  "$id": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/result.schema.json",
+   "title": "invoice-pro-result/1",
+   "type": "object",
+   "description": "The result of one compiled invoice.",
+diff --git a/src/contract/schema.typ b/src/contract/schema.typ
+index 34408e5..610706e 100644
+--- a/src/contract/schema.typ
++++ b/src/contract/schema.typ
+@@ -21,7 +21,7 @@
+ #let format = family + "/" + str(major)
+ /// The canonical `$id` of the JSON Schema (no package version in it: the
+ /// format is versioned on its own, SchemaVer-style).
+-#let schema-id = "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json"
++#let schema-id = "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json"
+ 
+ // ---- shared types -----------------------------------------------------------
+ 
+diff --git a/tests/data/conformance/fixtures.json b/tests/data/conformance/fixtures.json
+index d725841..79d57f1 100644
+--- a/tests/data/conformance/fixtures.json
++++ b/tests/data/conformance/fixtures.json
+@@ -3,7 +3,7 @@
+   "name": "good",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -194,7 +194,7 @@
+   "name": "minor-version",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1.0",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -367,7 +367,7 @@
+   "name": "nulls-for-optional",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -544,7 +544,7 @@
+   "name": "kind-null",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -718,7 +718,7 @@
+   "name": "period-as-date",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -888,7 +888,7 @@
+   "name": "tax-object",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -1065,7 +1065,7 @@
+   "name": "unit-object",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -1241,7 +1241,7 @@
+   "name": "unit-other-code",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -1414,7 +1414,7 @@
+   "name": "unit-display-only",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -1589,7 +1589,7 @@
+   "name": "identifier-gln",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -1766,7 +1766,7 @@
+   "name": "city-string",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -1936,7 +1936,7 @@
+   "name": "lines-array",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -2112,7 +2112,7 @@
+   "name": "direct-debit-only",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -2275,7 +2275,7 @@
+   "name": "card",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -2438,7 +2438,7 @@
+   "name": "paid",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -2601,7 +2601,7 @@
+   "name": "terms-text",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -2768,7 +2768,7 @@
+   "name": "custom-open-item",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -2942,7 +2942,7 @@
+   "name": "custom-null-inside",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -3116,7 +3116,7 @@
+   "name": "negative-quantity",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -3289,7 +3289,7 @@
+   "name": "leap-day",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2028-02-29",
+@@ -3462,7 +3462,7 @@
+   "name": "smallbiz-false-and-tax",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -3637,7 +3637,7 @@
+   "name": "price-as-number",
+   "expect": "lenient",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -3810,7 +3810,7 @@
+   "name": "quantity-as-int",
+   "expect": "lenient",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -3983,7 +3983,7 @@
+   "name": "missing-format",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+    "service-period": {
+@@ -4155,7 +4155,7 @@
+   "name": "missing-invoice-nr",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "date": "2026-11-02",
+    "service-period": {
+@@ -4327,7 +4327,7 @@
+   "name": "empty-invoice-nr",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "",
+    "date": "2026-11-02",
+@@ -4500,7 +4500,7 @@
+   "name": "number-invoice-nr",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": 42,
+    "date": "2026-11-02",
+@@ -4673,7 +4673,7 @@
+   "name": "unknown-root-key",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -4847,7 +4847,7 @@
+   "name": "unknown-party-key",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -5021,7 +5021,7 @@
+   "name": "bad-date",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-02-30",
+@@ -5194,7 +5194,7 @@
+   "name": "bad-date-format",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "02.11.2026",
+@@ -5367,7 +5367,7 @@
+   "name": "comma-decimal",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -5540,7 +5540,7 @@
+   "name": "price-and-total",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -5714,7 +5714,7 @@
+   "name": "no-price",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -5886,7 +5886,7 @@
+   "name": "percent-without-sign",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -6059,7 +6059,7 @@
+   "name": "tax-preset-string",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -6232,7 +6232,7 @@
+   "name": "tax-bad-category",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -6407,7 +6407,7 @@
+   "name": "bad-kind",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -6580,7 +6580,7 @@
+   "name": "kind-number",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -6753,7 +6753,7 @@
+   "name": "group-without-items",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -6895,7 +6895,7 @@
+   "name": "group-in-bundle",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -7078,7 +7078,7 @@
+   "name": "unit-name",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -7251,7 +7251,7 @@
+   "name": "bad-unit",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -7424,7 +7424,7 @@
+   "name": "bad-currency",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -7598,7 +7598,7 @@
+   "name": "bad-country",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -7771,7 +7771,7 @@
+   "name": "period-end-missing",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -7943,7 +7943,7 @@
+   "name": "period-array",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -8116,7 +8116,7 @@
+   "name": "bad-enum-tax-mode",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -8290,7 +8290,7 @@
+   "name": "negative-discount",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -8463,7 +8463,7 @@
+   "name": "discount-over-100",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -8636,7 +8636,7 @@
+   "name": "paid-and-terms",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -8812,7 +8812,7 @@
+   "name": "two-means",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -8988,7 +8988,7 @@
+   "name": "terms-days-and-text",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -9162,7 +9162,7 @@
+   "name": "card-last4-number",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -9324,7 +9324,7 @@
+   "name": "zero-base-quantity",
+   "expect": "decoder-only",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -9498,7 +9498,7 @@
+   "name": "days-negative",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -9671,7 +9671,7 @@
+   "name": "ref-too-long",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -9845,7 +9845,7 @@
+   "name": "bad-iban",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -10007,7 +10007,7 @@
+   "name": "wrong-major",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/2",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -10180,7 +10180,7 @@
+   "name": "smallbiz-and-tax",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -10355,7 +10355,7 @@
+   "name": "item-modifier-tax",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -10529,7 +10529,7 @@
+   "name": "null-in-array",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -10703,7 +10703,7 @@
+   "name": "leitweg-and-reference",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -10877,7 +10877,7 @@
+   "name": "custom-not-object",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -11046,7 +11046,7 @@
+   "name": "depth-9",
+   "expect": "decoder-only",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -11277,7 +11277,7 @@
+   "name": "modifier-without-items",
+   "expect": "decoder-only",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -11361,7 +11361,7 @@
+   "name": "amount-out-of-range",
+   "expect": "decoder-only",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -11534,7 +11534,7 @@
+   "name": "decimal-29-digits",
+   "expect": "decoder-only",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -11707,7 +11707,7 @@
+   "name": "self-billed-credit-note",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -11881,7 +11881,7 @@
+   "name": "doc-type-code-326",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -12055,7 +12055,7 @@
+   "name": "doc-type-code-999",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -12229,7 +12229,7 @@
+   "name": "blank-name-lines",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -12405,7 +12405,7 @@
+   "name": "empty-name-array",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -12578,7 +12578,7 @@
+   "name": "spaces-name",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -12751,7 +12751,7 @@
+   "name": "spaces-invoice-nr",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "   ",
+    "date": "2026-11-02",
+@@ -12924,7 +12924,7 @@
+   "name": "empty-sender-name",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -13100,7 +13100,7 @@
+   "name": "tax-zero",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -13273,7 +13273,7 @@
+   "name": "tax-zero-fraction",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -13446,7 +13446,7 @@
+   "name": "tax-small-rate",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -13622,7 +13622,7 @@
+   "name": "tax-S-without-rate",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -13797,7 +13797,7 @@
+   "name": "tax-S-rate-zero",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -13973,7 +13973,7 @@
+   "name": "tax-Z-without-rate",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -14148,7 +14148,7 @@
+   "name": "discount-zero",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -14321,7 +14321,7 @@
+   "name": "discount-100",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -14494,7 +14494,7 @@
+   "name": "discount-99.5",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -14667,7 +14667,7 @@
+   "name": "discount-0.01",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -14840,7 +14840,7 @@
+   "name": "terms-days-36500",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -15013,7 +15013,7 @@
+   "name": "terms-days-36501",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -15186,7 +15186,7 @@
+   "name": "terms-days-float",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -15359,7 +15359,7 @@
+   "name": "transfer-with-card",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -15522,7 +15522,7 @@
+   "name": "card-with-dd-method",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -15685,7 +15685,7 @@
+   "name": "card-with-card-method",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -15848,7 +15848,7 @@
+   "name": "empty-bundle",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -16010,7 +16010,7 @@
+   "name": "country-empty",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -16183,7 +16183,7 @@
+   "name": "currency-empty",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -16357,7 +16357,7 @@
+   "name": "extra-null-value",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -16537,7 +16537,7 @@
+   "name": "payref-140-umlauts",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -16711,7 +16711,7 @@
+   "name": "payref-141-umlauts",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -16885,7 +16885,7 @@
+   "name": "format-huge-major",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/99999999999999999999",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -17058,7 +17058,7 @@
+   "name": "format-huge-minor",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1.99999999999999999999",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -17231,7 +17231,7 @@
+   "name": "date-year-9899",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "9899-12-31",
+@@ -17404,7 +17404,7 @@
+   "name": "date-year-9999",
+   "expect": "decoder-only",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "9999-12-31",
+@@ -17577,7 +17577,7 @@
+   "name": "text-10001",
+   "expect": "decoder-only",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -17750,7 +17750,7 @@
+   "name": "depth-30",
+   "expect": "decoder-only",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -18107,7 +18107,7 @@
+   "name": "blank-due-date",
+   "expect": "lenient",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -18281,7 +18281,7 @@
+   "name": "blank-tax-mode",
+   "expect": "lenient",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -18455,7 +18455,7 @@
+   "name": "blank-service-period",
+   "expect": "lenient",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -18625,7 +18625,7 @@
+   "name": "blank-item-tax-unit-quantity",
+   "expect": "lenient",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -18796,7 +18796,7 @@
+   "name": "blank-kind",
+   "expect": "lenient",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -18970,7 +18970,7 @@
+   "name": "blank-terms-date",
+   "expect": "lenient",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -19144,7 +19144,7 @@
+   "name": "blank-terms-text-with-days",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -19318,7 +19318,7 @@
+   "name": "blank-subject",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -19492,7 +19492,7 @@
+   "name": "blank-date-required",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "",
+@@ -19665,7 +19665,7 @@
+   "name": "invoice-nr-4000-emoji",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+    "date": "2026-11-02",
+@@ -19838,7 +19838,7 @@
+   "name": "invoice-nr-4001",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "date": "2026-11-02",
+@@ -20011,7 +20011,7 @@
+   "name": "subject-4001",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -20185,7 +20185,7 @@
+   "name": "recipient-name-4001",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -20358,7 +20358,7 @@
+   "name": "sender-name-lines-total",
+   "expect": "decoder-only",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -20537,7 +20537,7 @@
+   "name": "noncharacter-in-name",
+   "expect": "decoder-only",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -20710,7 +20710,7 @@
+   "name": "custom-text-10001",
+   "expect": "decoder-only",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -20883,7 +20883,7 @@
+   "name": "custom-nested-noncharacter",
+   "expect": "decoder-only",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -21063,7 +21063,7 @@
+   "name": "management-lines",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -21243,7 +21243,7 @@
+   "name": "discount-2-decimals",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -21416,7 +21416,7 @@
+   "name": "discount-3-decimals",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -21589,7 +21589,7 @@
+   "name": "discount-0.001",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -21762,7 +21762,7 @@
+   "name": "discount-days-36500",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -21935,7 +21935,7 @@
+   "name": "discount-days-36501",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -22108,7 +22108,7 @@
+   "name": "invoice-nr-fs",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "\u001c",
+    "date": "2026-11-02",
+@@ -22281,7 +22281,7 @@
+   "name": "invoice-nr-bom",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "﻿",
+    "date": "2026-11-02",
+@@ -22454,7 +22454,7 @@
+   "name": "invoice-nr-nel",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "",
+    "date": "2026-11-02",
+@@ -22627,7 +22627,7 @@
+   "name": "invoice-nr-nbsp-ideographic",
+   "expect": "invalid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": " 　",
+    "date": "2026-11-02",
+@@ -22800,7 +22800,7 @@
+   "name": "dump-good",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+@@ -23228,7 +23228,7 @@
+   "name": "pydantic-model-dump",
+   "expect": "valid",
+   "doc": {
+-   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
++   "$schema": "https://leonieziechmann.github.io/invoice-pro/schema/invoice-pro/1/invoice.schema.json",
+    "format": "invoice-pro/1",
+    "invoice-nr": "2026-0042",
+    "date": "2026-11-02",
+-- 
+2.43.0
+
