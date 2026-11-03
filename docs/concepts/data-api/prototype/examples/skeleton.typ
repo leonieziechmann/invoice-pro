@@ -1,7 +1,7 @@
-// The skeleton of SYNTHESIS.md §4.7, verbatim except for the import (the
-// prototype tree, compiled with `--root <unified>`). Previewable alone,
-// hydrated without edits by `--input invoice-pro-data-file=..` or
-// `--input invoice-pro-data=<JSON>`.
+// The skeleton of the data API concept (§2.1; the synthesis' §4.7). It imports
+// the prototype tree: compile with `--root <work>` in the layout of run.sh.
+// Previewable alone; hydrated without edits by
+// `--input invoice-pro-data-file=..` or `--input invoice-pro-data=<JSON>`.
 #import "/repo/src/lib.typ": *
 
 // The data the CLI hands over (inline JSON or a file read here, so its path

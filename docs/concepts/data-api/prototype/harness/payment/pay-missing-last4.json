@@ -1,0 +1,165 @@
+{
+ "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+ "format": "invoice-pro/1",
+ "invoice-nr": "2026-0042",
+ "date": "2026-11-02",
+ "service-period": {
+  "start": "2026-10-01",
+  "end": "2026-10-31"
+ },
+ "customer-nr": "K-10077",
+ "order-nr": "PO-7781",
+ "project": "Gewerbeentsorgung 2026",
+ "notes": [
+  "Vielen Dank für Ihren Auftrag.",
+  {
+   "text": "Leistungen gemäß Rahmenvertrag RV-2025-03.",
+   "subject-code": "AAI"
+  }
+ ],
+ "recipient": {
+  "name": "Bayerische Beispiel AG",
+  "address": [
+   "Marienplatz 8",
+   "z. Hd. Einkauf"
+  ],
+  "city": {
+   "name": "München",
+   "post-code": "80331"
+  },
+  "country": "DE",
+  "vat-id": "DE987654321",
+  "buyer-reference": "04011000-1234512345-06",
+  "electronic-address": "einkauf@beispiel-ag.example",
+  "contact": {
+   "name": "Max Einkauf",
+   "email": "einkauf@beispiel-ag.example"
+  },
+  "custom": {
+   "segment": "enterprise",
+   "bezirk": "Altstadt-Lehel"
+  }
+ },
+ "items": [
+  {
+   "name": "Leerung Restmüll 1100 l",
+   "quantity": "8",
+   "unit": "H87",
+   "price": "38.90",
+   "tax": "19%",
+   "date": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "item-id": {
+    "seller": "RM-1100"
+   },
+   "custom": {
+    "behaelter": "RM-1100-0815"
+   }
+  },
+  {
+   "kind": "group",
+   "name": "Sonderleistungen",
+   "show-subtotal": true,
+   "items": [
+    {
+     "name": "Sperrmüllabholung",
+     "date": "2026-10-17",
+     "price": "45.00",
+     "tax": "19%"
+    },
+    {
+     "name": "Behälterreinigung",
+     "quantity": "2",
+     "unit": "H87",
+     "price": "15.00",
+     "tax": "19%",
+     "modifiers": [
+      {
+       "kind": "discount",
+       "name": "Kulanz",
+       "amount": "50%"
+      }
+     ]
+    },
+    {
+     "name": "Gutachten Abfallbilanz",
+     "total": "80.00",
+     "tax": {
+      "category": "E",
+      "grounds": "Steuerfrei nach § 4 Nr. 21 UStG",
+      "code": "VATEX-EU-132"
+     }
+    }
+   ]
+  },
+  {
+   "kind": "bundle",
+   "name": "Starterpaket Gewerbe",
+   "quantity": "1",
+   "unit": "SET",
+   "items": [
+    {
+     "name": "Wertstofftonne 240 l",
+     "price": "29.00",
+     "tax": "19%"
+    },
+    {
+     "name": "Sortierleitfaden (Druck)",
+     "price": "4.50",
+     "tax": "7%"
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Paketpreis",
+     "amount": "3.50"
+    }
+   ]
+  },
+  {
+   "name": "Strom Presscontainer",
+   "quantity": "120",
+   "unit": {
+    "code": "KWH",
+    "display": "kWh"
+   },
+   "price": "0.32",
+   "tax": "19%"
+  }
+ ],
+ "modifiers": [
+  {
+   "kind": "surcharge",
+   "name": "Energiekostenzuschlag",
+   "amount": "2.5%"
+  }
+ ],
+ "prepayments": [
+  {
+   "amount": "100.00",
+   "name": "Abschlag Oktober",
+   "date": "2026-10-05",
+   "reference": "AB-2026-0117"
+  }
+ ],
+ "payment": {
+  "terms": {
+   "days": 14,
+   "discount": [
+    {
+     "days": 7,
+     "percent": "2%"
+    }
+   ]
+  },
+  "method": "card"
+ },
+ "custom": {
+  "tarif": "Gewerbe M",
+  "wappen": "muenchen",
+  "kampagne-ende": "2026-12-31"
+ }
+}

@@ -1,0 +1,7047 @@
+[
+ {
+  "name": "good",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "minimal",
+  "expect": "valid",
+  "doc": {
+   "format": "invoice-pro/1",
+   "invoice-nr": "1",
+   "date": "2026-01-01",
+   "recipient": {
+    "name": "X"
+   },
+   "items": [
+    {
+     "name": "A",
+     "price": "1"
+    }
+   ]
+  }
+ },
+ {
+  "name": "minor-version",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1.0",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "nulls-for-optional",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": null,
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   },
+   "due-date": null,
+   "subject": null,
+   "payee": null
+  }
+ },
+ {
+  "name": "period-as-date",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": "2026-10-31",
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "tax-object",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": {
+      "category": "E",
+      "grounds": "§ 4 Nr. 14 UStG",
+      "code": "VATEX-EU-132-1A"
+     },
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "unit-object",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": {
+      "code": "KWH",
+      "display": "kWh"
+     },
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "unit-name",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "hour",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "identifier-gln",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    },
+    "global-id": {
+     "scheme": "gln",
+     "id": "4000001000005"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "city-string",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": "80331 München",
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "lines-array",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": [
+     "Bayerische Beispiel AG",
+     "Einkauf"
+    ],
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "direct-debit",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "direct-debit": {
+     "mandate": "M-1",
+     "debtor-iban": "DE02120300000000202051"
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "card",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "card": {
+     "last4": "0042",
+     "kind": "credit"
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "paid",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "paid": {
+     "method": "transfer",
+     "date": "2026-11-01"
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "custom-open-item-extra",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711",
+      "other": 1
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "negative-quantity",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "-1",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "leap-day",
+  "expect": "valid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2028-02-29",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "price-as-number",
+  "expect": "lenient",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": 120.5,
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "quantity-as-int",
+  "expect": "lenient",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": 12,
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "missing-format",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "missing-invoice-nr",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "empty-invoice-nr",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "number-invoice-nr",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": 42,
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "unknown-root-key",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   },
+   "invoice_nr": "x"
+  }
+ },
+ {
+  "name": "unknown-party-key",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    },
+    "plz": "80331"
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "bad-date",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-02-30",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "bad-date-format",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "02.11.2026",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "comma-decimal",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120,00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "price-and-total",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     },
+     "total": "1440.00"
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "no-price",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "percent-without-sign",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "tax-bad-category",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": {
+      "category": "X"
+     },
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "bad-kind",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "grup",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "group-without-items",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%"
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "bad-unit",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "STUNDE",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "bad-currency",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   },
+   "currency": "euro"
+  }
+ },
+ {
+  "name": "bad-country",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "Germany",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "period-end-missing",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "bad-enum-tax-mode",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   },
+   "tax-mode": "net"
+  }
+ },
+ {
+  "name": "negative-discount",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "-50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "discount-over-100",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "150%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "paid-and-terms",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    },
+    "paid": {
+     "method": "card"
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "card-last4-number",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "card": {
+     "last4": 42
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "zero-base-quantity",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     },
+     "base-quantity": "0"
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "days-negative",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": -1,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "ref-too-long",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   },
+   "payment-reference": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+ },
+ {
+  "name": "custom-declared-enum",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31",
+    "wappen": "bavaria"
+   }
+  }
+ },
+ {
+  "name": "custom-declared-unknown",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31",
+    "tariff": "Gold"
+   }
+  }
+ },
+ {
+  "name": "item-custom-pattern",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "bad-iban",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/1",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "bank": {
+     "iban": "12"
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ },
+ {
+  "name": "wrong-major",
+  "expect": "invalid",
+  "doc": {
+   "$schema": "https://invoice-pro.dev/schema/invoice-pro/1/invoice.schema.json",
+   "format": "invoice-pro/2",
+   "invoice-nr": "2026-0042",
+   "date": "2026-11-02",
+   "service-period": {
+    "start": "2026-10-01",
+    "end": "2026-10-31"
+   },
+   "order-nr": "PO-7781",
+   "customer-nr": "K-1007",
+   "project": "Relaunch Webshop",
+   "notes": [
+    "Vielen Dank für Ihren Auftrag.",
+    {
+     "text": "Lieferung frei Haus.",
+     "subject-code": "AAI"
+    }
+   ],
+   "recipient": {
+    "name": "Bayerische Beispiel AG",
+    "address": "Marienplatz 8",
+    "city": {
+     "name": "München",
+     "post-code": "80331"
+    },
+    "country": "DE",
+    "vat-id": "DE987654321",
+    "buyer-reference": "04011000-1234512345-06",
+    "electronic-address": "einkauf@beispiel-ag.example",
+    "contact": {
+     "name": "Max Einkauf",
+     "email": "einkauf@beispiel-ag.example"
+    },
+    "custom": {
+     "segment": "enterprise"
+    }
+   },
+   "items": [
+    {
+     "name": "Beratung Konzeption",
+     "description": "Workshops und Konzept, Oktober 2026",
+     "quantity": "12",
+     "unit": "HUR",
+     "price": "120.00",
+     "tax": "19%",
+     "item-id": {
+      "seller": "SRV-CONS"
+     },
+     "custom": {
+      "cost-center": "CC-4711"
+     }
+    },
+    {
+     "kind": "group",
+     "name": "Literatur",
+     "tax": "7%",
+     "items": [
+      {
+       "name": "Fachbuch Typst",
+       "quantity": "3",
+       "price": "39.90"
+      },
+      {
+       "name": "Fachbuch E-Rechnung",
+       "price": "49.90",
+       "modifiers": [
+        {
+         "kind": "discount",
+         "name": "Mengenrabatt",
+         "amount": "10%"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "bundle",
+     "name": "Starterpaket",
+     "quantity": "2",
+     "unit": "SET",
+     "items": [
+      {
+       "name": "Lizenz",
+       "price": "200.00",
+       "tax": "19%"
+      },
+      {
+       "name": "Handbuch",
+       "price": "25.00",
+       "tax": "7%"
+      }
+     ]
+    },
+    {
+     "name": "Hosting",
+     "quantity": "1",
+     "unit": "MON",
+     "price": "29.00",
+     "tax": "19%",
+     "date": {
+      "start": "2026-10-01",
+      "end": "2026-10-31"
+     }
+    }
+   ],
+   "modifiers": [
+    {
+     "kind": "discount",
+     "name": "Treuerabatt",
+     "amount": "50.00"
+    }
+   ],
+   "prepayments": [
+    {
+     "amount": "500.00",
+     "name": "Anzahlung",
+     "date": "2026-10-05",
+     "reference": "AZ-2026-0042"
+    }
+   ],
+   "payment": {
+    "terms": {
+     "days": 14,
+     "discount": [
+      {
+       "days": 7,
+       "percent": "2%"
+      }
+     ]
+    }
+   },
+   "custom": {
+    "tarif": "Gold",
+    "campaign-end": "2026-12-31"
+   }
+  }
+ }
+]
