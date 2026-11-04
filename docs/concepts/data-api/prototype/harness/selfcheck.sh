@@ -21,7 +21,7 @@ step P2; ($P/regress/integration.sh $T; $P/regress/integration.sh $T14
     rm $U/$t/template/_tpl.typ; done; done
   $P/regress/pages.sh $T pristine repo | tail -3; $P/regress/pages.sh $T14 pristine repo | tail -3) > $L/p2.log 2>&1
 step P3; ($P/misuse/p3.sh $T; $P/misuse/p3.sh $T14) > $L/p3.log 2>&1
-step P4; (cd $P/fuzz; for m in default draft; do python3 -I fuzz.py $T none $m; python3 -I fuzz.py $T14 none $m; python3 -I fuzz.py $T auto $m; done) > $L/p4.log 2>&1
+step P4; (cd $P/fuzz; for m in default draft; do python3 -I fuzz.py $T none $m; python3 -I fuzz.py $T14 none $m; python3 -I fuzz.py $T auto $m; python3 -I fuzz.py $T14 auto $m; done) > $L/p4.log 2>&1
 step P5; (cd $R; $T eval --root $R '{ import "/src/lib.typ": data; data.schema() }' --pretty | diff -q - src/contract/invoice.schema.json && echo "schema drift: none (0.15)"
   printf '#import "/src/lib.typ": data\n#metadata(data.schema()) <s>\n' | $T14 query --root $R - '<s>' --field value --one | python3 -c 'import json,sys; sys.exit(0 if json.load(sys.stdin)==json.load(open(sys.argv[1])) else 1)' src/contract/invoice.schema.json && echo "schema drift: none (0.14)"
   $P/schema/codegen.sh

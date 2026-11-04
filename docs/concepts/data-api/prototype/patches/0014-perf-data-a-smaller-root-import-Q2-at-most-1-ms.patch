@@ -1,4 +1,4 @@
-From 6eb22f6856a99de965bbe24dc03f76a050401bc4 Mon Sep 17 00:00:00 2001
+From 794b43a0ad7e1943af4ddb2dad71d232f73c5f56 Mon Sep 17 00:00:00 2001
 From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
 Date: Tue, 3 Nov 2026 21:50:19 +0000
 Subject: [PATCH 14/15] perf(data): a smaller root import (Q2: at most +1 ms)
