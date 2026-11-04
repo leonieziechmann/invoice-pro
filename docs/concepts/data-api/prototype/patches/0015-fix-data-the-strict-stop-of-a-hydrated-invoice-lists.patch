@@ -1,0 +1,453 @@
+From 81cfa030d397dbfac5793d82656506b516138aef Mon Sep 17 00:00:00 2001
+From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
+Date: Tue, 3 Nov 2026 23:28:17 +0000
+Subject: [PATCH 15/15] fix(data): the strict stop of a hydrated invoice lists
+ the layout's findings; the flag auto
+
+The verifier's findings on the fail-safe default (Q1):
+
+- A hydrated invoice stopped on a finding of the layout (footer fit, the
+  identity of number and date, a required part that renders nothing, the
+  contrast of a themed(..) scope) with the bare message and no debug hint,
+  and a data problem stopped before the layout was checked, so its stop
+  did not list them. Now the strict stop of a hydrated invoice comes at the
+  end of the invoice, once the layout has run (the second pass that every
+  invoice makes), and lists every problem once, as many as the draft's
+  report counts: the ones known up front (data, theme, measured) and the
+  layout's, followed by the hint. Under hydrated strict those findings are
+  emitted as in the draft, but no badge, marker or report is drawn; root
+  attaches no e-invoice while an issue is open. The hint names the withheld
+  e-invoice only when data is missing (a draft with theme or lint problems
+  alone attaches its XML, as in 0.6.0). The identity check is a function,
+  so that the stop reads its findings in the same pass. An invoice without
+  data keeps the strict behaviour and texts of 0.6.0.
+- `--input invoice-pro-validation=auto` is no override (the parameter
+  decides) instead of "is not a validation level ... Did you mean auto?";
+  the error for other values names auto.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RaaQussN1QVEE8zRWeeCD3
+---
+ src/components/root.typ          |  14 ++--
+ src/contract/hydrate.typ         |  27 ++++---
+ src/invoice.typ                  |   3 +-
+ src/theming/frame.typ            | 117 +++++++++++++++++--------------
+ src/theming/parts/body.typ       |  23 +++---
+ src/theming/scope.typ            |  10 ++-
+ src/validation/issue.typ         |  14 ++--
+ tests/validation/api/test.typ    |  12 ++++
+ tests/validation/strict/test.typ |  10 ++-
+ 9 files changed, 138 insertions(+), 92 deletions(-)
+
+diff --git a/src/components/root.typ b/src/components/root.typ
+index 8a9cf9f..7b56fac 100644
+--- a/src/components/root.typ
++++ b/src/components/root.typ
+@@ -479,19 +479,21 @@
+             + view.payment-blocks.map(b => b.issues).flatten()
+         )
+       }
+-      // hydrated: data without a binding point is an issue, and the strict
+-      // stop says how to debug it (contract/hydrate.typ)
++      // hydrated: data without a binding point is an issue; the strict stop
++      // follows the layout's checks (frame, contract/hydrate.typ)
+       let issues = if "hydration" in ctx {
+-        import "../contract/hydrate.typ": enforce-hydrated
+-        enforce-hydrated(issues, level, ctx.hydration.value, view)
++        import "../contract/hydrate.typ": hydrated-issues
++        hydrated-issues(issues, level, ctx.hydration.value, view)
+       } else { enforce(issues, level) }
+       // Draft: a machine-readable invoice with missing data is never attached
+       // (a receiving system would book it automatically); the badge and the
+       // report say that it was withheld, and the e-invoice is not validated.
+       // Under `none` no check runs, so the XML is attached as `zugferd-errors`
+-      // decides ("off means off", documented on invoice()).
++      // decides ("off means off", documented on invoice()); nor under strict
++      // with issues left (hydrated: the stop follows).
+       let withheld = (
+-        ctx.zugferd != none and issues.any(x => x.class in blocking-classes)
++        ctx.zugferd != none
++          and issues.any(x => level == "strict" or x.class in blocking-classes)
+       )
+       let ctx = (
+         ctx
+diff --git a/src/contract/hydrate.typ b/src/contract/hydrate.typ
+index 14f0248..04c1137 100644
+--- a/src/contract/hydrate.typ
++++ b/src/contract/hydrate.typ
+@@ -265,17 +265,23 @@
+ }
+ 
+ /// The issues of a hydrated invoice at `level` (root measure): `issues` and
+-/// the coverage issues of the sealed sections `h` (`coverage-issues`). Under
+-/// `"strict"` (the default of a hydrated invoice, `validation: auto`) any
+-/// problem stops the build with every problem listed and how to debug them
+-/// in a draft. The levels mean what they mean without data; only the text
+-/// of the stop differs from `enforce`'s.
++/// the coverage issues of the sealed sections `h` (`coverage-issues`). The
++/// levels mean what they mean without data, but a hydrated invoice's strict
++/// stop (the default, `validation: auto`) waits for the end of the invoice
++/// (`stop`), so that it lists the findings of the layout too.
+ /// -> array
+-#let enforce-hydrated(issues, level, h, view) = {
++#let hydrated-issues(issues, level, h, view) = {
+   if level == none { return () }
+-  let issues = issues + coverage-issues(h, view)
++  issues + coverage-issues(h, view)
++}
++
++/// The strict stop of a hydrated invoice (the frame, at the end of the
++/// invoice, in context): once the layout has run (`ready`), any problem stops
++/// the build with every problem listed and how to debug them in a draft.
++/// -> none
++#let stop(ready, issues) = {
+   let n = issues.len()
+-  if level != "strict" or n == 0 { return issues }
++  if not ready or n == 0 { return }
+   panic(
+     "invoice-pro found "
+       + str(n)
+@@ -287,6 +293,9 @@
+         .join("\n")
+       + "\nTo debug, render the draft with --input "
+       + level-key
+-      + "=draft: it marks every problem, lists them on a report page and attaches no e-invoice.",
++      + "=draft: it marks every problem and lists them on a report page"
++      + if issues.any(x => x.class == "data") {
++        ", and it attaches no e-invoice."
++      } else { "." },
+   )
+ }
+diff --git a/src/invoice.typ b/src/invoice.typ
+index 1e30fed..3122da6 100644
+--- a/src/invoice.typ
++++ b/src/invoice.typ
+@@ -212,7 +212,8 @@
+   /// These levels cover the invoice data and the theme; the rules of the
+   /// e-invoice follow `zugferd-errors`.
+   /// Misuse (unknown keys, wrong types, unknown parts, ..) always panics.
+-  /// `--input invoice-pro-validation=strict|draft|none` overrides this value.
++  /// `--input invoice-pro-validation=strict|draft|none` overrides this value
++  /// (`=auto` keeps it).
+   /// -> auto | none | "draft" | "strict"
+   validation: auto,
+   /// Fields of your own, which invoice-pro does not interpret: theme parts
+diff --git a/src/theming/frame.typ b/src/theming/frame.typ
+index 7ab8e21..d9adb38 100644
+--- a/src/theming/frame.typ
++++ b/src/theming/frame.typ
+@@ -185,16 +185,17 @@
+           + p
+           + " returned no content, but it carries legally required output"
+       )
+-      if level == "strict" { panic(msg) }
+-      if level == "draft" {
+-        return feedback.part-marker(ctx, p, issue(
+-          "theme/empty-" + p,
+-          "theme",
+-          msg,
+-          key: "part-empty",
+-          args: (part: p),
+-        ))
+-      }
++      if level == "strict" and "hydration" not in ctx { panic(msg) }
++      let x = issue(
++        "theme/empty-" + p,
++        "theme",
++        msg,
++        key: "part-empty",
++        args: (part: p),
++      )
++      if level == "draft" { return feedback.part-marker(ctx, p, x) }
++      // hydrated: the strict stop at the end of the invoice lists it
++      if level == "strict" { return feedback.emit((x,)) }
+     }
+     out
+   } else if type(p) == function { p(ctx, view) } else {
+@@ -420,15 +421,13 @@
+ 
+   let val = validation-of(ctx)
+   let draft = val.level == "draft"
++  // hydrated, strict stops at the end of the invoice with every problem
++  let stop = val.level == "strict" and "hydration" in ctx
+   // A render-time finding: strict panics (message unchanged), draft emits an
+   // issue into the flow (badge, watermark and report pick it up), none ignores it.
+-  let finding(id, class, msg, ref: none, fix: none, key: none, args: (:)) = {
+-    if val.level == "strict" { panic(msg) }
+-    if draft {
+-      feedback.emit((
+-        issue(id, class, msg, ref: ref, fix: fix, key: key, args: args),
+-      ))
+-    }
++  let finding(x) = {
++    if val.level == "strict" and not stop { panic(x.message) }
++    if draft or stop { feedback.emit((x,)) }
+   }
+   // This invoice's number in the document (its start marker follows this point).
+   let k = query(selector(<ip-invoice-start>).before(here())).len() + 1
+@@ -682,7 +681,7 @@
+   // Running footers must fit between footer-descent and footer-clearance (they are
+   // legal content: a footer that runs off the paper is lost silently otherwise).
+   if overflow and val.level != none {
+-    finding(
++    finding(issue(
+       "lint/footer-fit",
+       "lint",
+       "theme::layout::areas::footer is "
+@@ -704,7 +703,7 @@
+         avail: calc.round(avail / 1mm, digits: 1),
+         clearance: calc.round(clearance / 1mm, digits: 1),
+       ),
+-    )
++    ))
+   }
+ 
+   // First-page content drawn in the flow (tagged, reading order = area order):
+@@ -777,43 +776,45 @@
+       v(t.spacing.medium)
+     }
+   }
+-  if check-identity {
+-    context {
+-      // the probe is missing only in the first layout pass (introspection not ready yet)
+-      if query(<ip-identity-probe>).len() == 0 { return }
+-      // the tags on this invoice's first page (positions, not the invoice number k:
+-      // in the first pass every invoice still counts itself as the first)
+-      let first = invoice-span(k).first
+-      let seen = query(<ip-identity>)
+-        .filter(x => x.location().page() == first)
+-        .map(x => x.value)
+-      for (what, n) in needles {
+-        if what not in seen {
+-          let shown = if type(n) == str { n } else { repr(n) }
+-          let bt = if what == "number" { "BT-1" } else { "BT-2" }
+-          finding(
+-            "theme/identity-" + what,
+-            "theme",
+-            "theme: the invoice "
+-              + what
+-              + " ("
+-              + shown
+-              + ") does not appear in the first-page content; the area hosting `title` must render view.document."
+-              + (if what == "number" { "number" } else { "date.text" })
+-              + " (§ 14 UStG; EN 16931 "
+-              + bt
+-              + ")",
+-            ref: "§ 14 Abs. 4 Nr. "
+-              + (if what == "number" { "4" } else { "3" })
+-              + " UStG; EN 16931 "
+-              + bt,
+-            key: "identity",
+-            args: (what: what, shown: shown),
+-          )
+-        }
+-      }
++  // The identity findings (in context, after layout).
++  let identity() = {
++    // the probe is missing only in the first layout pass (introspection not ready yet)
++    if not check-identity or query(<ip-identity-probe>).len() == 0 {
++      return ()
+     }
++    // the tags on this invoice's first page (positions, not the invoice number k:
++    // in the first pass every invoice still counts itself as the first)
++    let first = invoice-span(k).first
++    let seen = query(<ip-identity>)
++      .filter(x => x.location().page() == first)
++      .map(x => x.value)
++    needles
++      .filter(((what, n)) => what not in seen)
++      .map(((what, n)) => {
++        let shown = if type(n) == str { n } else { repr(n) }
++        let bt = if what == "number" { "BT-1" } else { "BT-2" }
++        issue(
++          "theme/identity-" + what,
++          "theme",
++          "theme: the invoice "
++            + what
++            + " ("
++            + shown
++            + ") does not appear in the first-page content; the area hosting `title` must render view.document."
++            + (if what == "number" { "number" } else { "date.text" })
++            + " (§ 14 UStG; EN 16931 "
++            + bt
++            + ")",
++          ref: "§ 14 Abs. 4 Nr. "
++            + (if what == "number" { "4" } else { "3" })
++            + " UStG; EN 16931 "
++            + bt,
++          key: "identity",
++          args: (what: what, shown: shown),
++        )
++      })
+   }
++  if check-identity and not stop { context identity().map(finding).join() }
+   {
+     set par(justify: true)
+     body
+@@ -859,6 +860,14 @@
+   }
+   // end of the invoice proper (a draft report follows on its own pages)
+   [#metadata(k)<ip-invoice-end>]
++  // hydrated strict: the stop with every problem, the layout's too
++  if stop {
++    import "../contract/hydrate.typ"
++    context hydrate.stop(
++      query(<ip-invoice-start>).len() > 0,
++      feedback.dedupe(val.issues + feedback.collected(k) + identity()),
++    )
++  }
+   // Draft report: after the invoice, on its own page(s), outside the page count.
+   if draft {
+     context {
+diff --git a/src/theming/parts/body.typ b/src/theming/parts/body.typ
+index 34bbdb2..e8a320d 100644
+--- a/src/theming/parts/body.typ
++++ b/src/theming/parts/body.typ
+@@ -42,7 +42,7 @@
+ #import "../access.typ": unsealed
+ #import "../color.typ": on-color
+ #import "../../validation/issue.typ": issue
+-#import "../../validation/render.typ": part-marker
++#import "../../validation/render.typ": emit, part-marker
+ 
+ /// Body parts are set ragged: a justified payment sentence or note shows rivers
+ /// in the narrow columns many looks use (design review).
+@@ -77,16 +77,17 @@
+           + name
+           + " returned no content, but it must render legally required output"
+       )
+-      if level == "strict" { panic(msg) }
+-      if level == "draft" {
+-        return part-marker(ctx, name, issue(
+-          "theme/empty-" + name,
+-          "theme",
+-          msg,
+-          key: "part-empty",
+-          args: (part: name),
+-        ))
+-      }
++      if level == "strict" and "hydration" not in ctx { panic(msg) }
++      let x = issue(
++        "theme/empty-" + name,
++        "theme",
++        msg,
++        key: "part-empty",
++        args: (part: name),
++      )
++      if level == "draft" { return part-marker(ctx, name, x) }
++      // hydrated: the strict stop at the end of the invoice lists it (frame)
++      if level == "strict" { return emit((x,)) }
+     } else if level == "draft" {
+       let known = ctx.theme.issues.find(x => x.id == "theme/part-" + name)
+       return part-marker(ctx, name, if known != none { known } else {
+diff --git a/src/theming/scope.typ b/src/theming/scope.typ
+index 564b769..14c0c80 100644
+--- a/src/theming/scope.typ
++++ b/src/theming/scope.typ
+@@ -21,16 +21,20 @@
+       let t = scope-theme(theme-of(ctx), patches.pos())
+       let level = ctx.at("validation", default: (level: none)).level
+       // strict panics here; draft emits in draw (ids prefixed: a scope may
+-      // repeat a document-level finding with other colours); none drops them
++      // repeat a document-level finding with other colours); none drops them;
++      // hydrated, strict emits too (the stop lists them, frame)
++      let hydrated = "hydration" in ctx
+       t.issues = if level == none { () } else {
+-        enforce(t.issues, level).map(x => x + (id: "themed/" + x.id))
++        let issues = if hydrated { t.issues } else { enforce(t.issues, level) }
++        issues.map(x => x + (id: "themed/" + x.id))
+       }
+       ctx + (theme: seal(t))
+     },
+     measure: (_, children) => (children, none),
+     draw: (ctx, _, _, body) => {
+       let issues = theme-of(ctx).issues
+-      if ctx.at("validation", default: (level: none)).level == "draft" {
++      let level = ctx.at("validation", default: (level: none)).level
++      if level == "draft" or (level == "strict" and "hydration" in ctx) {
+         emit(issues)
+       }
+       body
+diff --git a/src/validation/issue.typ b/src/validation/issue.typ
+index b079eb1..daf5d81 100644
+--- a/src/validation/issue.typ
++++ b/src/validation/issue.typ
+@@ -75,8 +75,9 @@
+ 
+ /// Resolves the effective level: `--input invoice-pro-validation=..` wins over
+ /// the parameter, so CI and batch pipelines can enforce `strict` (or render
+-/// thumbnails with `none`) without editing documents. `auto` is `"strict"`
+-/// for a `hydrated` invoice (contract/hydrate.typ), else `"draft"`.
++/// thumbnails with `none`) without editing documents; `=auto` is no override.
++/// `auto` is `"strict"` for a `hydrated` invoice (contract/hydrate.typ), else
++/// `"draft"`.
+ /// -> none | str
+ #let resolve-level(param, inputs: sys.inputs, hydrated: false) = {
+   // common synonyms get a pointed hint instead of a generic did-you-mean
+@@ -107,16 +108,15 @@
+         + if type(param) in (str, bool) { synonym(param) } else { "" },
+     )
+   }
+-  let raw = inputs.at(input-key, default: auto)
+-  if raw == auto { return param }
+-  let names = ("none", "draft", "strict")
+-  if raw not in names {
++  let raw = inputs.at(input-key, default: "auto")
++  if raw == "auto" { return param }
++  if raw not in ("none", "draft", "strict") {
+     panic(
+       "--input "
+         + input-key
+         + "="
+         + raw
+-        + " is not a validation level; use none, draft or strict."
++        + " is not a validation level; use auto, none, draft or strict."
+         + synonym(raw).replace("\"", ""),
+     )
+   }
+diff --git a/tests/validation/api/test.typ b/tests/validation/api/test.typ
+index b924976..2d334a0 100644
+--- a/tests/validation/api/test.typ
++++ b/tests/validation/api/test.typ
+@@ -32,6 +32,18 @@
+   )
+     == "draft",
+ )
++// --input invoice-pro-validation=auto is no override: the parameter decides
++#assert(
++  resolve-level("draft", inputs: (invoice-pro-validation: "auto")) == "draft",
++)
++#assert(
++  resolve-level(
++    auto,
++    inputs: (invoice-pro-validation: "auto"),
++    hydrated: true,
++  )
++    == "strict",
++)
+ #assert(levels == (none, "draft", "strict"))
+ #assert(blocking-classes == ("data",))
+ #assert(classes == ("data", "theme", "lint"))
+diff --git a/tests/validation/strict/test.typ b/tests/validation/strict/test.typ
+index 3cd6437..7ab59b7 100644
+--- a/tests/validation/strict/test.typ
++++ b/tests/validation/strict/test.typ
+@@ -81,6 +81,14 @@
+   catch(() => resolve-level(none, inputs: (invoice-pro-validation: "strcit"))),
+   "panicked with: "
+     + repr(
+-      "--input invoice-pro-validation=strcit is not a validation level; use none, draft or strict. Did you mean `strict`?",
++      "--input invoice-pro-validation=strcit is not a validation level; use auto, none, draft or strict. Did you mean `strict`?",
++    ),
++)
++// `auto` is a level of the input (no override), so `Auto` gets the hint
++#assert.eq(
++  catch(() => resolve-level(auto, inputs: (invoice-pro-validation: "Auto"))),
++  "panicked with: "
++    + repr(
++      "--input invoice-pro-validation=Auto is not a validation level; use auto, none, draft or strict. Did you mean auto?",
+     ),
+ )
+-- 
+2.43.0
+

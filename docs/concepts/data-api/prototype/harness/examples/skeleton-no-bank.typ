@@ -7,8 +7,8 @@
 
 // The data the CLI hands over (inline JSON or a file read here, so its path
 // resolves against this project); `none` without input: the samples render.
-#let record = invoice-data.load(read: p => read(p, encoding: none))
-#let values = invoice-data.values(record)
+#let record = data.load(read: p => read(p, encoding: none))
+#let values = data.values(record)
 
 // Samples: what identifies one invoice. Hydrated, they are dropped.
 #let sample = (
@@ -40,7 +40,7 @@
   let custom = shown.at("custom", default: none)
   let key = if type(custom) == dictionary { custom.at("wappen", default: none) }
   if type(key) != str or key not in arms {
-    let who = invoice-data.party(shown.at("recipient", default: none))
+    let who = data.party(shown.at("recipient", default: none))
     let plz = who.at("post-code", default: none)
     key = if type(plz) == str and plz != "" {
       arms-by-plz.at(plz.first(), default: none)

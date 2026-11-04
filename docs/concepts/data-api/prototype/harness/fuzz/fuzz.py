@@ -2,12 +2,21 @@
 """P4 fault corpus: the engine judge's 38 single-fault documents
 (<session>/judge-engine/scripts/fuzz.py, unified format: prepayments are
 top-level, periods are objects) plus the faults the judges found later.
-usage: fuzz.py TYPST [zf] [names...]   -> one line per fault; exit code = hard aborts
-A hard abort is a failed compile other than the deliberate format-major panic
-(and, with zf=auto, e-invoice rule errors, which stop the compile by design)."""
+usage: fuzz.py TYPST [zf] [default|draft] [names...]
+  -> one line per fault; exit code = hard aborts + wrong outcomes
+Two modes (the decision on Q1: a hydrated invoice stops on any problem):
+- default: no level is given, so a fault must end in the deliberate strict
+  stop that lists the problems and ends with the debug hint, or in a clean
+  PDF; a draft PDF would be a broken invoice shipped by default;
+- draft: `--input invoice-pro-validation=draft`, the debug view: a fault
+  must give a PDF; a draft (badge) carries no embedded file.
+A hard abort is any other failed compile, except the deliberate format-major
+panic (and, with zf=auto, e-invoice rule errors, which stop the compile by
+design)."""
 import json, copy, subprocess, sys, os, re
 HERE = os.path.dirname(os.path.abspath(__file__)); U = os.path.dirname(os.path.dirname(HERE))
-T = sys.argv[1]; zf = sys.argv[2] if len(sys.argv) > 2 else "none"; only = sys.argv[3:]
+T = sys.argv[1]; zf = sys.argv[2] if len(sys.argv) > 2 else "none"; rest = sys.argv[3:]
+mode = rest.pop(0) if rest and rest[0] in ("default", "draft") else "default"; only = rest
 def first(d): return d["items"][0]
 def nest(n):
     g = {"name": "Tief", "price": "1.00"}
@@ -116,7 +125,7 @@ def main():
     base = json.load(open(os.path.join(HERE, "base.json")))
     schema = json.load(open(os.path.join(U, "repo/src/contract/invoice.schema.json")))
     names = only or list(M)
-    aborts = 0; out = []
+    aborts = 0; wrong = 0; out = []
     V = subprocess.run([T, "--version"], capture_output=True, text=True).stdout.split()[1]
     for name in names:
         d = copy.deepcopy(base)
@@ -124,12 +133,24 @@ def main():
         else: M[name](d)
         f = f"proto/fuzz/corpus/{name}.json"; json.dump(d, open(os.path.join(U, f), "w"), ensure_ascii=False)
         pdf = os.path.join(HERE, "out", f"{V}-{zf}-{name}.pdf"); os.makedirs(os.path.dirname(pdf), exist_ok=True)
+        if os.path.exists(pdf): os.remove(pdf)
         cmd = [T, "compile", "--root", U, "--input", f"f=/{f}", "--input", f"zf={zf}", "--creation-timestamp", "1767225600", os.path.join(HERE, "sk.typ"), pdf]
+        if mode == "draft": cmd += ["--input", "invoice-pro-validation=draft"]
         p = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        stop = "in the hydrated invoice, which stops on any problem" in p.stderr
         if p.returncode == 0:
             txt = subprocess.run(["pdftotext", pdf, "-"], capture_output=True, text=True).stdout
             m = re.search(r"ENTWURF[^\n]*", txt)
-            res = "PDF " + (m.group(0) if m else "clean")
+            att = subprocess.run(["pdfdetach", "-list", pdf], capture_output=True, text=True).stdout.split("\n")[0]
+            res = "PDF " + (m.group(0) if m else "clean") + f" ({att})"
+            # a draft by default, or a draft with an e-invoice, is a wrong outcome
+            if m and (mode == "default" or not att.startswith("0 ")):
+                wrong += 1; res = "WRONG " + res
+        elif mode == "default" and stop:
+            n = len(re.findall(r"(?m)^  \d+\. |\\n  \d+\. ", p.stderr))
+            hint = "To debug, render the draft with --input invoice-pro-validation=draft" in p.stderr
+            if not hint or n == 0: wrong += 1
+            res = f"STOP (strict by default: {n} problem(s){', debug hint' if hint else ', NO HINT'})"
         else:
             m = re.search(r"error: (.*)", p.stderr); msg = m.group(1) if m else p.stderr.strip().splitlines()[-1]
             loc = re.search(r"┌─ (\S+)", p.stderr); loc = loc.group(1) if loc else ""
@@ -142,6 +163,6 @@ def main():
             rule = re.search(r"\[((?:BR|IP|CII|PEPPOL)[^\]]*)\]", p.stderr)
             res = kind + (f"{rule.group(1)} " if rules and rule else "") + f"[{loc}] {msg[:160]}"
         print(f"{V} {name:20} {res}", flush=True)
-    print(f"{V} zf={zf} faults={len(names)} hard-aborts={aborts}")
-    sys.exit(aborts)
+    print(f"{V} zf={zf} mode={mode} faults={len(names)} hard-aborts={aborts} wrong-outcomes={wrong}")
+    sys.exit(aborts + wrong)
 if __name__ == "__main__": main()

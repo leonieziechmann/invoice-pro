@@ -1,7 +1,7 @@
 From 3adb8e368e2f7265ba9278397657c0006b49c68c Mon Sep 17 00:00:00 2001
 From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
 Date: Mon, 2 Nov 2026 22:35:33 +0000
-Subject: [PATCH 01/10] feat(data): contract core, invoice(data:, custom:)
+Subject: [PATCH 01/15] feat(data): contract core, invoice(data:, custom:)
  re-entry, rows engine, payment(..)
 
 Consolidated prototype of the unified data-hydration design (SYNTHESIS.md):

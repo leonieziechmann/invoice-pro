@@ -1,11 +1,13 @@
 #!/bin/bash
 # P10: tools/contract/signature.py passes on the prototype and FAILS when an
 # invoice() parameter is not classified in the descriptor, a classified key is
-# no parameter, a class or role is misspelt, or `data` is reclassified (each a
-# mutated copy). Runs on 0.15 and 0.14 (signature.py falls back to query).
+# no parameter, a class or role is misspelt, `data` is reclassified, an issuer
+# parameter is not passed to hydrate(..), or a document key becomes an issuer
+# key without being passed (each a mutated copy). Runs on 0.15 and 0.14
+# (signature.py falls back to query).
 T=$1; D=$(cd "$(dirname "$0")" && pwd); R=$(cd $D/../../repo && pwd); W=$D/work; fails=0
 python3 -I $R/tools/contract/signature.py --root $R --typst $T && echo "PASS prototype covered" || { echo "FAIL prototype"; fails=1; }
-for m in unclassified stale role-typo class-typo data-class; do
+for m in unclassified stale role-typo class-typo data-class unpassed now-issuer; do
   rm -rf $W; mkdir -p $W; cp -r $R/src $R/typst.toml $W/
   if [ $m = unclassified ]; then
     # a new parameter nobody classified (and that hydrate() does not get)
@@ -19,9 +21,15 @@ for m in unclassified stale role-typo class-typo data-class; do
   elif [ $m = class-typo ]; then
     # a misspelt fixed class: a hydrated invoice would drop the theme
     sed -i 's/^    theme: "design",$/    theme: "desing",/' $W/src/contract/schema.typ
-  else
+  elif [ $m = data-class ]; then
     # the hydration source classified as design
     sed -i 's/^    data: "data",$/    data: "design",/' $W/src/contract/schema.typ
+  elif [ $m = unpassed ]; then
+    # an issuer parameter that invoice() does not pass to hydrate(..)
+    sed -i '/^      payee: payee,$/d' $W/src/invoice.typ
+  else
+    # a document key that becomes an issuer key: invoice() must pass it now
+    python3 -I -c 'import sys; p=sys.argv[1]; s=open(p).read(); i=s.index("      customer-nr: field("); j=s.index("role: \"document\"", i); open(p, "w").write(s[:j] + "role: \"issuer\"" + s[j+len("role: \"document\""):])' $W/src/contract/schema.typ
   fi
   python3 -I $R/tools/contract/signature.py --root $W --typst $T > $W/out.txt; e=$?
   [ $e = 1 ] && echo "PASS mutation '$m' fails: $(head -2 $W/out.txt | tr '\n' ' ' | cut -c1-260)" || { echo "FAIL mutation $m exit=$e"; cat $W/out.txt; fails=1; }

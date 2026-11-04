@@ -1,0 +1,938 @@
+From 6eb22f6856a99de965bbe24dc03f76a050401bc4 Mon Sep 17 00:00:00 2001
+From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
+Date: Tue, 3 Nov 2026 21:50:19 +0000
+Subject: [PATCH 14/15] perf(data): a smaller root import (Q2: at most +1 ms)
+
+The maintainer's decision on Q2: the package import of an invoice without
+data may grow by at most 1 ms against 0.6.0. Every line the import parses
+costs about 10 k instructions (a comment line about 5 k, a closure about
+25 k), so the eagerly parsed files say less and run less:
+
+- invoice(): the re-entry hook passes only the design and issuer
+  parameters to hydrate(..) (the skeleton's document values are samples
+  and were never read), and the check for the applied marker moved into
+  the lazy hydrate.typ; tools/contract/signature.py checks exactly that
+  every design and issuer parameter is passed;
+- the facades public/data.typ and public/payment.typ keep the signatures
+  with a short doc comment and the `/// -> type` line of every function
+  and parameter; the full docs moved next to the bodies (contract/api.typ,
+  components/payment.typ), which load only when called;
+- root: one lazy call for the coverage issues and the strict stop of a
+  hydrated invoice; the items slot filters the marker frames once, and
+  its panic text lives in contract/rows.typ;
+- shorter comments in the shared path and in the region files.
+
+Measured with the prototype harness' bench/impcount.py (valgrind
+cachegrind, --jobs 1, import-only documents, tree copies under four sets
+of names of equal length): the import delta against 0.6.0 drops from
++3.81 M to +2.97 M instructions on Typst 0.15.1 (+0.74 % to +0.58 % of
+the import) and from +3.90 M to +3.11 M on 0.14.2 (+0.81 % to +0.65 %);
+at the import's own untraced rate on the measuring VM (113.5 ms and
+121.1 ms for the import) that is 0.84 to 0.65 ms and 0.99 to 0.79 ms.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RaaQussN1QVEE8zRWeeCD3
+---
+ src/components/dynamic.typ        |  3 +-
+ src/components/line-items.typ     | 25 +++------
+ src/components/payment-terms.typ  |  3 +-
+ src/components/payment.typ        | 26 ++++++++-
+ src/components/root.typ           | 22 +++-----
+ src/contract/api.typ              | 70 ++++++++++++++++++++++--
+ src/contract/hydrate.typ          | 66 +++++++++++++---------
+ src/contract/rows.typ             |  8 +++
+ src/invoice.typ                   | 91 +++++++++----------------------
+ src/locale/region/at.typ          |  3 +-
+ src/locale/region/base.typ        |  5 +-
+ src/locale/region/ch.typ          |  3 +-
+ src/locale/region/de.typ          |  3 +-
+ src/locale/region/es.typ          |  3 +-
+ src/locale/region/fr.typ          |  3 +-
+ src/locale/region/it.typ          |  3 +-
+ src/logic/modifier-applicator.typ |  4 +-
+ src/public/data.typ               | 72 ++++++------------------
+ src/public/payment.typ            | 40 +++++---------
+ src/theming/access.typ            |  2 +-
+ tools/contract/signature.py       | 11 +++-
+ 21 files changed, 229 insertions(+), 237 deletions(-)
+
+diff --git a/src/components/dynamic.typ b/src/components/dynamic.typ
+index d109873..da8dd4f 100644
+--- a/src/components/dynamic.typ
++++ b/src/components/dynamic.typ
+@@ -23,8 +23,7 @@
+ // of this size takes time, and `info` creates one element per value when
+ // the package is imported.
+ #let _draw(pos, default, format, ctx, body) = {
+-  // custom fields travel sealed (invoice.typ): paths read through them, and
+-  // the function form gets them unsealed
++  // custom fields travel sealed (invoice.typ)
+   let c = ctx.at("custom", default: none)
+   let ctx = if type(c) == content { ctx + (custom: c.value) } else { ctx }
+   if pos.len() == 0 {
+diff --git a/src/components/line-items.typ b/src/components/line-items.typ
+index 4d0c492..b963709 100755
+--- a/src/components/line-items.typ
++++ b/src/components/line-items.typ
+@@ -10,26 +10,17 @@
+ #import "../theming/parts/body.typ": call-part
+ #import "../data/tax.typ" as m-tax
+ 
+-// The items slot, the implicit binding point of the data's `items`,
+-// `modifiers` and `prepayments`: the body of `line-items` is a preview sample.
+-// Without data it passes the children through. Hydrated (`ctx.hydration`,
+-// sealed by invoice()), the rows of the data take the place of the whole
+-// body (ONE motif emits their frames, contract/rows.typ), unless the body
+-// has an explicit `data.items[..]` marker, which then places them
+-// (static rows outside it stay). The marker leaves a frame of its own kind
+-// for this slot to count and remove. The engine is imported only when used.
++// The items slot: the whole body of `line-items` is the binding point of the
++// data's rows (a preview sample), unless a `data.items[..]` marker places
++// them; its frame is removed here. Hydrated (`ctx.hydration`), ONE motif of
++// contract/rows.typ emits the frames of the rows instead of the body.
+ #let _items-slot(body) = motif(
+   measure: (ctx, children) => {
+-    let markers = children.filter(f => f.kind == "data-items").len()
++    let kept = children.filter(f => f.kind != "data-items")
++    let markers = children.len() - kept.len()
+     if markers > 1 {
+-      panic(
+-        "`data.items[..]` is the binding point of the data's line items: a `line-items` may have at most one, found "
+-          + str(markers)
+-          + ".",
+-      )
+-    }
+-    let kept = if markers == 0 { children } else {
+-      children.filter(f => f.kind != "data-items")
++      import "../contract/rows.typ": too-many-markers
++      too-many-markers(markers)
+     }
+     let h = ctx.at("hydration", default: none)
+     if h == none or markers > 0 { return (kept, false) }
+diff --git a/src/components/payment-terms.typ b/src/components/payment-terms.typ
+index cdc7844..6472874 100644
+--- a/src/components/payment-terms.typ
++++ b/src/components/payment-terms.typ
+@@ -88,8 +88,7 @@
+         discounts.len() > 0
+           and sender-pays(ctx.at("document-type", default: none))
+       ) {
+-        // hydrated, the data's document type is the cause: the discount is
+-        // left out with a data issue (contract/hydrate.typ)
++        // hydrated: the data's document type is the cause, a data issue
+         if "hydration" not in ctx {
+           panic(
+             "payment-terms: a cash discount (`discount`) is not supported on a credit note or a self-billed invoice, whose sender pays the amount. Remove `discount`.",
+diff --git a/src/components/payment.typ b/src/components/payment.typ
+index 72f739d..6299b67 100644
+--- a/src/components/payment.typ
++++ b/src/components/payment.typ
+@@ -160,7 +160,31 @@
+   (parts.join(), issues)
+ }
+ 
+-/// The payment block; documented at its root export, public/payment.typ.
++/// The payment block (root export `payment`, whose facade public/payment.typ
++/// has the short docs). The payment of the invoice in one block: the payment
++/// terms, the method (credit transfer, SEPA direct debit, payment card, or
++/// already paid) and the account to pay to. It places `payment-terms`,
++/// `direct-debit`, `card-payment` or `paid`, and `bank-details` as these
++/// arguments call for.
++///
++/// When the invoice is hydrated (`invoice(data: ..)`), the `payment` section
++/// of the data applies key by key: `terms`, `method`, `bank` and
++/// `creditor-id` keep this call's value unless the data gives them;
++/// `direct-debit`, `card` and `paid` describe one invoice and come from the
++/// data only (the values here are preview samples).
++///
++/// The arguments: `terms`: `(days: 14)`, `(date: datetime(..))`, optionally
++/// with `discount: (days: 7, percent: 2%)` (see `payment-terms`), `none`
++/// prints none. `method`: how the recipient pays, `"transfer"`,
++/// `"direct-debit"`, `"card"` or `"paid"`; `auto`: the method whose details
++/// are given, else a transfer. `bank`: the account to pay to, `(name: ..,
++/// bank: .., iban: .., bic: ..)` (see `bank-details`). `creditor-id`: the
++/// SEPA creditor identifier of the sender, for `"direct-debit"`.
++/// `direct-debit`: `(mandate: .., debtor-iban: ..)`. `card`: `(last4: ..,
++/// holder: .., kind: ..)`. `paid`: `(method: .., date: ..)` of an invoice
++/// that is already paid. Layout: `show-reference`, whether the bank details
++/// print the payment reference; `qr-code`, the EPC QR code of the bank
++/// details (see `bank-details`).
+ /// -> content
+ #let payment(
+   terms: none,
+diff --git a/src/components/root.typ b/src/components/root.typ
+index 1f0f0c6..8a9cf9f 100644
+--- a/src/components/root.typ
++++ b/src/components/root.typ
+@@ -245,8 +245,7 @@
+           message: "An invoice that is `paid` has no payment terms: nothing is left to pay, but `due-date` is a text of payment terms. Remove `due-date`, or give the date the payment was due as a `datetime`.",
+         )
+       }
+-      // the blocks of `payment(..)`: their data issues, and whether the
+-      // skeleton has a binding point for the payment section of the data
++      // the `payment(..)` blocks: their issues, the data's binding point
+       let payment-blocks = loom.query.collect-signals(children, kind: "payment")
+       let payment-means = resolve-payment-means(
+         bank-signals,
+@@ -478,18 +477,13 @@
+             + _bank-issues(view.banks)
+             + _direct-debit-issues(view.payment-means.direct-debit)
+             + view.payment-blocks.map(b => b.issues).flatten()
+-            // a section of hydrated data without a binding point in the
+-            // skeleton (contract/hydrate.typ, loaded only when hydrated)
+-            + if "hydration" in ctx {
+-              import "../contract/hydrate.typ": coverage-issues
+-              coverage-issues(ctx.hydration.value, view)
+-            } else { () }
+         )
+       }
+-      let issues = if "hydration" in ctx and level == "strict" {
+-        // every problem, and how to see them in a draft (contract/hydrate.typ)
++      // hydrated: data without a binding point is an issue, and the strict
++      // stop says how to debug it (contract/hydrate.typ)
++      let issues = if "hydration" in ctx {
+         import "../contract/hydrate.typ": enforce-hydrated
+-        enforce-hydrated(issues)
++        enforce-hydrated(issues, level, ctx.hydration.value, view)
+       } else { enforce(issues, level) }
+       // Draft: a machine-readable invoice with missing data is never attached
+       // (a receiving system would book it automatically); the badge and the
+@@ -621,10 +615,8 @@
+         description: if description == "" { none } else { description },
+         keywords: keywords,
+       )
+-      // The result contract (contract/result.typ): what a program needs
+-      // back, as JSON-friendly strings, for `typst query`/`typst eval`. A
+-      // hydrated invoice has it; another one on request only (its module
+-      // loads only then, and it loads no descriptor).
++      // The result record for programs (contract/result.typ): hydrated, or
++      // on request only (its module loads only then).
+       if (
+         "hydration" in ctx
+           or sys.inputs.at("invoice-pro-result", default: none) == "1"
+diff --git a/src/contract/api.typ b/src/contract/api.typ
+index 178f37b..093fafa 100644
+--- a/src/contract/api.typ
++++ b/src/contract/api.typ
+@@ -1,8 +1,43 @@
+-// The bodies of the `data` functions (public/data.typ, which
+-// holds their signatures and documentation): loaded only when one is called,
+-// so that the package import does not parse them. Each imports what it
+-// needs (`schema(kind: "result")` loads no data descriptor).
++// The bodies of the `data` functions (public/data.typ, which holds their
++// signatures and short docs): loaded only when one is called, so that the
++// package import does not parse them. Each imports what it needs
++// (`schema(kind: "result")` loads no data descriptor).
++//
++// The namespace is named `data` after the parameter it feeds,
++// `invoice(data:)`, as `theme` and `locale` are. A file that binds `data`
++// itself (`#let data = json(..)` after the package import) hides it;
++// `invoice(data: <dictionary>)` still works, and the docs name the record
++// `record`. `import data: *` shadows no Typst builtin.
++//
++// The full docs of the namespace:
++// - `format`: the data format this version reads, "invoice-pro/1". Data of
++//   another major version panics in invoice() and is an issue of `check`.
++// - `values(record)`: the decoded, typed values of a record (datetimes,
++//   decimals, ratios, unit functions, tax dictionaries, `id.*` values,
++//   custom bags as given), for design decisions in the skeleton at
++//   evaluation time; `none` for `none`. Any key can be absent, the required
++//   ones too (the decoder drops invalid values): read with `default:`.
++// - `party(party, region: "de")`: a party as invoice() normalises it
++//   (`post-code`, `city-name`, `country`, `*-inline`), for design decisions
++//   before invoice() runs: the post code of `"80331 München"` or of
++//   `(name: "München", post-code: "80331")`; `(:)` for no dictionary.
++//   `region`: the region of a party without a country (the skeleton's).
++// - `items(sample)`: the explicit binding point of the data's line items, a
++//   direct child of `line-items` (an `apply` around it is transparent), at
++//   most one per `line-items`. Without data it renders `sample` exactly as
++//   written; hydrated, the data's rows take its place and `sample` is never
++//   woven. Rows outside it stay on every invoice (a fixed fee). Without a
++//   marker, the whole body of `line-items` is the binding point
++//   (contract/rows.typ).
++// - `load(read:, inputs:)`, `decode`, `check`, `schema`: below.
+ 
++/// `decode(data, region: none)`: decodes and validates data without
++/// rendering, into a record for `invoice(data:)`, `values` and `check`.
++/// Never panics on bad data (problems become issues with JSON Pointers);
++/// `region` adds the region checks invoice() makes with its locale (e.g.
++/// `"16%"` is no VAT rate of `"de"`). `data`: a dictionary (`json(..)`,
++/// `toml(..)`, `yaml(..)`), JSON as bytes or text, or (Typst 0.15) a `path`.
++/// -> content
+ #let decode(data, region) = {
+   import "input.typ": resolve-data
+   import "hydrate.typ": make-record, rates-of
+@@ -12,6 +47,19 @@
+   make-record(src.raw, region: region, rates: rates-of(region))
+ }
+ 
++/// `load(read: none, inputs: sys.inputs)`: the record of the data the CLI
++/// hands over, for `invoice(data: ..)`: the JSON text of
++/// `--input invoice-pro-data`, or the file named by
++/// `--input invoice-pro-data-file`, opened with `read`. A package cannot
++/// open your files: pass `p => read(p, encoding: none)`, written in your
++/// file; a relative path resolves against that file, `/…` against the
++/// project root, `/dev/stdin` reads stdin (with `--root /`). The file
++/// extension picks the decoder (`.json`, `.toml`, `.yaml`, `.yml`; a UTF-8
++/// BOM is tolerated). Without a data input it returns `none` (the skeleton
++/// renders its samples) and loads no contract module. Without `read`, a
++/// given `--input invoice-pro-data-file` panics with this fix. `inputs`:
++/// injectable for tests (tytanic cannot pass `--input`).
++/// -> content
+ #let load(read, inputs) = {
+   import "input.typ": from-inputs
+   import "hydrate.typ": make-record
+@@ -19,6 +67,15 @@
+   make-record(src.raw, origin: src.origin)
+ }
+ 
++/// `check(data, region: none)`: a JSON-friendly validation report, without
++/// layout (CI, phase-2 bindings): `(format: "invoice-pro-check/1", valid:
++/// bool, issues: ((id, path, key, message, fix), ..))`. What the decoder
++/// checks (the JSON Schema and its own rules); an invoice can still report
++/// more when it is hydrated (rules of the skeleton, the e-invoice rules).
++/// Data that is no object (`none`, an array, a number, text that is not a
++/// JSON object) is an issue, never an error; JSON text that does not parse
++/// stops like `json(..)`.
++/// -> dictionary
+ #let check(data, region) = {
+   import "input.typ": is-record
+   let t = type(data)
+@@ -56,6 +113,11 @@
+   (format: "invoice-pro-check/1", valid: issues.len() == 0, issues: issues)
+ }
+ 
++/// `schema(kind: "data")`: the JSON Schema 2020-12 of the data format
++/// (`"data"`) or of the result record `<invoice-pro-result>` (`"result"`),
++/// generated from the descriptor: `typst eval '{ import
++/// "@preview/invoice-pro:<version>": data; data.schema() }'`.
++/// -> dictionary
+ #let schema(kind) = {
+   import "export.typ": json-schema
+   if kind == "data" {
+diff --git a/src/contract/hydrate.typ b/src/contract/hydrate.typ
+index 8d7a573..14f0248 100644
+--- a/src/contract/hydrate.typ
++++ b/src/contract/hydrate.typ
+@@ -75,12 +75,20 @@
+ )
+ 
+ /// The arguments of the re-entered invoice() call and the applied marker,
+-/// or `none` when the call is not hydrated. `given`: every parameter of the
+-/// call as (name: value).
+-/// -> none | dictionary
++/// `(args: .., marker: ..)`; in the re-entered call (`data` is the marker)
++/// `(applied: <its value>)`, and `(applied: none)` when the call is not
++/// hydrated. `given`: the design and issuer parameters of the call as
++/// (name: value); the skeleton's document keys are samples, never read.
++/// -> dictionary
+ #let hydrate(data, given, inputs: sys.inputs) = {
++  if (
++    type(data) == content
++      and data.func() == metadata
++      and type(data.value) == dictionary
++      and data.value.at("kind", default: none) == "invoice-pro-applied"
++  ) { return (applied: data.value) }
+   let src = resolve-data(data, inputs: inputs)
+-  if src == none { return none }
++  if src == none { return (applied: none) }
+   let rec = if is-record(src) { src } else {
+     make-record(src.raw, origin: src.origin)
+   }
+@@ -152,29 +160,6 @@
+   )
+ }
+ 
+-/// The strict level of a hydrated invoice (the default, `validation: auto`):
+-/// any problem stops the build, with every problem listed and how to debug
+-/// them in a draft; otherwise returns `issues`. Hydrated or not, the levels
+-/// mean the same: only the text differs from `enforce`'s.
+-/// -> array
+-#let enforce-hydrated(issues) = {
+-  let n = issues.len()
+-  if n == 0 { return issues }
+-  panic(
+-    "invoice-pro found "
+-      + str(n)
+-      + if n == 1 { " problem" } else { " problems" }
+-      + " in the hydrated invoice, which stops on any problem so that no broken invoice goes out:\n"
+-      + issues
+-        .enumerate()
+-        .map(((i, x)) => "  " + str(i + 1) + ". " + x.message)
+-        .join("\n")
+-      + "\nTo debug, render the draft with --input "
+-      + level-key
+-      + "=draft: it marks every problem, lists them on a report page and attaches no e-invoice.",
+-  )
+-}
+-
+ /// The arguments of `payment(..)` with the `payment` section applied by the
+ /// roles of schema.typ (`own`: the arguments of the call).
+ /// -> dictionary
+@@ -278,3 +263,30 @@
+     args: (path: "/modifiers"),
+   )
+ }
++
++/// The issues of a hydrated invoice at `level` (root measure): `issues` and
++/// the coverage issues of the sealed sections `h` (`coverage-issues`). Under
++/// `"strict"` (the default of a hydrated invoice, `validation: auto`) any
++/// problem stops the build with every problem listed and how to debug them
++/// in a draft. The levels mean what they mean without data; only the text
++/// of the stop differs from `enforce`'s.
++/// -> array
++#let enforce-hydrated(issues, level, h, view) = {
++  if level == none { return () }
++  let issues = issues + coverage-issues(h, view)
++  let n = issues.len()
++  if level != "strict" or n == 0 { return issues }
++  panic(
++    "invoice-pro found "
++      + str(n)
++      + if n == 1 { " problem" } else { " problems" }
++      + " in the hydrated invoice, which stops on any problem so that no broken invoice goes out:\n"
++      + issues
++        .enumerate()
++        .map(((i, x)) => "  " + str(i + 1) + ". " + x.message)
++        .join("\n")
++      + "\nTo debug, render the draft with --input "
++      + level-key
++      + "=draft: it marks every problem, lists them on a report page and attaches no e-invoice.",
++  )
++}
+diff --git a/src/contract/rows.typ b/src/contract/rows.typ
+index d4cb582..71e2b58 100644
+--- a/src/contract/rows.typ
++++ b/src/contract/rows.typ
+@@ -393,6 +393,14 @@
+   false
+ }
+ 
++/// The panic of a `line-items` with `n` markers (components/line-items.typ).
++/// -> none
++#let too-many-markers(n) = panic(
++  "`data.items[..]` is the binding point of the data's line items: a `line-items` may have at most one, found "
++    + str(n)
++    + ".",
++)
++
+ /// The explicit binding point `data.items[..]`: without data the
+ /// `sample` renders exactly as written; hydrated, the rows of the data take
+ /// its place and the sample is never woven (it is held in this closure,
+diff --git a/src/invoice.typ b/src/invoice.typ
+index 7f2e9ae..1e30fed 100644
+--- a/src/invoice.typ
++++ b/src/invoice.typ
+@@ -194,10 +194,9 @@
+ 
+   /// What happens when legally required data or output is missing, or a
+   /// theme check fails:
+-  /// - `auto`: `"strict"` when the invoice is hydrated (see `data`), so that
+-  ///   no broken invoice goes out by mistake, else `"draft"`. To debug a
+-  ///   hydrated invoice, render its draft with
+-  ///   `--input invoice-pro-validation=draft`.
++  /// - `auto`: `"strict"` when hydrated (see `data`), so that no broken
++  ///   invoice goes out by mistake, else `"draft"`. To debug a hydrated
++  ///   invoice, render its draft: `--input invoice-pro-validation=draft`.
+   /// - `"draft"`: the document renders, and every problem is shown in it: an
+   ///   inline marker where data is missing (‹fehlt: Rechnungsnummer›), a badge
+   ///   and a watermark on each page, and a report page with the legal basis of
+@@ -222,21 +221,12 @@
+   /// alone.
+   /// -> none | dictionary
+   custom: none,
+-  /// The data of the invoice (format "invoice-pro/1"), to hydrate this call
+-  /// as a skeleton. What identifies one invoice (number, dates, recipient,
+-  /// delivery address, references, line items, the details of a direct
+-  /// debit, card or paid invoice, custom fields) then comes from the data
+-  /// alone: the skeleton's values for it are preview samples. The issuer's
+-  /// settings (sender, payee, currency, subject, document type, notes, tax
+-  /// settings, payment terms, method and bank) keep the skeleton's value
+-  /// unless the data gives them, as a whole. Design never comes from data.
+-  /// Problems in the data are `data` issues: by default a hydrated invoice
+-  /// stops on any problem (see `validation`).
+-  ///
+-  /// `auto`: the JSON of `--input invoice-pro-data` if it is given, else the
+-  /// invoice is not hydrated. Also: a record of `data.load(..)` or
+-  /// `data.decode(..)`, a dictionary (`json(..)`, `toml(..)`,
+-  /// `yaml(..)`), JSON as bytes or text, or (Typst 0.15) a `path`.
++  /// The data ("invoice-pro/1") that hydrates this call as a skeleton: what
++  /// identifies one invoice comes from it alone (the skeleton's values are
++  /// samples), the issuer's settings stay unless it gives them, the design
++  /// never comes from data; it stops on any problem (see `validation`).
++  /// `auto`: `--input invoice-pro-data`; or a record of `data.load(..)`, a
++  /// dictionary, JSON bytes or text, a `path` (Typst 0.15).
+   /// -> auto | none | dictionary | bytes | str | content
+   data: auto,
+ 
+@@ -245,67 +235,40 @@
+   body,
+ ) = {
+   /** Hydration (contract/hydrate.typ) **/
+-  // A hydrated call re-enters invoice() with the effective arguments and the
+-  // sealed "applied" marker as `data`; a document key the data lacks is left
+-  // out of that call, so the defaults of this signature apply. Without data,
+-  // only the keys of `sys.inputs` are looked at: a data key, or a near miss
+-  // of one (`invoice-pro-data-fil`), which then panics (contract/input.typ).
++  // Hydrated, invoice() re-enters itself with the effective arguments and
++  // the applied data's marker as `data`; a near miss of a data key panics.
+   let applied = none
+   if (
+-    type(data) == content
+-      and data.func() == metadata
+-      and type(data.value) == dictionary
+-      and data.value.at("kind", default: none) == "invoice-pro-applied"
+-  ) {
+-    applied = data.value
+-  } else if (
+     data not in (auto, none)
+       or sys
+         .inputs
+         .keys()
+         .any(k => lower(k)
+-          .replace("-", "")
+-          .replace("_", "")
+-          .replace(".", "")
++          .replace(regex("[-_.]"), "")
+           .starts-with("invoiceprodata"))
+   ) {
+     import "contract/hydrate.typ": hydrate
++    // the design and issuer keys (the skeleton's document keys are samples)
+     let h = hydrate(data, (
+       theme: theme,
+       locale: locale,
+-      currency: currency,
+-      sender: sender,
+-      recipient: recipient,
+-      delivery-address: delivery-address,
+-      payee: payee,
++      references: references,
++      zugferd: zugferd,
++      zugferd-errors: zugferd-errors,
++      validation: validation,
+       tax-nr: tax-nr,
+-      date: date,
+-      service-period: service-period,
+-      subject: subject,
+       document-type: document-type,
+-      references: references,
+-      invoice-nr: invoice-nr,
+-      customer-nr: customer-nr,
+-      order-nr: order-nr,
+-      order-date: order-date,
+-      project: project,
+-      contract-nr: contract-nr,
+-      quote-nr: quote-nr,
+-      delivery-note-nr: delivery-note-nr,
+-      preceding-invoice-nr: preceding-invoice-nr,
+-      preceding-invoice-date: preceding-invoice-date,
+-      due-date: due-date,
+-      payment-reference: payment-reference,
++      currency: currency,
++      subject: subject,
+       notes: notes,
++      sender: sender,
++      payee: payee,
+       tax: tax,
+       tax-mode: tax-mode,
+       tax-exempt-small-biz: tax-exempt-small-biz,
+-      zugferd: zugferd,
+-      zugferd-errors: zugferd-errors,
+-      validation: validation,
+-      custom: custom,
+     ))
+-    if h != none { return invoice(..h.args, data: h.marker, body) }
++    if "marker" in h { return invoice(..h.args, data: h.marker, body) }
++    applied = h.applied
+   }
+   types.require(custom, "invoice::custom", none, dictionary)
+ 
+@@ -649,7 +612,7 @@
+           ),
+           region: lower(str(eval-locale.meta.region)),
+         )
+-        // the problems of the hydrating data (contract/decode.typ)
++        // the problems of the data (contract/decode.typ)
+         + if applied != none { applied.issues } else { () }
+     )
+   }
+@@ -706,10 +669,8 @@
+     preceding-invoice-date: preceding-invoice-date,
+     // `(text: .., subject-code: ..)` each, see `normalize-notes`.
+     notes: normalize-notes(notes),
+-    // A hydrated invoice: the body sections for the binding points (the items
+-    // slot, `payment(..)`) and the format of the data, for the result. The
+-    // custom fields. Both sealed like the theme: a large payload would
+-    // otherwise be hashed with every loom call.
++    // Hydrated: the sections for the binding points; the custom fields.
++    // Sealed like the theme (a large payload is hashed with each loom call).
+     hydration: if applied != none { metadata(applied.sections) },
+     custom: if custom != none { metadata(custom) },
+   ) {
+diff --git a/src/locale/region/at.typ b/src/locale/region/at.typ
+index 585b3b0..0399e4d 100644
+--- a/src/locale/region/at.typ
++++ b/src/locale/region/at.typ
+@@ -36,8 +36,7 @@
+ 
+     normalize: (
+       infer-tax: infer-tax-at,
+-      // The rates `infer-tax` resolves, for checks before it runs (a
+-      // rate of invoice data that is not listed is an issue, not a panic).
++      // the rates of `infer-tax` (see base.typ)
+       vat-rates: (20%, 13%, 10%),
+     ),
+ 
+diff --git a/src/locale/region/base.typ b/src/locale/region/base.typ
+index 9aed414..e0196ea 100644
+--- a/src/locale/region/base.typ
++++ b/src/locale/region/base.typ
+@@ -55,9 +55,8 @@
+       /// -> (ratio | float | decimal | int) => tax
+       infer-tax: x => panic("Can't infer tax for region:`base`!"),
+ 
+-      /// The rates `infer-tax` resolves (e.g. `(19%, 7%)`), so that a rate of
+-      /// invoice data is checked before `infer-tax` runs; `none`: not listed
+-      /// (`infer-tax` decides).
++      /// The rates `infer-tax` resolves, `(19%, 7%)`: a rate of invoice data
++      /// is checked against them first; `none`: `infer-tax` decides.
+       /// -> none | array
+       vat-rates: none,
+     ),
+diff --git a/src/locale/region/ch.typ b/src/locale/region/ch.typ
+index 7308be0..9536138 100644
+--- a/src/locale/region/ch.typ
++++ b/src/locale/region/ch.typ
+@@ -50,8 +50,7 @@
+ 
+     normalize: (
+       infer-tax: infer-tax-ch,
+-      // The rates `infer-tax` resolves, for checks before it runs (a
+-      // rate of invoice data that is not listed is an issue, not a panic).
++      // the rates of `infer-tax` (see base.typ)
+       vat-rates: (8.1%, 2.6%, 3.8%),
+     ),
+ 
+diff --git a/src/locale/region/de.typ b/src/locale/region/de.typ
+index c7bb4af..b8f66d0 100644
+--- a/src/locale/region/de.typ
++++ b/src/locale/region/de.typ
+@@ -34,8 +34,7 @@
+ 
+     normalize: (
+       infer-tax: infer-tax-de,
+-      // The rates `infer-tax` resolves, for checks before it runs (a
+-      // rate of invoice data that is not listed is an issue, not a panic).
++      // the rates of `infer-tax` (see base.typ)
+       vat-rates: (19%, 7%),
+     ),
+ 
+diff --git a/src/locale/region/es.typ b/src/locale/region/es.typ
+index ec858c8..f9b336f 100644
+--- a/src/locale/region/es.typ
++++ b/src/locale/region/es.typ
+@@ -31,8 +31,7 @@
+ 
+     normalize: (
+       infer-tax: infer-tax-es,
+-      // The rates `infer-tax` resolves, for checks before it runs (a
+-      // rate of invoice data that is not listed is an issue, not a panic).
++      // the rates of `infer-tax` (see base.typ)
+       vat-rates: (21%, 10%, 4%),
+     ),
+ 
+diff --git a/src/locale/region/fr.typ b/src/locale/region/fr.typ
+index a08d94c..8acc75b 100644
+--- a/src/locale/region/fr.typ
++++ b/src/locale/region/fr.typ
+@@ -56,8 +56,7 @@
+ 
+     normalize: (
+       infer-tax: infer-tax-fr,
+-      // The rates `infer-tax` resolves, for checks before it runs (a
+-      // rate of invoice data that is not listed is an issue, not a panic).
++      // the rates of `infer-tax` (see base.typ)
+       vat-rates: (20%, 10%, 5.5%, 2.1%),
+     ),
+ 
+diff --git a/src/locale/region/it.typ b/src/locale/region/it.typ
+index 03a31a6..d36ef1c 100644
+--- a/src/locale/region/it.typ
++++ b/src/locale/region/it.typ
+@@ -42,8 +42,7 @@
+ 
+     normalize: (
+       infer-tax: infer-tax-it,
+-      // The rates `infer-tax` resolves, for checks before it runs (a
+-      // rate of invoice data that is not listed is an issue, not a panic).
++      // the rates of `infer-tax` (see base.typ)
+       vat-rates: (22%, 10%, 5%, 4%),
+     ),
+ 
+diff --git a/src/logic/modifier-applicator.typ b/src/logic/modifier-applicator.typ
+index 7513d80..a8ddfc2 100755
+--- a/src/logic/modifier-applicator.typ
++++ b/src/logic/modifier-applicator.typ
+@@ -214,9 +214,7 @@
+ 
+   let discounts = ()
+   let surcharges = ()
+-  // Hydrated data (contract/rows.typ) does not pass the guards a modifier
+-  // written in Typst stops on: one that no VAT group can take is left out,
+-  // and reported as a data issue (contract/hydrate.typ, root.typ).
++  // hydrated: a modifier no VAT group can take is a data issue, left out
+   let data-issues = ()
+   for mod in modifiers {
+     if "hydration" in ctx {
+diff --git a/src/public/data.typ b/src/public/data.typ
+index 8841fa6..6d3c534 100644
+--- a/src/public/data.typ
++++ b/src/public/data.typ
+@@ -1,28 +1,17 @@
+-// The invoice data contract: the format "invoice-pro/1" and the layout-free
+-// tools a program or a skeleton needs. Everything else of the contract is
+-// generated from ONE descriptor (contract/schema.typ).
+-//
+-// Named `data` after the parameter it feeds, `invoice(data:)`, as `theme`
+-// and `locale` are. A file that binds `data` itself (`#let data = json(..)`)
+-// hides the namespace; `invoice(data: <dictionary>)` still works. The docs
+-// name the record `record`. `import data: *` shadows no Typst builtin. Every
+-// function imports its module inside its body, so the package import costs
+-// nothing for invoices without data.
++// The data contract, named after `invoice(data:)`: signatures and short
++// docs only (every import parses this file); the rest: contract/api.typ.
+ 
+-/// The invoice data format this version reads: `"invoice-pro/1"`.
++/// The data format this version reads: `"invoice-pro/1"`.
+ /// -> str
+ #let format = "invoice-pro/1"
+ 
+-/// Decodes and validates data without rendering: a record for
+-/// `invoice(data:)`, `values` and `check`. Never panics on bad data (problems
+-/// become issues with JSON Pointers); `region` adds the region checks
+-/// invoice() makes with its locale (e.g. `"16%"` is no VAT rate of `"de"`).
++/// Decodes and checks data into a record for `invoice(data:)`, never panics.
+ /// -> content
+ #let decode(
+-  /// A dictionary (`json(..)`, `toml(..)`, `yaml(..)`), JSON as bytes or
+-  /// text, or (Typst 0.15) a `path`.
++  /// A dictionary, JSON bytes or text, or (Typst 0.15) a `path`.
+   /// -> dictionary | bytes | str
+   data,
++  /// The region checks of invoice(), e.g. the VAT rates of `"de"`.
+   /// -> none | str
+   region: none,
+ ) = {
+@@ -30,41 +19,26 @@
+   api.decode(data, region)
+ }
+ 
+-/// The record of the data the CLI hands over, for `invoice(data: ..)`:
+-/// the JSON text of `--input invoice-pro-data` (or a dictionary an embedder
+-/// passes), or the file named by `--input invoice-pro-data-file`, opened with
+-/// `read`. A package cannot open your files: pass
+-/// `p => read(p, encoding: none)`, written in your file; a relative path
+-/// resolves against that file, `/…` against the project root, `/dev/stdin`
+-/// reads stdin (with `--root /`). The file extension picks the decoder
+-/// (`.json`, `.toml`, `.yaml`, `.yml`; a UTF-8 BOM is tolerated). `none`
+-/// without input: the skeleton renders its samples.
++/// The record of `--input invoice-pro-data=<JSON>` or of the file of
++/// `--input invoice-pro-data-file=<path>`, for `invoice(data:)`, or `none`.
+ /// -> none | content
+ #let load(
+-  /// The skeleton's reader, `p => read(p, encoding: none)`. Without it, a
+-  /// given `--input invoice-pro-data-file` panics with this fix.
++  /// `p => read(p, encoding: none)`, written in your file.
+   /// -> none | function
+   read: none,
+-  /// The CLI inputs; injectable for tests (tytanic cannot pass `--input`).
++  /// The CLI inputs (injectable for tests).
+   /// -> dictionary
+   inputs: sys.inputs,
+ ) = {
++  // without a data key: none (a near miss panics in invoice())
+   if not ("invoice-pro-data" in inputs or "invoice-pro-data-file" in inputs) {
+-    // a near miss of a data key (`invoice-pro-data-fil`) panics in invoice()
+     return none
+   }
+   import "../contract/api.typ"
+   api.load(read, inputs)
+ }
+ 
+-/// A JSON-friendly validation report, layout-free (CI, phase-2 bindings):
+-/// `(format: "invoice-pro-check/1", valid: bool,
+-///   issues: ((id, path, key, message, fix), ..))`. What the decoder checks
+-/// (the JSON Schema and its own rules); an invoice can still report more
+-/// when it is hydrated (rules of the skeleton, the e-invoice rules). Data
+-/// that is no object (`none`, an array, a number, text that is not a JSON
+-/// object) is an issue, never an error; JSON text that does not parse
+-/// stops like `json(..)`.
++/// A JSON-friendly report of what the decoder finds (`valid`, `issues`).
+ /// -> dictionary
+ #let check(
+   /// -> dictionary | bytes | str | content
+@@ -76,23 +50,19 @@
+   api.check(data, region)
+ }
+ 
+-/// The decoded, typed values of a record (datetimes, decimals, ratios, unit
+-/// functions, tax dictionaries, `id.*` values, custom bags as given): for
+-/// design decisions in the skeleton at evaluation time. `none` for `none`.
++/// The decoded, typed values of a record, for design rules; `none` for none.
+ /// -> none | dictionary
+ #let values(
+   /// -> none | content
+   record,
+ ) = if record == none { none } else { record.value.values }
+ 
+-/// A party as invoice() normalises it (`post-code`, `city-name`, `country`,
+-/// `*-inline`), for design decisions before invoice() runs: the post code of
+-/// `"80331 München"` or of `(name: "München", post-code: "80331")`.
++/// A party as invoice() normalises it (`post-code`, `city-name`, ..).
+ /// -> dictionary
+ #let party(
+   /// -> none | dictionary
+   party,
+-  /// The region of a party without a country (the skeleton's locale region).
++  /// The region of a party without a country.
+   /// -> str
+   region: "de",
+ ) = {
+@@ -101,12 +71,7 @@
+   normalize-party(party, region)
+ }
+ 
+-/// The explicit binding point of the data's line items inside `line-items`:
+-/// without data it renders `sample` exactly as written; with data the rows of
+-/// the data take its place and `sample` is never traversed. Rows outside it
+-/// stay on every invoice (a fixed fee). At most one per `line-items`, as a
+-/// direct child of it. Without a marker, the whole body of `line-items` is
+-/// the binding point.
++/// The binding point of the data's rows in `line-items`; others stay.
+ /// -> content
+ #let items(
+   /// -> content
+@@ -116,10 +81,7 @@
+   items-marker(sample)
+ }
+ 
+-/// The JSON Schema 2020-12 of the data format (`"data"`) or of the result
+-/// record `<invoice-pro-result>` (`"result"`), generated from the descriptor:
+-/// `typst eval '{ import "@preview/invoice-pro:<version>": data;
+-/// data.schema() }'`.
++/// The JSON Schema of the data (`"data"`) or of the result (`"result"`).
+ /// -> dictionary
+ #let schema(
+   /// -> "data" | "result"
+diff --git a/src/public/payment.typ b/src/public/payment.typ
+index 3d4e411..38f0566 100644
+--- a/src/public/payment.typ
++++ b/src/public/payment.typ
+@@ -1,49 +1,35 @@
+-// The root export `payment` (lib.typ): its signature and documentation,
+-// with the implementation (components/payment.typ) imported only when an
+-// invoice uses it, so that the package import does not parse it.
++// The root export `payment`: signature and short docs only (every package
++// import parses this file); implementation and docs: components/payment.typ.
+ 
+-/// The payment of the invoice in one block: the payment terms, the method
+-/// (credit transfer, SEPA direct debit, payment card, or already paid) and the
+-/// account to pay to. It places `payment-terms`, `direct-debit`,
+-/// `card-payment` or `paid`, and `bank-details` as these arguments call for.
+-///
+-/// When the invoice is hydrated (`invoice(data: ..)`), the `payment` section
+-/// of the data applies key by key: `terms`, `method`, `bank` and `creditor-id`
+-/// keep this call's value unless the data gives them; `direct-debit`, `card`
+-/// and `paid` describe one invoice and come from the data only (the values
+-/// here are preview samples).
+-///
++/// The payment in one block: terms, method and account. Hydrated, the data's
++/// `payment` section applies key by key.
+ /// -> content
+ #let payment(
+-  /// The payment terms: `(days: 14)`, `(date: datetime(..))`, optionally
+-  /// with `discount: (days: 7, percent: 2%)` (see `payment-terms`). `none`
+-  /// prints none.
++  /// `(days: 14)` or `(date: ..)`, see `payment-terms`.
+   /// -> none | dictionary
+   terms: none,
+-  /// How the recipient pays: `"transfer"`, `"direct-debit"`, `"card"` or
+-  /// `"paid"`. `auto`: the method whose details are given, else a transfer.
++  /// `auto`: the method whose details are given, else a transfer.
+   /// -> auto | "transfer" | "direct-debit" | "card" | "paid"
+   method: auto,
+-  /// The account to pay to: `(name: .., bank: .., iban: .., bic: ..)` (see
+-  /// `bank-details`).
++  /// The account to pay to, see `bank-details`.
+   /// -> none | dictionary
+   bank: none,
+-  /// The SEPA creditor identifier of the sender, for `"direct-debit"`.
++  /// The sender's SEPA creditor ID, for `"direct-debit"`.
+   /// -> none | str
+   creditor-id: none,
+-  /// `(mandate: .., debtor-iban: ..)` of a direct debit.
++  /// `(mandate: .., debtor-iban: ..)`.
+   /// -> none | dictionary
+   direct-debit: none,
+-  /// `(last4: .., holder: .., kind: ..)` of a card payment.
++  /// `(last4: .., holder: .., kind: ..)`.
+   /// -> none | dictionary
+   card: none,
+-  /// `(method: .., date: ..)` of an invoice that is already paid.
++  /// `(method: .., date: ..)` of a paid invoice.
+   /// -> none | dictionary
+   paid: none,
+-  /// Layout: whether the bank details print the payment reference.
++  /// Whether the bank details print the payment reference.
+   /// -> bool
+   show-reference: true,
+-  /// Layout: the EPC QR code of the bank details, see `bank-details`.
++  /// The EPC QR code, see `bank-details`.
+   /// -> dictionary
+   qr-code: (:),
+ ) = {
+diff --git a/src/theming/access.typ b/src/theming/access.typ
+index 7d57aa4..e145b44 100644
+--- a/src/theming/access.typ
++++ b/src/theming/access.typ
+@@ -20,7 +20,7 @@
+ #let unsealed(ctx) = {
+   let t = ctx.at("theme", default: none)
+   let ctx = if type(t) == content { ctx + (theme: t.value) } else { ctx }
+-  // the `custom` fields of hydrated data travel sealed too (invoice.typ)
++  // custom fields travel sealed too (invoice.typ)
+   let c = ctx.at("custom", default: none)
+   if type(c) == content { ctx + (custom: c.value) } else { ctx }
+ }
+diff --git a/tools/contract/signature.py b/tools/contract/signature.py
+index 565d6c0..b7efc49 100755
+--- a/tools/contract/signature.py
++++ b/tools/contract/signature.py
+@@ -8,7 +8,9 @@ src/invoice.typ and fails unless every parameter is classified with a known
+ class (`param-classes`: design, document, issuer, data, body; a misspelt
+ class or role would make a hydrated invoice drop the key silently) and every
+ classified name is a parameter. It also checks that src/invoice.typ passes
+-every parameter to `hydrate(..)`. Runs on typst 0.15 (`typst eval`) and 0.14
++every design and issuer parameter to `hydrate(..)`, and nothing else that is
++no parameter (a document parameter comes from the data alone: the skeleton's
++value is a sample, never read). Runs on typst 0.15 (`typst eval`) and 0.14
+ (`typst query` of a stub on stdin). The signature is read with a small
+ scanner (comments, strings and brackets aware): any identifier is a
+ parameter, several may share a line, and an argument sink (`..args`) fails.
+@@ -122,8 +124,11 @@ def main():
+             problems.append(f"`{k}` is classified in src/contract/schema.typ but is no parameter of invoice()")
+     passed = hydrate_call(src, problems)
+     for p in params:
+-        if p not in ("data", "body") and p not in passed:
+-            problems.append(f"invoice() does not pass `{p}` to hydrate(..) in src/invoice.typ")
++        if classes.get(p) in ("design", "issuer") and p not in passed:
++            problems.append(f"invoice() does not pass the {classes[p]} parameter `{p}` to hydrate(..) in src/invoice.typ")
++    for p in passed:
++        if p not in params:
++            problems.append(f"invoice() passes `{p}` to hydrate(..), which is no parameter of invoice()")
+     for line in problems: print("FAIL " + line)
+     if not problems:
+         roles = {}
+-- 
+2.43.0
+

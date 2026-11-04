@@ -5,6 +5,9 @@
    the delta of the files the prototype changed or added is the import cost
    of the new code (unchanged files only add noise to an inclusive delta).
 2. untraced: wall-clock medians of the same import-only documents.
+The tree names differ (/pristine, /repo), and the name alone moves the
+import by more than 1 ms (imptrace-names.py), so this shows where the time
+goes, not whether the budget holds: impcount.py decides that.
 usage: imptrace.py TYPST RUNS"""
 import json, subprocess, sys, os, statistics, time
 T = sys.argv[1]; N = int(sys.argv[2]); HERE = os.path.dirname(os.path.abspath(__file__)); U = os.path.dirname(os.path.dirname(HERE))

@@ -1,5 +1,5 @@
 # (design D) Differential conformance: python-jsonschema (the exported JSON Schema) vs
-# the Typst decoder (invoice-data.check) on the same fixtures.
+# the Typst decoder (data.check) on the same fixtures.
 import json, sys
 from jsonschema import Draft202012Validator, FormatChecker
 schema = json.load(open(sys.argv[1])); fixtures = json.load(open(sys.argv[2])); typst = json.load(open(sys.argv[3]))

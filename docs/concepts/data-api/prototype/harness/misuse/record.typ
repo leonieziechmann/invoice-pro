@@ -1,7 +1,7 @@
 // R7: a record of decode(..) plus a CLI input = two sources.
 #import "/repo/src/lib.typ": *
 #show: invoice.with(
-  data: invoice-data.decode(json("../data/2026-0042.json")),
+  data: data.decode(json("../data/2026-0042.json")),
   sender: (
     name: "ACME GmbH",
     address: "Weg 1",

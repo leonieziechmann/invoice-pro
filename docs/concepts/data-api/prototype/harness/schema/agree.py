@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Agreement of python-jsonschema (committed schema) and invoice-data.check on
+"""Agreement of python-jsonschema (committed schema) and data.check on
 arbitrary fixtures, independent of their expectation labels: agree when both
 accept, both reject, the decoder accepts a documented leniency (a JSON
 number for a decimal) that the schema rejects, or the decoder rejects a

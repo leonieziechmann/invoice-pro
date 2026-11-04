@@ -1,7 +1,7 @@
 From 29486ec6ec1a79f07dd16b6e980e64335f7685e5 Mon Sep 17 00:00:00 2001
 From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
 Date: Tue, 3 Nov 2026 13:49:41 +0000
-Subject: [PATCH 10/10] chore(data): host the schemas on the documentation site
+Subject: [PATCH 10/15] chore(data): host the schemas on the documentation site
 
 The $id of the data and result schemas named a domain the project does
 not own. They now point at the documentation site, versioned by the

@@ -3,7 +3,7 @@
 #import "/repo/src/lib.typ": *
 #import "e2-common.typ": *
 #show: invoice.with(
-  data: invoice-data.load(read: p => read(p, encoding: none)),
+  data: data.load(read: p => read(p, encoding: none)),
   locale: locale.de-at,
   sender: sender2,
   recipient: (name: "S"),

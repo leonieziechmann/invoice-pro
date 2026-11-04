@@ -1,7 +1,7 @@
 // Coverage: data items but no line-items, data payment but no payment(..).
 #import "/repo/src/lib.typ": *
 #show: invoice.with(
-  data: invoice-data.load(read: p => read(p, encoding: none)),
+  data: data.load(read: p => read(p, encoding: none)),
   sender: (
     name: "ACME GmbH",
     address: "Weg 1",

@@ -1,7 +1,7 @@
 From 97b00012f5ffeb473c76c8375b366d2060fc6a5a Mon Sep 17 00:00:00 2001
 From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
 Date: Tue, 3 Nov 2026 10:12:22 +0000
-Subject: [PATCH 09/10] fix(data): a cash discount period has at most 36 500
+Subject: [PATCH 09/15] fix(data): a cash discount period has at most 36 500
  days, as the payment days
 
 The v3 corpus accepted Skonto days of 36 501 and 10^15; they are now a data

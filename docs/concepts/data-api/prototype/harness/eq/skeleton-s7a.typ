@@ -4,7 +4,7 @@
 #import "/repo-s7a/src/lib.typ": *
 #let zf = sys.inputs.at("zf", default: "none")
 #show: invoice.with(
-  data: invoice-data.load(read: p => read(p, encoding: none)),
+  data: data.load(read: p => read(p, encoding: none)),
   theme: theme.classic,
   zugferd: if zf == "none" { none } else if zf == "auto" { auto } else { zf },
   sender: (

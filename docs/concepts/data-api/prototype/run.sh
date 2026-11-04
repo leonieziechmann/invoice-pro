@@ -5,10 +5,14 @@
 #   2. hydrated from a file, from inline JSON, from stdin and from TOML, it is
 #      byte-identical to the same invoice written by hand with invoice-pro
 #      0.6.0 (PDF/A-3b, factur-x.xml included);
-#   3. data without an invoice number gives a draft without XML, and
-#      `strict` stops the build;
+#   3. data without an invoice number stops the build and lists the problem
+#      (a hydrated invoice is strict by default), and the debug flag
+#      `--input invoice-pro-validation=draft` gives a draft without XML;
 #   4. the post code of the recipient picks the coat of arms, and the custom
-#      field `wappen` overrides it.
+#      field `wappen` overrides it;
+#   5. the shipped template of the patched tree compiles alone to the same
+#      PDF as the template of 0.6.0, and hydrates from a data file to a final
+#      e-invoice.
 #
 # Usage: run.sh [work-dir]   (default: a new temporary directory)
 # Needs git, Typst ($TYPST_BIN, default `typst`; 0.14 or 0.15), python3, and
@@ -85,20 +89,24 @@ for v in file inline stdin toml; do
   fi
 done
 
-# 3. No sample leaks: a missing invoice number is a draft without XML.
+# 3. Fail safe: a missing invoice number stops the build and lists the
+#    problem; the debug flag renders a draft without XML (no sample leaks).
 B=../data/broken-no-invoice-nr.json
-"$TYPST" compile "${C[@]}" skeleton.typ "$O/draft.pdf" --input invoice-pro-data-file="$B" 2>/dev/null
+if "$TYPST" compile "${C[@]}" skeleton.typ "$O/stop.pdf" --input invoice-pro-data-file="$B" \
+  2>"$O/stop.err"; then
+  no "missing invoice-nr: the build did not stop"
+elif grep -q "invoice-nr is missing" "$O/stop.err" && grep -q "invoice-pro-validation=draft" "$O/stop.err"; then
+  ok "missing invoice-nr: stops ($(grep -m1 -o 'invoice-nr is missing[^;]*' "$O/stop.err"); the hint names the draft flag)"
+else
+  no "missing invoice-nr: stops without the problem or the hint: $(grep -m1 error "$O/stop.err")"
+fi
+"$TYPST" compile "${C[@]}" skeleton.typ "$O/draft.pdf" --input invoice-pro-data-file="$B" \
+  --input invoice-pro-validation=draft 2>/dev/null
 n=$(attachments "$O/draft.pdf")
 if [ "$n" = "0" ] || [ "$n" = "?" ]; then
-  ok "missing invoice-nr: draft, embedded files: $n"
+  ok "missing invoice-nr with --input invoice-pro-validation=draft: draft, embedded files: $n"
 else
-  no "missing invoice-nr: $n embedded files"
-fi
-if "$TYPST" compile "${C[@]}" skeleton.typ "$O/strict.pdf" --input invoice-pro-data-file="$B" \
-  --input invoice-pro-validation=strict 2>"$O/strict.err"; then
-  no "missing invoice-nr under strict: the build did not stop"
-else
-  ok "missing invoice-nr under strict: stops ($(grep -m1 -o 'invoice-nr[^.]*' "$O/strict.err" || true))"
+  no "missing invoice-nr with the draft flag: $n embedded files"
 fi
 
 # 4. The coat of arms by post code; custom.wappen overrides.
@@ -111,6 +119,38 @@ for k in 80331 20095 10115 50667 override; do
     no "arms for $k: $a (want ${WANT[$k]})"
   fi
 done
+
+# 5. The template (template/invoice.typ of the patched tree) is a skeleton:
+#    alone it gives the PDF of the 0.6.0 template, with and without PDF/A;
+#    hydrated from a file (the example data with the creditor ID that the
+#    template lacks) it is a final e-invoice.
+for t in pristine repo; do
+  sed "s#@preview/invoice-pro:0.6.0#/$t/src/lib.typ#" "$W/$t/template/invoice.typ" >"template-$t.typ"
+done
+for std in none a-3b; do
+  T0=(--root "$W" --creation-timestamp 1767225600)
+  [ "$std" = none ] || T0+=(--pdf-standard "$std")
+  a=$("$TYPST" compile "${T0[@]}" template-pristine.typ - 2>/dev/null | md5sum | cut -c1-12)
+  b=$("$TYPST" compile "${T0[@]}" template-repo.typ - 2>/dev/null | md5sum | cut -c1-12)
+  if [ "$a" = "$b" ]; then
+    ok "template alone (PDF standard $std) == the 0.6.0 template: $b"
+  else
+    no "template alone (PDF standard $std): $b != 0.6.0 $a"
+  fi
+done
+python3 -c 'import json, sys; d = json.load(open(sys.argv[1])); d["payment"]["creditor-id"] = "DE98ZZZ09999999999"; json.dump(d, open(sys.argv[2], "w"), ensure_ascii=False)' \
+  "$J" ../data/template-0042.json
+if "$TYPST" compile "${C[@]}" template-repo.typ "$O/template.pdf" \
+  --input invoice-pro-data-file=../data/template-0042.json 2>"$O/template.err"; then
+  n=$(attachments "$O/template.pdf")
+  if [ "$n" = "1" ] || [ "$n" = "?" ]; then
+    ok "template hydrated from a file: final, embedded files: $n"
+  else
+    no "template hydrated: $n embedded files"
+  fi
+else
+  no "template hydrated: $(grep -m1 error "$O/template.err")"
+fi
 
 echo "failures: $fails"
 [ "$fails" = 0 ]

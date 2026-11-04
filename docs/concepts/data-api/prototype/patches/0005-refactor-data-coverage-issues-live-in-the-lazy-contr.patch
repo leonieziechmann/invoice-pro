@@ -1,7 +1,7 @@
 From 2963ca6df8c5889c73e43a09d4480f0d489c0184 Mon Sep 17 00:00:00 2001
 From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
 Date: Mon, 2 Nov 2026 23:41:40 +0000
-Subject: [PATCH 05/10] refactor(data): coverage issues live in the lazy
+Subject: [PATCH 05/15] refactor(data): coverage issues live in the lazy
  contract module
 
 root.typ calls contract/hydrate.typ coverage-issues(..) only for a hydrated

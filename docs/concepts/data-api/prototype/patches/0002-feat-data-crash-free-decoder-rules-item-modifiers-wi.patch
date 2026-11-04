@@ -1,7 +1,7 @@
 From 20bf27b628b8cad043c9d933beb4bc3fec5e2988 Mon Sep 17 00:00:00 2001
 From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
 Date: Mon, 2 Nov 2026 22:47:33 +0000
-Subject: [PATCH 02/10] feat(data): crash-free decoder rules, item modifiers
+Subject: [PATCH 02/15] feat(data): crash-free decoder rules, item modifiers
  without tax, schemas, conformance fixtures
 
 - decoder: base-quantity >= 0.0001 after rounding, 28 significant digits,

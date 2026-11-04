@@ -1,7 +1,7 @@
 From 6c6a1b1936e0ff75738680f4a8968cff5055ffd4 Mon Sep 17 00:00:00 2001
 From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
 Date: Tue, 3 Nov 2026 03:41:57 +0000
-Subject: [PATCH 06/10] fix(data): crash-free decoding, codegen-friendly
+Subject: [PATCH 06/15] fix(data): crash-free decoding, codegen-friendly
  schema, payment and R7 checks (verifier round 1)
 
 - clip messages by grapheme clusters (was: byte slices inside UTF-8)

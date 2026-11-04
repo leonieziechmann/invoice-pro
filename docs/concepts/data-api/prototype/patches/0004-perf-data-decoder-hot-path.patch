@@ -1,7 +1,7 @@
 From f4148469392853b7f7e3bb9d5eaddb35f8cf8ef0 Mon Sep 17 00:00:00 2001
 From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
 Date: Mon, 2 Nov 2026 23:08:40 +0000
-Subject: [PATCH 04/10] perf(data): decoder hot path
+Subject: [PATCH 04/15] perf(data): decoder hot path
 
 Plain values of plain types are decoded in the object loop without a
 recursive call; invalid keys are tracked directly; required keys and the

@@ -3,9 +3,12 @@
 # (md5, vs pristine 0.6.0 too). With data: the §4.7 skeleton hydrated with
 # 2026-0042 + a payment section == handwritten.typ --input pay=<mode> (md5),
 # BT-81 code and account in the XML (the rules engine checks CII-SR-467/470;
-# zugferd-errors "panic" would stop on them); incomplete data -> data issue.
+# zugferd-errors "panic" would stop on them); incomplete data -> data issue:
+# the default stops (a hydrated invoice is strict), the debug flag
+# --input invoice-pro-validation=draft gives the draft without XML.
 T=$1; cd "$(dirname "$0")"; U=$(cd ../.. && pwd); O=../out/p6-$(basename $T); mkdir -p $O; fails=0
 V=$($T --version | cut -d' ' -f2); C="--root $U --creation-timestamp 1767225600 --pdf-standard a-3b"
+DRAFT="--input invoice-pro-validation=draft"
 ok() { echo "PASS $V $*"; }; no() { echo "FAIL $V $*"; fails=$((fails+1)); }
 xmlinfo() { # pdf -> "code=<BT-81> account=<yes|no> terms=<yes|no>"
   rm -rf $O/x; mkdir -p $O/x; pdfdetach -saveall -o $O/x $1 >/dev/null 2>&1
@@ -30,19 +33,20 @@ for m in transfer direct-debit card paid-cash paid-transfer; do
   [ "$a" = "$b" ] && [ "$x" = "${WANT[$m]}" ] && ok "with data $m: hydrated == hand (pristine) $a, XML $x" || no "with data $m: hydrated=$a hand=$b XML [$x] want [${WANT[$m]}]"
 done
 for m in missing-mandate missing-last4 paid-and-terms; do
-  $T compile $C ../examples/skeleton.typ $O/d-$m.pdf --input invoice-pro-data-file=../payment/pay-$m.json 2>$O/e6
+  $T compile $C ../examples/skeleton.typ $O/d-$m.pdf --input invoice-pro-data-file=../payment/pay-$m.json $DRAFT 2>$O/e6
   t=$(pdftotext $O/d-$m.pdf - | grep -m1 -o "ENTWURF · [0-9]* Probl[a-z]*"); n=$(pdfdetach -list $O/d-$m.pdf | head -1)
-  $T compile $C ../examples/skeleton.typ $O/s-$m.pdf --input invoice-pro-data-file=../payment/pay-$m.json --input invoice-pro-validation=strict >/dev/null 2>$O/e7
+  $T compile $C ../examples/skeleton.typ $O/s-$m.pdf --input invoice-pro-data-file=../payment/pay-$m.json >/dev/null 2>$O/e7
   msg=$(grep -o "invoice data[^\n]*" $O/e7 | head -1 | cut -c1-140)
-  [ -n "$t" ] && [ "$n" = "0 embedded files" ] && [ -n "$msg" ] && ok "issue $m: draft [$t], XML withheld; strict: $msg" || no "issue $m: [$t] [$n] [$msg]"
+  [ -n "$t" ] && [ "$n" = "0 embedded files" ] && [ -n "$msg" ] && [ ! -f $O/s-$m.pdf ] && ok "issue $m: draft flag [$t], XML withheld; the default stops: $msg" || no "issue $m: [$t] [$n] [$msg]"
 done
-# round 1: what the components stop on is a data issue when hydrated (draft,
-# XML withheld, strict exit 1); the details of another method are an issue too
+# round 1: what the components stop on is a data issue when hydrated (the
+# draft flag: draft, XML withheld; the default: exit 1); the details of
+# another method are an issue too
 issue() { # name skeleton data-file expected-message-part
-  $T compile $C $2 $O/r1-$1.pdf --input invoice-pro-data-file=../payment/$3 >/dev/null 2>$O/r1e1
+  $T compile $C $2 $O/r1-$1.pdf --input invoice-pro-data-file=../payment/$3 $DRAFT >/dev/null 2>$O/r1e1
   local t=$(pdftotext $O/r1-$1.pdf - 2>/dev/null | grep -m1 -o "ENTWURF · [0-9]* Probl[a-z]*"); local n=$(pdfdetach -list $O/r1-$1.pdf 2>/dev/null | head -1)
-  $T compile $C $2 $O/r1s-$1.pdf --input invoice-pro-data-file=../payment/$3 --input invoice-pro-validation=strict >/dev/null 2>$O/r1e2; local e=$?
-  [ -n "$t" ] && [ "$n" = "0 embedded files" ] && [ $e = 1 ] && grep -q -- "$4" $O/r1e2 && ok "issue $1: draft [$t], XML withheld; strict exit 1: $(grep -o "invoice data[^.]*" $O/r1e2 | head -1 | cut -c1-120)" || no "issue $1: [$t] [$n] strict=$e $(grep -m1 error $O/r1e1 $O/r1e2 | cut -c1-200)"
+  $T compile $C $2 $O/r1s-$1.pdf --input invoice-pro-data-file=../payment/$3 >/dev/null 2>$O/r1e2; local e=$?
+  [ -n "$t" ] && [ "$n" = "0 embedded files" ] && [ $e = 1 ] && grep -q -- "$4" $O/r1e2 && ok "issue $1: draft flag [$t], XML withheld; the default stops, exit 1: $(grep -o "invoice data[^.]*" $O/r1e2 | head -1 | cut -c1-120)" || no "issue $1: [$t] [$n] default=$e $(grep -m1 error $O/r1e1 $O/r1e2 | cut -c1-200)"
 }
 issue credit-skonto ../examples/skeleton.typ pay-credit-skonto.json "no cash discount"
 issue credit-direct-debit ../examples/skeleton.typ pay-credit-direct-debit.json "cannot collect the amount"

@@ -1,7 +1,7 @@
 From cda7b07502ec8e473df8efc86f04f6ca18ab9cb2 Mon Sep 17 00:00:00 2001
 From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
 Date: Tue, 3 Nov 2026 09:04:42 +0000
-Subject: [PATCH 08/10] =?UTF-8?q?fix(data):=20verifier=20round=202=20?=
+Subject: [PATCH 08/15] =?UTF-8?q?fix(data):=20verifier=20round=202=20?=
  =?UTF-8?q?=E2=80=94=20""=20is=20absent=20for=20every=20optional=20key,=20?=
  =?UTF-8?q?PDF/A-safe=20texts,=20total=20check(),=20nested=20marker=20with?=
  =?UTF-8?q?=20data,=20faster=20decoder?=

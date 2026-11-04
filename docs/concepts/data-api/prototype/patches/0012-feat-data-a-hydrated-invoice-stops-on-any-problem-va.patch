@@ -1,0 +1,235 @@
+From 0913d0853940075c5b46f5b6c35ae89fb0e4aa5d Mon Sep 17 00:00:00 2001
+From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
+Date: Tue, 3 Nov 2026 21:33:03 +0000
+Subject: [PATCH 12/15] feat(data): a hydrated invoice stops on any problem
+ (validation: auto)
+
+The maintainer's decision on Q1: fail safe by default, so that nobody
+sends a broken invoice by mistake, with a flag to debug it.
+
+invoice(validation:) gets the default `auto`: "strict" when the invoice
+is hydrated (data from `data:` or `--input invoice-pro-data*`), "draft"
+otherwise, so an invoice without data behaves exactly as in 0.6.0. An
+explicit "draft", "strict" or none keeps its meaning in both modes, and
+`--input invoice-pro-validation=..` still wins: `=draft` renders the
+draft (inline markers, badge, watermark, report page, no XML), `=none`
+turns the checks off. Data problems stay class-`data` issues, which is
+what makes the draft a debug view.
+
+The strict stop of a hydrated invoice lists every problem and ends with
+the one line that says how to debug it (contract/hydrate.typ, loaded only
+when hydrated); the strict text of an invoice without data is unchanged.
+resolve-level takes `hydrated:` and names `auto` among the allowed
+values (the misuse pin in tests/validation/strict follows). Misuse and
+the R7 panics are unchanged; zugferd-errors keeps "panic".
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RaaQussN1QVEE8zRWeeCD3
+---
+ src/components/root.typ          |  6 +++++-
+ src/contract/hydrate.typ         | 25 ++++++++++++++++++++++++-
+ src/invoice.typ                  | 13 +++++++++----
+ src/validation/issue.typ         |  9 ++++++---
+ tests/data/contract/test.typ     |  5 +++++
+ tests/validation/api/test.typ    | 11 +++++++++++
+ tests/validation/strict/test.typ |  2 +-
+ 7 files changed, 61 insertions(+), 10 deletions(-)
+
+diff --git a/src/components/root.typ b/src/components/root.typ
+index 10f1be5..1f0f0c6 100644
+--- a/src/components/root.typ
++++ b/src/components/root.typ
+@@ -486,7 +486,11 @@
+             } else { () }
+         )
+       }
+-      let issues = enforce(issues, level)
++      let issues = if "hydration" in ctx and level == "strict" {
++        // every problem, and how to see them in a draft (contract/hydrate.typ)
++        import "../contract/hydrate.typ": enforce-hydrated
++        enforce-hydrated(issues)
++      } else { enforce(issues, level) }
+       // Draft: a machine-readable invoice with missing data is never attached
+       // (a receiving system would book it automatically); the badge and the
+       // report say that it was withheld, and the e-invoice is not validated.
+diff --git a/src/contract/hydrate.typ b/src/contract/hydrate.typ
+index cbf9d56..8d7a573 100644
+--- a/src/contract/hydrate.typ
++++ b/src/contract/hydrate.typ
+@@ -18,7 +18,7 @@
+ #import "input.typ": is-record, resolve-data
+ #import "../locale/lang/base.typ": base-language
+ #import "../locale/region/base.typ": base-region
+-#import "../validation/issue.typ": issue
++#import "../validation/issue.typ": input-key as level-key, issue
+ 
+ /// Decodes raw data into a record: sealed content, so it cannot be
+ /// confused with raw data and travels through loom at no hashing cost.
+@@ -152,6 +152,29 @@
+   )
+ }
+ 
++/// The strict level of a hydrated invoice (the default, `validation: auto`):
++/// any problem stops the build, with every problem listed and how to debug
++/// them in a draft; otherwise returns `issues`. Hydrated or not, the levels
++/// mean the same: only the text differs from `enforce`'s.
++/// -> array
++#let enforce-hydrated(issues) = {
++  let n = issues.len()
++  if n == 0 { return issues }
++  panic(
++    "invoice-pro found "
++      + str(n)
++      + if n == 1 { " problem" } else { " problems" }
++      + " in the hydrated invoice, which stops on any problem so that no broken invoice goes out:\n"
++      + issues
++        .enumerate()
++        .map(((i, x)) => "  " + str(i + 1) + ". " + x.message)
++        .join("\n")
++      + "\nTo debug, render the draft with --input "
++      + level-key
++      + "=draft: it marks every problem, lists them on a report page and attaches no e-invoice.",
++  )
++}
++
+ /// The arguments of `payment(..)` with the `payment` section applied by the
+ /// roles of schema.typ (`own`: the arguments of the call).
+ /// -> dictionary
+diff --git a/src/invoice.typ b/src/invoice.typ
+index 2bb7803..7f2e9ae 100644
+--- a/src/invoice.typ
++++ b/src/invoice.typ
+@@ -194,6 +194,10 @@
+ 
+   /// What happens when legally required data or output is missing, or a
+   /// theme check fails:
++  /// - `auto`: `"strict"` when the invoice is hydrated (see `data`), so that
++  ///   no broken invoice goes out by mistake, else `"draft"`. To debug a
++  ///   hydrated invoice, render its draft with
++  ///   `--input invoice-pro-validation=draft`.
+   /// - `"draft"`: the document renders, and every problem is shown in it: an
+   ///   inline marker where data is missing (‹fehlt: Rechnungsnummer›), a badge
+   ///   and a watermark on each page, and a report page with the legal basis of
+@@ -210,8 +214,8 @@
+   /// e-invoice follow `zugferd-errors`.
+   /// Misuse (unknown keys, wrong types, unknown parts, ..) always panics.
+   /// `--input invoice-pro-validation=strict|draft|none` overrides this value.
+-  /// -> none | "draft" | "strict"
+-  validation: "draft",
++  /// -> auto | none | "draft" | "strict"
++  validation: auto,
+   /// Fields of your own, which invoice-pro does not interpret: theme parts
+   /// read them as `ctx.custom`, the body as `info.get("custom", ..)`. A
+   /// preview sample: a hydrated invoice takes its custom fields from the data
+@@ -226,7 +230,8 @@
+   /// settings (sender, payee, currency, subject, document type, notes, tax
+   /// settings, payment terms, method and bank) keep the skeleton's value
+   /// unless the data gives them, as a whole. Design never comes from data.
+-  /// Problems in the data are `data` issues (see `validation`).
++  /// Problems in the data are `data` issues: by default a hydrated invoice
++  /// stops on any problem (see `validation`).
+   ///
+   /// `auto`: the JSON of `--input invoice-pro-data` if it is given, else the
+   /// invoice is not hydrated. Also: a record of `data.load(..)` or
+@@ -458,7 +463,7 @@
+   )
+ 
+   /** Input Calculations **/
+-  let validation-level = resolve-level(validation)
++  let validation-level = resolve-level(validation, hydrated: applied != none)
+   let eval-locale = locale(base-language, base-region)
+   if currency != auto { eval-locale = with-currency(eval-locale, currency) }
+   let document = resolve-document-type(document-type)
+diff --git a/src/validation/issue.typ b/src/validation/issue.typ
+index 86bfbe0..b079eb1 100644
+--- a/src/validation/issue.typ
++++ b/src/validation/issue.typ
+@@ -75,9 +75,10 @@
+ 
+ /// Resolves the effective level: `--input invoice-pro-validation=..` wins over
+ /// the parameter, so CI and batch pipelines can enforce `strict` (or render
+-/// thumbnails with `none`) without editing documents.
++/// thumbnails with `none`) without editing documents. `auto` is `"strict"`
++/// for a `hydrated` invoice (contract/hydrate.typ), else `"draft"`.
+ /// -> none | str
+-#let resolve-level(param, inputs: sys.inputs) = {
++#let resolve-level(param, inputs: sys.inputs, hydrated: false) = {
+   // common synonyms get a pointed hint instead of a generic did-you-mean
+   let synonym(v) = {
+     let to = (
+@@ -89,6 +90,7 @@
+       error: "\"strict\"",
+       fail: "\"strict\"",
+       off: "none",
++      "auto": "auto",
+       "none": "none",
+       "false": "none",
+     ).at(lower(str(v)), default: none)
+@@ -96,11 +98,12 @@
+       " Did you mean " + to + "?"
+     }
+   }
++  if param == auto { param = if hydrated { "strict" } else { "draft" } }
+   if param not in levels {
+     panic(
+       "variable `invoice::validation`("
+         + repr(param)
+-        + ") must be one of none, \"draft\", \"strict\"."
++        + ") must be one of auto, none, \"draft\", \"strict\"."
+         + if type(param) in (str, bool) { synonym(param) } else { "" },
+     )
+   }
+diff --git a/tests/data/contract/test.typ b/tests/data/contract/test.typ
+index 50c24ad..15c9d1f 100644
+--- a/tests/data/contract/test.typ
++++ b/tests/data/contract/test.typ
+@@ -152,6 +152,11 @@
+ // design keys pass through
+ #assert.eq(x.theme, theme.classic)
+ #assert.eq(x.validation, "draft")
++// `auto` too: the re-entered call resolves it to "strict" (fail safe)
++#assert.eq(
++  hydrate(minimal, given + (validation: auto), inputs: (:)).args.validation,
++  auto,
++)
+ // the data's custom fields replace the sample as a whole
+ #assert.eq(h(minimal + (custom: (a: 1))).custom, (a: 1))
+ // small business: the data's exemption drops the skeleton's tax
+diff --git a/tests/validation/api/test.typ b/tests/validation/api/test.typ
+index ea9381d..b924976 100644
+--- a/tests/validation/api/test.typ
++++ b/tests/validation/api/test.typ
+@@ -21,6 +21,17 @@
+ #assert(
+   resolve-level(none, inputs: (invoice-pro-validation: "draft")) == "draft",
+ )
++// auto: strict for a hydrated invoice, else draft; the input wins over both
++#assert(resolve-level(auto, inputs: (:)) == "draft")
++#assert(resolve-level(auto, inputs: (:), hydrated: true) == "strict")
++#assert(
++  resolve-level(
++    auto,
++    inputs: (invoice-pro-validation: "draft"),
++    hydrated: true,
++  )
++    == "draft",
++)
+ #assert(levels == (none, "draft", "strict"))
+ #assert(blocking-classes == ("data",))
+ #assert(classes == ("data", "theme", "lint"))
+diff --git a/tests/validation/strict/test.typ b/tests/validation/strict/test.typ
+index 22bcddd..3cd6437 100644
+--- a/tests/validation/strict/test.typ
++++ b/tests/validation/strict/test.typ
+@@ -20,7 +20,7 @@
+   "2": "invoice-pro found 3 problems (validation: \"strict\"; preview them with validation: \"draft\" or --input invoice-pro-validation=draft):\n  1. invoice::invoice-nr is missing; every invoice needs a unique, sequential number (EN 16931 BT-1)\n  2. invoice::sender has neither `vat-id` nor `tax-nr`; the supplier's VAT ID or tax number is required (EN 16931 BT-31, BT-32)\n  3. invoice::recipient has no address (`address`, `city`); the recipient's full address is required (EN 16931 BG-8)",
+   "4": "invoice: the document has no line items; an invoice must state the quantity and kind of the supply (EN 16931 BG-25)",
+   "5": "invoice::recipient::vat-id is missing, but the invoice applies reverse charge or an intra-community supply; the recipient's VAT ID is required (EN 16931 BT-48)",
+-  "8": "variable `invoice::validation`(\"visual\") must be one of none, \"draft\", \"strict\". Did you mean \"draft\"?",
++  "8": "variable `invoice::validation`(\"visual\") must be one of auto, none, \"draft\", \"strict\". Did you mean \"draft\"?",
+   "10": "theme::tokens::colors has unknown key `primry`. Did you mean `primary`? Allowed keys: primary, on-primary, primary-text, accent, accent-text, text, text-muted, border, tint, background",
+ )
+ #let args = (
+-- 
+2.43.0
+

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Conformance fixtures (design D's make_fixtures.py, trimmed format): the
 good example plus mutations, each tagged with what the contract promises:
-  valid        - the JSON Schema and invoice-data.check accept it
+  valid        - the JSON Schema and data.check accept it
   invalid      - both reject it (on the same branch)
   lenient      - the decoder reads it, the schema (writer's contract) does not
   decoder-only - schema-valid, but a rule only the decoder can check rejects it

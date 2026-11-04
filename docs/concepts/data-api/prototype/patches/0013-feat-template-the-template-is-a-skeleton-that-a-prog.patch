@@ -1,0 +1,83 @@
+From de61cc23b2e2c48df3b27cfba5778772cc7cfb04 Mon Sep 17 00:00:00 2001
+From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
+Date: Tue, 3 Nov 2026 21:34:27 +0000
+Subject: [PATCH 13/15] feat(template): the template is a skeleton that a
+ program can hydrate
+
+The maintainer's decision on Q36: invoice-pro is as useful as possible
+out of the box. template/invoice.typ, which `typst init` installs, gets
+the one load line, `data: record`, and one `payment(..)` block instead of
+`payment-terms(..)` and `bank-details(..)`, so that the data's payment
+section has its binding point. Its header comment gains a short DATA /
+PROGRAMMATIC section: how to hydrate it from a file or inline, that a
+hydrated invoice stops on any problem, and the draft flag to see why.
+
+Without data the PDF is byte-identical to the 0.6.0 template on Typst
+0.15.1 and 0.14.2, with and without --pdf-standard a-3b, so the golden
+XML and the thumbnail stay. The import line and its version are unchanged.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RaaQussN1QVEE8zRWeeCD3
+---
+ template/invoice.typ | 30 ++++++++++++++++++++++++------
+ 1 file changed, 24 insertions(+), 6 deletions(-)
+
+diff --git a/template/invoice.typ b/template/invoice.typ
+index 215e81a..292e840 100755
+--- a/template/invoice.typ
++++ b/template/invoice.typ
+@@ -16,6 +16,19 @@
+  * a report page, and no XML is attached. `validation: "strict"` stops the
+  * compilation instead, e.g. before sending.
+  *
++ * DATA / PROGRAMMATIC
++ * This invoice is also a skeleton: a program can hydrate it with the data
++ * of one invoice (JSON, TOML or YAML in the format "invoice-pro/1", see the
++ * docs), which replaces the number, the dates, the recipient and the line
++ * items shown here; the sender, the bank and the payment terms stay unless
++ * the data gives them.
++ * - From a file: typst compile --pdf-standard=a-3b invoice.typ
++ *     --input invoice-pro-data-file=invoice-2026-02.json
++ * - Inline: --input invoice-pro-data="$(cat invoice-2026-02.json)"
++ * A hydrated invoice stops on any problem, so that no broken invoice goes
++ * out. To see why, add --input invoice-pro-validation=draft: a draft that
++ * marks every problem, without XML.
++ *
+  * THEMES
+  * `theme` sets the look: bold, classic, plain, corporate, elegant,
+  * prestige, technical, soft, compact or boxed. All ten in the docs:
+@@ -28,7 +41,11 @@
+  * - For a window envelope: theme.bold.with(layout: theme.layout.din-5008-a)
+  */
+ 
++// the data of the CLI (see DATA above); none: the values below are shown
++#let record = data.load(read: p => read(p, encoding: none))
++
+ #show: invoice.with(
++  data: record,
+   theme: theme.bold, // the look, see THEMES above
+   locale: locale.de-de,
+   zugferd: "en16931", // the e-invoice profile; none: a PDF without XML
+@@ -127,12 +144,13 @@
+   #surcharge([Processing and Service Fee], amount: 15.00)
+ ]
+ 
+-#payment-terms(days: 14)
+-
+-#bank-details(
+-  bank: "Musterbank",
+-  iban: "DE07100202005821158846",
+-  bic: "EXAMPLEBICX",
++#payment(
++  terms: (days: 14),
++  bank: (
++    bank: "Musterbank",
++    iban: "DE07100202005821158846",
++    bic: "EXAMPLEBICX",
++  ),
+ )
+ 
+ #signature()
+-- 
+2.43.0
+

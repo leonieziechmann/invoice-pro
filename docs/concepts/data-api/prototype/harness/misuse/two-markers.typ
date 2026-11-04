@@ -12,6 +12,6 @@
   invoice-nr: "MUSTER-0001",
 )
 #line-items[
-  #invoice-data.items[#item("A", price: 1)]
-  #invoice-data.items[#item("B", price: 1)]
+  #data.items[#item("A", price: 1)]
+  #data.items[#item("B", price: 1)]
 ]

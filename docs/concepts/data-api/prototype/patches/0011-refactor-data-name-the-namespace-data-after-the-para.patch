@@ -1,0 +1,510 @@
+From 69ad192cf9276c510dae41f2d41606c63cdd5429 Mon Sep 17 00:00:00 2001
+From: leonieziechmann <48921293+leonieziechmann@users.noreply.github.com>
+Date: Tue, 3 Nov 2026 21:29:20 +0000
+Subject: [PATCH 11/15] refactor(data): name the namespace `data`, after the
+ parameter it feeds
+
+The maintainer's decision on Q19: canonical names, single descriptive
+words where possible. The root namespace `invoice-data` becomes `data`,
+the house rule for a namespace that feeds a parameter (`theme:`/`theme`,
+`locale:`/`locale`): `invoice(data: data.load(..))`. Its file
+src/public/invoice-data.typ becomes src/public/data.typ.
+
+The string constants `input-key` and `file-key` leave the public
+namespace (8 names: format, load, decode, check, values, party, items,
+schema); they stay internal in contract/input.typ, and the doc comment of
+`load` names the two --input keys.
+
+A file that binds `data` itself (`#let data = json(..)` after the
+package import) hides the namespace; `invoice(data: <dictionary>)` still
+works, and the docs name the record `record`. The messages (`data:
+data.load(read: ..)`, `data.items[..]`), the comments, the export pin and
+the contract tests follow; the marker's internal frame kind is
+`data-items`.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01RaaQussN1QVEE8zRWeeCD3
+---
+ src/components/line-items.typ             |  8 ++--
+ src/contract/api.typ                      |  4 +-
+ src/contract/hydrate.typ                  |  2 +-
+ src/contract/input.typ                    | 10 ++---
+ src/contract/result-schema.typ            |  2 +-
+ src/contract/rows.typ                     | 10 ++---
+ src/contract/types.typ                    |  2 +-
+ src/invoice.typ                           |  4 +-
+ src/lib.typ                               |  2 +-
+ src/public/{invoice-data.typ => data.typ} | 29 +++++--------
+ tests/data/conformance/check-all.typ      |  6 +--
+ tests/data/contract/test.typ              | 50 +++++++++++------------
+ tests/theme/exports/test.typ              | 10 ++---
+ tools/perf/gate.py                        |  2 +-
+ 14 files changed, 65 insertions(+), 76 deletions(-)
+ rename src/public/{invoice-data.typ => data.typ} (82%)
+
+diff --git a/src/components/line-items.typ b/src/components/line-items.typ
+index 2b6e1f2..4d0c492 100755
+--- a/src/components/line-items.typ
++++ b/src/components/line-items.typ
+@@ -15,21 +15,21 @@
+ // Without data it passes the children through. Hydrated (`ctx.hydration`,
+ // sealed by invoice()), the rows of the data take the place of the whole
+ // body (ONE motif emits their frames, contract/rows.typ), unless the body
+-// has an explicit `invoice-data.items[..]` marker, which then places them
++// has an explicit `data.items[..]` marker, which then places them
+ // (static rows outside it stay). The marker leaves a frame of its own kind
+ // for this slot to count and remove. The engine is imported only when used.
+ #let _items-slot(body) = motif(
+   measure: (ctx, children) => {
+-    let markers = children.filter(f => f.kind == "invoice-data-items").len()
++    let markers = children.filter(f => f.kind == "data-items").len()
+     if markers > 1 {
+       panic(
+-        "`invoice-data.items[..]` is the binding point of the data's line items: a `line-items` may have at most one, found "
++        "`data.items[..]` is the binding point of the data's line items: a `line-items` may have at most one, found "
+           + str(markers)
+           + ".",
+       )
+     }
+     let kept = if markers == 0 { children } else {
+-      children.filter(f => f.kind != "invoice-data-items")
++      children.filter(f => f.kind != "data-items")
+     }
+     let h = ctx.at("hydration", default: none)
+     if h == none or markers > 0 { return (kept, false) }
+diff --git a/src/contract/api.typ b/src/contract/api.typ
+index c313766..178f37b 100644
+--- a/src/contract/api.typ
++++ b/src/contract/api.typ
+@@ -1,4 +1,4 @@
+-// The bodies of the `invoice-data` functions (public/invoice-data.typ, which
++// The bodies of the `data` functions (public/data.typ, which
+ // holds their signatures and documentation): loaded only when one is called,
+ // so that the package import does not parse them. Each imports what it
+ // needs (`schema(kind: "result")` loads no data descriptor).
+@@ -66,7 +66,7 @@
+     json-schema(r.objects, root: "result", id: r.schema-id, title: r.format)
+   } else {
+     panic(
+-      "variable `invoice-data.schema::kind` must be \"data\" or \"result\", found "
++      "variable `data.schema::kind` must be \"data\" or \"result\", found "
+         + repr(kind),
+     )
+   }
+diff --git a/src/contract/hydrate.typ b/src/contract/hydrate.typ
+index 3c53f20..cbf9d56 100644
+--- a/src/contract/hydrate.typ
++++ b/src/contract/hydrate.typ
+@@ -1,5 +1,5 @@
+ // Hydration: applies a decoded record to one invoice() call. Loaded only by
+-// a hydrated invoice (and by `invoice-data.load`/`decode`).
++// a hydrated invoice (and by `data.load`/`decode`).
+ //
+ // The precedence is not written here per key: it is the `role` of each
+ // field in schema.typ (`invoice-params`).
+diff --git a/src/contract/input.typ b/src/contract/input.typ
+index d1c8de5..97d1ef0 100644
+--- a/src/contract/input.typ
++++ b/src/contract/input.typ
+@@ -7,7 +7,7 @@
+ //                                           the user's files)
+ // Embedders (typst as a library, phase 2) may pass a dictionary as the value
+ // of `invoice-pro-data` instead of JSON text. Loaded only when an invoice is
+-// hydrated (invoice.typ looks up the two keys itself) or by `invoice-data`.
++// hydrated (invoice.typ looks up the two keys itself) or by `data`.
+ 
+ /// The `--input` key with the data of one invoice as JSON text.
+ /// -> str
+@@ -66,9 +66,9 @@
+   }
+ }
+ 
+-#let _load-line = "`data: invoice-data.load(read: p => read(p, encoding: none))`"
++#let _load-line = "`data: data.load(read: p => read(p, encoding: none))`"
+ 
+-/// Whether `x` is a record of `invoice-data.load`/`decode` (sealed content).
++/// Whether `x` is a record of `data.load`/`decode` (sealed content).
+ /// -> bool
+ #let is-record(x) = (
+   type(x) == content
+@@ -178,7 +178,7 @@
+     })
+     if unread.len() > 0 {
+       _two-sources(
+-        "--input " + unread.first() + " and a record of invoice-data.decode",
++        "--input " + unread.first() + " and a record of data.decode",
+       )
+     }
+     return data
+@@ -208,7 +208,7 @@
+     )
+   }
+   panic(
+-    "variable `invoice::data` must be of auto | none | dictionary | bytes | str (JSON text) | a record of invoice-data.load/decode, found "
++    "variable `invoice::data` must be of auto | none | dictionary | bytes | str (JSON text) | a record of data.load/decode, found "
+       + str(type(data)),
+   )
+ }
+diff --git a/src/contract/result-schema.typ b/src/contract/result-schema.typ
+index b29bb64..0091dea 100644
+--- a/src/contract/result-schema.typ
++++ b/src/contract/result-schema.typ
+@@ -1,5 +1,5 @@
+ // The shape of the result "invoice-pro-result/1", declared with the
+-// vocabulary of the input format, so `invoice-data.schema(kind: "result")`
++// vocabulary of the input format, so `data.schema(kind: "result")`
+ // exports it as a JSON Schema. Loaded only by `schema`: the result record
+ // itself (result.typ) never loads a descriptor.
+ #import "types.typ" as t
+diff --git a/src/contract/rows.typ b/src/contract/rows.typ
+index 1dbf066..d4cb582 100644
+--- a/src/contract/rows.typ
++++ b/src/contract/rows.typ
+@@ -1,7 +1,7 @@
+ // The line items of hydrated data as ONE loom motif (design C's engine).
+ //
+ // The binding point (`items-slot`, the body of every `line-items`, or the
+-// explicit `invoice-data.items[..]` marker) replaces N `item` / `group` /
++// explicit `data.items[..]` marker) replaces N `item` / `group` /
+ // `bundle` / `discount` / `surcharge` / `prepayment` motifs by one raw motif
+ // whose `measure` emits exactly the frames those motifs emit (kinds "item",
+ // "group", "bundle", "modifier", "prepayment"), so line-items, the
+@@ -359,7 +359,7 @@
+ 
+ // The frame a marker leaves for the slot of its `line-items`, which removes
+ // it (components/line-items.typ): the rows of the data are placed already.
+-#let _marker-kind = "invoice-data-items"
++#let _marker-kind = "data-items"
+ 
+ // The body of a marker's motif: it carries no rows (the sample is held in
+ // the closure), only this sign, by which a marker is found in content.
+@@ -393,7 +393,7 @@
+   false
+ }
+ 
+-/// The explicit binding point `invoice-data.items[..]`: without data the
++/// The explicit binding point `data.items[..]`: without data the
+ /// `sample` renders exactly as written; hydrated, the rows of the data take
+ /// its place and the sample is never woven (it is held in this closure,
+ /// not in the motif's body). Rows outside it stay (a fixed fee). It must be
+@@ -406,7 +406,7 @@
+     let parent = loom.path.get(ctx).last(default: (none, none)).first()
+     if parent != "line-items" {
+       panic(
+-        "`invoice-data.items[..]` must be a direct child of `line-items` (it places groups, modifiers and prepayments of the data), found it inside "
++        "`data.items[..]` must be a direct child of `line-items` (it places groups, modifiers and prepayments of the data), found it inside "
+           + if parent == none { "no `line-items`" } else {
+             "a `" + parent + "`"
+           }
+@@ -426,7 +426,7 @@
+     }
+     if _holds-marker(sample) {
+       panic(
+-        "`invoice-data.items[..]` is the binding point of the data's line items: a `line-items` may have at most one, found one inside another.",
++        "`data.items[..]` is the binding point of the data's line items: a `line-items` may have at most one, found one inside another.",
+       )
+     }
+     ((compute(h.rows, env-of(ctx)), marker), true)
+diff --git a/src/contract/types.typ b/src/contract/types.typ
+index 4c9f359..3686137 100644
+--- a/src/contract/types.typ
++++ b/src/contract/types.typ
+@@ -9,7 +9,7 @@
+ // Internal: this module shadows `text`, `decimal`, `array` and friends of the
+ // standard library (`t.text()` reads well in the descriptor); it must not call
+ // the standard functions itself, and it is never re-exported (the public
+-// namespace `invoice-data` shadows no builtin).
++// namespace `data` shadows no builtin).
+ 
+ /// A string. `max`: maximum length in characters (e.g. 35 for the
+ /// structured payment reference of an EPC QR code). `pattern`: a regular
+diff --git a/src/invoice.typ b/src/invoice.typ
+index 5c9e0d9..2bb7803 100644
+--- a/src/invoice.typ
++++ b/src/invoice.typ
+@@ -229,8 +229,8 @@
+   /// Problems in the data are `data` issues (see `validation`).
+   ///
+   /// `auto`: the JSON of `--input invoice-pro-data` if it is given, else the
+-  /// invoice is not hydrated. Also: a record of `invoice-data.load(..)` or
+-  /// `invoice-data.decode(..)`, a dictionary (`json(..)`, `toml(..)`,
++  /// invoice is not hydrated. Also: a record of `data.load(..)` or
++  /// `data.decode(..)`, a dictionary (`json(..)`, `toml(..)`,
+   /// `yaml(..)`), JSON as bytes or text, or (Typst 0.15) a `path`.
+   /// -> auto | none | dictionary | bytes | str | content
+   data: auto,
+diff --git a/src/lib.typ b/src/lib.typ
+index 4b96f9c..956b745 100755
+--- a/src/lib.typ
++++ b/src/lib.typ
+@@ -27,4 +27,4 @@
+ #import "public/unit.typ"
+ #import "public/references.typ"
+ #import "public/info.typ" as info
+-#import "public/invoice-data.typ"
++#import "public/data.typ"
+diff --git a/src/public/invoice-data.typ b/src/public/data.typ
+similarity index 82%
+rename from src/public/invoice-data.typ
+rename to src/public/data.typ
+index 462d01d..8841fa6 100644
+--- a/src/public/invoice-data.typ
++++ b/src/public/data.typ
+@@ -1,25 +1,18 @@
+-// The invoice data contract: the format "invoice-pro/1", its CLI keys and
+-// the layout-free tools a program or a skeleton needs. Everything else of
+-// the contract is generated from ONE descriptor (contract/schema.typ).
++// The invoice data contract: the format "invoice-pro/1" and the layout-free
++// tools a program or a skeleton needs. Everything else of the contract is
++// generated from ONE descriptor (contract/schema.typ).
+ //
+-// Named `invoice-data`, not `data`: a root export `data` would take the
+-// place of a user's `#let data = json(..)`; and `import invoice-data: *`
+-// shadows no Typst builtin. Every function imports its module inside its
+-// body, so the package import costs nothing for invoices without data.
++// Named `data` after the parameter it feeds, `invoice(data:)`, as `theme`
++// and `locale` are. A file that binds `data` itself (`#let data = json(..)`)
++// hides the namespace; `invoice(data: <dictionary>)` still works. The docs
++// name the record `record`. `import data: *` shadows no Typst builtin. Every
++// function imports its module inside its body, so the package import costs
++// nothing for invoices without data.
+ 
+ /// The invoice data format this version reads: `"invoice-pro/1"`.
+ /// -> str
+ #let format = "invoice-pro/1"
+ 
+-/// The `--input` key that carries the data of one invoice as JSON text.
+-/// -> str
+-#let input-key = "invoice-pro-data"
+-
+-/// The `--input` key that names a data file (JSON, TOML or YAML), opened by
+-/// the skeleton's `read` callback (see `load`).
+-/// -> str
+-#let file-key = "invoice-pro-data-file"
+-
+ /// Decodes and validates data without rendering: a record for
+ /// `invoice(data:)`, `values` and `check`. Never panics on bad data (problems
+ /// become issues with JSON Pointers); `region` adds the region checks
+@@ -125,8 +118,8 @@
+ 
+ /// The JSON Schema 2020-12 of the data format (`"data"`) or of the result
+ /// record `<invoice-pro-result>` (`"result"`), generated from the descriptor:
+-/// `typst eval '{ import "@preview/invoice-pro:<version>": invoice-data;
+-/// invoice-data.schema() }'`.
++/// `typst eval '{ import "@preview/invoice-pro:<version>": data;
++/// data.schema() }'`.
+ /// -> dictionary
+ #let schema(
+   /// -> "data" | "result"
+diff --git a/tests/data/conformance/check-all.typ b/tests/data/conformance/check-all.typ
+index 93ab01c..753b7f8 100644
+--- a/tests/data/conformance/check-all.typ
++++ b/tests/data/conformance/check-all.typ
+@@ -1,10 +1,10 @@
+-// Runs invoice-data.check over every conformance fixture (no layout): the
++// Runs data.check over every conformance fixture (no layout): the
+ // report CI compares with python-jsonschema on the committed JSON Schema.
+ //   0.15: typst eval 'query(<r>).first().value' --in check-all.typ
+ //   0.14: typst query check-all.typ '<r>' --field value --one
+-#import "/src/lib.typ": invoice-data
++#import "/src/lib.typ": data
+ #let cases = json("fixtures.json")
+ #metadata(cases.map(c => (
+   name: c.name,
+-  report: invoice-data.check(c.doc),
++  report: data.check(c.doc),
+ ))) <r>
+diff --git a/tests/data/contract/test.typ b/tests/data/contract/test.typ
+index 37290a5..50c24ad 100644
+--- a/tests/data/contract/test.typ
++++ b/tests/data/contract/test.typ
+@@ -24,39 +24,37 @@
+ #let reader = p => files.at(p)
+ 
+ // ---- load: inline, file (JSON with BOM, TOML), none -------------------------
+-#let a = invoice-data.load(inputs: (invoice-pro-data: json-text))
+-#let b = invoice-data.load(read: reader, inputs: (
++#let a = data.load(inputs: (invoice-pro-data: json-text))
++#let b = data.load(read: reader, inputs: (
+   invoice-pro-data-file: "d.json",
+ ))
+-#let c = invoice-data.load(read: reader, inputs: (
++#let c = data.load(read: reader, inputs: (
+   invoice-pro-data-file: "d.toml",
+ ))
+-#assert.eq(invoice-data.load(inputs: (:)), none)
++#assert.eq(data.load(inputs: (:)), none)
+ #assert.eq(a.value.origin, "input")
+ #assert.eq(b.value.origin, "file")
+-#assert.eq(invoice-data.values(a), invoice-data.values(b))
+-#assert.eq(invoice-data.values(a), invoice-data.values(c))
++#assert.eq(data.values(a), data.values(b))
++#assert.eq(data.values(a), data.values(c))
+ #assert.eq(a.value.format, "invoice-pro/1.0")
+ // an embedder may pass a dictionary
+ #assert.eq(
+-  invoice-data.values(invoice-data.load(inputs: (invoice-pro-data: minimal))),
+-  invoice-data.values(a),
++  data.values(data.load(inputs: (invoice-pro-data: minimal))),
++  data.values(a),
+ )
+ 
+ // ---- decode: typed values -----------------------------------------------------
+-#let v = invoice-data.values(a)
++#let v = data.values(a)
+ #assert.eq(v.date, datetime(year: 2026, month: 1, day: 2))
+ #let row = v.items.first()
+ #assert.eq(row.kind, "item")
+ #assert.eq(row.price, decimal("12.30"))
+ #assert.eq(row.tax, 19%)
+ #assert.eq(type(row.unit), function)
+-#assert.eq(invoice-data.format, "invoice-pro/1")
+-#assert.eq(invoice-data.input-key, "invoice-pro-data")
+-#assert.eq(invoice-data.file-key, "invoice-pro-data-file")
++#assert.eq(data.format, "invoice-pro/1")
+ 
+ // null = absent, also as `kind`; an optional "" is absent
+-#let n = invoice-data.values(invoice-data.decode(
++#let n = data.values(data.decode(
+   minimal
+     + (
+       due-date: none,
+@@ -69,19 +67,19 @@
+ #assert("description" not in n.items.first())
+ 
+ // ---- check: a report of JSON Pointers -------------------------------------------
+-#let r = invoice-data.check(minimal + (items: ((name: "A", price: "12,30"),)))
++#let r = data.check(minimal + (items: ((name: "A", price: "12,30"),)))
+ #assert.eq(r.format, "invoice-pro-check/1")
+ #assert.eq(r.valid, false)
+ #assert(r.issues.any(i => i.path == "/items/0/price"))
+-#assert(invoice-data.check(minimal).valid)
++#assert(data.check(minimal).valid)
+ // the region pass: "16%" is no rate of "de"
+-#let r16 = invoice-data.check(
++#let r16 = data.check(
+   minimal + (items: ((name: "A", price: "1", tax: "16%"),)),
+   region: "de",
+ )
+ #assert(r16.issues.any(i => i.id == "schema/items/0/tax"))
+ #assert(
+-  invoice-data
++  data
+     .check(
+       minimal + (items: ((name: "A", price: "1", tax: "16%"),)),
+     )
+@@ -90,11 +88,11 @@
+ 
+ // ---- party ---------------------------------------------------------------------
+ #assert.eq(
+-  invoice-data.party((name: "X", city: "80331 München")).post-code,
++  data.party((name: "X", city: "80331 München")).post-code,
+   "80331",
+ )
+-#assert.eq(invoice-data.party(v.recipient).post-code, "80331")
+-#assert.eq(invoice-data.party(none), (:))
++#assert.eq(data.party(v.recipient).post-code, "80331")
++#assert.eq(data.party(none), (:))
+ 
+ // ---- precedence of the re-entered call (R2, R3, R8) ------------------------------
+ #let given = (
+@@ -216,7 +214,7 @@
+ // ---- crash-free decoding (fixer round 1): never a hard error on bad data ----------
+ #import "/src/contract/input.typ": clip
+ #import "/src/contract/decode.typ": decode-document, max-nesting
+-#let issues-of(d) = invoice-data.check(minimal + d).issues
++#let issues-of(d) = data.check(minimal + d).issues
+ #let ids-of(d) = issues-of(d).map(i => i.id)
+ // messages are shortened by grapheme clusters, never inside a character
+ #assert.eq(clip("ä" * 30, 10), "ä" * 7 + "…")
+@@ -263,8 +261,8 @@
+ #assert.eq(ids-of((invoice-nr: "   ")), ("schema/invoice-nr",))
+ // document types: exactly what invoice() accepts
+ #assert.eq(
+-  invoice-data
+-    .values(invoice-data.decode(
++  data
++    .values(data.decode(
+       minimal + (document-type: "self-billed-credit-note"),
+     ))
+     .document-type,
+@@ -318,8 +316,8 @@
+   (),
+ )
+ #assert.eq(
+-  invoice-data.values(invoice-data.decode(minimal + (due-date: ""))),
+-  invoice-data.values(invoice-data.decode(minimal)),
++  data.values(data.decode(minimal + (due-date: ""))),
++  data.values(data.decode(minimal)),
+ )
+ #assert.eq(ids-of((date: "")), ("schema/date",))
+ // texts that become PDF metadata (title, author): at most 4000 characters,
+@@ -354,7 +352,7 @@
+ )
+ // check() reports data that is no object instead of stopping
+ #for x in (none, (1, 2), 42, "abc", bytes("[1]"), true) {
+-  let r = invoice-data.check(x)
++  let r = data.check(x)
+   assert.eq(r.valid, false)
+   assert.eq(r.issues.map(i => i.id), ("schema",))
+ }
+diff --git a/tests/theme/exports/test.typ b/tests/theme/exports/test.typ
+index 650d7f8..00fa2c9 100644
+--- a/tests/theme/exports/test.typ
++++ b/tests/theme/exports/test.typ
+@@ -23,13 +23,14 @@
+ 
+ // the package root: the 0.5 names (payment-goal renamed, themes removed) plus
+ // theme, themed, the payment means (card-payment, direct-debit, paid), the
+-// identifiers (id), and the data contract (invoice-data, payment)
++// identifiers (id), and the data contract (data, payment)
+ #expect("invoice-pro", lib, (
+   "apply",
+   "bank-details",
+   "bundle",
+   "card-payment",
+   "country",
++  "data",
+   "date",
+   "direct-debit",
+   "discount",
+@@ -38,7 +39,6 @@
+   "id",
+   "info",
+   "invoice",
+-  "invoice-data",
+   "item",
+   "line-items",
+   "locale",
+@@ -216,13 +216,11 @@
+     )
+   }
+ }
+-// the data contract: 10 names, none shadowing a Typst builtin
+-#expect("invoice-data", invoice-data, (
++// the data contract: 8 names, none shadowing a Typst builtin
++#expect("data", data, (
+   "check",
+   "decode",
+-  "file-key",
+   "format",
+-  "input-key",
+   "items",
+   "load",
+   "party",
+diff --git a/tools/perf/gate.py b/tools/perf/gate.py
+index 51532d1..f7539c2 100755
+--- a/tools/perf/gate.py
++++ b/tools/perf/gate.py
+@@ -77,7 +77,7 @@ LAZY_MODULES = (
+     "src/zugferd/rules/xrechnung-messages.typ",
+     "src/zugferd/document.typ",  # a title that may name another document type
+     # the invoice data contract: only a hydrated invoice (or a skeleton with
+-    # an `invoice-data.items` marker, or --input invoice-pro-result=1) loads it
++    # a `data.items` marker, or --input invoice-pro-result=1) loads it
+     "src/contract/api.typ",
+     "src/contract/types.typ",
+     "src/contract/schema.typ",
+-- 
+2.43.0
+
